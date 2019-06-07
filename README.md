@@ -1,2 +1,2 @@
 ![pasl logo](https://github.com/docker/pasl/blob/master/PASL.png)
-# Platform Agnost Security Layer
+# Platform Agnostic Security Layer
