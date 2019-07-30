@@ -18,13 +18,14 @@
 # ------------------------------------------------------------------------------
 
 # This script executes all the tests of the security daemon:
-# - the unit tests of the interface
+# - the unit tests of the interface and service
 #
 # It is meant to be executed by the Docker image available in the same
 # directory.
 
 UNIT_TEST_CRATES=(\
     interface/interface-rs \
+    service \
 )
 
 run_test() {

@@ -44,6 +44,8 @@ This project uses the following third party crates:
 * prost-build (Apache-2.0)
 * prost (Apache-2.0)
 * bytes (MIT)
+* num (MIT and Apache-2.0)
+* crossbeam (MIT and Apache-2.0)
 
 # User Guide
 
