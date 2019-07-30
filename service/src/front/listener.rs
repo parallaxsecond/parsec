@@ -12,6 +12,15 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub mod back;
-pub mod front;
-pub mod providers;
+
+/// Definition of
+pub trait Listen {
+    /// Initialise the internals of the listener.
+    fn init(&mut self);
+
+    /// Kickstart the listener and thus the service. Puts the listener in
+    /// an infinite loop.
+    ///
+    /// Requires the `init` method to have been called previously.
+    fn run(&self);
+}
