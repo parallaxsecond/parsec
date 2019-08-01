@@ -49,7 +49,14 @@ This project uses the following third party crates:
 
 # User Guide
 
-Will be completed.
+This project is coded in the Rsut Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
+To build and run the service, execute `cargo run` inside `service/`. The service will then wait for clients.
+
+## Testing
+
+You can unit test the `integration-rs` and `service` crates executing `cargo test` inside those.
+You can perform an integration test by running the service first and then executing `cargo test` inside the `minimal_client` crate in `test/test_rs/minimal_client`.
+The `test/ci/all.sh` script executes all of the unit tests and integration tests.
 
 # Contributing
 

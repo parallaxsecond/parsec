@@ -19,6 +19,7 @@
 
 # This script executes all the tests of the security daemon:
 # - the unit tests of the interface and service
+# - the integration tests using the minimal client
 #
 # It is meant to be executed by the Docker image available in the same
 # directory.
@@ -45,3 +46,21 @@ for crate in "${UNIT_TEST_CRATES[@]}"
 do
     run_test $crate
 done
+
+#####################
+# Integration tests #
+#####################
+pushd service || exit 1
+cargo build || exit 1
+./target/debug/main &
+SERVER_PID=$!
+popd || exit 1
+
+pushd test/test_rs/minimal_client/ || exit 1
+cargo build || exit 1
+cargo fmt --all -- --check || exit 1
+cargo clippy || exit 1
+cargo test || exit 1
+popd
+
+kill $SERVER_PID
