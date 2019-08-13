@@ -36,6 +36,12 @@ Contributions from the developer community are welcome. Please refer to the cont
 
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
 
+This project uses the following third party crates:
+* serde (Apache-2.0)
+* bincode (MIT)
+* num-traits (MIT and Apache-2.0)
+* num-derive (MIT and Apache-2.0)
+
 # User Guide
 
 Will be completed.
