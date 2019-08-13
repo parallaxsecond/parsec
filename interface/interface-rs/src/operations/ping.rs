@@ -12,5 +12,17 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub mod operations;
-pub mod requests;
+
+/// Native object for Ping operation.
+#[derive(Debug)]
+pub struct OpPing;
+
+/// Native object for Ping result.
+///
+/// The field names stand for 'supported version major' and
+/// 'supported version minor' - the latest version supported by the
+/// provider forming the result.
+pub struct ResultPing {
+    pub supp_version_maj: u8,
+    pub supp_version_min: u8,
+}
