@@ -5,11 +5,16 @@ authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
            "Hugues de Valon <hugues.devalon@arm.com>"]
 edition = "2018"
 
+[build-dependencies]
+prost-build = "0.5.0"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 bincode = "1.1.4"
 num-traits = "0.2"
 num-derive = "0.2"
+prost = "0.5.0"
+bytes = "0.4.12"
 
 [features]
 testing = []

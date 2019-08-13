@@ -41,6 +41,9 @@ This project uses the following third party crates:
 * bincode (MIT)
 * num-traits (MIT and Apache-2.0)
 * num-derive (MIT and Apache-2.0)
+* prost-build (Apache-2.0)
+* prost (Apache-2.0)
+* bytes (MIT)
 
 # User Guide
 

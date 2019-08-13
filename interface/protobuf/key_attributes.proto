@@ -1,0 +1,194 @@
+/*
+ * Copyright (c) 2019, ARM Limited, All Rights Reserved
+ * SPDX-License-Identifier: Apache-2.0
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+syntax = "proto3";
+
+package key_attributes;
+
+enum KeyLifetime {
+   Volatile = 0;
+   Persistent = 1;
+}
+
+enum KeyType {
+   HMAC_Key = 0;
+   Derivation_Key = 1;
+   AES_Key = 2;
+   DES_Key = 3;
+   Camellia_Key = 4;
+   ARC4_Key = 5;
+   RSA_Public_Key = 6;
+   RSA_Keypair = 7;
+   DSA_Public_Key = 8;
+   DSA_Keypair = 9;
+   ECC_Public_Key = 10;
+   ECC_Keypair = 11;
+}
+
+enum EccCurve {
+   No_Ecc_Curve = 0;
+   SECT163K1 = 1;
+   SECT163R1 = 2;
+   SECT163R2 = 3;
+   SECT193R1 = 4;
+   SECT193R2 = 5;
+   SECT233K1 = 6;
+   SECT233R1 = 7;
+   SECT239K1 = 8;
+   SECT283K1 = 9;
+   SECT283R1 = 10;
+   SECT409K1 = 11;
+   SECT409R1 = 12;
+   SECT571K1 = 13;
+   SECT571R1 = 14;
+   SECP160K1 = 15;
+   SECP160R1 = 16;
+   SECP160R2 = 17;
+   SECP192K1 = 18;
+   SECP192R1 = 19;
+   SECP224K1 = 20;
+   SECP224R1 = 21;
+   SECP256K1 = 22;
+   SECP256R1 = 23;
+   SECP384R1 = 24;
+   SECP521R1 = 25;
+   BRAINPOOL_P256R1 = 26;
+   BRAINPOOL_P384R1 = 27;
+   BRAINPOOL_P512R1 = 28;
+   CURVE25519 = 29;
+   CURVE448 = 30;
+}
+
+enum HashAlgorithm {
+   No_Hash_Algorithm = 0;
+   MD2 = 1;
+   MD4 = 2;
+   MD5 = 3;
+   RIPEMD160 = 4;
+   SHA_1 = 5;
+   SHA_224 = 6;
+   SHA_256 = 7;
+   SHA_384 = 8;
+   SHA_512 = 9;
+   SHA_512_224 = 10;
+   SHA_512_256 = 11;
+   SHA3_224 = 12;
+   SHA3_256 = 13;
+   SHA3_384 = 14;
+   SHA3_512 = 15;
+}
+
+enum CipherAlgorithm {
+   ARC4 = 0;
+   CTR = 1;
+   CFB = 2;
+   OFB = 3;
+   XTS = 4;
+   CBC_No_Padding = 5;
+   CBC_PKCS7 = 6;
+}
+
+enum AsymmetricEncryptionAlgorithm {
+   RSA_PKCS1V15_Crypt = 0;
+   RSA_OAEP = 1;
+}
+
+message AsymmetricEncryption {
+   AsymmetricEncryptionAlgorithm asymmetric_encryption_algorithm = 1;
+   HashAlgorithm hash_algorithm = 2;
+}
+
+enum MacAlgorithm {
+   HMAC = 0;
+   CBC_MAC = 1;
+   CMAC = 2;
+   GMAC = 3;
+}
+
+message Mac {
+   MacAlgorithm mac_algorithm = 1;
+   HashAlgorithm hash_algorithm = 2;
+   uint32 tag_length = 3;
+}
+
+enum AeadAlgorithm {
+   CCM = 0;
+   GCM = 1;
+}
+
+message Aead {
+   AeadAlgorithm aead_algorithm = 1;
+   uint32 tag_length = 2;
+}
+
+enum SignAlgorithm {
+   RSA_PKCS1V15_Sign = 0;
+   RSA_PSS = 1;
+   DSA = 2;
+   Deterministic_DSA = 3;
+   ECDSA = 4;
+   Deterministic_ECDSA = 5;
+}
+
+message Sign {
+   SignAlgorithm sign_algorithm = 1;
+   HashAlgorithm hash_algorithm = 2;
+}
+
+enum KeyDerivationFunction {
+   HKDF = 0;
+   TLS12_PRF = 1;
+   TLS12_PSK_To_MS = 2;
+   Select_Raw = 3;
+}
+
+message KeyDerivation {
+   KeyDerivationFunction key_derivation_function = 1;
+   HashAlgorithm hash_algorithm = 2;
+}
+
+enum KeyAgreementAlgorithm {
+   FFDH = 0;
+   ECDH = 1;
+}
+
+message KeyAgreement {
+   KeyAgreementAlgorithm key_agreement_algorithm = 1;
+   KeyDerivation key_derivation = 2;
+}
+
+message KeyAttributesProto {
+   KeyLifetime key_lifetime = 1;
+   KeyType key_type = 2;
+   EccCurve ecc_curve = 3;
+   oneof algorithm_proto {
+      CipherAlgorithm cipher_algorithm = 100;
+      AsymmetricEncryption asymmetric_encryption = 101;
+      Mac mac = 102;
+      Aead aead = 103;
+      Sign sign = 104;
+      KeyDerivation key_derivation = 105;
+      KeyAgreement key_agreement = 106;
+      HashAlgorithm hash_algorithm = 107;
+   }
+   uint32 key_size = 4;
+   bool permit_export = 5;
+   bool permit_encrypt = 6;
+   bool permit_decrypt = 7;
+   bool permit_sign = 8;
+   bool permit_verify = 9;
+   bool permit_derive = 10;
+}

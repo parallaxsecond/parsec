@@ -29,6 +29,8 @@ UNIT_TEST_CRATES=(\
 
 run_test() {
     pushd $1 || exit 1
+    # Build before cargo fmt to run the build.rs script.
+    cargo build || exit 1
     cargo fmt --all -- --check || exit 1
     cargo clippy || exit 1
     cargo test || exit 1
