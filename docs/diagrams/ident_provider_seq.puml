@@ -1,0 +1,85 @@
+
+  -- Copyright (c) 2019, Arm Limited, All Rights Reserved
+  -- SPDX-License-Identifier: Apache-2.0
+  --
+  -- Licensed under the Apache License, Version 2.0 (the "License"); you may
+  -- not use this file except in compliance with the License.
+  -- You may obtain a copy of the License at
+  --
+  -- http://www.apache.org/licenses/LICENSE-2.0
+  --
+  -- Unless required by applicable law or agreed to in writing, software
+  -- distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  -- WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  -- See the License for the specific language governing permissions and
+  -- limitations under the License.
+
+@startuml ident_provider_seq
+
+participant app as "Client Application"
+participant lib as "Client Library"
+participant orch as "Orchestrator"
+participant idprov as "Identity Provider"
+participant parsec as "Security Service"
+participant keystore as "Keystore/Crypto Engine"
+
+== System Lifecycle ==
+
+group Trust Relationship (Boot)
+orch -[#blue]> orch: Generate root cert
+note left of orch
+  //private key held in//
+  //local memory//
+end note
+orch -[#blue]> idprov: **ShareTrustBundle**(//root public cert//)
+group Trust Relationship (Refresh - periodic)
+orch -[#blue]> orch: Generate intermediate cert
+orch -[#blue]> idprov: **ShareTrustBundle**(//intermediate public cert//)
+end
+end
+group Trust Relationship (Boot)
+idprov -[#blue]> idprov: Generate root cert
+note left of idprov
+  //private key held in//
+  //local memory//
+end note
+idprov -[#blue]> parsec: **ShareTrustBundle**(//root public cert//)
+group Trust Relationship (Refresh - periodic)
+idprov -[#blue]> idprov: Generate intermediate cert
+idprov -[#blue]> parsec: **ShareTrustBundle**(//intermediate public cert//)
+end
+end
+
+== Client Lifecycle ==
+
+orch -> app: spawn client (eg. **docker run ,,,**)
+app -> orch: platform client details (eg. PID)
+orch -> orch: Sign client definition with intermediate private key
+orch -> idprov: **AddClient**(//signed client definition//)
+idprov -> idprov: Verify client with intermediate public key
+idprov -> idprov: Build/cache client JWT
+idprov -> idprov: generic attestations
+orch -> orch: platform-specific attestations
+orch -> orch: Sign proofs with private key
+orch -> idprov: **ProveClient**(//signed proofs//)
+idprov -> idprov: Verify proofs with intermediate public key
+idprov -> idprov: Sign client JWT with intermediate private key
+
+== Client Operations ==
+
+loop For each crypto operation
+app -> lib: Perform cryptographic operation\nwith simplified client API
+alt ID uncached or expired
+lib -> idprov: Get application ID
+idprov -> lib: Application ID (signed JWT)
+end
+lib -> parsec: Perform cryptographic operation using wire protocol API (JWT auth header)
+parsec -> parsec: Verify JWT with intermediate public key
+parsec -> keystore: Implementation-defined operation
+keystore -> parsec: Implementation-defined results
+parsec -> lib: API-defined results
+lib -> app: Simplified results
+end
+
+
+@enduml
