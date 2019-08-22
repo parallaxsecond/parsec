@@ -46,10 +46,16 @@ This project uses the following third party crates:
 * bytes (MIT)
 * num (MIT and Apache-2.0)
 * crossbeam (MIT and Apache-2.0)
+* bindgen (BSD-3-Clause)
+* cargo\_toml (Apache-2.0)
+* toml (MIT and Apache-2.0)
+
+This project uses the following third party libraries:
+* [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
 
 # User Guide
 
-This project is coded in the Rsut Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
+This project is coded in the Rust Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
 To build and run the service, execute `cargo run` inside `service/`. The service will then wait for clients.
 
 ## Testing

@@ -12,19 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub mod core_provider;
-
-#[cfg(feature = "mbed")]
-pub mod mbed_provider;
-
-use interface::operations::{OpPing, ResultPing};
-use interface::requests::response::ResponseStatus;
-
-/// Definition of the interface that a provider must implement to
-/// be linked into the service through a backend handler.
-pub trait Provide {
-    /// Execute a Ping operation
-    fn ping(&self, _op: OpPing) -> Result<ResultPing, ResponseStatus> {
-        Err(ResponseStatus::UnsupportedOperation)
-    }
-}
+#[allow(
+    non_snake_case,
+    non_camel_case_types,
+    non_upper_case_globals,
+    dead_code
+)]
+#[allow(clippy::all)]
+mod psa_crypto_binding;
