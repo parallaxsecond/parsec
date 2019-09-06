@@ -180,17 +180,13 @@ impl RequestBody {
 /// Wrapper around the body of a request.
 ///
 /// Hides the contents and keeps them immutable.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct RequestAuth {
     bytes: Vec<u8>,
 }
 
 impl RequestAuth {
-    fn new() -> RequestAuth {
-        RequestAuth { bytes: Vec::new() }
-    }
-
     fn read_from_stream(mut stream: &mut impl Read, len: usize) -> Result<RequestAuth> {
         let bytes = get_from_stream!(stream; len);
         Ok(RequestAuth { bytes })
@@ -201,7 +197,6 @@ impl RequestAuth {
     }
 
     /// Create a `RequestAuth` from a vector of bytes.
-    #[allow(dead_code)] // for now
     pub fn from_bytes(bytes: Vec<u8>) -> RequestAuth {
         RequestAuth { bytes }
     }
@@ -248,7 +243,7 @@ impl Request {
         Request {
             header: RequestHeader::new(),
             body: RequestBody::new(),
-            auth: RequestAuth::new(),
+            auth: Default::default(),
         }
     }
 

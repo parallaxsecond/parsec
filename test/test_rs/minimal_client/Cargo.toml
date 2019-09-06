@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 interface = { path = "../../../interface/interface-rs"  }
+num = "0.2.0"
 
 [features]
 default = ["testing"]

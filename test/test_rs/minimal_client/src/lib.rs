@@ -12,90 +12,152 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Minimal PARSEC Client library
+//!
+//! This library exposes minimal functions to communicate with the PARSEC service through a Unix
+//! socket.
+
 use interface::operations::{Convert, ConvertOperation, ConvertResult};
 use interface::operations_protobuf::ProtobufConverter;
-use interface::requests::{request::Request, response::Response, Opcode};
-use std::io::Result;
+use interface::requests::{
+    request::Request, request::RequestAuth, response::Response, response::ResponseStatus, AuthType,
+    BodyType, Opcode, ProviderID,
+};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
+/// Minimal client structure containing necessary information to form requests and convert them to
+/// the wire format.
 pub struct MinimalClient {
-    stream: UnixStream,
+    timeout: Duration,
     converter: Box<dyn Convert>,
+    version_maj: u8,
+    version_min: u8,
+    provider: ProviderID,
+    content_type: BodyType,
+    accept_type: BodyType,
+    auth_type: AuthType,
+    auth: RequestAuth,
 }
 
 static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 
 #[allow(clippy::new_without_default)]
 impl MinimalClient {
-    pub fn new() -> MinimalClient {
-        let stream = UnixStream::connect(SOCKET_PATH).expect("Failed to connect to Unix socket");
-        stream
-            .set_read_timeout(Some(Duration::new(5, 0)))
-            .expect("Failed to set read timeout for stream");
-        stream
-            .set_write_timeout(Some(Duration::new(5, 0)))
-            .expect("Failed to set write timeout for stream");
+    /// Creates a MinimalClient instance. The minimal client uses a timeout of 5 seconds on reads
+    /// and writes on the socket. It uses the version 1.0 to form request, the simple
+    /// authentication method and protobuf format as content type.
+    pub fn new(provider: ProviderID) -> MinimalClient {
+        let timeout = Duration::new(5, 0);
 
         MinimalClient {
-            stream,
+            timeout,
             converter: Box::from(ProtobufConverter {}),
+            version_maj: 1,
+            version_min: 0,
+            provider,
+            content_type: BodyType::Protobuf,
+            accept_type: BodyType::Protobuf,
+            auth_type: AuthType::Simple,
+            auth: Default::default(),
         }
     }
 
-    pub fn shutdown(&self) {
-        self.stream
-            .shutdown(::std::net::Shutdown::Both)
-            .expect("Failed to shut down Unix stream");
+    /// Modify the provider to use for future requests.
+    pub fn provider(&mut self, provider: ProviderID) {
+        self.provider = provider;
     }
 
-    fn send_operation(&mut self, op: ConvertOperation) {
-        let req = self.req_from_op(op);
-        req.write_to_stream(&mut self.stream)
-            .expect("Failed to write to socket");
+    /// Modify the `RequestAuth` payload to use for future requests.
+    pub fn auth(&mut self, auth: RequestAuth) {
+        self.auth = auth;
     }
 
-    fn result(&mut self) -> ConvertResult {
-        let resp = self.read_response().expect("Failed to read response");
-        assert!(resp.header.status == 0);
-        self.converter
-            .body_to_result(resp.body(), Opcode::Ping)
-            .expect("Failed to convert response")
+    /// Send a request and get a response.
+    ///
+    /// # Panics
+    ///
+    /// If the connection to the Unix socket fails, if there is a timeout on reading or writing or
+    /// if there is an error reading or writing.
+    pub fn send_request(&mut self, request: Request) -> Response {
+        let mut stream =
+            UnixStream::connect(SOCKET_PATH).expect("Failed to connect to Unix socket");
+        stream
+            .set_read_timeout(Some(self.timeout))
+            .expect("Failed to set read timeout for stream");
+        stream
+            .set_write_timeout(Some(self.timeout))
+            .expect("Failed to set write timeout for stream");
+
+        request
+            .write_to_stream(&mut stream)
+            .expect("Failed to write request to socket.");
+        Response::read_from_stream(&mut stream).expect("Failed to read response from socket.")
     }
 
-    pub fn send_request(&mut self, req: Request) {
-        req.write_to_stream(&mut self.stream)
-            .expect("Failed to write to stream");
+    fn operation_to_request(&self, operation: ConvertOperation) -> Result<Request, ResponseStatus> {
+        let mut request = Request::new();
+        let opcode = match operation {
+            ConvertOperation::Ping(_) => Opcode::Ping,
+            ConvertOperation::CreateKey(_) => Opcode::CreateKey,
+            ConvertOperation::DestroyKey(_) => Opcode::DestroyKey,
+            ConvertOperation::AsymSign(_) => Opcode::AsymSign,
+            ConvertOperation::AsymVerify(_) => Opcode::AsymVerify,
+            ConvertOperation::ImportKey(_) => Opcode::ImportKey,
+            ConvertOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
+        };
+        let request_body = self.converter.body_from_operation(operation)?;
+        request.set_body(request_body);
+        request.set_auth(self.auth.clone());
+        request.header.version_maj = self.version_maj;
+        request.header.version_min = self.version_min;
+        request.header.provider = self.provider as u8;
+        request.header.content_type = self.content_type as u8;
+        request.header.accept_type = self.accept_type as u8;
+        request.header.auth_type = self.auth_type as u8;
+        request.header.opcode = opcode as u16;
+
+        Ok(request)
     }
 
-    fn read_response(&mut self) -> Result<Response> {
-        Response::read_from_stream(&mut self.stream)
+    fn response_to_result(&self, response: Response) -> Result<ConvertResult, ResponseStatus> {
+        let status = response.header.status();
+        if status != ResponseStatus::Success {
+            return Err(status);
+        }
+        let opcode = match ::num::FromPrimitive::from_u16(response.header.opcode) {
+            Some(opcode) => opcode,
+            None => return Err(ResponseStatus::OpcodeDoesNotExist),
+        };
+        self.converter.body_to_result(response.body(), opcode)
     }
 
-    pub fn process_operation(&mut self, op: ConvertOperation) -> ConvertResult {
-        self.send_operation(op);
-        self.result()
-    }
-
-    pub fn process_request(&mut self, req: Request) -> Response {
-        self.send_request(req);
-        self.read_response().expect("Failed to read response")
-    }
-
-    pub fn req_from_op(&self, op: ConvertOperation) -> Request {
-        let mut req = Request::new();
-        req.set_body(
-            self.converter
-                .body_from_operation(op)
-                .expect("Failed to convert request"),
+    /// Send an operation and get a result.
+    ///
+    /// # Errors
+    ///
+    /// If the conversions between operation to request or between response to result fail, returns
+    /// a serializing or deserializing error. Returns an error if the operation itself failed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the opcode of the response is different from the opcode of the request.
+    pub fn send_operation(
+        &mut self,
+        operation: ConvertOperation,
+    ) -> Result<ConvertResult, ResponseStatus> {
+        // ConvertOperation -> OpXXX
+        // OpXXX -> Request
+        let request = self.operation_to_request(operation)?;
+        let opcode_request = request.header.opcode;
+        // Request -> Response
+        let response = self.send_request(request);
+        assert_eq!(
+            opcode_request, response.header.opcode,
+            "Request and Response opcodes should be the same!"
         );
-        req.header.version_maj = 1;
-        req
-    }
-
-    pub fn process_req_no_resp(&mut self, req: Request) {
-        self.send_request(req);
-        self.read_response()
-            .expect_err("Got response when not expecting one");
+        // Response -> Result<ResultXXX, ResponseStatus>
+        // Result<ResultXXX, ResponseStatus> -> Result<ConvertResult, ResponseStatus>
+        self.response_to_result(response)
     }
 }

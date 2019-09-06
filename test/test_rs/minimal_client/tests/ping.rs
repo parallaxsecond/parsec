@@ -15,14 +15,19 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::{ConvertOperation, ConvertResult, OpPing};
-    use interface::requests::request::RequestBody;
+    use interface::requests::request::{Request, RequestBody};
+    use interface::requests::response::ResponseStatus;
+    use interface::requests::Opcode;
+    use interface::requests::ProviderID;
     use minimal_client::MinimalClient;
 
     #[test]
     fn test_ping() {
-        let mut client = MinimalClient::new();
+        let mut client = MinimalClient::new(ProviderID::CoreProvider);
         let ping = OpPing {};
-        let result = client.process_operation(ConvertOperation::Ping(ping));
+        let result = client
+            .send_operation(ConvertOperation::Ping(ping))
+            .expect("ping failed");
         if let ConvertResult::Ping(ping_result) = result {
             assert!(ping_result.supp_version_maj == 1);
             assert!(ping_result.supp_version_min == 0);
@@ -34,12 +39,18 @@ mod tests {
     #[cfg(feature = "testing")]
     #[test]
     fn mangled_ping() {
-        let mut client = MinimalClient::new();
-        let mut req = client.req_from_op(ConvertOperation::Ping(OpPing {}));
+        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut req = Request::new();
+        req.header.version_maj = 1;
+        req.header.provider = ProviderID::CoreProvider as u8;
+        req.header.opcode = Opcode::Ping as u16;
 
         req.set_body(RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]));
 
-        let resp = client.process_request(req);
-        assert!(resp.header.status != 0);
+        let resp = client.send_request(req);
+        assert_eq!(
+            resp.header.status(),
+            ResponseStatus::DeserializingBodyFailed
+        );
     }
 }
