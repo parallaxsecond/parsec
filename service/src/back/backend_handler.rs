@@ -151,6 +151,13 @@ impl BackEndHandler {
                 );
                 self.result_to_response(ConvertResult::AsymSign(result), request, opcode)
             }
+            ConvertOperation::AsymVerify(op_asym_verify) => {
+                let result = unwrap_or_else_return!(
+                    self.provider.asym_verify(app_name, op_asym_verify),
+                    request
+                );
+                self.result_to_response(ConvertResult::AsymVerify(result), request, opcode)
+            }
         }
     }
 }

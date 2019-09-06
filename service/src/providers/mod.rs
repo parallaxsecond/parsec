@@ -19,8 +19,9 @@ pub mod mbed_provider;
 
 use crate::authenticators::ApplicationName;
 use interface::operations::{
-    OpAsymSign, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey, OpPing, ResultAsymSign,
-    ResultCreateKey, ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultPing,
+    OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey, OpPing,
+    ResultAsymSign, ResultAsymVerify, ResultCreateKey, ResultDestroyKey, ResultExportPublicKey,
+    ResultImportKey, ResultPing,
 };
 use interface::requests::response::ResponseStatus;
 
@@ -87,6 +88,15 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpAsymSign,
     ) -> Result<ResultAsymSign, ResponseStatus> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
+
+    /// Execute a AsymVerify operation.
+    fn asym_verify(
+        &self,
+        _app_name: ApplicationName,
+        _op: OpAsymVerify,
+    ) -> Result<ResultAsymVerify, ResponseStatus> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }

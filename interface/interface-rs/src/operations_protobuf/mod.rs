@@ -19,6 +19,7 @@ mod convert_import_key;
 mod convert_export_public_key;
 mod convert_destroy_key;
 mod convert_asym_sign;
+mod convert_asym_verify;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -30,6 +31,7 @@ use crate::requests::{
     Opcode,
 };
 use generated_ops::asym_sign::{OpAsymmetricSignProto, ResultAsymmetricSignProto};
+use generated_ops::asym_verify::{OpAsymmetricVerifyProto, ResultAsymmetricVerifyProto};
 use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
@@ -94,6 +96,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpAsymmetricSignProto
             ))),
+            Opcode::AsymVerify => Ok(ConvertOperation::AsymVerify(wire_to_native!(
+                body.bytes(),
+                OpAsymmetricVerifyProto
+            ))),
         }
     }
 
@@ -124,6 +130,9 @@ impl Convert for ProtobufConverter {
                 operation,
                 OpAsymmetricSignProto
             ))),
+            ConvertOperation::AsymVerify(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpAsymmetricVerifyProto),
+            )),
         }
     }
 
@@ -157,6 +166,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultAsymmetricSignProto
             ))),
+            Opcode::AsymVerify => Ok(ConvertResult::AsymVerify(wire_to_native!(
+                body.bytes(),
+                ResultAsymmetricVerifyProto
+            ))),
         }
     }
 
@@ -184,6 +197,10 @@ impl Convert for ProtobufConverter {
             ConvertResult::AsymSign(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultAsymmetricSignProto
+            ))),
+            ConvertResult::AsymVerify(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultAsymmetricVerifyProto
             ))),
         }
     }

@@ -21,6 +21,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
 use interface::operations::{OpAsymSign, ResultAsymSign};
+use interface::operations::{OpAsymVerify, ResultAsymVerify};
 use interface::operations::{OpCreateKey, ResultCreateKey};
 use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
@@ -433,6 +434,61 @@ impl Provide for MbedProvider {
                 Ok(res)
             } else {
                 Err(conversion_utils::convert_status(sign_status))
+            }
+        } else {
+            Err(conversion_utils::convert_status(open_key_status))
+        }
+    }
+
+    fn asym_verify(
+        &self,
+        app_name: ApplicationName,
+        op: OpAsymVerify,
+    ) -> Result<ResultAsymVerify, ResponseStatus> {
+        println!("Mbed Provider - Asym Verify");
+        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+
+        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let open_key_status =
+            unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
+
+        if open_key_status == 0 {
+            let mut policy = psa_crypto_binding::psa_key_policy_t {
+                alg: 0,
+                alg2: 0,
+                usage: 0,
+            };
+
+            let algorithm: psa_crypto_binding::psa_algorithm_t;
+
+            let verify_status = unsafe {
+                // Determine the algorithm by getting the key policy, and then getting
+                // the algorithm from the policy. No handling of failing status here. The key is open,
+                // and the policy is just data, so this shouldn't really fail.
+                psa_crypto_binding::psa_get_key_policy(key_handle, &mut policy);
+                algorithm = psa_crypto_binding::psa_key_policy_get_algorithm(&policy);
+
+                psa_crypto_binding::psa_asymmetric_verify(
+                    key_handle,
+                    algorithm,
+                    op.hash.as_ptr(),
+                    op.hash.len(),
+                    op.signature.as_ptr(),
+                    op.signature.len(),
+                )
+            };
+
+            unsafe {
+                psa_crypto_binding::psa_close_key(key_handle);
+            }
+
+            if verify_status == 0 {
+                Ok(ResultAsymVerify {})
+            } else {
+                Err(conversion_utils::convert_status(verify_status))
             }
         } else {
             Err(conversion_utils::convert_status(open_key_status))

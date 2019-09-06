@@ -52,6 +52,7 @@ pub enum Opcode {
     CreateKey = 1,
     DestroyKey = 2,
     AsymSign = 3,
+    AsymVerify = 4,
     ImportKey = 5,
     ExportPublicKey = 6,
 }

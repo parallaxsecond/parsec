@@ -19,6 +19,7 @@ mod import_key;
 mod export_public_key;
 mod destroy_key;
 mod asym_sign;
+mod asym_verify;
 
 use crate::requests::{
     request::RequestBody,
@@ -26,6 +27,7 @@ use crate::requests::{
     Opcode,
 };
 pub use asym_sign::{OpAsymSign, ResultAsymSign};
+pub use asym_verify::{OpAsymVerify, ResultAsymVerify};
 pub use create_key::{OpCreateKey, ResultCreateKey};
 pub use destroy_key::{OpDestroyKey, ResultDestroyKey};
 pub use export_public_key::{OpExportPublicKey, ResultExportPublicKey};
@@ -41,6 +43,7 @@ pub enum ConvertOperation {
     ExportPublicKey(export_public_key::OpExportPublicKey),
     DestroyKey(destroy_key::OpDestroyKey),
     AsymSign(asym_sign::OpAsymSign),
+    AsymVerify(asym_verify::OpAsymVerify),
 }
 
 /// Container type for result conversion values, holding a native result object to be
@@ -53,6 +56,7 @@ pub enum ConvertResult {
     ExportPublicKey(export_public_key::ResultExportPublicKey),
     DestroyKey(destroy_key::ResultDestroyKey),
     AsymSign(asym_sign::ResultAsymSign),
+    AsymVerify(asym_verify::ResultAsymVerify),
 }
 
 /// Definition of the operations converters must implement to allow usage of a specific
