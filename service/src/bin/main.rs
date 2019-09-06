@@ -21,9 +21,11 @@ use service::back::{backend_handler::BackEndHandler, dispatcher::Dispatcher};
 use service::front::{
     domain_socket::DomainSocketListener, front_end::FrontEndHandler, listener::Listen,
 };
-use service::providers::core_provider::CoreProvider;
-use std::collections::HashMap;
+use service::key_id_managers::simple_manager::SimpleKeyIDManager;
+use service::providers::{core_provider::CoreProvider, mbed_provider::MbedProvider, Provide};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::RwLock;
 
 const VERSION_MINOR: u8 = 0;
 const VERSION_MAJOR: u8 = 1;
@@ -45,9 +47,32 @@ fn construct_app() -> Box<dyn Listen> {
         version_maj: VERSION_MAJOR,
     };
 
+    let mbed_provider = MbedProvider {
+        key_id_store: Arc::new(RwLock::new(Box::new(SimpleKeyIDManager {
+            key_store: HashMap::new(),
+        }))),
+        local_ids: RwLock::new(HashSet::new()),
+    };
+    if mbed_provider.init() {
+        println!("Init successful");
+    } else {
+        panic!("mbed not started");
+    }
+
+    let mbed_backend_handler = BackEndHandler {
+        provider: Box::from(mbed_provider),
+        converter: Box::from(ProtobufConverter {}),
+        provider_id: ProviderID::MbedProvider,
+        content_type: BodyType::Protobuf,
+        accept_type: BodyType::Protobuf,
+        version_min: VERSION_MINOR,
+        version_maj: VERSION_MAJOR,
+    };
+
     // Add the BackEndHandler structures to the Dispatcher
     let mut backends: HashMap<ProviderID, BackEndHandler> = HashMap::new();
     backends.insert(core_provider_id, core_provider_backend);
+    backends.insert(ProviderID::MbedProvider, mbed_backend_handler);
 
     let dispatcher = Dispatcher { backends };
     let simple_authenticator = Box::from(SimpleAuthenticator {});

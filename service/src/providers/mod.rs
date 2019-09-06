@@ -17,14 +17,36 @@ pub mod core_provider;
 #[cfg(feature = "mbed")]
 pub mod mbed_provider;
 
-use interface::operations::{OpPing, ResultPing};
+use crate::authenticators::ApplicationName;
+use interface::operations::{OpCreateKey, OpPing, ResultCreateKey, ResultPing};
 use interface::requests::response::ResponseStatus;
 
 /// Definition of the interface that a provider must implement to
 /// be linked into the service through a backend handler.
 pub trait Provide {
-    /// Execute a Ping operation
+    /// Initialises the provider. Returns `true` or `false` if the initialisation was successfull
+    /// or not. The service `main` function can decide to panic if the initialisation of one
+    /// provider has failed.
+    fn init(&self) -> bool {
+        unimplemented!();
+    }
+
+    /// Execute a Ping operation to get the version minor and version major information.
+    ///
+    /// # Errors
+    ///
+    /// This operation will only fail if not implemented. It will never fail when being called on
+    /// the `CoreProvider`.
     fn ping(&self, _op: OpPing) -> Result<ResultPing, ResponseStatus> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
+
+    /// Execute a CreateKey operation.
+    fn create_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: OpCreateKey,
+    ) -> Result<ResultCreateKey, ResponseStatus> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }

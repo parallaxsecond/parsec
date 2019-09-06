@@ -9,6 +9,7 @@ edition = "2018"
 interface = { path = "../interface/interface-rs"  }
 num = "0.2.0"
 crossbeam = "0.7.2"
+rand = "0.7.0"
 
 [build-dependencies]
 bindgen = "0.50.0"

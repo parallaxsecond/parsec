@@ -102,7 +102,7 @@ impl BackEndHandler {
     ///
     /// If any of the steps fails, a response containing an appropriate status code is
     /// returned.
-    pub fn execute_request(&self, request: Request, _app_name: ApplicationName) -> Response {
+    pub fn execute_request(&self, request: Request, app_name: ApplicationName) -> Response {
         let opcode = match ::num::FromPrimitive::from_u16(request.header.opcode) {
             Some(opcode) => opcode,
             None => return request.into_response(ResponseStatus::OpcodeDoesNotExist),
@@ -114,6 +114,13 @@ impl BackEndHandler {
             ConvertOperation::Ping(op_ping) => {
                 let result = unwrap_or_else_return!(self.provider.ping(op_ping), request);
                 self.result_to_response(ConvertResult::Ping(result), request, opcode)
+            }
+            ConvertOperation::CreateKey(op_create_key) => {
+                let result = unwrap_or_else_return!(
+                    self.provider.create_key(app_name, op_create_key),
+                    request
+                );
+                self.result_to_response(ConvertResult::CreateKey(result), request, opcode)
             }
         }
     }

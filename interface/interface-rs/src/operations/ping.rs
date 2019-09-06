@@ -22,6 +22,7 @@ pub struct OpPing;
 /// The field names stand for 'supported version major' and
 /// 'supported version minor' - the latest version supported by the
 /// provider forming the result.
+#[derive(Debug)]
 pub struct ResultPing {
     pub supp_version_maj: u8,
     pub supp_version_min: u8,

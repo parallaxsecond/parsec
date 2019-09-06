@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 mod convert_ping;
+mod convert_create_key;
 mod convert_key_attributes;
 
 #[rustfmt::skip]
@@ -24,8 +25,10 @@ use crate::requests::{
     response::{ResponseBody, ResponseStatus},
     Opcode,
 };
+use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
 use prost::Message;
+use std::convert::TryInto;
 
 macro_rules! wire_to_native {
     ($body:expr, $proto_type:ty) => {{
@@ -33,13 +36,13 @@ macro_rules! wire_to_native {
         if proto.merge($body).is_err() {
             return Err(ResponseStatus::DeserializingBodyFailed);
         }
-        proto.into()
+        proto.try_into()?
     }};
 }
 
 macro_rules! native_to_wire {
     ($native_msg:expr, $proto_type:ty) => {{
-        let proto: $proto_type = $native_msg.into();
+        let proto: $proto_type = $native_msg.try_into()?;
         let mut bytes = Vec::new();
         if proto.encode(&mut bytes).is_err() {
             return Err(ResponseStatus::SerializingBodyFailed);
@@ -63,6 +66,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpPingProto
             ))),
+            Opcode::CreateKey => Ok(ConvertOperation::CreateKey(wire_to_native!(
+                body.bytes(),
+                OpCreateKeyProto
+            ))),
         }
     }
 
@@ -74,6 +81,10 @@ impl Convert for ProtobufConverter {
             ConvertOperation::Ping(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpPingProto
+            ))),
+            ConvertOperation::CreateKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+                operation,
+                OpCreateKeyProto
             ))),
         }
     }
@@ -88,6 +99,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultPingProto
             ))),
+            Opcode::CreateKey => Ok(ConvertResult::CreateKey(wire_to_native!(
+                body.bytes(),
+                ResultCreateKeyProto
+            ))),
         }
     }
 
@@ -97,100 +112,10 @@ impl Convert for ProtobufConverter {
                 result,
                 ResultPingProto
             ))),
+            ConvertResult::CreateKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultCreateKeyProto
+            ))),
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::{Convert, ProtobufConverter};
-    use crate::operations::{ConvertOperation, ConvertResult, OpPing, ResultPing};
-    use crate::requests::{request::RequestBody, response::ResponseBody, Opcode};
-
-    static CONVERTER: ProtobufConverter = ProtobufConverter {};
-
-    #[test]
-    fn ping_req_to_native() {
-        let req_body = RequestBody::from_bytes(Vec::new());
-        assert!(CONVERTER.body_to_operation(&req_body, Opcode::Ping).is_ok());
-    }
-
-    #[test]
-    fn op_ping_from_native() {
-        let ping = OpPing {};
-        let body = CONVERTER
-            .body_from_operation(ConvertOperation::Ping(ping))
-            .expect("Failed to convert request");
-        assert!(body.len() == 0);
-    }
-
-    #[test]
-    fn op_ping_e2e() {
-        let ping = OpPing {};
-        let body = CONVERTER
-            .body_from_operation(ConvertOperation::Ping(ping))
-            .expect("Failed to convert request");
-
-        assert!(CONVERTER.body_to_operation(&body, Opcode::Ping).is_ok());
-    }
-
-    #[test]
-    fn req_from_native_mangled_body() {
-        let req_body =
-            RequestBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
-
-        assert!(CONVERTER
-            .body_to_operation(&req_body, Opcode::Ping)
-            .is_err());
-    }
-
-    #[test]
-    fn ping_body_to_native() {
-        let resp_body = ResponseBody::from_bytes(Vec::new());
-        assert!(CONVERTER.body_to_result(&resp_body, Opcode::Ping).is_ok());
-    }
-
-    #[test]
-    fn result_ping_from_native() {
-        let ping = ResultPing {
-            supp_version_maj: 1,
-            supp_version_min: 0,
-        };
-
-        let body = CONVERTER
-            .body_from_result(ConvertResult::Ping(ping))
-            .expect("Failed to convert response");
-        assert!(body.len() != 0);
-    }
-
-    #[test]
-    fn ping_result_e2e() {
-        let ping = ResultPing {
-            supp_version_maj: 1,
-            supp_version_min: 0,
-        };
-
-        let body = CONVERTER
-            .body_from_result(ConvertResult::Ping(ping))
-            .expect("Failed to convert response");
-        assert!(body.len() != 0);
-
-        let result = CONVERTER
-            .body_to_result(&body, Opcode::Ping)
-            .expect("Failed to convert back to result");
-
-        match result {
-            ConvertResult::Ping(result) => {
-                assert_eq!(result.supp_version_maj, 1);
-                assert_eq!(result.supp_version_min, 0);
-            }
-        }
-    }
-
-    #[test]
-    fn resp_from_native_mangled_body() {
-        let resp_body =
-            ResponseBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
-        assert!(CONVERTER.body_to_result(&resp_body, Opcode::Ping).is_err());
     }
 }

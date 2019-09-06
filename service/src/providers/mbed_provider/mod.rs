@@ -12,6 +12,17 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use super::Provide;
+use crate::authenticators::ApplicationName;
+use crate::key_id_managers::ManageKeyIDs;
+use interface::requests::ProviderID;
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::sync::{Arc, RwLock};
+
+use interface::operations::{OpCreateKey, ResultCreateKey};
+use interface::requests::response::ResponseStatus;
+
 #[allow(
     non_snake_case,
     non_camel_case_types,
@@ -20,3 +31,168 @@
 )]
 #[allow(clippy::all)]
 mod psa_crypto_binding;
+
+#[allow(dead_code)]
+mod constants;
+mod conversion_utils;
+
+type KeyIdManager = Box<dyn ManageKeyIDs + Send + Sync>;
+type LocalIdStore = HashSet<psa_crypto_binding::psa_key_id_t>;
+
+pub struct MbedProvider {
+    pub key_id_store: Arc<RwLock<KeyIdManager>>,
+    pub local_ids: RwLock<LocalIdStore>,
+}
+
+impl MbedProvider {
+    #[allow(dead_code)]
+    fn get_key_id(
+        &self,
+        app_name: &ApplicationName,
+        key_name: &str,
+        store_handle: &KeyIdManager,
+    ) -> Result<psa_crypto_binding::psa_key_id_t, ResponseStatus> {
+        Ok(u32::from_ne_bytes(
+            store_handle
+                .get(app_name, ProviderID::MbedProvider, key_name)?
+                .try_into()
+                .expect("Stored key ID was not valid"),
+        ))
+    }
+
+    fn create_key_id(
+        &self,
+        app_name: &ApplicationName,
+        key_name: &str,
+        store_handle: &mut KeyIdManager,
+        local_ids_handle: &mut LocalIdStore,
+    ) -> psa_crypto_binding::psa_key_id_t {
+        let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
+        while !local_ids_handle.insert(key_id) {
+            key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
+        }
+        store_handle.insert(
+            app_name,
+            ProviderID::MbedProvider,
+            key_name,
+            key_id.to_ne_bytes().to_vec(),
+        );
+
+        key_id
+    }
+
+    fn remove_key_id(
+        &self,
+        app_name: &ApplicationName,
+        key_name: &str,
+        key_id: psa_crypto_binding::psa_key_id_t,
+        store_handle: &mut KeyIdManager,
+        local_ids_handle: &mut LocalIdStore,
+    ) {
+        local_ids_handle.remove(&key_id);
+        store_handle.remove(app_name, ProviderID::MbedProvider, key_name);
+    }
+
+    fn key_id_exists(
+        &self,
+        app_name: &ApplicationName,
+        key_name: &str,
+        store_handle: &KeyIdManager,
+    ) -> bool {
+        store_handle.exists(app_name, ProviderID::MbedProvider, key_name)
+    }
+}
+
+impl Provide for MbedProvider {
+    fn init(&self) -> bool {
+        let init_status = unsafe { psa_crypto_binding::psa_crypto_init() };
+
+        init_status == 0
+    }
+
+    fn create_key(
+        &self,
+        app_name: ApplicationName,
+        op: OpCreateKey,
+    ) -> Result<ResultCreateKey, ResponseStatus> {
+        println!("Mbed Provider - Create Key");
+        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
+        if self.key_id_exists(&app_name, &op.key_name, &store_handle) {
+            return Err(ResponseStatus::KeyAlreadyExists);
+        }
+        let key_id = self.create_key_id(
+            &app_name,
+            &op.key_name,
+            &mut store_handle,
+            &mut local_ids_handle,
+        );
+
+        let key_attrs = conversion_utils::convert_key_attributes(&op.key_attributes);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let create_key_status = unsafe {
+            psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
+        };
+
+        let ret_val: Result<ResultCreateKey, ResponseStatus>;
+
+        if create_key_status == 0 {
+            let mut policy = psa_crypto_binding::psa_key_policy_t {
+                alg: 0,
+                alg2: 0,
+                usage: 0,
+            };
+
+            let set_policy_status = unsafe {
+                psa_crypto_binding::psa_key_policy_set_usage(
+                    &mut policy,
+                    key_attrs.key_usage,
+                    key_attrs.algorithm,
+                );
+                psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
+            };
+
+            if set_policy_status == 0 {
+                let generate_key_status = unsafe {
+                    psa_crypto_binding::psa_generate_key(
+                        key_handle,
+                        key_attrs.key_type,
+                        key_attrs.key_size,
+                        std::ptr::null(),
+                        0,
+                    )
+                };
+
+                if generate_key_status == 0 {
+                    ret_val = Ok(ResultCreateKey {});
+                } else {
+                    ret_val = Err(conversion_utils::convert_status(generate_key_status));
+                    println!("Generate key status: {}", generate_key_status);
+                }
+            } else {
+                ret_val = Err(conversion_utils::convert_status(set_policy_status));
+                println!("Set policy status: {}", set_policy_status);
+            }
+
+            unsafe {
+                psa_crypto_binding::psa_close_key(key_handle);
+            }
+        } else {
+            ret_val = Err(conversion_utils::convert_status(create_key_status));
+            println!("Create key status: {}", create_key_status);
+        }
+
+        if ret_val.is_err() {
+            self.remove_key_id(
+                &app_name,
+                &op.key_name,
+                key_id,
+                &mut store_handle,
+                &mut local_ids_handle,
+            );
+        }
+
+        ret_val
+    }
+}

@@ -14,24 +14,28 @@
 // limitations under the License.
 mod ping;
 pub mod key_attributes;
+mod create_key;
 
 use crate::requests::{
     request::RequestBody,
     response::{ResponseBody, ResponseStatus},
     Opcode,
 };
+pub use create_key::{OpCreateKey, ResultCreateKey};
 pub use ping::{OpPing, ResultPing};
 
 /// Container type for operation conversion values, holding a native operation object
 /// to be passed in/out of a converter.
 pub enum ConvertOperation {
     Ping(ping::OpPing),
+    CreateKey(create_key::OpCreateKey),
 }
 
 /// Container type for result conversion values, holding a native result object to be
 /// passed in/out of the converter.
 pub enum ConvertResult {
     Ping(ping::ResultPing),
+    CreateKey(create_key::ResultCreateKey),
 }
 
 /// Definition of the operations converters must implement to allow usage of a specific

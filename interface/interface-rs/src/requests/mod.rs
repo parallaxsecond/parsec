@@ -26,6 +26,7 @@ const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum ProviderID {
     CoreProvider = 0,
+    MbedProvider = 1,
 }
 
 impl std::fmt::Display for ProviderID {
@@ -45,9 +46,10 @@ pub enum BodyType {
 /// Listing of available operations and their associated opcode.
 ///
 /// Passed in headers as `opcode`.
-#[derive(FromPrimitive, Copy, Clone)]
+#[derive(FromPrimitive, Copy, Clone, PartialEq, Debug)]
 pub enum Opcode {
     Ping = 0,
+    CreateKey = 1,
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]

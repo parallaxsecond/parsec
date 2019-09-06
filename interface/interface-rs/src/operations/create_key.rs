@@ -12,14 +12,21 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use super::key_attributes::KeyAttributes;
 
-pub trait Listen {
-    /// Initialise the internals of the listener.
-    fn init(&mut self);
-
-    /// Kickstart the listener and thus the service. Puts the listener in
-    /// an infinite loop.
-    ///
-    /// Requires the `init` method to have been called previously.
-    fn run(&self);
+/// Native object for creating a cryptographic key.
+///
+/// `key_name` specifies a name by which the service will identify the key. Key
+/// name must be unique per application. `key_attributes` specifies the parameters
+/// to be associated with the key.
+#[derive(Clone)]
+pub struct OpCreateKey {
+    pub key_name: String,
+    pub key_attributes: KeyAttributes,
 }
+
+/// Native object for the result of creating a cryptographic key.
+///
+/// The true result is returned in the `status` field of the response.
+#[derive(Debug)]
+pub struct ResultCreateKey;

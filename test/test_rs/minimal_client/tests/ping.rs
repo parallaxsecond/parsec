@@ -23,9 +23,12 @@ mod tests {
         let mut client = MinimalClient::new();
         let ping = OpPing {};
         let result = client.process_operation(ConvertOperation::Ping(ping));
-        let ConvertResult::Ping(ping_result) = result;
-        assert!(ping_result.supp_version_maj == 1);
-        assert!(ping_result.supp_version_min == 0);
+        if let ConvertResult::Ping(ping_result) = result {
+            assert!(ping_result.supp_version_maj == 1);
+            assert!(ping_result.supp_version_min == 0);
+        } else {
+            panic!("Got wrong type of result!");
+        }
     }
 
     #[cfg(feature = "testing")]

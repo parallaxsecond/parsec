@@ -49,6 +49,7 @@ This project uses the following third party crates:
 * bindgen (BSD-3-Clause)
 * cargo\_toml (Apache-2.0)
 * toml (MIT and Apache-2.0)
+* rand (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
