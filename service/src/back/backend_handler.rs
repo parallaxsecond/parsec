@@ -122,6 +122,13 @@ impl BackEndHandler {
                 );
                 self.result_to_response(ConvertResult::CreateKey(result), request, opcode)
             }
+            ConvertOperation::ImportKey(op_import_key) => {
+                let result = unwrap_or_else_return!(
+                    self.provider.import_key(app_name, op_import_key),
+                    request
+                );
+                self.result_to_response(ConvertResult::ImportKey(result), request, opcode)
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
 use interface::operations::{OpCreateKey, ResultCreateKey};
+use interface::operations::{OpImportKey, ResultImportKey};
 use interface::requests::response::ResponseStatus;
 
 #[allow(
@@ -169,6 +170,91 @@ impl Provide for MbedProvider {
                 } else {
                     ret_val = Err(conversion_utils::convert_status(generate_key_status));
                     println!("Generate key status: {}", generate_key_status);
+                }
+            } else {
+                ret_val = Err(conversion_utils::convert_status(set_policy_status));
+                println!("Set policy status: {}", set_policy_status);
+            }
+
+            unsafe {
+                psa_crypto_binding::psa_close_key(key_handle);
+            }
+        } else {
+            ret_val = Err(conversion_utils::convert_status(create_key_status));
+            println!("Create key status: {}", create_key_status);
+        }
+
+        if ret_val.is_err() {
+            self.remove_key_id(
+                &app_name,
+                &op.key_name,
+                key_id,
+                &mut store_handle,
+                &mut local_ids_handle,
+            );
+        }
+
+        ret_val
+    }
+
+    fn import_key(
+        &self,
+        app_name: ApplicationName,
+        op: OpImportKey,
+    ) -> Result<ResultImportKey, ResponseStatus> {
+        println!("Mbed Provider - Import Key");
+        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
+        if self.key_id_exists(&app_name, &op.key_name, &store_handle) {
+            return Err(ResponseStatus::KeyAlreadyExists);
+        }
+        let key_id = self.create_key_id(
+            &app_name,
+            &op.key_name,
+            &mut store_handle,
+            &mut local_ids_handle,
+        );
+
+        let key_attrs = conversion_utils::convert_key_attributes(&op.key_attributes);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let create_key_status = unsafe {
+            psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
+        };
+
+        let ret_val: Result<ResultImportKey, ResponseStatus>;
+
+        if create_key_status == 0 {
+            let mut policy = psa_crypto_binding::psa_key_policy_t {
+                alg: 0,
+                alg2: 0,
+                usage: 0,
+            };
+
+            let set_policy_status = unsafe {
+                psa_crypto_binding::psa_key_policy_set_usage(
+                    &mut policy,
+                    key_attrs.key_usage,
+                    key_attrs.algorithm,
+                );
+                psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
+            };
+
+            if set_policy_status == 0 {
+                let import_key_status = unsafe {
+                    psa_crypto_binding::psa_import_key(
+                        key_handle,
+                        key_attrs.key_type,
+                        op.key_data.as_ptr(),
+                        key_attrs.key_size,
+                    )
+                };
+
+                if import_key_status == 0 {
+                    ret_val = Ok(ResultImportKey {});
+                } else {
+                    ret_val = Err(conversion_utils::convert_status(import_key_status));
+                    println!("Import key status: {}", import_key_status);
                 }
             } else {
                 ret_val = Err(conversion_utils::convert_status(set_policy_status));

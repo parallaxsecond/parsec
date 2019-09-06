@@ -15,6 +15,7 @@
 mod ping;
 pub mod key_attributes;
 mod create_key;
+mod import_key;
 
 use crate::requests::{
     request::RequestBody,
@@ -22,6 +23,7 @@ use crate::requests::{
     Opcode,
 };
 pub use create_key::{OpCreateKey, ResultCreateKey};
+pub use import_key::{OpImportKey, ResultImportKey};
 pub use ping::{OpPing, ResultPing};
 
 /// Container type for operation conversion values, holding a native operation object
@@ -29,13 +31,16 @@ pub use ping::{OpPing, ResultPing};
 pub enum ConvertOperation {
     Ping(ping::OpPing),
     CreateKey(create_key::OpCreateKey),
+    ImportKey(import_key::OpImportKey),
 }
 
 /// Container type for result conversion values, holding a native result object to be
 /// passed in/out of the converter.
+#[derive(Debug)]
 pub enum ConvertResult {
     Ping(ping::ResultPing),
     CreateKey(create_key::ResultCreateKey),
+    ImportKey(import_key::ResultImportKey),
 }
 
 /// Definition of the operations converters must implement to allow usage of a specific

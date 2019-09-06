@@ -18,7 +18,9 @@ pub mod core_provider;
 pub mod mbed_provider;
 
 use crate::authenticators::ApplicationName;
-use interface::operations::{OpCreateKey, OpPing, ResultCreateKey, ResultPing};
+use interface::operations::{
+    OpCreateKey, OpImportKey, OpPing, ResultCreateKey, ResultImportKey, ResultPing,
+};
 use interface::requests::response::ResponseStatus;
 
 /// Definition of the interface that a provider must implement to
@@ -47,6 +49,15 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpCreateKey,
     ) -> Result<ResultCreateKey, ResponseStatus> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
+
+    /// Execute a ImportKey operation.
+    fn import_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: OpImportKey,
+    ) -> Result<ResultImportKey, ResponseStatus> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }

@@ -15,6 +15,7 @@
 mod convert_ping;
 mod convert_create_key;
 mod convert_key_attributes;
+mod convert_import_key;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -26,6 +27,7 @@ use crate::requests::{
     Opcode,
 };
 use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
+use generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
 use prost::Message;
 use std::convert::TryInto;
@@ -70,6 +72,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpCreateKeyProto
             ))),
+            Opcode::ImportKey => Ok(ConvertOperation::ImportKey(wire_to_native!(
+                body.bytes(),
+                OpImportKeyProto
+            ))),
         }
     }
 
@@ -85,6 +91,10 @@ impl Convert for ProtobufConverter {
             ConvertOperation::CreateKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpCreateKeyProto
+            ))),
+            ConvertOperation::ImportKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+                operation,
+                OpImportKeyProto
             ))),
         }
     }
@@ -103,6 +113,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultCreateKeyProto
             ))),
+            Opcode::ImportKey => Ok(ConvertResult::ImportKey(wire_to_native!(
+                body.bytes(),
+                ResultImportKeyProto
+            ))),
         }
     }
 
@@ -115,6 +129,10 @@ impl Convert for ProtobufConverter {
             ConvertResult::CreateKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultCreateKeyProto
+            ))),
+            ConvertResult::ImportKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultImportKeyProto
             ))),
         }
     }
