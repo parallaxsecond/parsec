@@ -43,3 +43,8 @@ pub enum BodyType {
 pub enum Opcode {
     Ping = 0,
 }
+
+#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]
+pub enum AuthType {
+    Simple = 0,
+}

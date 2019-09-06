@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use interface::operations_protobuf::ProtobufConverter;
+use interface::requests::AuthType;
 use interface::requests::{BodyType, ProviderID};
+use service::authenticators::simple_authenticator::SimpleAuthenticator;
+use service::authenticators::Authenticate;
 use service::back::{backend_handler::BackEndHandler, dispatcher::Dispatcher};
 use service::front::{
     domain_socket::DomainSocketListener, front_end::FrontEndHandler, listener::Listen,
@@ -47,7 +50,13 @@ fn construct_app() -> Box<dyn Listen> {
     backends.insert(core_provider_id, core_provider_backend);
 
     let dispatcher = Dispatcher { backends };
-    let front_end = FrontEndHandler { dispatcher };
+    let simple_authenticator = Box::from(SimpleAuthenticator {});
+    let mut authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>> = HashMap::new();
+    authenticators.insert(AuthType::Simple, simple_authenticator);
+    let front_end = FrontEndHandler {
+        dispatcher,
+        authenticators,
+    };
 
     Box::from(DomainSocketListener {
         front_end_handler: Arc::from(front_end),

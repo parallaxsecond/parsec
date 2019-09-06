@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use super::backend_handler::BackEndHandler;
+use crate::authenticators::ApplicationName;
 use interface::requests::request::Request;
 use interface::requests::response::{Response, ResponseStatus};
 use interface::requests::ProviderID;
@@ -34,13 +35,13 @@ impl Dispatcher {
     /// Returns either the response coming from the backend handler, or a response
     /// containing a status code consistent with the error encountered during
     /// processing.
-    pub fn dispatch_request(&self, request: Request) -> Response {
+    pub fn dispatch_request(&self, request: Request, app_name: ApplicationName) -> Response {
         if let Some(provider_id) = ::num::FromPrimitive::from_u8(request.header.provider) {
             if let Some(backend) = self.backends.get(&provider_id) {
                 if let Err(status) = backend.is_capable(&request) {
                     request.into_response(status)
                 } else {
-                    backend.execute_request(request)
+                    backend.execute_request(request, app_name)
                 }
             } else {
                 request.into_response(ResponseStatus::ProviderNotRegistered)

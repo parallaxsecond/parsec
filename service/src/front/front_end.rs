@@ -12,8 +12,12 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
 use interface::requests::request::Request;
+use interface::requests::response::ResponseStatus;
+use interface::requests::AuthType;
+use std::collections::HashMap;
 use std::io::{Read, Write};
 
 /// Service component that serializes requests and deserializes responses
@@ -22,6 +26,7 @@ use std::io::{Read, Write};
 /// Requests are passed forward to the `Dispatcher`.
 pub struct FrontEndHandler {
     pub dispatcher: Dispatcher,
+    pub authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
 }
 
 impl FrontEndHandler {
@@ -42,9 +47,24 @@ impl FrontEndHandler {
                 return;
             }
         };
-        // Send the request to the dispatcher
-        // Get a response back
-        let response = self.dispatcher.dispatch_request(request);
+        // Find an authenticator that is capable to authenticate the request
+        let response =
+            if let Some(auth_type) = ::num::FromPrimitive::from_u8(request.header.auth_type) {
+                if let Some(authenticator) = self.authenticators.get(&auth_type) {
+                    // Authenticate the request
+                    match authenticator.authenticate(request.auth()) {
+                        // Send the request to the dispatcher
+                        // Get a response back
+                        Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
+                        Err(status) => request.into_response(status),
+                    }
+                } else {
+                    request.into_response(ResponseStatus::AuthenticatorNotRegistered)
+                }
+            } else {
+                request.into_response(ResponseStatus::AuthenticatorDoesNotExist)
+            };
+
         // Serialise the responso into bytes
         // Write bytes to stream
         match response.write_to_stream(&mut stream) {

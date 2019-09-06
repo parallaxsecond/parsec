@@ -238,6 +238,9 @@ pub enum ResponseStatus {
     OpcodeDoesNotExist = 9,
     ResponseTooLarge = 10,
     UnsupportedOperation = 11,
+    AuthenticationError = 12,
+    AuthenticatorDoesNotExist = 13,
+    AuthenticatorNotRegistered = 14,
 }
 
 impl fmt::Display for ResponseStatus {
@@ -274,6 +277,9 @@ impl fmt::Display for ResponseStatus {
             ResponseStatus::UnsupportedOperation => {
                 write!(f, "requested operation is not supported by the provider")
             }
+            ResponseStatus::AuthenticationError => write!(f, "authentication failed"),
+            ResponseStatus::AuthenticatorDoesNotExist => write!(f, "authenticator not supported"),
+            ResponseStatus::AuthenticatorNotRegistered => write!(f, "authenticator not supported"),
         }
     }
 }

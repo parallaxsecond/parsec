@@ -202,7 +202,7 @@ impl RequestAuth {
 
     /// Create a `RequestAuth` from a vector of bytes.
     #[allow(dead_code)] // for now
-    pub(crate) fn from_bytes(bytes: Vec<u8>) -> RequestAuth {
+    pub fn from_bytes(bytes: Vec<u8>) -> RequestAuth {
         RequestAuth { bytes }
     }
 
@@ -304,7 +304,7 @@ impl Request {
     }
 
     /// Getter for request auth field.
-    pub fn auth(&mut self) -> &RequestAuth {
+    pub fn auth(&self) -> &RequestAuth {
         &self.auth
     }
 

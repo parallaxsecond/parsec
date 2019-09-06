@@ -12,6 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use interface::operations::Convert;
 use interface::operations::{ConvertOperation, ConvertResult};
@@ -101,7 +102,7 @@ impl BackEndHandler {
     ///
     /// If any of the steps fails, a response containing an appropriate status code is
     /// returned.
-    pub fn execute_request(&self, request: Request) -> Response {
+    pub fn execute_request(&self, request: Request, _app_name: ApplicationName) -> Response {
         let opcode = match ::num::FromPrimitive::from_u16(request.header.opcode) {
             Some(opcode) => opcode,
             None => return request.into_response(ResponseStatus::OpcodeDoesNotExist),
