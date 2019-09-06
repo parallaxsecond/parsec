@@ -18,6 +18,7 @@ mod convert_key_attributes;
 mod convert_import_key;
 mod convert_export_public_key;
 mod convert_destroy_key;
+mod convert_asym_sign;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -28,6 +29,7 @@ use crate::requests::{
     response::{ResponseBody, ResponseStatus},
     Opcode,
 };
+use generated_ops::asym_sign::{OpAsymmetricSignProto, ResultAsymmetricSignProto};
 use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
@@ -88,6 +90,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpDestroyKeyProto
             ))),
+            Opcode::AsymSign => Ok(ConvertOperation::AsymSign(wire_to_native!(
+                body.bytes(),
+                OpAsymmetricSignProto
+            ))),
         }
     }
 
@@ -114,6 +120,10 @@ impl Convert for ProtobufConverter {
             ConvertOperation::DestroyKey(operation) => Ok(RequestBody::from_bytes(
                 native_to_wire!(operation, OpDestroyKeyProto),
             )),
+            ConvertOperation::AsymSign(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+                operation,
+                OpAsymmetricSignProto
+            ))),
         }
     }
 
@@ -143,6 +153,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultDestroyKeyProto
             ))),
+            Opcode::AsymSign => Ok(ConvertResult::AsymSign(wire_to_native!(
+                body.bytes(),
+                ResultAsymmetricSignProto
+            ))),
         }
     }
 
@@ -166,6 +180,10 @@ impl Convert for ProtobufConverter {
             ConvertResult::DestroyKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultDestroyKeyProto
+            ))),
+            ConvertResult::AsymSign(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultAsymmetricSignProto
             ))),
         }
     }

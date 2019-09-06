@@ -144,6 +144,13 @@ impl BackEndHandler {
                 );
                 self.result_to_response(ConvertResult::DestroyKey(result), request, opcode)
             }
+            ConvertOperation::AsymSign(op_asym_sign) => {
+                let result = unwrap_or_else_return!(
+                    self.provider.asym_sign(app_name, op_asym_sign),
+                    request
+                );
+                self.result_to_response(ConvertResult::AsymSign(result), request, opcode)
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
+use interface::operations::{OpAsymSign, ResultAsymSign};
 use interface::operations::{OpCreateKey, ResultCreateKey};
 use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
@@ -366,6 +367,72 @@ impl Provide for MbedProvider {
                 Ok(ResultDestroyKey {})
             } else {
                 Err(conversion_utils::convert_status(destroy_key_status))
+            }
+        } else {
+            Err(conversion_utils::convert_status(open_key_status))
+        }
+    }
+
+    fn asym_sign(
+        &self,
+        app_name: ApplicationName,
+        op: OpAsymSign,
+    ) -> Result<ResultAsymSign, ResponseStatus> {
+        println!("Mbed Provider - Asym Sign");
+        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+
+        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let open_key_status =
+            unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
+
+        if open_key_status == 0 {
+            let mut policy = psa_crypto_binding::psa_key_policy_t {
+                alg: 0,
+                alg2: 0,
+                usage: 0,
+            };
+
+            let algorithm: psa_crypto_binding::psa_algorithm_t;
+
+            // Allocate a "big enough" buffer. (No handling of PSA_STATUS_BUFFER_TOO_SMALL here.)
+            let mut signature = [0u8; 1024];
+            let mut signature_size: usize = 0;
+
+            let sign_status = unsafe {
+                // Determine the algorithm by getting the key policy, and then getting
+                // the algorithm from the policy. No handling of failing status here. The key is open,
+                // and the policy is just data, so this shouldn't really fail.
+                psa_crypto_binding::psa_get_key_policy(key_handle, &mut policy);
+                algorithm = psa_crypto_binding::psa_key_policy_get_algorithm(&policy);
+
+                psa_crypto_binding::psa_asymmetric_sign(
+                    key_handle,
+                    algorithm,
+                    op.hash.as_ptr(),
+                    op.hash.len(),
+                    signature.as_mut_ptr(),
+                    1024,
+                    &mut signature_size,
+                )
+            };
+
+            unsafe {
+                psa_crypto_binding::psa_close_key(key_handle);
+            }
+
+            if sign_status == 0 {
+                let mut res = ResultAsymSign {
+                    signature: Vec::new(),
+                };
+                res.signature.resize(signature_size, 0);
+                res.signature.copy_from_slice(&signature[0..signature_size]);
+
+                Ok(res)
+            } else {
+                Err(conversion_utils::convert_status(sign_status))
             }
         } else {
             Err(conversion_utils::convert_status(open_key_status))

@@ -51,6 +51,7 @@ pub enum Opcode {
     Ping = 0,
     CreateKey = 1,
     DestroyKey = 2,
+    AsymSign = 3,
     ImportKey = 5,
     ExportPublicKey = 6,
 }
