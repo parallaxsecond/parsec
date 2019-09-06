@@ -23,9 +23,15 @@ const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 /// Listing of provider types and their associated codes.
 ///
 /// Passed in headers as `provider`.
-#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum ProviderID {
     CoreProvider = 0,
+}
+
+impl std::fmt::Display for ProviderID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// Listing of body encoding types and their associated codes.

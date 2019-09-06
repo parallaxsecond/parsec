@@ -15,4 +15,5 @@
 pub mod authenticators;
 pub mod back;
 pub mod front;
+pub mod key_id_managers;
 pub mod providers;

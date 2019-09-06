@@ -241,6 +241,8 @@ pub enum ResponseStatus {
     AuthenticationError = 12,
     AuthenticatorDoesNotExist = 13,
     AuthenticatorNotRegistered = 14,
+    KeyDoesNotExist = 15,
+    KeyAlreadyExists = 16,
 }
 
 impl fmt::Display for ResponseStatus {
@@ -280,6 +282,11 @@ impl fmt::Display for ResponseStatus {
             ResponseStatus::AuthenticationError => write!(f, "authentication failed"),
             ResponseStatus::AuthenticatorDoesNotExist => write!(f, "authenticator not supported"),
             ResponseStatus::AuthenticatorNotRegistered => write!(f, "authenticator not supported"),
+            ResponseStatus::KeyDoesNotExist => write!(f, "key does not exist"),
+            ResponseStatus::KeyAlreadyExists => write!(
+                f,
+                "key with requested name already exists in the specified provider"
+            ),
         }
     }
 }
