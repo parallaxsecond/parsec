@@ -129,6 +129,14 @@ impl BackEndHandler {
                 );
                 self.result_to_response(ConvertResult::ImportKey(result), request, opcode)
             }
+            ConvertOperation::ExportPublicKey(op_export_public_key) => {
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .export_public_key(app_name, op_export_public_key),
+                    request
+                );
+                self.result_to_response(ConvertResult::ExportPublicKey(result), request, opcode)
+            }
         }
     }
 }

@@ -19,7 +19,8 @@ pub mod mbed_provider;
 
 use crate::authenticators::ApplicationName;
 use interface::operations::{
-    OpCreateKey, OpImportKey, OpPing, ResultCreateKey, ResultImportKey, ResultPing,
+    OpCreateKey, OpExportPublicKey, OpImportKey, OpPing, ResultCreateKey, ResultExportPublicKey,
+    ResultImportKey, ResultPing,
 };
 use interface::requests::response::ResponseStatus;
 
@@ -58,6 +59,15 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpImportKey,
     ) -> Result<ResultImportKey, ResponseStatus> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
+
+    /// Execute a ExportPublicKey operation.
+    fn export_public_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: OpExportPublicKey,
+    ) -> Result<ResultExportPublicKey, ResponseStatus> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }

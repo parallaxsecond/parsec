@@ -51,6 +51,7 @@ pub enum Opcode {
     Ping = 0,
     CreateKey = 1,
     ImportKey = 5,
+    ExportPublicKey = 6,
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]

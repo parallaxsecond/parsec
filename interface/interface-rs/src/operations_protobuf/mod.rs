@@ -16,6 +16,7 @@ mod convert_ping;
 mod convert_create_key;
 mod convert_key_attributes;
 mod convert_import_key;
+mod convert_export_public_key;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -27,6 +28,7 @@ use crate::requests::{
     Opcode,
 };
 use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
+use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
 use generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
 use prost::Message;
@@ -76,6 +78,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpImportKeyProto
             ))),
+            Opcode::ExportPublicKey => Ok(ConvertOperation::ExportPublicKey(wire_to_native!(
+                body.bytes(),
+                OpExportPublicKeyProto
+            ))),
         }
     }
 
@@ -96,6 +102,9 @@ impl Convert for ProtobufConverter {
                 operation,
                 OpImportKeyProto
             ))),
+            ConvertOperation::ExportPublicKey(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpExportPublicKeyProto),
+            )),
         }
     }
 
@@ -117,6 +126,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultImportKeyProto
             ))),
+            Opcode::ExportPublicKey => Ok(ConvertResult::ExportPublicKey(wire_to_native!(
+                body.bytes(),
+                ResultExportPublicKeyProto
+            ))),
         }
     }
 
@@ -134,6 +147,9 @@ impl Convert for ProtobufConverter {
                 result,
                 ResultImportKeyProto
             ))),
+            ConvertResult::ExportPublicKey(result) => Ok(ResponseBody::from_bytes(
+                native_to_wire!(result, ResultExportPublicKeyProto),
+            )),
         }
     }
 }

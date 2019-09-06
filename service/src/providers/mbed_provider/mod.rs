@@ -21,6 +21,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
 use interface::operations::{OpCreateKey, ResultCreateKey};
+use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use interface::operations::{OpImportKey, ResultImportKey};
 use interface::requests::response::ResponseStatus;
 
@@ -46,7 +47,6 @@ pub struct MbedProvider {
 }
 
 impl MbedProvider {
-    #[allow(dead_code)]
     fn get_key_id(
         &self,
         app_name: &ApplicationName,
@@ -277,6 +277,59 @@ impl Provide for MbedProvider {
                 &mut store_handle,
                 &mut local_ids_handle,
             );
+        }
+
+        ret_val
+    }
+
+    fn export_public_key(
+        &self,
+        app_name: ApplicationName,
+        op: OpExportPublicKey,
+    ) -> Result<ResultExportPublicKey, ResponseStatus> {
+        println!("Mbed Provider - Export Public Key");
+        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+
+        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let ret_val: Result<ResultExportPublicKey, ResponseStatus>;
+
+        let open_key_status =
+            unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
+
+        if open_key_status == 0 {
+            // TODO: There's no calculation of the buffer size here, nor is there any handling of the
+            // PSA_ERROR_BUFFER_TOO_SMALL condition. Just allocating a "big" buffer and assuming/hoping it is
+            // enough.
+
+            let mut buffer = vec![0u8; 1024];
+            let mut actual_size = 0;
+
+            let export_status = unsafe {
+                psa_crypto_binding::psa_export_public_key(
+                    key_handle,
+                    buffer.as_mut_ptr(),
+                    1024,
+                    &mut actual_size,
+                )
+            };
+
+            if export_status == 0 {
+                buffer.resize(actual_size, 0);
+                ret_val = Ok(ResultExportPublicKey { key_data: buffer });
+            } else {
+                println!("Export status: {}", export_status);
+                ret_val = Err(conversion_utils::convert_status(export_status));
+            }
+
+            unsafe {
+                psa_crypto_binding::psa_close_key(key_handle);
+            }
+        } else {
+            println!("Open key status: {}", open_key_status);
+            ret_val = Err(conversion_utils::convert_status(open_key_status));
         }
 
         ret_val
