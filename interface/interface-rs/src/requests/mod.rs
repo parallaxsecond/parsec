@@ -50,6 +50,7 @@ pub enum BodyType {
 pub enum Opcode {
     Ping = 0,
     CreateKey = 1,
+    DestroyKey = 2,
     ImportKey = 5,
     ExportPublicKey = 6,
 }

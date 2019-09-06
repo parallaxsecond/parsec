@@ -17,6 +17,7 @@ mod convert_create_key;
 mod convert_key_attributes;
 mod convert_import_key;
 mod convert_export_public_key;
+mod convert_destroy_key;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -28,6 +29,7 @@ use crate::requests::{
     Opcode,
 };
 use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
+use generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
 use generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
@@ -82,6 +84,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 OpExportPublicKeyProto
             ))),
+            Opcode::DestroyKey => Ok(ConvertOperation::DestroyKey(wire_to_native!(
+                body.bytes(),
+                OpDestroyKeyProto
+            ))),
         }
     }
 
@@ -104,6 +110,9 @@ impl Convert for ProtobufConverter {
             ))),
             ConvertOperation::ExportPublicKey(operation) => Ok(RequestBody::from_bytes(
                 native_to_wire!(operation, OpExportPublicKeyProto),
+            )),
+            ConvertOperation::DestroyKey(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpDestroyKeyProto),
             )),
         }
     }
@@ -130,6 +139,10 @@ impl Convert for ProtobufConverter {
                 body.bytes(),
                 ResultExportPublicKeyProto
             ))),
+            Opcode::DestroyKey => Ok(ConvertResult::DestroyKey(wire_to_native!(
+                body.bytes(),
+                ResultDestroyKeyProto
+            ))),
         }
     }
 
@@ -150,6 +163,10 @@ impl Convert for ProtobufConverter {
             ConvertResult::ExportPublicKey(result) => Ok(ResponseBody::from_bytes(
                 native_to_wire!(result, ResultExportPublicKeyProto),
             )),
+            ConvertResult::DestroyKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultDestroyKeyProto
+            ))),
         }
     }
 }

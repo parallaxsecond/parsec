@@ -19,8 +19,8 @@ pub mod mbed_provider;
 
 use crate::authenticators::ApplicationName;
 use interface::operations::{
-    OpCreateKey, OpExportPublicKey, OpImportKey, OpPing, ResultCreateKey, ResultExportPublicKey,
-    ResultImportKey, ResultPing,
+    OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey, OpPing, ResultCreateKey,
+    ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultPing,
 };
 use interface::requests::response::ResponseStatus;
 
@@ -68,6 +68,15 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpExportPublicKey,
     ) -> Result<ResultExportPublicKey, ResponseStatus> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
+
+    /// Execute a DestroyKey operation.
+    fn destroy_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: OpDestroyKey,
+    ) -> Result<ResultDestroyKey, ResponseStatus> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }

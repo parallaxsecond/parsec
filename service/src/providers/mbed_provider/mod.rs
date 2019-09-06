@@ -21,6 +21,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
 use interface::operations::{OpCreateKey, ResultCreateKey};
+use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use interface::operations::{OpImportKey, ResultImportKey};
 use interface::requests::response::ResponseStatus;
@@ -333,5 +334,41 @@ impl Provide for MbedProvider {
         }
 
         ret_val
+    }
+
+    fn destroy_key(
+        &self,
+        app_name: ApplicationName,
+        op: OpDestroyKey,
+    ) -> Result<ResultDestroyKey, ResponseStatus> {
+        println!("Mbed Provider - Destroy Key");
+        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
+        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+
+        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+
+        let open_key_status =
+            unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
+
+        if open_key_status == 0 {
+            let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
+
+            if destroy_key_status == 0 {
+                self.remove_key_id(
+                    &app_name,
+                    &op.key_name,
+                    key_id,
+                    &mut store_handle,
+                    &mut local_ids_handle,
+                );
+                Ok(ResultDestroyKey {})
+            } else {
+                Err(conversion_utils::convert_status(destroy_key_status))
+            }
+        } else {
+            Err(conversion_utils::convert_status(open_key_status))
+        }
     }
 }

@@ -17,6 +17,7 @@ pub mod key_attributes;
 mod create_key;
 mod import_key;
 mod export_public_key;
+mod destroy_key;
 
 use crate::requests::{
     request::RequestBody,
@@ -24,6 +25,7 @@ use crate::requests::{
     Opcode,
 };
 pub use create_key::{OpCreateKey, ResultCreateKey};
+pub use destroy_key::{OpDestroyKey, ResultDestroyKey};
 pub use export_public_key::{OpExportPublicKey, ResultExportPublicKey};
 pub use import_key::{OpImportKey, ResultImportKey};
 pub use ping::{OpPing, ResultPing};
@@ -35,6 +37,7 @@ pub enum ConvertOperation {
     CreateKey(create_key::OpCreateKey),
     ImportKey(import_key::OpImportKey),
     ExportPublicKey(export_public_key::OpExportPublicKey),
+    DestroyKey(destroy_key::OpDestroyKey),
 }
 
 /// Container type for result conversion values, holding a native result object to be
@@ -45,6 +48,7 @@ pub enum ConvertResult {
     CreateKey(create_key::ResultCreateKey),
     ImportKey(import_key::ResultImportKey),
     ExportPublicKey(export_public_key::ResultExportPublicKey),
+    DestroyKey(destroy_key::ResultDestroyKey),
 }
 
 /// Definition of the operations converters must implement to allow usage of a specific

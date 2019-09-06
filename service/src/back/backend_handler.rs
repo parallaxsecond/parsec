@@ -137,6 +137,13 @@ impl BackEndHandler {
                 );
                 self.result_to_response(ConvertResult::ExportPublicKey(result), request, opcode)
             }
+            ConvertOperation::DestroyKey(op_destroy_key) => {
+                let result = unwrap_or_else_return!(
+                    self.provider.destroy_key(app_name, op_destroy_key),
+                    request
+                );
+                self.result_to_response(ConvertResult::DestroyKey(result), request, opcode)
+            }
         }
     }
 }
