@@ -41,11 +41,14 @@ mod psa_crypto_binding;
 mod constants;
 mod conversion_utils;
 
-type KeyIdManager = Box<dyn ManageKeyIDs + Send + Sync>;
 type LocalIdStore = HashSet<psa_crypto_binding::psa_key_id_t>;
 
 pub struct MbedProvider {
-    pub key_id_store: Arc<RwLock<KeyIdManager>>,
+    // When calling write on a reference of key_id_store, a type
+    // std::sync::RwLockWriteGuard<dyn ManageKeyIDs + Send + Sync> is returned. We need to use the
+    // dereference operator (*) to access the inner type dyn ManageKeyIDs + Send + Sync and then
+    // reference it to match with the method prototypes.
+    pub key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
     pub local_ids: RwLock<LocalIdStore>,
 }
 
@@ -54,7 +57,7 @@ impl MbedProvider {
         &self,
         app_name: &ApplicationName,
         key_name: &str,
-        store_handle: &KeyIdManager,
+        store_handle: &dyn ManageKeyIDs,
     ) -> Result<psa_crypto_binding::psa_key_id_t, ResponseStatus> {
         Ok(u32::from_ne_bytes(
             store_handle
@@ -68,7 +71,7 @@ impl MbedProvider {
         &self,
         app_name: &ApplicationName,
         key_name: &str,
-        store_handle: &mut KeyIdManager,
+        store_handle: &mut dyn ManageKeyIDs,
         local_ids_handle: &mut LocalIdStore,
     ) -> psa_crypto_binding::psa_key_id_t {
         let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
@@ -90,7 +93,7 @@ impl MbedProvider {
         app_name: &ApplicationName,
         key_name: &str,
         key_id: psa_crypto_binding::psa_key_id_t,
-        store_handle: &mut KeyIdManager,
+        store_handle: &mut dyn ManageKeyIDs,
         local_ids_handle: &mut LocalIdStore,
     ) {
         local_ids_handle.remove(&key_id);
@@ -101,7 +104,7 @@ impl MbedProvider {
         &self,
         app_name: &ApplicationName,
         key_name: &str,
-        store_handle: &KeyIdManager,
+        store_handle: &dyn ManageKeyIDs,
     ) -> bool {
         store_handle.exists(app_name, ProviderID::MbedProvider, key_name)
     }
@@ -122,13 +125,13 @@ impl Provide for MbedProvider {
         println!("Mbed Provider - Create Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if self.key_id_exists(&app_name, &op.key_name, &store_handle) {
+        if self.key_id_exists(&app_name, &op.key_name, &*store_handle) {
             return Err(ResponseStatus::KeyAlreadyExists);
         }
         let key_id = self.create_key_id(
             &app_name,
             &op.key_name,
-            &mut store_handle,
+            &mut *store_handle,
             &mut local_ids_handle,
         );
 
@@ -192,7 +195,7 @@ impl Provide for MbedProvider {
                 &app_name,
                 &op.key_name,
                 key_id,
-                &mut store_handle,
+                &mut *store_handle,
                 &mut local_ids_handle,
             );
         }
@@ -208,13 +211,13 @@ impl Provide for MbedProvider {
         println!("Mbed Provider - Import Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if self.key_id_exists(&app_name, &op.key_name, &store_handle) {
+        if self.key_id_exists(&app_name, &op.key_name, &*store_handle) {
             return Err(ResponseStatus::KeyAlreadyExists);
         }
         let key_id = self.create_key_id(
             &app_name,
             &op.key_name,
-            &mut store_handle,
+            &mut *store_handle,
             &mut local_ids_handle,
         );
 
@@ -277,7 +280,7 @@ impl Provide for MbedProvider {
                 &app_name,
                 &op.key_name,
                 key_id,
-                &mut store_handle,
+                &mut *store_handle,
                 &mut local_ids_handle,
             );
         }
@@ -292,7 +295,7 @@ impl Provide for MbedProvider {
     ) -> Result<ResultExportPublicKey, ResponseStatus> {
         println!("Mbed Provider - Export Public Key");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
 
         let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
@@ -346,7 +349,7 @@ impl Provide for MbedProvider {
         println!("Mbed Provider - Destroy Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
 
         let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
@@ -362,7 +365,7 @@ impl Provide for MbedProvider {
                     &app_name,
                     &op.key_name,
                     key_id,
-                    &mut store_handle,
+                    &mut *store_handle,
                     &mut local_ids_handle,
                 );
                 Ok(ResultDestroyKey {})
@@ -381,7 +384,7 @@ impl Provide for MbedProvider {
     ) -> Result<ResultAsymSign, ResponseStatus> {
         println!("Mbed Provider - Asym Sign");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
 
         let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
@@ -447,7 +450,7 @@ impl Provide for MbedProvider {
     ) -> Result<ResultAsymVerify, ResponseStatus> {
         println!("Mbed Provider - Asym Verify");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &store_handle)?;
+        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
 
         let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;

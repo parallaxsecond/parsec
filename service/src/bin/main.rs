@@ -31,7 +31,7 @@ const VERSION_MINOR: u8 = 0;
 const VERSION_MAJOR: u8 = 1;
 
 /// Construct a hardcoded version of the service, containing only the core provider.
-fn construct_app() -> Box<dyn Listen> {
+fn construct_app() -> impl Listen {
     // Create the Core Provider and its associated BackEndHandler
     let core_provider_id = ProviderID::CoreProvider;
     let core_provider_backend = BackEndHandler {
@@ -48,9 +48,9 @@ fn construct_app() -> Box<dyn Listen> {
     };
 
     let mbed_provider = MbedProvider {
-        key_id_store: Arc::new(RwLock::new(Box::new(SimpleKeyIDManager {
+        key_id_store: Arc::new(RwLock::new(SimpleKeyIDManager {
             key_store: HashMap::new(),
-        }))),
+        })),
         local_ids: RwLock::new(HashSet::new()),
     };
     if mbed_provider.init() {
@@ -83,10 +83,12 @@ fn construct_app() -> Box<dyn Listen> {
         authenticators,
     };
 
-    Box::from(DomainSocketListener {
+    // This function currently only returns a DomainSocketListener but in the future, depending on
+    // the configuration it would return anything implementing Listen.
+    DomainSocketListener {
         front_end_handler: Arc::from(front_end),
         listener: None,
-    })
+    }
 }
 
 fn main() {
