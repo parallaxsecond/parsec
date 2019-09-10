@@ -27,6 +27,7 @@ use interface::requests::{BodyType, Opcode, ProviderID};
 /// It also provides assessment capabilities, letting the dispatcher know if
 /// it can process a request.
 pub struct BackEndHandler {
+    // Send and Sync are required for Arc<FrontEndHandler> to be Send.
     pub provider: Box<dyn Provide + Send + Sync>,
     pub converter: Box<dyn Convert + Send + Sync>,
     pub provider_id: ProviderID,
