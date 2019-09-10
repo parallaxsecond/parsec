@@ -16,12 +16,12 @@ use std::fs;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use super::front_end;
 use super::listener;
 
-use crossbeam::scope;
 use front_end::FrontEndHandler;
 use listener::Listen;
 
@@ -33,6 +33,8 @@ static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 ///
 /// Only works on Unix systems.
 pub struct DomainSocketListener {
+    // Multiple threads can not just have a reference of the FrontEndHandler because they could
+    // outlive the run function.
     pub front_end_handler: Arc<FrontEndHandler>,
     pub listener: Option<UnixListener>,
 }
@@ -72,30 +74,29 @@ impl Listen for DomainSocketListener {
     /// - if any of the child threads, spawned to handle connections, panics
     fn run(&self) {
         if let Some(listener) = &self.listener {
-            scope(|thread_scope| {
-                for stream in listener.incoming() {
-                    match stream {
-                        Ok(stream) => {
-                            if let (Ok(_), Ok(_)) = (
-                                stream.set_read_timeout(Some(Duration::from_millis(100))),
-                                stream.set_write_timeout(Some(Duration::from_millis(100))),
-                            ) {
-                                let front_end_handler = self.front_end_handler.clone();
-                                thread_scope.spawn(move |_| {
-                                    front_end_handler.handle_request(stream);
-                                });
-                            } else {
-                                println!("Failed to seet timeout on Unix socket stream.");
-                            }
-                        }
-                        Err(err) => {
-                            /* connection failed */
-                            println!("Failed to connect with a UnixStream ({})", err);
+            for stream in listener.incoming() {
+                match stream {
+                    Ok(stream) => {
+                        if let (Ok(_), Ok(_)) = (
+                            stream.set_read_timeout(Some(Duration::from_millis(100))),
+                            stream.set_write_timeout(Some(Duration::from_millis(100))),
+                        ) {
+                            // Clone the front_end_handler to add a reference count on it and
+                            // to be able to give the thread ownership of that clone.
+                            let front_end_handler = self.front_end_handler.clone();
+                            thread::spawn(move || {
+                                front_end_handler.handle_request(stream);
+                            });
+                        } else {
+                            println!("Failed to seet timeout on Unix socket stream.");
                         }
                     }
+                    Err(err) => {
+                        /* connection failed */
+                        println!("Failed to connect with a UnixStream ({})", err);
+                    }
                 }
-            })
-            .expect("One of the child threads has panicked.");
+            }
         } else {
             panic!("The Unix Domain Socket has not been initialised.");
         }

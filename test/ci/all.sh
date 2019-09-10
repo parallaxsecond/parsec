@@ -31,10 +31,7 @@ UNIT_TEST_CRATES=(\
 
 run_test() {
     pushd $1 || exit 1
-    # Build before cargo fmt to run the build.rs script.
     cargo build || exit 1
-    cargo fmt --all -- --check || exit 1
-    cargo clippy || exit 1
     cargo test || exit 1
     popd || exit 1
 }
@@ -47,19 +44,22 @@ do
     run_test $crate
 done
 
+#################
+# Static checks #
+#################
+cargo fmt --all -- --check || exit 1
+cargo clippy || exit 1
+
 #####################
 # Integration tests #
 #####################
 pushd service || exit 1
-cargo build || exit 1
-./target/debug/main &
+cargo run &
 SERVER_PID=$!
 popd || exit 1
 
 pushd test/test_rs/minimal_client/ || exit 1
 cargo build || exit 1
-cargo fmt --all -- --check || exit 1
-cargo clippy || exit 1
 cargo test || exit 1
 popd
 

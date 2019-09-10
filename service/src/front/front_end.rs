@@ -26,6 +26,7 @@ use std::io::{Read, Write};
 /// Requests are passed forward to the `Dispatcher`.
 pub struct FrontEndHandler {
     pub dispatcher: Dispatcher,
+    // Send and Sync are required for Arc<FrontEndHandler> to be Send.
     pub authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
 }
 
