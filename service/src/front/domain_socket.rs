@@ -15,28 +15,23 @@
 use std::fs;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
-use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 
-use super::front_end;
 use super::listener;
 
-use front_end::FrontEndHandler;
 use listener::Listen;
+use listener::ReadWrite;
 
 static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 
 /// Listener implementation for Unix sockets as the underlying IPC mechanism.
 ///
-/// Holds references to a `FrontEndHandler` and a `UnixListener`.
+/// Holds references to a `UnixListener`.
 ///
 /// Only works on Unix systems.
 pub struct DomainSocketListener {
-    // Multiple threads can not just have a reference of the FrontEndHandler because they could
-    // outlive the run function.
-    front_end_handler: Arc<FrontEndHandler>,
     listener: Option<UnixListener>,
+    timeout: Duration,
 }
 
 impl Listen for DomainSocketListener {
@@ -61,40 +56,31 @@ impl Listen for DomainSocketListener {
         self.listener = Some(listener_val);
     }
 
-    /// Enters a continuous loop over connections made through the socket.
-    ///
-    /// When a new connection registers, a `UnixStream` is obtained and a thread
-    /// is spawned, taking ownership of the stream and of a copy of the frontend
-    /// handler.
-    ///
-    /// `init` *MUST* be called on the listener before calling `run`.
-    ///
-    /// # Panics
-    /// - if the Unix socket was not initialised before using `DomainSocketListener::init`
-    /// - if any of the child threads, spawned to handle connections, panics
-    fn run(&self) {
+    fn set_timeout(&mut self, duration: Duration) {
+        self.timeout = duration;
+    }
+
+    fn wait_on_connection(&self) -> Option<Box<ReadWrite + Send>> {
         if let Some(listener) = &self.listener {
-            for stream in listener.incoming() {
-                match stream {
-                    Ok(stream) => {
-                        if let (Ok(_), Ok(_)) = (
-                            stream.set_read_timeout(Some(Duration::from_millis(100))),
-                            stream.set_write_timeout(Some(Duration::from_millis(100))),
-                        ) {
-                            // Clone the front_end_handler to add a reference count on it and
-                            // to be able to give the thread ownership of that clone.
-                            let front_end_handler = self.front_end_handler.clone();
-                            thread::spawn(move || {
-                                front_end_handler.handle_request(stream);
-                            });
-                        } else {
-                            println!("Failed to seet timeout on Unix socket stream.");
-                        }
+            let stream_result = listener
+                .incoming()
+                .next()
+                .expect("The Incoming iterator should never return None!");
+            match stream_result {
+                Ok(stream) => {
+                    if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
+                        println!("Failed to set read timeout ({})", err);
+                        None
+                    } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
+                        println!("Failed to set write timeout ({})", err);
+                        None
+                    } else {
+                        Some(Box::from(stream))
                     }
-                    Err(err) => {
-                        /* connection failed */
-                        println!("Failed to connect with a UnixStream ({})", err);
-                    }
+                }
+                Err(err) => {
+                    println!("Failed to connect with a UnixStream ({})", err);
+                    None
                 }
             }
         } else {
@@ -105,24 +91,22 @@ impl Listen for DomainSocketListener {
 
 #[derive(Default)]
 pub struct DomainSocketListenerBuilder {
-    front_end_handler: Option<Arc<FrontEndHandler>>,
+    timeout: Option<Duration>,
 }
 
 impl DomainSocketListenerBuilder {
     pub fn new() -> Self {
-        DomainSocketListenerBuilder {
-            front_end_handler: None,
-        }
+        DomainSocketListenerBuilder { timeout: None }
     }
 
-    pub fn with_front_end_handler(mut self, front_end_handler: Arc<FrontEndHandler>) -> Self {
-        self.front_end_handler = Some(front_end_handler);
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
         self
     }
 
     pub fn build(self) -> DomainSocketListener {
         DomainSocketListener {
-            front_end_handler: self.front_end_handler.expect("FrontEndHandler missing"),
+            timeout: self.timeout.expect("FrontEndHandler missing"),
             listener: None,
         }
     }
