@@ -21,11 +21,7 @@ mod destroy_key;
 mod asym_sign;
 mod asym_verify;
 
-use crate::requests::{
-    request::RequestBody,
-    response::{ResponseBody, ResponseStatus},
-    Opcode,
-};
+use crate::requests::{request::RequestBody, response::ResponseBody, Opcode, Result};
 pub use asym_sign::{OpAsymSign, ResultAsymSign};
 pub use asym_verify::{OpAsymVerify, ResultAsymVerify};
 pub use create_key::{OpCreateKey, ResultCreateKey};
@@ -66,34 +62,23 @@ pub trait Convert {
     ///
     /// # Errors
     /// - if deserialization fails, `ResponseStatus::DeserializingBodyFailed` is returned
-    fn body_to_operation(
-        &self,
-        body: &RequestBody,
-        opcode: Opcode,
-    ) -> Result<ConvertOperation, ResponseStatus>;
+    fn body_to_operation(&self, body: &RequestBody, opcode: Opcode) -> Result<ConvertOperation>;
 
     /// Create a request body from a native operation object.
     ///
     /// # Errors
     /// - if serialization fails, `ResponseStatus::SerializingBodyFailed` is returned
-    fn body_from_operation(
-        &self,
-        operation: ConvertOperation,
-    ) -> Result<RequestBody, ResponseStatus>;
+    fn body_from_operation(&self, operation: ConvertOperation) -> Result<RequestBody>;
 
     /// Create a native result object from a response body.
     ///
     /// # Errors
     /// - if deserialization fails, `ResponseStatus::DeserializingBodyFailed` is returned
-    fn body_to_result(
-        &self,
-        body: &ResponseBody,
-        opcode: Opcode,
-    ) -> Result<ConvertResult, ResponseStatus>;
+    fn body_to_result(&self, body: &ResponseBody, opcode: Opcode) -> Result<ConvertResult>;
 
     /// Create a response body from a native result object.
     ///
     /// # Errors
     /// - if serialization fails, `ResponseStatus::SerializingBodyFailed` is returned
-    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody, ResponseStatus>;
+    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody>;
 }

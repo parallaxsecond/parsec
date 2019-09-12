@@ -16,9 +16,9 @@
 mod tests {
     use interface::operations::{ConvertOperation, ConvertResult, OpPing};
     use interface::requests::request::{Request, RequestBody};
-    use interface::requests::response::ResponseStatus;
     use interface::requests::Opcode;
     use interface::requests::ProviderID;
+    use interface::requests::ResponseStatus;
     use minimal_client::MinimalClient;
 
     #[test]

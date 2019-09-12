@@ -16,8 +16,8 @@
 mod tests {
     use interface::operations::key_attributes::*;
     use interface::operations::{ConvertOperation, OpCreateKey, OpDestroyKey, OpImportKey};
-    use interface::requests::response::ResponseStatus;
     use interface::requests::ProviderID;
+    use interface::requests::ResponseStatus;
     use minimal_client::MinimalClient;
 
     #[test]

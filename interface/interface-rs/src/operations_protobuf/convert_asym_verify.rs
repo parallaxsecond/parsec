@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::asym_verify::{OpAsymmetricVerifyProto, ResultAsymmetricVerifyProto};
 use crate::operations::{OpAsymVerify, ResultAsymVerify};
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 

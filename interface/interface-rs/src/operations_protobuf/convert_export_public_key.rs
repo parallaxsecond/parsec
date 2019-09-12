@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
 use crate::operations;
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 

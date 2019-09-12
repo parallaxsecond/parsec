@@ -17,7 +17,7 @@ mod tests {
     use interface::operations::{
         key_attributes::KeyLifetime, ConvertOperation, OpDestroyKey, OpPing,
     };
-    use interface::requests::{request::Request, response::ResponseStatus, Opcode, ProviderID};
+    use interface::requests::{request::Request, Opcode, ProviderID, ResponseStatus};
     use minimal_client::MinimalClient;
 
     #[test]

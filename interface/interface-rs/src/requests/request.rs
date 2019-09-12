@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use super::response::ResponseHeader;
-use super::response::{Response, ResponseStatus};
 use super::MAGIC_NUMBER;
+use super::{Response, ResponseStatus};
 use serde::{Deserialize, Serialize};
 use std::io::{Error, ErrorKind, Read, Result, Write};
 

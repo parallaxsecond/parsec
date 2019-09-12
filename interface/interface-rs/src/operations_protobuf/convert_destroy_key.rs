@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use crate::operations::{OpDestroyKey, ResultDestroyKey};
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 

@@ -16,10 +16,8 @@ use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use interface::operations::Convert;
 use interface::operations::{ConvertOperation, ConvertResult};
-use interface::requests::request::Request;
-use interface::requests::response::Response;
-use interface::requests::response::ResponseStatus;
-use interface::requests::{BodyType, Opcode, ProviderID};
+use interface::requests::{BodyType, ProviderID};
+use interface::requests::{Opcode, Request, Response, ResponseStatus, Result};
 
 /// Component responsible for unmarshalling requests, passing the operation
 /// to the provider and marshalling the result.
@@ -75,7 +73,7 @@ impl BackEndHandler {
     /// - if the content type does not match, returns `ResponseStatus::ContentTypeNotSupported`
     /// - if the accept type does not match, returns `ResponseStatus::AcceptTypeNotSupported`
     /// - if the version is not supported, returns `ResponseStatus::VersionTooBig`
-    pub fn is_capable(&self, request: &Request) -> Result<(), ResponseStatus> {
+    pub fn is_capable(&self, request: &Request) -> Result<()> {
         let header = &request.header;
 
         // TODO: Add opcode checking here; store supported opcodes as a hashset

@@ -20,8 +20,8 @@
 
 use super::ManageKeyIDs;
 use crate::authenticators::ApplicationName;
-use interface::requests::response::ResponseStatus;
 use interface::requests::ProviderID;
+use interface::requests::{ResponseStatus, Result};
 use std::collections::HashMap;
 
 pub struct SimpleKeyIDManager {
@@ -34,7 +34,7 @@ impl ManageKeyIDs for SimpleKeyIDManager {
         app_name: &ApplicationName,
         provider_id: ProviderID,
         key_name: &str,
-    ) -> Result<&[u8], ResponseStatus> {
+    ) -> Result<&[u8]> {
         if let Some(key_id) = self
             .key_store
             .get(&format!("{}/{}/{}", app_name, provider_id, key_name))

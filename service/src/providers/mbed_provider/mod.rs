@@ -26,7 +26,7 @@ use interface::operations::{OpCreateKey, ResultCreateKey};
 use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use interface::operations::{OpImportKey, ResultImportKey};
-use interface::requests::response::ResponseStatus;
+use interface::requests::{ResponseStatus, Result};
 
 #[allow(
     non_snake_case,
@@ -58,7 +58,7 @@ impl MbedProvider {
         app_name: &ApplicationName,
         key_name: &str,
         store_handle: &dyn ManageKeyIDs,
-    ) -> Result<psa_crypto_binding::psa_key_id_t, ResponseStatus> {
+    ) -> Result<psa_crypto_binding::psa_key_id_t> {
         Ok(u32::from_ne_bytes(
             store_handle
                 .get(app_name, ProviderID::MbedProvider, key_name)?
@@ -117,11 +117,7 @@ impl Provide for MbedProvider {
         init_status == 0
     }
 
-    fn create_key(
-        &self,
-        app_name: ApplicationName,
-        op: OpCreateKey,
-    ) -> Result<ResultCreateKey, ResponseStatus> {
+    fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
         println!("Mbed Provider - Create Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
@@ -142,7 +138,7 @@ impl Provide for MbedProvider {
             psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
         };
 
-        let ret_val: Result<ResultCreateKey, ResponseStatus>;
+        let ret_val: Result<ResultCreateKey>;
 
         if create_key_status == 0 {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
@@ -203,11 +199,7 @@ impl Provide for MbedProvider {
         ret_val
     }
 
-    fn import_key(
-        &self,
-        app_name: ApplicationName,
-        op: OpImportKey,
-    ) -> Result<ResultImportKey, ResponseStatus> {
+    fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
         println!("Mbed Provider - Import Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
@@ -228,7 +220,7 @@ impl Provide for MbedProvider {
             psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
         };
 
-        let ret_val: Result<ResultImportKey, ResponseStatus>;
+        let ret_val: Result<ResultImportKey>;
 
         if create_key_status == 0 {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
@@ -292,7 +284,7 @@ impl Provide for MbedProvider {
         &self,
         app_name: ApplicationName,
         op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey, ResponseStatus> {
+    ) -> Result<ResultExportPublicKey> {
         println!("Mbed Provider - Export Public Key");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
@@ -300,7 +292,7 @@ impl Provide for MbedProvider {
         let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
-        let ret_val: Result<ResultExportPublicKey, ResponseStatus>;
+        let ret_val: Result<ResultExportPublicKey>;
 
         let open_key_status =
             unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
@@ -341,11 +333,7 @@ impl Provide for MbedProvider {
         ret_val
     }
 
-    fn destroy_key(
-        &self,
-        app_name: ApplicationName,
-        op: OpDestroyKey,
-    ) -> Result<ResultDestroyKey, ResponseStatus> {
+    fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
         println!("Mbed Provider - Destroy Key");
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
@@ -377,11 +365,7 @@ impl Provide for MbedProvider {
         }
     }
 
-    fn asym_sign(
-        &self,
-        app_name: ApplicationName,
-        op: OpAsymSign,
-    ) -> Result<ResultAsymSign, ResponseStatus> {
+    fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
         println!("Mbed Provider - Asym Sign");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
@@ -443,11 +427,7 @@ impl Provide for MbedProvider {
         }
     }
 
-    fn asym_verify(
-        &self,
-        app_name: ApplicationName,
-        op: OpAsymVerify,
-    ) -> Result<ResultAsymVerify, ResponseStatus> {
+    fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
         println!("Mbed Provider - Asym Verify");
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;

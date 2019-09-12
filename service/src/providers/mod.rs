@@ -23,7 +23,7 @@ use interface::operations::{
     ResultAsymSign, ResultAsymVerify, ResultCreateKey, ResultDestroyKey, ResultExportPublicKey,
     ResultImportKey, ResultPing,
 };
-use interface::requests::response::ResponseStatus;
+use interface::requests::{ResponseStatus, Result};
 
 /// Definition of the interface that a provider must implement to
 /// be linked into the service through a backend handler.
@@ -41,25 +41,17 @@ pub trait Provide {
     ///
     /// This operation will only fail if not implemented. It will never fail when being called on
     /// the `CoreProvider`.
-    fn ping(&self, _op: OpPing) -> Result<ResultPing, ResponseStatus> {
+    fn ping(&self, _op: OpPing) -> Result<ResultPing> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
     /// Execute a CreateKey operation.
-    fn create_key(
-        &self,
-        _app_name: ApplicationName,
-        _op: OpCreateKey,
-    ) -> Result<ResultCreateKey, ResponseStatus> {
+    fn create_key(&self, _app_name: ApplicationName, _op: OpCreateKey) -> Result<ResultCreateKey> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
     /// Execute a ImportKey operation.
-    fn import_key(
-        &self,
-        _app_name: ApplicationName,
-        _op: OpImportKey,
-    ) -> Result<ResultImportKey, ResponseStatus> {
+    fn import_key(&self, _app_name: ApplicationName, _op: OpImportKey) -> Result<ResultImportKey> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
@@ -68,7 +60,7 @@ pub trait Provide {
         &self,
         _app_name: ApplicationName,
         _op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey, ResponseStatus> {
+    ) -> Result<ResultExportPublicKey> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
@@ -77,17 +69,13 @@ pub trait Provide {
         &self,
         _app_name: ApplicationName,
         _op: OpDestroyKey,
-    ) -> Result<ResultDestroyKey, ResponseStatus> {
+    ) -> Result<ResultDestroyKey> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
     /// Execute a AsymSign operation. This operation only signs the short digest given but does not
     /// hash it.
-    fn asym_sign(
-        &self,
-        _app_name: ApplicationName,
-        _op: OpAsymSign,
-    ) -> Result<ResultAsymSign, ResponseStatus> {
+    fn asym_sign(&self, _app_name: ApplicationName, _op: OpAsymSign) -> Result<ResultAsymSign> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 
@@ -96,7 +84,7 @@ pub trait Provide {
         &self,
         _app_name: ApplicationName,
         _op: OpAsymVerify,
-    ) -> Result<ResultAsymVerify, ResponseStatus> {
+    ) -> Result<ResultAsymVerify> {
         Err(ResponseStatus::UnsupportedOperation)
     }
 }
