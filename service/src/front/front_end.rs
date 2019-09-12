@@ -15,8 +15,8 @@
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
 use interface::requests::AuthType;
-use interface::requests::Request;
 use interface::requests::ResponseStatus;
+use interface::requests::{Request, Response};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 
@@ -43,27 +43,31 @@ impl FrontEndHandler {
         // De-Serialise bytes into a request
         let request = match Request::read_from_stream(&mut stream) {
             Ok(request) => request,
-            Err(err) => {
-                println!("Failed to read request; error: {}", err);
+            Err(status) => {
+                println!("Failed to read request; status: {}", status);
+
+                let response = Response::from_status(status);
+                if let Err(status) = response.write_to_stream(&mut stream) {
+                    println!("Failed to write response; status: {}", status);
+                }
                 return;
             }
         };
         // Find an authenticator that is capable to authenticate the request
         let response =
-            if let Some(auth_type) = ::num::FromPrimitive::from_u8(request.header.auth_type) {
-                if let Some(authenticator) = self.authenticators.get(&auth_type) {
-                    // Authenticate the request
-                    match authenticator.authenticate(request.auth()) {
-                        // Send the request to the dispatcher
-                        // Get a response back
-                        Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
-                        Err(status) => request.into_response(status),
-                    }
-                } else {
-                    request.into_response(ResponseStatus::AuthenticatorNotRegistered)
+            if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
+                // Authenticate the request
+                match authenticator.authenticate(&request.auth) {
+                    // Send the request to the dispatcher
+                    // Get a response back
+                    Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
+                    Err(status) => Response::from_request_header(request.header, status),
                 }
             } else {
-                request.into_response(ResponseStatus::AuthenticatorDoesNotExist)
+                Response::from_request_header(
+                    request.header,
+                    ResponseStatus::AuthenticatorNotRegistered,
+                )
             };
 
         // Serialise the responso into bytes

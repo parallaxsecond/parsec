@@ -36,18 +36,14 @@ impl Dispatcher {
     /// containing a status code consistent with the error encountered during
     /// processing.
     pub fn dispatch_request(&self, request: Request, app_name: ApplicationName) -> Response {
-        if let Some(provider_id) = ::num::FromPrimitive::from_u8(request.header.provider) {
-            if let Some(backend) = self.backends.get(&provider_id) {
-                if let Err(status) = backend.is_capable(&request) {
-                    request.into_response(status)
-                } else {
-                    backend.execute_request(request, app_name)
-                }
+        if let Some(backend) = self.backends.get(&request.header.provider) {
+            if let Err(status) = backend.is_capable(&request) {
+                Response::from_request_header(request.header, status)
             } else {
-                request.into_response(ResponseStatus::ProviderNotRegistered)
+                backend.execute_request(request, app_name)
             }
         } else {
-            request.into_response(ResponseStatus::ProviderDoesNotExist)
+            Response::from_request_header(request.header, ResponseStatus::ProviderNotRegistered)
         }
     }
 }
