@@ -16,7 +16,7 @@
 mod tests {
     use interface::operations::key_attributes::*;
     use interface::operations::{
-        ConvertOperation, ConvertResult, OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey,
+        NativeOperation, NativeResult, OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey,
     };
     use interface::requests::ProviderID;
     use interface::requests::ResponseStatus;
@@ -31,7 +31,7 @@ mod tests {
             hash: vec![0xDE, 0xAD, 0xBE, 0xEF],
         };
         let status = client
-            .send_operation(ConvertOperation::AsymSign(asym_sign))
+            .send_operation(NativeOperation::AsymSign(asym_sign))
             .expect_err("Key should not exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
@@ -46,7 +46,7 @@ mod tests {
             signature: vec![0xDE, 0xAD, 0xBE, 0xEF],
         };
         let status = client
-            .send_operation(ConvertOperation::AsymVerify(asym_verify))
+            .send_operation(NativeOperation::AsymVerify(asym_verify))
             .expect_err("Key should not exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
@@ -74,7 +74,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         let hash = vec![
@@ -88,9 +88,9 @@ mod tests {
             hash: hash.clone(),
         };
         let convert_result = client
-            .send_operation(ConvertOperation::AsymSign(asym_sign))
+            .send_operation(NativeOperation::AsymSign(asym_sign))
             .unwrap();
-        if let ConvertResult::AsymSign(result) = convert_result {
+        if let NativeResult::AsymSign(result) = convert_result {
             let signature = result.signature;
             let asym_verify = OpAsymVerify {
                 key_name: String::from("asym_sign_and_verify"),
@@ -99,7 +99,7 @@ mod tests {
                 signature,
             };
             client
-                .send_operation(ConvertOperation::AsymVerify(asym_verify))
+                .send_operation(NativeOperation::AsymVerify(asym_verify))
                 .unwrap();
         }
 
@@ -108,7 +108,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::{ConvertOperation, ConvertResult, OpPing};
+    use interface::operations::{NativeOperation, NativeResult, OpPing};
     use interface::requests::request::{Request, RequestBody};
     use interface::requests::Opcode;
     use interface::requests::ProviderID;
@@ -26,9 +26,9 @@ mod tests {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
         let ping = OpPing {};
         let result = client
-            .send_operation(ConvertOperation::Ping(ping))
+            .send_operation(NativeOperation::Ping(ping))
             .expect("ping failed");
-        if let ConvertResult::Ping(ping_result) = result {
+        if let NativeResult::Ping(ping_result) = result {
             assert!(ping_result.supp_version_maj == 1);
             assert!(ping_result.supp_version_min == 0);
         } else {

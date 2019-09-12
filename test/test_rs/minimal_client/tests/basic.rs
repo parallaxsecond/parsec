@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::{
-        key_attributes::KeyLifetime, ConvertOperation, OpDestroyKey, OpPing,
+        key_attributes::KeyLifetime, NativeOperation, OpDestroyKey, OpPing,
     };
     use interface::requests::request::RawHeader;
     use interface::requests::{Opcode, ProviderID, ResponseStatus};
@@ -127,7 +127,7 @@ mod tests {
     fn wrong_provider_mbed() {
         let mut client = MinimalClient::new(ProviderID::MbedProvider);
         let ping = OpPing {};
-        let response_status = match client.send_operation(ConvertOperation::Ping(ping)) {
+        let response_status = match client.send_operation(NativeOperation::Ping(ping)) {
             Ok(_) => panic!("Mbed Provider should not support Ping operation!"),
             Err(response_status) => response_status,
         };
@@ -142,7 +142,7 @@ mod tests {
             key_name: String::new(),
             key_lifetime: KeyLifetime::Persistent,
         };
-        let response_status = match client.send_operation(ConvertOperation::DestroyKey(op)) {
+        let response_status = match client.send_operation(NativeOperation::DestroyKey(op)) {
             Ok(_) => panic!("Core Provider should not support DestroyKey operation!"),
             Err(response_status) => response_status,
         };

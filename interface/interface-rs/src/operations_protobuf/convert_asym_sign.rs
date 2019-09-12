@@ -70,7 +70,7 @@ mod test {
     };
     use super::super::{Convert, ProtobufConverter};
     use crate::operations::{
-        key_attributes, ConvertOperation, ConvertResult, OpAsymSign, ResultAsymSign,
+        key_attributes, NativeOperation, NativeResult, OpAsymSign, ResultAsymSign,
     };
     use crate::requests::{request::RequestBody, response::ResponseBody, Opcode};
     use std::convert::TryInto;
@@ -145,10 +145,10 @@ mod test {
             key_name: "test name".to_string(),
         };
         let body = CONVERTER
-            .body_from_operation(ConvertOperation::AsymSign(op))
+            .operation_to_body(NativeOperation::AsymSign(op))
             .expect("Failed to convert request");
 
-        assert!(CONVERTER.body_to_operation(&body, Opcode::AsymSign).is_ok());
+        assert!(CONVERTER.body_to_operation(body, Opcode::AsymSign).is_ok());
     }
 
     #[test]
@@ -157,10 +157,10 @@ mod test {
             signature: vec![0x11, 0x22, 0x33],
         };
         let body = CONVERTER
-            .body_from_result(ConvertResult::AsymSign(result))
+            .result_to_body(NativeResult::AsymSign(result))
             .expect("Failed to convert request");
 
-        assert!(CONVERTER.body_to_result(&body, Opcode::AsymSign).is_ok());
+        assert!(CONVERTER.body_to_result(body, Opcode::AsymSign).is_ok());
     }
 
     #[test]
@@ -168,7 +168,7 @@ mod test {
         let resp_body =
             ResponseBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
         assert!(CONVERTER
-            .body_to_result(&resp_body, Opcode::AsymSign)
+            .body_to_result(resp_body, Opcode::AsymSign)
             .is_err());
     }
 
@@ -178,7 +178,7 @@ mod test {
             RequestBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
 
         assert!(CONVERTER
-            .body_to_operation(&req_body, Opcode::AsymSign)
+            .body_to_operation(req_body, Opcode::AsymSign)
             .is_err());
     }
 }

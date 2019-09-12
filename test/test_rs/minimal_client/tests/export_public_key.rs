@@ -16,7 +16,7 @@
 mod tests {
     use interface::operations::key_attributes::*;
     use interface::operations::{
-        ConvertOperation, ConvertResult, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
+        NativeOperation, NativeResult, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
     };
     use interface::requests::ProviderID;
     use interface::requests::ResponseStatus;
@@ -42,7 +42,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         let export = OpExportPublicKey {
@@ -50,7 +50,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::ExportPublicKey(export))
+            .send_operation(NativeOperation::ExportPublicKey(export))
             .unwrap();
 
         let destroy_key = OpDestroyKey {
@@ -58,7 +58,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 
@@ -70,7 +70,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         let status = client
-            .send_operation(ConvertOperation::ExportPublicKey(export))
+            .send_operation(NativeOperation::ExportPublicKey(export))
             .expect_err("Key should not exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
@@ -106,7 +106,7 @@ mod tests {
             key_data: key_data.clone(),
         };
         client
-            .send_operation(ConvertOperation::ImportKey(import))
+            .send_operation(NativeOperation::ImportKey(import))
             .unwrap();
 
         let export = OpExportPublicKey {
@@ -114,9 +114,9 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         let convert_result = client
-            .send_operation(ConvertOperation::ExportPublicKey(export))
+            .send_operation(NativeOperation::ExportPublicKey(export))
             .unwrap();
-        if let ConvertResult::ExportPublicKey(result) = convert_result {
+        if let NativeResult::ExportPublicKey(result) = convert_result {
             assert_eq!(key_data, result.key_data);
         }
 
@@ -125,7 +125,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 }

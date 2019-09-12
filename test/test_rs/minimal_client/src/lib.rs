@@ -17,7 +17,7 @@
 //! This library exposes minimal functions to communicate with the PARSEC service through a Unix
 //! socket.
 
-use interface::operations::{Convert, ConvertOperation, ConvertResult};
+use interface::operations::{Convert, NativeOperation, NativeResult};
 use interface::operations_protobuf::ProtobufConverter;
 use interface::requests::request::RawHeader;
 use interface::requests::{
@@ -120,18 +120,18 @@ impl MinimalClient {
         Response::read_from_stream(&mut stream).expect("Failed to read response from socket.")
     }
 
-    fn operation_to_request(&self, operation: ConvertOperation) -> Result<Request> {
+    fn operation_to_request(&self, operation: NativeOperation) -> Result<Request> {
         let mut request = Request::new();
         let opcode = match operation {
-            ConvertOperation::Ping(_) => Opcode::Ping,
-            ConvertOperation::CreateKey(_) => Opcode::CreateKey,
-            ConvertOperation::DestroyKey(_) => Opcode::DestroyKey,
-            ConvertOperation::AsymSign(_) => Opcode::AsymSign,
-            ConvertOperation::AsymVerify(_) => Opcode::AsymVerify,
-            ConvertOperation::ImportKey(_) => Opcode::ImportKey,
-            ConvertOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
+            NativeOperation::Ping(_) => Opcode::Ping,
+            NativeOperation::CreateKey(_) => Opcode::CreateKey,
+            NativeOperation::DestroyKey(_) => Opcode::DestroyKey,
+            NativeOperation::AsymSign(_) => Opcode::AsymSign,
+            NativeOperation::AsymVerify(_) => Opcode::AsymVerify,
+            NativeOperation::ImportKey(_) => Opcode::ImportKey,
+            NativeOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
         };
-        let request_body = self.converter.body_from_operation(operation)?;
+        let request_body = self.converter.operation_to_body(operation)?;
         request.body = request_body;
         request.auth = self.auth.clone();
         request.header.version_maj = self.version_maj;
@@ -145,13 +145,13 @@ impl MinimalClient {
         Ok(request)
     }
 
-    fn response_to_result(&self, response: Response) -> Result<ConvertResult> {
+    fn response_to_result(&self, response: Response) -> Result<NativeResult> {
         let status = response.header.status;
         if status != ResponseStatus::Success {
             return Err(status);
         }
         let opcode = response.header.opcode;
-        self.converter.body_to_result(&response.body, opcode)
+        self.converter.body_to_result(response.body, opcode)
     }
 
     /// Send an operation and get a result.
@@ -164,8 +164,8 @@ impl MinimalClient {
     /// # Panics
     ///
     /// Panics if the opcode of the response is different from the opcode of the request.
-    pub fn send_operation(&mut self, operation: ConvertOperation) -> Result<ConvertResult> {
-        // ConvertOperation -> OpXXX
+    pub fn send_operation(&mut self, operation: NativeOperation) -> Result<NativeResult> {
+        // NativeOperation -> OpXXX
         // OpXXX -> Request
         let request = self.operation_to_request(operation)?;
         let opcode_request = request.header.opcode;
@@ -176,7 +176,7 @@ impl MinimalClient {
             "Request and Response opcodes should be the same!"
         );
         // Response -> Result<ResultXXX, ResponseStatus>
-        // Result<ResultXXX, ResponseStatus> -> Result<ConvertResult, ResponseStatus>
+        // Result<ResultXXX, ResponseStatus> -> Result<NativeResult, ResponseStatus>
         self.response_to_result(response)
     }
 }

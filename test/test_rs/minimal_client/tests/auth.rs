@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::key_attributes::*;
-    use interface::operations::{ConvertOperation, OpCreateKey, OpDestroyKey};
+    use interface::operations::{NativeOperation, OpCreateKey, OpDestroyKey};
     use interface::requests::request::RequestAuth;
     use interface::requests::ProviderID;
     use interface::requests::ResponseStatus;
@@ -45,14 +45,14 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key.clone()))
+            .send_operation(NativeOperation::CreateKey(create_key.clone()))
             .unwrap();
 
         client.auth(RequestAuth::from_bytes(
             String::from("second_client").into_bytes(),
         ));
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         client.auth(RequestAuth::from_bytes(
@@ -63,14 +63,14 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key.clone()))
+            .send_operation(NativeOperation::DestroyKey(destroy_key.clone()))
             .unwrap();
 
         client.auth(RequestAuth::from_bytes(
             String::from("second_client").into_bytes(),
         ));
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key.clone()))
+            .send_operation(NativeOperation::DestroyKey(destroy_key.clone()))
             .unwrap();
     }
 
@@ -98,7 +98,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key.clone()))
+            .send_operation(NativeOperation::CreateKey(create_key.clone()))
             .unwrap();
 
         client.auth(RequestAuth::from_bytes(
@@ -109,7 +109,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         let status = client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .expect_err("Key should not exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
 
@@ -121,7 +121,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 }
