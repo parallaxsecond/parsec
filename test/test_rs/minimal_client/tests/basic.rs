@@ -17,114 +17,110 @@ mod tests {
     use interface::operations::{
         key_attributes::KeyLifetime, ConvertOperation, OpDestroyKey, OpPing,
     };
-    use interface::requests::{request::Request, Opcode, ProviderID, ResponseStatus};
+    use interface::requests::request::RawHeader;
+    use interface::requests::{Opcode, ProviderID, ResponseStatus};
     use minimal_client::MinimalClient;
 
     #[test]
     fn invalid_version() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 0xff;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 0xff;
 
-        let resp = client.send_request(req);
-        assert_eq!(resp.header.status(), ResponseStatus::VersionTooBig);
-        assert_eq!(resp.header.opcode(), Opcode::Ping);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::VersionTooBig);
+        assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_provider() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = 0xff;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 0xff;
+        req_hdr.provider = 0xff;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 0xff;
 
-        let resp = client.send_request(req);
-        assert_eq!(resp.header.status(), ResponseStatus::ProviderDoesNotExist);
-        assert_eq!(resp.header.opcode(), Opcode::Ping);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::ProviderDoesNotExist);
+        assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_content_type() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 1;
-        req.header.content_type = 0xff;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 1;
+        req_hdr.content_type = 0xff;
 
-        let resp = client.send_request(req);
-        assert_eq!(
-            resp.header.status(),
-            ResponseStatus::ContentTypeNotSupported
-        );
-        assert_eq!(resp.header.opcode(), Opcode::Ping);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::ContentTypeNotSupported);
+        assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_accept_type() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 1;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 1;
 
-        req.header.accept_type = 0xff;
+        req_hdr.accept_type = 0xff;
 
-        let resp = client.send_request(req);
-        assert_eq!(resp.header.status(), ResponseStatus::AcceptTypeNotSupported);
-        assert_eq!(resp.header.opcode(), Opcode::Ping);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::AcceptTypeNotSupported);
+        assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
-    #[cfg(feature = "testing")]
     #[test]
-    #[should_panic]
     fn invalid_body_len() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 1;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 1;
 
-        req.header.set_body_len(0xff_ff);
+        req_hdr.body_len = 0xff_ff;
 
-        client.send_request(req);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::ConnectionError);
     }
 
-    #[cfg(feature = "testing")]
     #[test]
-    #[should_panic]
     fn invalid_auth_len() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
-        req.header.version_maj = 1;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = Opcode::Ping as u16;
+        req_hdr.version_maj = 1;
 
-        req.header.set_auth_len(0xff_ff);
+        req_hdr.auth_len = 0xff_ff;
 
-        client.send_request(req);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::ConnectionError);
     }
 
     #[test]
     fn invalid_opcode() {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let mut req = Request::new();
+        let mut req_hdr = RawHeader::new();
 
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = 0xff_ff;
-        req.header.version_maj = 1;
+        req_hdr.provider = ProviderID::CoreProvider as u8;
+        req_hdr.opcode = 0xff_ff;
+        req_hdr.version_maj = 1;
 
-        let resp = client.send_request(req);
-        assert_eq!(resp.header.status(), ResponseStatus::OpcodeDoesNotExist);
+        let resp = client.send_raw_request(req_hdr, Vec::new());
+        assert_eq!(resp.header.status, ResponseStatus::OpcodeDoesNotExist);
     }
 
     #[test]

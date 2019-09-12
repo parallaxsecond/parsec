@@ -19,10 +19,12 @@
 
 use interface::operations::{Convert, ConvertOperation, ConvertResult};
 use interface::operations_protobuf::ProtobufConverter;
+use interface::requests::request::RawHeader;
 use interface::requests::{
     request::RequestAuth, AuthType, BodyType, Opcode, ProviderID, Request, Response,
     ResponseStatus, Result,
 };
+use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
@@ -95,6 +97,29 @@ impl MinimalClient {
         Response::read_from_stream(&mut stream).expect("Failed to read response from socket.")
     }
 
+    /// Send a raw request.
+    ///
+    /// Send a raw request header and a collection of bytes.
+    pub fn send_raw_request(&mut self, request_hdr: RawHeader, bytes: Vec<u8>) -> Response {
+        let mut stream =
+            UnixStream::connect(SOCKET_PATH).expect("Failed to connect to Unix socket");
+        stream
+            .set_read_timeout(Some(self.timeout))
+            .expect("Failed to set read timeout for stream");
+        stream
+            .set_write_timeout(Some(self.timeout))
+            .expect("Failed to set write timeout for stream");
+
+        request_hdr
+            .write_to_stream(&mut stream)
+            .expect("Failed to write raw header to socket");
+        stream
+            .write_all(&bytes)
+            .expect("Failed to write bytes to stream");
+
+        Response::read_from_stream(&mut stream).expect("Failed to read response from socket.")
+    }
+
     fn operation_to_request(&self, operation: ConvertOperation) -> Result<Request> {
         let mut request = Request::new();
         let opcode = match operation {
@@ -107,29 +132,26 @@ impl MinimalClient {
             ConvertOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
         };
         let request_body = self.converter.body_from_operation(operation)?;
-        request.set_body(request_body);
-        request.set_auth(self.auth.clone());
+        request.body = request_body;
+        request.auth = self.auth.clone();
         request.header.version_maj = self.version_maj;
         request.header.version_min = self.version_min;
-        request.header.provider = self.provider as u8;
-        request.header.content_type = self.content_type as u8;
-        request.header.accept_type = self.accept_type as u8;
-        request.header.auth_type = self.auth_type as u8;
-        request.header.opcode = opcode as u16;
+        request.header.provider = self.provider;
+        request.header.content_type = self.content_type;
+        request.header.accept_type = self.accept_type;
+        request.header.auth_type = self.auth_type;
+        request.header.opcode = opcode;
 
         Ok(request)
     }
 
     fn response_to_result(&self, response: Response) -> Result<ConvertResult> {
-        let status = response.header.status();
+        let status = response.header.status;
         if status != ResponseStatus::Success {
             return Err(status);
         }
-        let opcode = match ::num::FromPrimitive::from_u16(response.header.opcode) {
-            Some(opcode) => opcode,
-            None => return Err(ResponseStatus::OpcodeDoesNotExist),
-        };
-        self.converter.body_to_result(response.body(), opcode)
+        let opcode = response.header.opcode;
+        self.converter.body_to_result(&response.body, opcode)
     }
 
     /// Send an operation and get a result.

@@ -43,7 +43,7 @@ impl std::fmt::Display for ProviderID {
 /// Listing of body encoding types and their associated codes.
 ///
 /// Passed in headers as `content_type` and `accept_type`.
-#[derive(FromPrimitive, Copy, Clone)]
+#[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
 pub enum BodyType {
     Protobuf = 0,
 }
@@ -62,7 +62,7 @@ pub enum Opcode {
     ExportPublicKey = 6,
 }
 
-#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub enum AuthType {
     Simple = 0,
 }

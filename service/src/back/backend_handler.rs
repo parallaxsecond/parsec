@@ -16,8 +16,8 @@ use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use interface::operations::Convert;
 use interface::operations::{ConvertOperation, ConvertResult};
+use interface::requests::{request::RequestHeader, Request, Response, ResponseStatus, Result};
 use interface::requests::{BodyType, ProviderID};
-use interface::requests::{Opcode, Request, Response, ResponseStatus, Result};
 
 /// Component responsible for unmarshalling requests, passing the operation
 /// to the provider and marshalling the result.
@@ -35,33 +35,14 @@ pub struct BackEndHandler {
     pub version_maj: u8,
 }
 
-macro_rules! unwrap_or_else_return {
-    ($result:expr, $request:expr) => {
-        match $result {
-            Ok(value) => value,
-            Err(status) => return $request.into_response(status),
-        }
-    };
-}
-
 impl BackEndHandler {
     /// Convert a request into a response, given the result of the operation.
-    fn result_to_response(
-        &self,
-        result: ConvertResult,
-        request: Request,
-        opcode: Opcode,
-    ) -> Response {
-        let mut response = Response::new();
-        response.set_body(unwrap_or_else_return!(
-            self.converter.body_from_result(result),
-            request
-        ));
-        response.header.version_maj = self.version_maj;
-        response.header.version_min = self.version_min;
-        response.header.provider = self.provider_id as u8;
-        response.header.opcode = opcode as u16;
-        response.header.content_type = self.accept_type as u8;
+    fn result_to_response(&self, result: ConvertResult, request_hdr: RequestHeader) -> Response {
+        let mut response = Response::from_request_header(request_hdr, ResponseStatus::Success);
+        match self.converter.body_from_result(result) {
+            Ok(body) => response.body = body,
+            Err(status) => response.header.status = status,
+        };
         response
     }
 
@@ -80,11 +61,11 @@ impl BackEndHandler {
         //      - should we move header field parsing at deserialization?
         // TODO: if these two don't match the service should probably panic,
         // but I think it's reasonable to assume they do match
-        if header.provider != self.provider_id as u8 {
+        if header.provider != self.provider_id {
             Err(ResponseStatus::WrongProviderID)
-        } else if header.content_type != self.content_type as u8 {
+        } else if header.content_type != self.content_type {
             Err(ResponseStatus::ContentTypeNotSupported)
-        } else if header.accept_type != self.accept_type as u8 {
+        } else if header.accept_type != self.accept_type {
             Err(ResponseStatus::AcceptTypeNotSupported)
         } else if (header.version_maj > self.version_maj)
             // TODO: This is incompatible with semantic versioning - does it hold?
@@ -102,60 +83,53 @@ impl BackEndHandler {
     /// If any of the steps fails, a response containing an appropriate status code is
     /// returned.
     pub fn execute_request(&self, request: Request, app_name: ApplicationName) -> Response {
-        let opcode = match ::num::FromPrimitive::from_u16(request.header.opcode) {
-            Some(opcode) => opcode,
-            None => return request.into_response(ResponseStatus::OpcodeDoesNotExist),
-        };
-        match unwrap_or_else_return!(
-            self.converter.body_to_operation(request.body(), opcode),
-            request
-        ) {
+        let opcode = request.header.opcode;
+        let header = request.header;
+
+        macro_rules! unwrap_or_else_return {
+            ($result:expr) => {
+                match $result {
+                    Ok(value) => value,
+                    Err(status) => return Response::from_request_header(header, status),
+                }
+            };
+        }
+
+        match unwrap_or_else_return!(self.converter.body_to_operation(&request.body, opcode)) {
             ConvertOperation::Ping(op_ping) => {
-                let result = unwrap_or_else_return!(self.provider.ping(op_ping), request);
-                self.result_to_response(ConvertResult::Ping(result), request, opcode)
+                let result = unwrap_or_else_return!(self.provider.ping(op_ping));
+                self.result_to_response(ConvertResult::Ping(result), header)
             }
             ConvertOperation::CreateKey(op_create_key) => {
-                let result = unwrap_or_else_return!(
-                    self.provider.create_key(app_name, op_create_key),
-                    request
-                );
-                self.result_to_response(ConvertResult::CreateKey(result), request, opcode)
+                let result =
+                    unwrap_or_else_return!(self.provider.create_key(app_name, op_create_key));
+                self.result_to_response(ConvertResult::CreateKey(result), header)
             }
             ConvertOperation::ImportKey(op_import_key) => {
-                let result = unwrap_or_else_return!(
-                    self.provider.import_key(app_name, op_import_key),
-                    request
-                );
-                self.result_to_response(ConvertResult::ImportKey(result), request, opcode)
+                let result =
+                    unwrap_or_else_return!(self.provider.import_key(app_name, op_import_key));
+                self.result_to_response(ConvertResult::ImportKey(result), header)
             }
             ConvertOperation::ExportPublicKey(op_export_public_key) => {
-                let result = unwrap_or_else_return!(
-                    self.provider
-                        .export_public_key(app_name, op_export_public_key),
-                    request
-                );
-                self.result_to_response(ConvertResult::ExportPublicKey(result), request, opcode)
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .export_public_key(app_name, op_export_public_key));
+                self.result_to_response(ConvertResult::ExportPublicKey(result), header)
             }
             ConvertOperation::DestroyKey(op_destroy_key) => {
-                let result = unwrap_or_else_return!(
-                    self.provider.destroy_key(app_name, op_destroy_key),
-                    request
-                );
-                self.result_to_response(ConvertResult::DestroyKey(result), request, opcode)
+                let result =
+                    unwrap_or_else_return!(self.provider.destroy_key(app_name, op_destroy_key));
+                self.result_to_response(ConvertResult::DestroyKey(result), header)
             }
             ConvertOperation::AsymSign(op_asym_sign) => {
-                let result = unwrap_or_else_return!(
-                    self.provider.asym_sign(app_name, op_asym_sign),
-                    request
-                );
-                self.result_to_response(ConvertResult::AsymSign(result), request, opcode)
+                let result =
+                    unwrap_or_else_return!(self.provider.asym_sign(app_name, op_asym_sign));
+                self.result_to_response(ConvertResult::AsymSign(result), header)
             }
             ConvertOperation::AsymVerify(op_asym_verify) => {
-                let result = unwrap_or_else_return!(
-                    self.provider.asym_verify(app_name, op_asym_verify),
-                    request
-                );
-                self.result_to_response(ConvertResult::AsymVerify(result), request, opcode)
+                let result =
+                    unwrap_or_else_return!(self.provider.asym_verify(app_name, op_asym_verify));
+                self.result_to_response(ConvertResult::AsymVerify(result), header)
             }
         }
     }

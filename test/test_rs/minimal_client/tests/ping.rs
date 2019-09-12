@@ -42,15 +42,12 @@ mod tests {
         let mut client = MinimalClient::new(ProviderID::CoreProvider);
         let mut req = Request::new();
         req.header.version_maj = 1;
-        req.header.provider = ProviderID::CoreProvider as u8;
-        req.header.opcode = Opcode::Ping as u16;
+        req.header.provider = ProviderID::CoreProvider;
+        req.header.opcode = Opcode::Ping;
 
-        req.set_body(RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]));
+        req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 
         let resp = client.send_request(req);
-        assert_eq!(
-            resp.header.status(),
-            ResponseStatus::DeserializingBodyFailed
-        );
+        assert_eq!(resp.header.status, ResponseStatus::DeserializingBodyFailed);
     }
 }
