@@ -15,7 +15,7 @@
 use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use interface::operations::Convert;
-use interface::operations::{ConvertOperation, ConvertResult};
+use interface::operations::{NativeOperation, NativeResult};
 use interface::requests::{request::RequestHeader, Request, Response, ResponseStatus, Result};
 use interface::requests::{BodyType, ProviderID};
 
@@ -37,9 +37,9 @@ pub struct BackEndHandler {
 
 impl BackEndHandler {
     /// Convert a request into a response, given the result of the operation.
-    fn result_to_response(&self, result: ConvertResult, request_hdr: RequestHeader) -> Response {
+    fn result_to_response(&self, result: NativeResult, request_hdr: RequestHeader) -> Response {
         let mut response = Response::from_request_header(request_hdr, ResponseStatus::Success);
-        match self.converter.body_from_result(result) {
+        match self.converter.result_to_body(result) {
             Ok(body) => response.body = body,
             Err(status) => response.header.status = status,
         };
@@ -95,41 +95,41 @@ impl BackEndHandler {
             };
         }
 
-        match unwrap_or_else_return!(self.converter.body_to_operation(&request.body, opcode)) {
-            ConvertOperation::Ping(op_ping) => {
+        match unwrap_or_else_return!(self.converter.body_to_operation(request.body, opcode)) {
+            NativeOperation::Ping(op_ping) => {
                 let result = unwrap_or_else_return!(self.provider.ping(op_ping));
-                self.result_to_response(ConvertResult::Ping(result), header)
+                self.result_to_response(NativeResult::Ping(result), header)
             }
-            ConvertOperation::CreateKey(op_create_key) => {
+            NativeOperation::CreateKey(op_create_key) => {
                 let result =
                     unwrap_or_else_return!(self.provider.create_key(app_name, op_create_key));
-                self.result_to_response(ConvertResult::CreateKey(result), header)
+                self.result_to_response(NativeResult::CreateKey(result), header)
             }
-            ConvertOperation::ImportKey(op_import_key) => {
+            NativeOperation::ImportKey(op_import_key) => {
                 let result =
                     unwrap_or_else_return!(self.provider.import_key(app_name, op_import_key));
-                self.result_to_response(ConvertResult::ImportKey(result), header)
+                self.result_to_response(NativeResult::ImportKey(result), header)
             }
-            ConvertOperation::ExportPublicKey(op_export_public_key) => {
+            NativeOperation::ExportPublicKey(op_export_public_key) => {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .export_public_key(app_name, op_export_public_key));
-                self.result_to_response(ConvertResult::ExportPublicKey(result), header)
+                self.result_to_response(NativeResult::ExportPublicKey(result), header)
             }
-            ConvertOperation::DestroyKey(op_destroy_key) => {
+            NativeOperation::DestroyKey(op_destroy_key) => {
                 let result =
                     unwrap_or_else_return!(self.provider.destroy_key(app_name, op_destroy_key));
-                self.result_to_response(ConvertResult::DestroyKey(result), header)
+                self.result_to_response(NativeResult::DestroyKey(result), header)
             }
-            ConvertOperation::AsymSign(op_asym_sign) => {
+            NativeOperation::AsymSign(op_asym_sign) => {
                 let result =
                     unwrap_or_else_return!(self.provider.asym_sign(app_name, op_asym_sign));
-                self.result_to_response(ConvertResult::AsymSign(result), header)
+                self.result_to_response(NativeResult::AsymSign(result), header)
             }
-            ConvertOperation::AsymVerify(op_asym_verify) => {
+            NativeOperation::AsymVerify(op_asym_verify) => {
                 let result =
                     unwrap_or_else_return!(self.provider.asym_verify(app_name, op_asym_verify));
-                self.result_to_response(ConvertResult::AsymVerify(result), header)
+                self.result_to_response(NativeResult::AsymVerify(result), header)
             }
         }
     }

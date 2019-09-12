@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::key_attributes::*;
-    use interface::operations::{ConvertOperation, OpCreateKey, OpDestroyKey, OpImportKey};
+    use interface::operations::{NativeOperation, OpCreateKey, OpDestroyKey, OpImportKey};
     use interface::requests::ProviderID;
     use interface::requests::ResponseStatus;
     use minimal_client::MinimalClient;
@@ -51,7 +51,7 @@ mod tests {
             key_data,
         };
         client
-            .send_operation(ConvertOperation::ImportKey(import))
+            .send_operation(NativeOperation::ImportKey(import))
             .unwrap();
 
         let destroy_key = OpDestroyKey {
@@ -59,7 +59,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 
@@ -83,7 +83,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         let key_data = vec![
@@ -114,7 +114,7 @@ mod tests {
             key_data,
         };
         let status = client
-            .send_operation(ConvertOperation::ImportKey(import))
+            .send_operation(NativeOperation::ImportKey(import))
             .expect_err("The key with the same name has already been created.");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
@@ -123,7 +123,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 
@@ -159,10 +159,10 @@ mod tests {
         };
         let import_2 = import_1.clone();
         client
-            .send_operation(ConvertOperation::ImportKey(import_1))
+            .send_operation(NativeOperation::ImportKey(import_1))
             .unwrap();
         let status = client
-            .send_operation(ConvertOperation::ImportKey(import_2))
+            .send_operation(NativeOperation::ImportKey(import_2))
             .expect_err("The key with the same name has already been created.");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
@@ -171,7 +171,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 }

@@ -15,7 +15,7 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::key_attributes::*;
-    use interface::operations::{ConvertOperation, OpAsymSign, OpCreateKey, OpDestroyKey};
+    use interface::operations::{NativeOperation, OpAsymSign, OpCreateKey, OpDestroyKey};
     use interface::requests::ProviderID;
     use interface::requests::ResponseStatus;
     use minimal_client::MinimalClient;
@@ -41,7 +41,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         let destroy_key = OpDestroyKey {
@@ -49,7 +49,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 
@@ -74,10 +74,10 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key.clone()))
+            .send_operation(NativeOperation::CreateKey(create_key.clone()))
             .unwrap();
         let status = client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .expect_err("A key with the same name can not be created twice.");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
@@ -86,7 +86,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
     }
 
@@ -99,7 +99,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         let status = client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .expect_err("The key should not already exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
@@ -125,7 +125,7 @@ mod tests {
             },
         };
         client
-            .send_operation(ConvertOperation::CreateKey(create_key))
+            .send_operation(NativeOperation::CreateKey(create_key))
             .unwrap();
 
         let destroy_key = OpDestroyKey {
@@ -133,7 +133,7 @@ mod tests {
             key_lifetime: KeyLifetime::Persistent,
         };
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key))
+            .send_operation(NativeOperation::DestroyKey(destroy_key))
             .unwrap();
 
         let asym_sign = OpAsymSign {
@@ -142,7 +142,7 @@ mod tests {
             hash: vec![0xDE, 0xAD, 0xBE, 0xEF],
         };
         let status = client
-            .send_operation(ConvertOperation::AsymSign(asym_sign))
+            .send_operation(NativeOperation::AsymSign(asym_sign))
             .expect_err("The key used by this operation should have been deleted.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
@@ -170,10 +170,10 @@ mod tests {
         let mut create_key_2 = create_key_1.clone();
         create_key_2.key_name = String::from("create_destroy_twice_2");
         client
-            .send_operation(ConvertOperation::CreateKey(create_key_1))
+            .send_operation(NativeOperation::CreateKey(create_key_1))
             .unwrap();
         client
-            .send_operation(ConvertOperation::CreateKey(create_key_2))
+            .send_operation(NativeOperation::CreateKey(create_key_2))
             .unwrap();
 
         let destroy_key_1 = OpDestroyKey {
@@ -183,10 +183,10 @@ mod tests {
         let mut destroy_key_2 = destroy_key_1.clone();
         destroy_key_2.key_name = String::from("create_destroy_twice_2");
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key_1))
+            .send_operation(NativeOperation::DestroyKey(destroy_key_1))
             .unwrap();
         client
-            .send_operation(ConvertOperation::DestroyKey(destroy_key_2))
+            .send_operation(NativeOperation::DestroyKey(destroy_key_2))
             .unwrap();
     }
 }

@@ -32,7 +32,7 @@ pub use ping::{OpPing, ResultPing};
 
 /// Container type for operation conversion values, holding a native operation object
 /// to be passed in/out of a converter.
-pub enum ConvertOperation {
+pub enum NativeOperation {
     Ping(ping::OpPing),
     CreateKey(create_key::OpCreateKey),
     ImportKey(import_key::OpImportKey),
@@ -45,7 +45,7 @@ pub enum ConvertOperation {
 /// Container type for result conversion values, holding a native result object to be
 /// passed in/out of the converter.
 #[derive(Debug)]
-pub enum ConvertResult {
+pub enum NativeResult {
     Ping(ping::ResultPing),
     CreateKey(create_key::ResultCreateKey),
     ImportKey(import_key::ResultImportKey),
@@ -62,23 +62,23 @@ pub trait Convert {
     ///
     /// # Errors
     /// - if deserialization fails, `ResponseStatus::DeserializingBodyFailed` is returned
-    fn body_to_operation(&self, body: &RequestBody, opcode: Opcode) -> Result<ConvertOperation>;
+    fn body_to_operation(&self, body: RequestBody, opcode: Opcode) -> Result<NativeOperation>;
 
     /// Create a request body from a native operation object.
     ///
     /// # Errors
     /// - if serialization fails, `ResponseStatus::SerializingBodyFailed` is returned
-    fn body_from_operation(&self, operation: ConvertOperation) -> Result<RequestBody>;
+    fn operation_to_body(&self, operation: NativeOperation) -> Result<RequestBody>;
 
     /// Create a native result object from a response body.
     ///
     /// # Errors
     /// - if deserialization fails, `ResponseStatus::DeserializingBodyFailed` is returned
-    fn body_to_result(&self, body: &ResponseBody, opcode: Opcode) -> Result<ConvertResult>;
+    fn body_to_result(&self, body: ResponseBody, opcode: Opcode) -> Result<NativeResult>;
 
     /// Create a response body from a native result object.
     ///
     /// # Errors
     /// - if serialization fails, `ResponseStatus::SerializingBodyFailed` is returned
-    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody>;
+    fn result_to_body(&self, result: NativeResult) -> Result<ResponseBody>;
 }
