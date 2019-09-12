@@ -26,9 +26,7 @@ mod generated_ops;
 
 use crate::operations::{Convert, ConvertOperation, ConvertResult};
 use crate::requests::{
-    request::RequestBody,
-    response::{ResponseBody, ResponseStatus},
-    Opcode,
+    request::RequestBody, response::ResponseBody, Opcode, ResponseStatus, Result,
 };
 use generated_ops::asym_sign::{OpAsymmetricSignProto, ResultAsymmetricSignProto};
 use generated_ops::asym_verify::{OpAsymmetricVerifyProto, ResultAsymmetricVerifyProto};
@@ -66,11 +64,7 @@ macro_rules! native_to_wire {
 pub struct ProtobufConverter;
 
 impl Convert for ProtobufConverter {
-    fn body_to_operation(
-        &self,
-        body: &RequestBody,
-        opcode: Opcode,
-    ) -> Result<ConvertOperation, ResponseStatus> {
+    fn body_to_operation(&self, body: &RequestBody, opcode: Opcode) -> Result<ConvertOperation> {
         match opcode {
             Opcode::Ping => Ok(ConvertOperation::Ping(wire_to_native!(
                 body.bytes(),
@@ -103,10 +97,7 @@ impl Convert for ProtobufConverter {
         }
     }
 
-    fn body_from_operation(
-        &self,
-        operation: ConvertOperation,
-    ) -> Result<RequestBody, ResponseStatus> {
+    fn body_from_operation(&self, operation: ConvertOperation) -> Result<RequestBody> {
         match operation {
             ConvertOperation::Ping(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
@@ -136,11 +127,7 @@ impl Convert for ProtobufConverter {
         }
     }
 
-    fn body_to_result(
-        &self,
-        body: &ResponseBody,
-        opcode: Opcode,
-    ) -> Result<ConvertResult, ResponseStatus> {
+    fn body_to_result(&self, body: &ResponseBody, opcode: Opcode) -> Result<ConvertResult> {
         match opcode {
             Opcode::Ping => Ok(ConvertResult::Ping(wire_to_native!(
                 body.bytes(),
@@ -173,7 +160,7 @@ impl Convert for ProtobufConverter {
         }
     }
 
-    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody, ResponseStatus> {
+    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody> {
         match result {
             ConvertResult::Ping(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,

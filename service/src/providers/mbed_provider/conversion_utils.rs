@@ -17,7 +17,7 @@ use super::psa_crypto_binding::{
     psa_algorithm_t, psa_key_lifetime_t, psa_key_type_t, psa_key_usage_t, psa_status_t,
 };
 use interface::operations::key_attributes::*;
-use interface::requests::response::ResponseStatus;
+use interface::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 /// This structure holds key attribute values to be used by the Mbed Crypto library.

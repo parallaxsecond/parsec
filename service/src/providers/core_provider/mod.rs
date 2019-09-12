@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::Provide;
 use interface::operations::{OpPing, ResultPing};
-use interface::requests::response::ResponseStatus;
+use interface::requests::Result;
 
 pub struct CoreProvider {
     pub version_min: u8,
@@ -22,7 +22,7 @@ pub struct CoreProvider {
 }
 
 impl Provide for CoreProvider {
-    fn ping(&self, _op: OpPing) -> Result<ResultPing, ResponseStatus> {
+    fn ping(&self, _op: OpPing) -> Result<ResultPing> {
         let result = ResultPing {
             supp_version_maj: self.version_maj,
             supp_version_min: self.version_min,

@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::asym_sign::{OpAsymmetricSignProto, ResultAsymmetricSignProto};
 use crate::operations::{OpAsymSign, ResultAsymSign};
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 

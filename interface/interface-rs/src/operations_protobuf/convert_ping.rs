@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::ping::{OpPingProto, ResultPingProto};
 use crate::operations;
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 impl TryFrom<OpPingProto> for operations::OpPing {

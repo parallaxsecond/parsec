@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use crate::operations;
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 impl TryFrom<OpCreateKeyProto> for operations::OpCreateKey {

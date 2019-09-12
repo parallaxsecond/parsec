@@ -20,8 +20,8 @@
 use interface::operations::{Convert, ConvertOperation, ConvertResult};
 use interface::operations_protobuf::ProtobufConverter;
 use interface::requests::{
-    request::Request, request::RequestAuth, response::Response, response::ResponseStatus, AuthType,
-    BodyType, Opcode, ProviderID,
+    request::RequestAuth, AuthType, BodyType, Opcode, ProviderID, Request, Response,
+    ResponseStatus, Result,
 };
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
@@ -95,7 +95,7 @@ impl MinimalClient {
         Response::read_from_stream(&mut stream).expect("Failed to read response from socket.")
     }
 
-    fn operation_to_request(&self, operation: ConvertOperation) -> Result<Request, ResponseStatus> {
+    fn operation_to_request(&self, operation: ConvertOperation) -> Result<Request> {
         let mut request = Request::new();
         let opcode = match operation {
             ConvertOperation::Ping(_) => Opcode::Ping,
@@ -120,7 +120,7 @@ impl MinimalClient {
         Ok(request)
     }
 
-    fn response_to_result(&self, response: Response) -> Result<ConvertResult, ResponseStatus> {
+    fn response_to_result(&self, response: Response) -> Result<ConvertResult> {
         let status = response.header.status();
         if status != ResponseStatus::Success {
             return Err(status);
@@ -142,10 +142,7 @@ impl MinimalClient {
     /// # Panics
     ///
     /// Panics if the opcode of the response is different from the opcode of the request.
-    pub fn send_operation(
-        &mut self,
-        operation: ConvertOperation,
-    ) -> Result<ConvertResult, ResponseStatus> {
+    pub fn send_operation(&mut self, operation: ConvertOperation) -> Result<ConvertResult> {
         // ConvertOperation -> OpXXX
         // OpXXX -> Request
         let request = self.operation_to_request(operation)?;

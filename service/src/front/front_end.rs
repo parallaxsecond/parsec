@@ -14,9 +14,9 @@
 // limitations under the License.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
-use interface::requests::request::Request;
-use interface::requests::response::ResponseStatus;
 use interface::requests::AuthType;
+use interface::requests::Request;
+use interface::requests::ResponseStatus;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 

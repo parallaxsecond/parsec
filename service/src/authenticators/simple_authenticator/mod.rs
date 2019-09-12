@@ -21,13 +21,13 @@
 use super::ApplicationName;
 use super::Authenticate;
 use interface::requests::request::RequestAuth;
-use interface::requests::response::ResponseStatus;
+use interface::requests::{ResponseStatus, Result};
 use std::str;
 
 pub struct SimpleAuthenticator;
 
 impl Authenticate for SimpleAuthenticator {
-    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName, ResponseStatus> {
+    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName> {
         if auth.is_empty() {
             Ok(ApplicationName(String::from("root")))
         } else {

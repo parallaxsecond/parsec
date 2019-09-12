@@ -14,9 +14,14 @@
 // limitations under the License.
 use num_derive::FromPrimitive;
 
+mod response_status;
+
 pub mod utils;
 pub mod request;
 pub mod response;
+pub use request::Request;
+pub use response::Response;
+pub use response_status::{ResponseStatus, Result};
 
 const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 

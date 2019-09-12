@@ -15,8 +15,8 @@
 use super::backend_handler::BackEndHandler;
 use crate::authenticators::ApplicationName;
 use interface::requests::request::Request;
-use interface::requests::response::{Response, ResponseStatus};
 use interface::requests::ProviderID;
+use interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
 
 /// Component tasked with identifying the backend handler that can

@@ -19,8 +19,8 @@
 //! different means.
 
 use crate::authenticators::ApplicationName;
-use interface::requests::response::ResponseStatus;
 use interface::requests::ProviderID;
+use interface::requests::Result;
 
 pub mod simple_manager;
 
@@ -35,7 +35,7 @@ pub trait ManageKeyIDs {
         app_name: &ApplicationName,
         provider_id: ProviderID,
         key_name: &str,
-    ) -> Result<&[u8], ResponseStatus>;
+    ) -> Result<&[u8]>;
 
     /// Insert a new mapping between the key tuple and the key ID. If the tuple already exists,
     /// overwrite the existing mapping.
