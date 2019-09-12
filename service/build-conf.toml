@@ -1,0 +1,11 @@
+# Configuration values for setting up and building the Mbed Crypto library that Plasma depends on
+[mbed_config]
+
+# The compiler to use when building the Mbed Crypto library
+# mbed_compiler = "clang"
+
+# The archiver to use when building the Mbed Crypto library
+# mbed_archiver = "ar"
+
+# Path (either relative or absolute) where the Mbed Crypto source code will be persisted
+mbed_path = "./target/"
