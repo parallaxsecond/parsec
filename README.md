@@ -1,2 +1,2 @@
-![plasma logo](PLASMA.png)
-# Platform Agnostic Security Manager
+![parsec logo](PARSEC.png)
+# Platform Security
