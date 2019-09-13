@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "service",
+    "test/test_rs/minimal_client",
+    "interface/interface-rs"
+]
