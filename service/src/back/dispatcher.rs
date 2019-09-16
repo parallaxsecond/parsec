@@ -25,7 +25,7 @@ use std::collections::HashMap;
 /// As such, it owns all the backend handlers and attempts to match
 /// the fields in the request header to the properties of the handlers.
 pub struct Dispatcher {
-    pub backends: HashMap<ProviderID, BackEndHandler>,
+    backends: HashMap<ProviderID, BackEndHandler>,
 }
 
 impl Dispatcher {
@@ -44,6 +44,42 @@ impl Dispatcher {
             }
         } else {
             Response::from_request_header(request.header, ResponseStatus::ProviderNotRegistered)
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct DispatcherBuilder {
+    backends: Option<HashMap<ProviderID, BackEndHandler>>,
+}
+
+impl DispatcherBuilder {
+    pub fn new() -> Self {
+        DispatcherBuilder { backends: None }
+    }
+
+    pub fn with_backend(
+        mut self,
+        provider_id: ProviderID,
+        backend_handler: BackEndHandler,
+    ) -> Self {
+        match &mut self.backends {
+            Some(backends) => {
+                backends.insert(provider_id, backend_handler);
+            }
+            None => {
+                let mut map = HashMap::new();
+                map.insert(provider_id, backend_handler);
+                self.backends = Some(map);
+            }
+        }
+
+        self
+    }
+
+    pub fn build(self) -> Dispatcher {
+        Dispatcher {
+            backends: self.backends.expect("Backends missing"),
         }
     }
 }

@@ -35,8 +35,8 @@ static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 pub struct DomainSocketListener {
     // Multiple threads can not just have a reference of the FrontEndHandler because they could
     // outlive the run function.
-    pub front_end_handler: Arc<FrontEndHandler>,
-    pub listener: Option<UnixListener>,
+    front_end_handler: Arc<FrontEndHandler>,
+    listener: Option<UnixListener>,
 }
 
 impl Listen for DomainSocketListener {
@@ -99,6 +99,31 @@ impl Listen for DomainSocketListener {
             }
         } else {
             panic!("The Unix Domain Socket has not been initialised.");
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct DomainSocketListenerBuilder {
+    front_end_handler: Option<Arc<FrontEndHandler>>,
+}
+
+impl DomainSocketListenerBuilder {
+    pub fn new() -> Self {
+        DomainSocketListenerBuilder {
+            front_end_handler: None,
+        }
+    }
+
+    pub fn with_front_end_handler(mut self, front_end_handler: Arc<FrontEndHandler>) -> Self {
+        self.front_end_handler = Some(front_end_handler);
+        self
+    }
+
+    pub fn build(self) -> DomainSocketListener {
+        DomainSocketListener {
+            front_end_handler: self.front_end_handler.expect("FrontEndHandler missing"),
+            listener: None,
         }
     }
 }
