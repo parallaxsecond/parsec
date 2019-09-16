@@ -35,7 +35,7 @@ pub fn convert_key_attributes(attrs: &KeyAttributes) -> MbedKeyAttributes {
         key_lifetime: convert_key_lifetime(attrs.key_lifetime),
         key_type: convert_key_type(attrs.key_type),
         algorithm: convert_algorithm(&attrs.algorithm),
-        key_size: attrs.key_size as usize,
+        key_size: usize::try_from(attrs.key_size).expect("Key size cannot be represented as usize"),
         key_usage: convert_key_usage(attrs),
     }
 }
@@ -156,8 +156,8 @@ pub fn convert_status(psa_status: psa_status_t) -> ResponseStatus {
     let psa_status = psa_status
         .checked_add(PSA_STATUS_TO_RESPONSE_STATUS_OFFSET)
         .expect("Overflow of psa_status.");
-    let psa_status: u16 = u16::try_from(psa_status).expect(
+    let psa_status = u16::try_from(psa_status).expect(
         "Mapping operation result in a value that can not be represented in a u16 variable.",
     );
-    num::FromPrimitive::from_u16(psa_status).expect("No ResponseStatus value corresponding.")
+    ResponseStatus::from_u16(psa_status)
 }

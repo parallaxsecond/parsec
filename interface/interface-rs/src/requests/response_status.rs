@@ -18,6 +18,7 @@ use std::fmt;
 
 /// C-like enum mapping response status options to their code.
 #[derive(Debug, PartialEq, FromPrimitive)]
+#[repr(u16)]
 pub enum ResponseStatus {
     Success = 0,
     WrongProviderID = 1,
@@ -59,6 +60,13 @@ pub enum ResponseStatus {
     PsaErrorInvalidSignature = 1149,
     PsaErrorInvalidPadding = 1150,
     PsaErrorTamperingDetected = 1151,
+}
+
+impl ResponseStatus {
+    pub fn from_u16(value: u16) -> Self {
+        num::FromPrimitive::from_u16(value)
+            .expect("Value does not correspond to a valid ResponseStatus")
+    }
 }
 
 impl fmt::Display for ResponseStatus {
@@ -194,6 +202,18 @@ impl From<std::io::Error> for ResponseStatus {
 impl From<bincode::Error> for ResponseStatus {
     fn from(_err: bincode::Error) -> Self {
         ResponseStatus::InvalidEncoding
+    }
+}
+
+impl From<std::num::TryFromIntError> for ResponseStatus {
+    fn from(_err: std::num::TryFromIntError) -> Self {
+        ResponseStatus::InvalidEncoding
+    }
+}
+
+impl From<std::convert::Infallible> for ResponseStatus {
+    fn from(_err: std::convert::Infallible) -> Self {
+        unreachable!();
     }
 }
 

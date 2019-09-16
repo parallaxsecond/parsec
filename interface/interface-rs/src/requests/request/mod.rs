@@ -15,7 +15,7 @@
 use super::response::ResponseHeader;
 use crate::requests::{ResponseStatus, Result};
 use request_header::RawRequestHeader;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::io::{Read, Write};
 
 const REQUEST_HDR_SIZE: u16 = 22;
@@ -69,8 +69,8 @@ impl Request {
     /// is returned.
     pub fn write_to_stream(self, stream: &mut impl Write) -> Result<()> {
         let mut raw_header: RawRequestHeader = self.header.into();
-        raw_header.body_len = self.body.len() as u32;
-        raw_header.auth_len = self.auth.len() as u16;
+        raw_header.body_len = u32::try_from(self.body.len())?;
+        raw_header.auth_len = u16::try_from(self.auth.len())?;
         raw_header.write_to_stream(stream)?;
 
         self.body.write_to_stream(stream)?;
@@ -88,8 +88,8 @@ impl Request {
     /// `ResponseStatus` will be returned.
     pub fn read_from_stream(stream: &mut impl Read) -> Result<Request> {
         let raw_header = RawRequestHeader::read_from_stream(stream)?;
-        let body = RequestBody::read_from_stream(stream, raw_header.body_len as usize)?;
-        let auth = RequestAuth::read_from_stream(stream, raw_header.auth_len as usize)?;
+        let body = RequestBody::read_from_stream(stream, usize::try_from(raw_header.body_len)?)?;
+        let auth = RequestAuth::read_from_stream(stream, usize::try_from(raw_header.auth_len)?)?;
 
         Ok(Request {
             header: raw_header.try_into()?,
