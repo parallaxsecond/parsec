@@ -24,7 +24,7 @@ use crate::authenticators::ApplicationName;
 use interface::requests::ProviderID;
 use std::fmt;
 
-pub mod simple_manager;
+pub mod on_disk_manager;
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.
