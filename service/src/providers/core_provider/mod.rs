@@ -17,8 +17,8 @@ use interface::operations::{OpPing, ResultPing};
 use interface::requests::Result;
 
 pub struct CoreProvider {
-    pub version_min: u8,
-    pub version_maj: u8,
+    version_min: u8,
+    version_maj: u8,
 }
 
 impl Provide for CoreProvider {
@@ -29,6 +29,35 @@ impl Provide for CoreProvider {
         };
 
         Ok(result)
+    }
+}
+
+#[derive(Default)]
+pub struct CoreProviderBuilder {
+    version_maj: Option<u8>,
+    version_min: Option<u8>,
+}
+
+impl CoreProviderBuilder {
+    pub fn new() -> Self {
+        CoreProviderBuilder {
+            version_maj: None,
+            version_min: None,
+        }
+    }
+
+    pub fn with_version(mut self, version_min: u8, version_maj: u8) -> Self {
+        self.version_maj = Some(version_maj);
+        self.version_min = Some(version_min);
+
+        self
+    }
+
+    pub fn build(self) -> CoreProvider {
+        CoreProvider {
+            version_maj: self.version_maj.expect("Version Maj missing"),
+            version_min: self.version_min.expect("Version Min missing"),
+        }
     }
 }
 

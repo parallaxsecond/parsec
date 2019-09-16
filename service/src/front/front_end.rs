@@ -25,9 +25,9 @@ use std::io::{Read, Write};
 ///
 /// Requests are passed forward to the `Dispatcher`.
 pub struct FrontEndHandler {
-    pub dispatcher: Dispatcher,
+    dispatcher: Dispatcher,
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
-    pub authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
+    authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
 }
 
 impl FrontEndHandler {
@@ -75,6 +75,52 @@ impl FrontEndHandler {
         match response.write_to_stream(&mut stream) {
             Ok(_) => println!("Request handled successfully"),
             Err(err) => println!("Failed to send response; error: {}", err),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct FrontEndHandlerBuilder {
+    dispatcher: Option<Dispatcher>,
+    authenticators: Option<HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>>,
+}
+
+impl FrontEndHandlerBuilder {
+    pub fn new() -> Self {
+        FrontEndHandlerBuilder {
+            dispatcher: None,
+            authenticators: None,
+        }
+    }
+
+    pub fn with_dispatcher(mut self, dispatcher: Dispatcher) -> Self {
+        self.dispatcher = Some(dispatcher);
+        self
+    }
+
+    pub fn with_authenticator(
+        mut self,
+        auth_type: AuthType,
+        authenticator: Box<dyn Authenticate + Send + Sync>,
+    ) -> Self {
+        match &mut self.authenticators {
+            Some(authenticators) => {
+                authenticators.insert(auth_type, authenticator);
+            }
+            None => {
+                let mut map = HashMap::new();
+                map.insert(auth_type, authenticator);
+                self.authenticators = Some(map);
+            }
+        };
+
+        self
+    }
+
+    pub fn build(self) -> FrontEndHandler {
+        FrontEndHandler {
+            dispatcher: self.dispatcher.expect("Dispatcher missing"),
+            authenticators: self.authenticators.expect("Authenticators missing"),
         }
     }
 }

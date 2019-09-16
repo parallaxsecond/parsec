@@ -26,13 +26,13 @@ use interface::requests::{BodyType, ProviderID};
 /// it can process a request.
 pub struct BackEndHandler {
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
-    pub provider: Box<dyn Provide + Send + Sync>,
-    pub converter: Box<dyn Convert + Send + Sync>,
-    pub provider_id: ProviderID,
-    pub content_type: BodyType,
-    pub accept_type: BodyType,
-    pub version_min: u8,
-    pub version_maj: u8,
+    provider: Box<dyn Provide + Send + Sync>,
+    converter: Box<dyn Convert + Send + Sync>,
+    provider_id: ProviderID,
+    content_type: BodyType,
+    accept_type: BodyType,
+    version_min: u8,
+    version_maj: u8,
 }
 
 impl BackEndHandler {
@@ -131,6 +131,74 @@ impl BackEndHandler {
                     unwrap_or_else_return!(self.provider.asym_verify(app_name, op_asym_verify));
                 self.result_to_response(NativeResult::AsymVerify(result), header)
             }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct BackEndHandlerBuilder {
+    provider: Option<Box<dyn Provide + Send + Sync>>,
+    converter: Option<Box<dyn Convert + Send + Sync>>,
+    provider_id: Option<ProviderID>,
+    content_type: Option<BodyType>,
+    accept_type: Option<BodyType>,
+    version_min: Option<u8>,
+    version_maj: Option<u8>,
+}
+
+impl BackEndHandlerBuilder {
+    pub fn new() -> BackEndHandlerBuilder {
+        BackEndHandlerBuilder {
+            provider: None,
+            converter: None,
+            provider_id: None,
+            content_type: None,
+            accept_type: None,
+            version_min: None,
+            version_maj: None,
+        }
+    }
+
+    pub fn with_provider(mut self, provider: Box<dyn Provide + Send + Sync>) -> Self {
+        self.provider = Some(provider);
+        self
+    }
+
+    pub fn with_converter(mut self, converter: Box<dyn Convert + Send + Sync>) -> Self {
+        self.converter = Some(converter);
+        self
+    }
+
+    pub fn with_provider_id(mut self, provider_id: ProviderID) -> Self {
+        self.provider_id = Some(provider_id);
+        self
+    }
+
+    pub fn with_content_type(mut self, content_type: BodyType) -> Self {
+        self.content_type = Some(content_type);
+        self
+    }
+
+    pub fn with_accept_type(mut self, accept_type: BodyType) -> Self {
+        self.accept_type = Some(accept_type);
+        self
+    }
+
+    pub fn with_version(mut self, version_min: u8, version_maj: u8) -> Self {
+        self.version_maj = Some(version_maj);
+        self.version_min = Some(version_min);
+        self
+    }
+
+    pub fn build(self) -> BackEndHandler {
+        BackEndHandler {
+            provider: self.provider.expect("Provider missing"),
+            converter: self.converter.expect("Converter missing"),
+            provider_id: self.provider_id.expect("Provider ID missing"),
+            content_type: self.content_type.expect("Content type missing"),
+            accept_type: self.accept_type.expect("Accept type missing"),
+            version_min: self.version_min.expect("Version min missing"),
+            version_maj: self.version_maj.expect("Version maj missing"),
         }
     }
 }
