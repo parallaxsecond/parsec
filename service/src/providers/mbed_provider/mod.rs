@@ -14,8 +14,7 @@
 // limitations under the License.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_id_managers::ManageKeyIDs;
-use interface::requests::ProviderID;
+use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
@@ -28,7 +27,7 @@ use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use interface::operations::{OpImportKey, ResultImportKey};
 use interface::operations::{OpListOpcodes, ResultListOpcodes};
-use interface::requests::{Opcode, ResponseStatus, Result};
+use interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 
 #[allow(
     non_snake_case,
@@ -70,13 +69,15 @@ impl MbedProvider {
         app_name: &ApplicationName,
         key_name: &str,
         store_handle: &dyn ManageKeyIDs,
-    ) -> Result<psa_crypto_binding::psa_key_id_t> {
-        Ok(u32::from_ne_bytes(
-            store_handle
-                .get(app_name, ProviderID::MbedProvider, key_name)?
-                .try_into()
-                .expect("Stored key ID was not valid"),
-        ))
+    ) -> ::std::result::Result<psa_crypto_binding::psa_key_id_t, ResponseStatus> {
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        if let Some(key_id) = store_handle.get(key_triple) {
+            Ok(u32::from_ne_bytes(
+                key_id.try_into().expect("Stored key ID was not valid"),
+            ))
+        } else {
+            Err(ResponseStatus::KeyDoesNotExist)
+        }
     }
 
     fn create_key_id(
@@ -90,12 +91,13 @@ impl MbedProvider {
         while !local_ids_handle.insert(key_id) {
             key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
         }
-        store_handle.insert(
-            app_name,
-            ProviderID::MbedProvider,
-            key_name,
-            key_id.to_ne_bytes().to_vec(),
-        );
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        if store_handle
+            .insert(key_triple, key_id.to_ne_bytes().to_vec())
+            .is_some()
+        {
+            println!("Overwriting Key triple mapping ({})", key_triple);
+        }
 
         key_id
     }
@@ -109,7 +111,7 @@ impl MbedProvider {
         local_ids_handle: &mut LocalIdStore,
     ) {
         local_ids_handle.remove(&key_id);
-        store_handle.remove(app_name, ProviderID::MbedProvider, key_name);
+        store_handle.remove(KeyTriple::new(app_name, ProviderID::MbedProvider, key_name));
     }
 
     fn key_id_exists(
@@ -118,7 +120,7 @@ impl MbedProvider {
         key_name: &str,
         store_handle: &dyn ManageKeyIDs,
     ) -> bool {
-        store_handle.exists(app_name, ProviderID::MbedProvider, key_name)
+        store_handle.exists(KeyTriple::new(app_name, ProviderID::MbedProvider, key_name))
     }
 }
 

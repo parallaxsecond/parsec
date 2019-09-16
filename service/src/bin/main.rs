@@ -25,7 +25,7 @@ use service::key_id_managers::simple_manager::SimpleKeyIDManager;
 use service::providers::{
     core_provider::CoreProviderBuilder, mbed_provider::MbedProvider, Provide,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
@@ -43,9 +43,7 @@ fn build_components() -> (FrontEndHandler, impl Listen) {
         CoreProviderBuilder::new().with_version(VERSION_MINOR, VERSION_MAJOR);
 
     let mbed_provider = MbedProvider {
-        key_id_store: Arc::new(RwLock::new(SimpleKeyIDManager {
-            key_store: HashMap::new(),
-        })),
+        key_id_store: Arc::new(RwLock::new(SimpleKeyIDManager::new())),
         local_ids: RwLock::new(HashSet::new()),
     };
     if mbed_provider.init() {
