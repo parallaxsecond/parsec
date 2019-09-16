@@ -18,59 +18,49 @@
 //! more complex manager that uses a persistant storage to store the mapping. This implementation
 //! only uses a `HashMap`.
 
-use super::ManageKeyIDs;
-use crate::authenticators::ApplicationName;
-use interface::requests::ProviderID;
-use interface::requests::{ResponseStatus, Result};
+use super::{KeyTriple, ManageKeyIDs};
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct SimpleKeyIDManager {
-    pub key_store: HashMap<String, Vec<u8>>,
+    key_store: HashMap<String, Vec<u8>>,
+}
+
+impl SimpleKeyIDManager {
+    pub fn new() -> SimpleKeyIDManager {
+        SimpleKeyIDManager {
+            key_store: HashMap::new(),
+        }
+    }
 }
 
 impl ManageKeyIDs for SimpleKeyIDManager {
-    fn get(
-        &self,
-        app_name: &ApplicationName,
-        provider_id: ProviderID,
-        key_name: &str,
-    ) -> Result<&[u8]> {
-        if let Some(key_id) = self
-            .key_store
-            .get(&format!("{}/{}/{}", app_name, provider_id, key_name))
-        {
-            Ok(key_id)
+    fn get(&self, key_triple: KeyTriple) -> Option<&[u8]> {
+        // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
+        // done by hand.
+        if let Some(key_id) = self.key_store.get(&key_triple.to_string()) {
+            Some(key_id)
         } else {
-            Err(ResponseStatus::KeyDoesNotExist)
+            None
         }
     }
 
-    fn insert(
-        &mut self,
-        app_name: &ApplicationName,
-        provider_id: ProviderID,
-        key_name: &str,
-        key_id: Vec<u8>,
-    ) {
-        self.key_store
-            .insert(format!("{}/{}/{}", app_name, provider_id, key_name), key_id);
+    fn insert(&mut self, key_triple: KeyTriple, key_id: Vec<u8>) -> Option<Vec<u8>> {
+        self.key_store.insert(key_triple.to_string(), key_id)
     }
 
-    fn remove(&mut self, app_name: &ApplicationName, provider_id: ProviderID, key_name: &str) {
-        self.key_store
-            .remove(&format!("{}/{}/{}", app_name, provider_id, key_name))
-            .expect("Key to remove was not present");
+    fn remove(&mut self, key_triple: KeyTriple) -> Option<Vec<u8>> {
+        self.key_store.remove(&key_triple.to_string())
     }
 
-    fn exists(&self, app_name: &ApplicationName, provider_id: ProviderID, key_name: &str) -> bool {
-        self.key_store
-            .contains_key(&format!("{}/{}/{}", app_name, provider_id, key_name))
+    fn exists(&self, key_triple: KeyTriple) -> bool {
+        self.key_store.contains_key(&key_triple.to_string())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::super::ManageKeyIDs;
+    use super::super::{KeyTriple, ManageKeyIDs};
     use super::SimpleKeyIDManager;
     use crate::authenticators::ApplicationName;
     use interface::requests::ProviderID;
@@ -84,17 +74,14 @@ mod test {
 
         let (app_name, prov) = get_names();
         let key_name = "test_key".to_string();
+        let key_triple = KeyTriple::new(&app_name, prov, &key_name);
         let key_id = vec![0x11, 0x22, 0x33];
 
-        assert!(manager.get(&app_name, prov, &key_name).is_err());
+        assert!(manager.get(key_triple).is_none());
 
-        manager.insert(&app_name, prov, &key_name, key_id.clone());
+        manager.insert(key_triple, key_id.clone());
 
-        let stored_key_id = Vec::from(
-            manager
-                .get(&app_name, prov, &key_name)
-                .expect("Failed to get key id"),
-        );
+        let stored_key_id = Vec::from(manager.get(key_triple).expect("Failed to get key id"));
 
         assert_eq!(stored_key_id, key_id);
     }
@@ -107,23 +94,24 @@ mod test {
 
         let (app_name, prov) = get_names();
         let key_name = "test_key".to_string();
+        let key_triple = KeyTriple::new(&app_name, prov, &key_name);
         let key_id = vec![0x11, 0x22, 0x33];
 
-        manager.insert(&app_name, prov, &key_name, key_id.clone());
+        manager.insert(key_triple, key_id.clone());
 
-        manager.remove(&app_name, prov, &key_name);
+        manager.remove(key_triple);
     }
 
     #[test]
-    #[should_panic(expected = "Key to remove was not present")]
-    fn remove_panicking() {
+    fn remove_unexisting_key() {
         let mut manager = SimpleKeyIDManager {
             key_store: HashMap::new(),
         };
 
         let (app_name, prov) = get_names();
         let key_name = "test_key".to_string();
-        manager.remove(&app_name, prov, &key_name);
+        let key_triple = KeyTriple::new(&app_name, prov, &key_name);
+        assert_eq!(manager.remove(key_triple), None);
     }
 
     #[test]
@@ -134,15 +122,16 @@ mod test {
 
         let (app_name, prov) = get_names();
         let key_name = "test_key".to_string();
+        let key_triple = KeyTriple::new(&app_name, prov, &key_name);
         let key_id = vec![0x11, 0x22, 0x33];
 
-        assert!(!manager.exists(&app_name, prov, &key_name));
+        assert!(!manager.exists(key_triple));
 
-        manager.insert(&app_name, prov, &key_name, key_id.clone());
-        assert!(manager.exists(&app_name, prov, &key_name));
+        manager.insert(key_triple, key_id.clone());
+        assert!(manager.exists(key_triple));
 
-        manager.remove(&app_name, prov, &key_name);
-        assert!(!manager.exists(&app_name, prov, &key_name));
+        manager.remove(key_triple);
+        assert!(!manager.exists(key_triple));
     }
 
     #[test]
@@ -153,17 +142,14 @@ mod test {
 
         let (app_name, prov) = get_names();
         let key_name = "test_key".to_string();
+        let key_triple = KeyTriple::new(&app_name, prov, &key_name);
         let key_id_1 = vec![0x11, 0x22, 0x33];
         let key_id_2 = vec![0xaa, 0xbb, 0xcc];
 
-        manager.insert(&app_name, prov, &key_name, key_id_1.clone());
-        manager.insert(&app_name, prov, &key_name, key_id_2.clone());
+        manager.insert(key_triple, key_id_1.clone());
+        manager.insert(key_triple, key_id_2.clone());
 
-        let stored_key_id = Vec::from(
-            manager
-                .get(&app_name, prov, &key_name)
-                .expect("Failed to get key id"),
-        );
+        let stored_key_id = Vec::from(manager.get(key_triple).expect("Failed to get key id"));
 
         assert_eq!(stored_key_id, key_id_2);
     }
