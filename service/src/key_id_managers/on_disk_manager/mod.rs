@@ -22,19 +22,19 @@ use super::{KeyTriple, ManageKeyIDs};
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct SimpleKeyIDManager {
+pub struct OnDiskKeyIDManager {
     key_store: HashMap<String, Vec<u8>>,
 }
 
-impl SimpleKeyIDManager {
-    pub fn new() -> SimpleKeyIDManager {
-        SimpleKeyIDManager {
+impl OnDiskKeyIDManager {
+    pub fn new() -> OnDiskKeyIDManager {
+        OnDiskKeyIDManager {
             key_store: HashMap::new(),
         }
     }
 }
 
-impl ManageKeyIDs for SimpleKeyIDManager {
+impl ManageKeyIDs for OnDiskKeyIDManager {
     fn get(&self, key_triple: KeyTriple) -> Option<&[u8]> {
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
         // done by hand.
@@ -61,14 +61,14 @@ impl ManageKeyIDs for SimpleKeyIDManager {
 #[cfg(test)]
 mod test {
     use super::super::{KeyTriple, ManageKeyIDs};
-    use super::SimpleKeyIDManager;
+    use super::OnDiskKeyIDManager;
     use crate::authenticators::ApplicationName;
     use interface::requests::ProviderID;
     use std::collections::HashMap;
 
     #[test]
     fn insert_get_key_id() {
-        let mut manager = SimpleKeyIDManager {
+        let mut manager = OnDiskKeyIDManager {
             key_store: HashMap::new(),
         };
 
@@ -88,7 +88,7 @@ mod test {
 
     #[test]
     fn insert_remove_key() {
-        let mut manager = SimpleKeyIDManager {
+        let mut manager = OnDiskKeyIDManager {
             key_store: HashMap::new(),
         };
 
@@ -104,7 +104,7 @@ mod test {
 
     #[test]
     fn remove_unexisting_key() {
-        let mut manager = SimpleKeyIDManager {
+        let mut manager = OnDiskKeyIDManager {
             key_store: HashMap::new(),
         };
 
@@ -116,7 +116,7 @@ mod test {
 
     #[test]
     fn exists() {
-        let mut manager = SimpleKeyIDManager {
+        let mut manager = OnDiskKeyIDManager {
             key_store: HashMap::new(),
         };
 
@@ -136,7 +136,7 @@ mod test {
 
     #[test]
     fn insert_overwrites() {
-        let mut manager = SimpleKeyIDManager {
+        let mut manager = OnDiskKeyIDManager {
             key_store: HashMap::new(),
         };
 
