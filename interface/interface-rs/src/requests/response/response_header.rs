@@ -86,7 +86,7 @@ impl RawResponseHeader {
         if magic_number != MAGIC_NUMBER || hdr_size != RESPONSE_HDR_SIZE {
             return Err(ResponseStatus::InvalidHeader);
         }
-        let mut bytes = vec![0u8; hdr_size as usize];
+        let mut bytes = vec![0u8; usize::try_from(hdr_size)?];
         stream.read_exact(&mut bytes)?;
 
         Ok(bincode::deserialize(&bytes)?)

@@ -16,7 +16,7 @@ use super::request::RequestHeader;
 use super::ResponseStatus;
 use super::Result;
 use response_header::RawResponseHeader;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::io::{Read, Write};
 
 const RESPONSE_HDR_SIZE: u16 = 20;
@@ -81,7 +81,7 @@ impl Response {
     /// `ResponseStatus::InvalidEncoding` is returned.
     pub fn write_to_stream(self, stream: &mut impl Write) -> Result<()> {
         let mut raw_header: RawResponseHeader = self.header.into();
-        raw_header.body_len = self.body.len() as u32;
+        raw_header.body_len = u32::try_from(self.body.len())?;
 
         raw_header.write_to_stream(stream)?;
         self.body.write_to_stream(stream)?;
@@ -96,7 +96,7 @@ impl Response {
     /// corresponding `ResponseStatus` will be returned.
     pub fn read_from_stream(stream: &mut impl Read) -> Result<Response> {
         let raw_header = RawResponseHeader::read_from_stream(stream)?;
-        let body = ResponseBody::read_from_stream(stream, raw_header.body_len as usize)?;
+        let body = ResponseBody::read_from_stream(stream, usize::try_from(raw_header.body_len)?)?;
 
         Ok(Response {
             header: raw_header.try_into()?,

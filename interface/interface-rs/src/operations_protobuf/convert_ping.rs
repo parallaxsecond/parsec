@@ -50,8 +50,8 @@ impl TryFrom<ResultPingProto> for operations::ResultPing {
 
     fn try_from(response: ResultPingProto) -> Result<Self, Self::Error> {
         Ok(operations::ResultPing {
-            supp_version_maj: response.supported_version_maj as u8,
-            supp_version_min: response.supported_version_min as u8,
+            supp_version_maj: u8::try_from(response.supported_version_maj)?,
+            supp_version_min: u8::try_from(response.supported_version_min)?,
         })
     }
 }

@@ -29,6 +29,7 @@ const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 ///
 /// Passed in headers as `provider`.
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum ProviderID {
     CoreProvider = 0,
     MbedProvider = 1,
@@ -44,6 +45,7 @@ impl std::fmt::Display for ProviderID {
 ///
 /// Passed in headers as `content_type` and `accept_type`.
 #[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum BodyType {
     Protobuf = 0,
 }
@@ -52,6 +54,7 @@ pub enum BodyType {
 ///
 /// Passed in headers as `opcode`.
 #[derive(FromPrimitive, Copy, Clone, PartialEq, Debug)]
+#[repr(u16)]
 pub enum Opcode {
     Ping = 0,
     CreateKey = 1,
@@ -63,6 +66,7 @@ pub enum Opcode {
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum AuthType {
     Simple = 0,
 }
