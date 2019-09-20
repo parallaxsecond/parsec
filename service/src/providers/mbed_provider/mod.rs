@@ -27,7 +27,8 @@ use interface::operations::{OpCreateKey, ResultCreateKey};
 use interface::operations::{OpDestroyKey, ResultDestroyKey};
 use interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use interface::operations::{OpImportKey, ResultImportKey};
-use interface::requests::{ResponseStatus, Result};
+use interface::operations::{OpListOpcodes, ResultListOpcodes};
+use interface::requests::{Opcode, ResponseStatus, Result};
 
 #[allow(
     non_snake_case,
@@ -43,6 +44,16 @@ mod constants;
 mod conversion_utils;
 
 type LocalIdStore = HashSet<psa_crypto_binding::psa_key_id_t>;
+
+const SUPPORTED_OPCODES: [Opcode; 7] = [
+    Opcode::CreateKey,
+    Opcode::DestroyKey,
+    Opcode::AsymSign,
+    Opcode::AsymVerify,
+    Opcode::ImportKey,
+    Opcode::ExportPublicKey,
+    Opcode::ListOpcodes,
+];
 
 pub struct MbedProvider {
     // When calling write on a reference of key_id_store, a type
@@ -112,6 +123,12 @@ impl MbedProvider {
 }
 
 impl Provide for MbedProvider {
+    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
+        Ok(ResultListOpcodes {
+            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
+        })
+    }
+
     fn describe(&self) -> ProviderInfo {
         ProviderInfo {
             id: ProviderID::MbedProvider,
