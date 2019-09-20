@@ -15,69 +15,35 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::key_attributes::*;
-    use interface::operations::{
-        NativeOperation, NativeResult, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
-    };
-    use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::TestClient;
 
     #[test]
-    fn export_public_key() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let create_key = OpCreateKey {
-            key_name: String::from("export_public_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key))
-            .unwrap();
+    fn export_public_key() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("export_public_key");
 
-        let export = OpExportPublicKey {
-            key_name: String::from("export_public_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::ExportPublicKey(export))
-            .unwrap();
+        client.create_rsa_sign_key(key_name.clone())?;
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("export_public_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        client.export_public_key(key_name.clone())?;
+
+        Ok(())
     }
 
     #[test]
     fn export_without_create() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let export = OpExportPublicKey {
-            key_name: String::from("export_without_create"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
+        let mut client = TestClient::new();
+        let key_name = String::from("export_without_create");
         let status = client
-            .send_operation(NativeOperation::ExportPublicKey(export))
+            .export_public_key(key_name)
             .expect_err("Key should not exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
 
     #[test]
-    fn import_and_export_public_key() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+    fn import_and_export_public_key() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("import_and_export_public_key");
         let key_data = vec![
             48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247,
             20, 102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109,
@@ -88,44 +54,15 @@ mod tests {
             24, 159, 12, 146, 44, 111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9,
             128, 27, 57, 131, 2, 3, 1, 0, 1,
         ];
-        let import = OpImportKey {
-            key_name: String::from("import_and_export_public_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaPublicKey,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: key_data.len() as u32,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-            key_data: key_data.clone(),
-        };
-        client
-            .send_operation(NativeOperation::ImportKey(import))
-            .unwrap();
+        client.import_key(
+            key_name.clone(),
+            KeyType::RsaPublicKey,
+            Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
+            key_data.clone(),
+        )?;
 
-        let export = OpExportPublicKey {
-            key_name: String::from("import_and_export_public_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        let convert_result = client
-            .send_operation(NativeOperation::ExportPublicKey(export))
-            .unwrap();
-        if let NativeResult::ExportPublicKey(result) = convert_result {
-            assert_eq!(key_data, result.key_data);
-        }
+        assert_eq!(key_data, client.export_public_key(key_name.clone())?);
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("import_and_export_public_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        Ok(())
     }
 }

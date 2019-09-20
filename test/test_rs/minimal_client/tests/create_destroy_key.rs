@@ -14,179 +14,72 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::key_attributes::*;
-    use interface::operations::{NativeOperation, OpAsymSign, OpCreateKey, OpDestroyKey};
-    use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::TestClient;
 
     #[test]
-    fn create_and_destroy() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+    fn create_and_destroy() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("create_and_destroy");
 
-        let create_key = OpCreateKey {
-            key_name: String::from("create_and_destroy"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key))
-            .unwrap();
+        client.create_rsa_sign_key(key_name.clone())?;
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("create_and_destroy"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        client.destroy_key(key_name)
     }
 
     #[test]
-    fn create_twice() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+    fn create_twice() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("create_twice");
 
-        let create_key = OpCreateKey {
-            key_name: String::from("create_twice"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key.clone()))
-            .unwrap();
+        client.create_rsa_sign_key(key_name.clone())?;
         let status = client
-            .send_operation(NativeOperation::CreateKey(create_key))
+            .create_rsa_sign_key(key_name.clone())
             .expect_err("A key with the same name can not be created twice.");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("create_twice"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        Ok(())
     }
 
     #[test]
     fn destroy_without_create() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+        let mut client = TestClient::new();
+        let key_name = String::from("destroy_without_create");
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("destroy_without_create"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
         let status = client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
+            .destroy_key(key_name)
             .expect_err("The key should not already exist.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
     }
 
     #[test]
-    fn create_destroy_and_operation() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+    fn create_destroy_and_operation() -> Result<()> {
+        let mut client = TestClient::new();
+        let hash = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let key_name = String::from("create_destroy_and_operation");
 
-        let create_key = OpCreateKey {
-            key_name: String::from("create_destroy_and_operation"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key))
-            .unwrap();
+        client.create_rsa_sign_key(key_name.clone())?;
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("create_destroy_and_operation"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        client.destroy_key(key_name.clone())?;
 
-        let asym_sign = OpAsymSign {
-            key_name: String::from("create_destroy_and_operation"),
-            key_lifetime: KeyLifetime::Persistent,
-            hash: vec![0xDE, 0xAD, 0xBE, 0xEF],
-        };
         let status = client
-            .send_operation(NativeOperation::AsymSign(asym_sign))
+            .sign(key_name, hash)
             .expect_err("The key used by this operation should have been deleted.");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+
+        Ok(())
     }
 
     #[test]
-    fn create_destroy_twice() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
+    fn create_destroy_twice() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("create_destroy_twice_1");
+        let key_name_2 = String::from("create_destroy_twice_2");
 
-        let create_key_1 = OpCreateKey {
-            key_name: String::from("create_destroy_twice_1"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        let mut create_key_2 = create_key_1.clone();
-        create_key_2.key_name = String::from("create_destroy_twice_2");
-        client
-            .send_operation(NativeOperation::CreateKey(create_key_1))
-            .unwrap();
-        client
-            .send_operation(NativeOperation::CreateKey(create_key_2))
-            .unwrap();
+        client.create_rsa_sign_key(key_name.clone())?;
+        client.create_rsa_sign_key(key_name_2.clone())?;
 
-        let destroy_key_1 = OpDestroyKey {
-            key_name: String::from("create_destroy_twice_1"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        let mut destroy_key_2 = destroy_key_1.clone();
-        destroy_key_2.key_name = String::from("create_destroy_twice_2");
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key_1))
-            .unwrap();
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key_2))
-            .unwrap();
+        client.destroy_key(key_name)?;
+        client.destroy_key(key_name_2)
     }
 }

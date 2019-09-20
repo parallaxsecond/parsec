@@ -14,32 +14,26 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::{NativeOperation, NativeResult, OpPing};
     use interface::requests::request::{Request, RequestBody};
     use interface::requests::Opcode;
     use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::RequestTestClient;
+    use minimal_client::TestClient;
 
     #[test]
-    fn test_ping() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let ping = OpPing {};
-        let result = client
-            .send_operation(NativeOperation::Ping(ping))
-            .expect("ping failed");
-        if let NativeResult::Ping(ping_result) = result {
-            assert!(ping_result.supp_version_maj == 1);
-            assert!(ping_result.supp_version_min == 0);
-        } else {
-            panic!("Got wrong type of result!");
-        }
+    fn test_ping() -> Result<()> {
+        let mut client = TestClient::new();
+        let version = client.ping(ProviderID::CoreProvider)?;
+        assert_eq!(version.0, 0);
+        assert_eq!(version.1, 1);
+
+        Ok(())
     }
 
-    #[cfg(feature = "testing")]
     #[test]
     fn mangled_ping() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req = Request::new();
         req.header.version_maj = 1;
         req.header.provider = ProviderID::CoreProvider;
@@ -47,7 +41,7 @@ mod tests {
 
         req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 
-        let resp = client.send_request(req);
+        let resp = client.send_request(req).expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::DeserializingBodyFailed);
     }
 }

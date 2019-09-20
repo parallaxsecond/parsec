@@ -14,44 +14,46 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::{
-        key_attributes::KeyLifetime, NativeOperation, OpDestroyKey, OpPing,
-    };
     use interface::requests::request::RawHeader;
     use interface::requests::{Opcode, ProviderID, ResponseStatus};
-    use minimal_client::MinimalClient;
+    use minimal_client::RequestTestClient;
+    use minimal_client::TestClient;
 
     #[test]
     fn invalid_version() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
         req_hdr.opcode = Opcode::Ping as u16;
         req_hdr.version_maj = 0xff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::VersionTooBig);
         assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_provider() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = 0xff;
         req_hdr.opcode = Opcode::Ping as u16;
         req_hdr.version_maj = 0xff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::ProviderDoesNotExist);
         assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_content_type() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
@@ -59,14 +61,16 @@ mod tests {
         req_hdr.version_maj = 1;
         req_hdr.content_type = 0xff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::ContentTypeNotSupported);
         assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_accept_type() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
@@ -75,14 +79,16 @@ mod tests {
 
         req_hdr.accept_type = 0xff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::AcceptTypeNotSupported);
         assert_eq!(resp.header.opcode, Opcode::Ping);
     }
 
     #[test]
     fn invalid_body_len() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
@@ -91,13 +97,15 @@ mod tests {
 
         req_hdr.body_len = 0xff_ff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::ConnectionError);
     }
 
     #[test]
     fn invalid_auth_len() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
@@ -106,46 +114,35 @@ mod tests {
 
         req_hdr.auth_len = 0xff_ff;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::ConnectionError);
     }
 
     #[test]
     fn invalid_opcode() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req_hdr = RawHeader::new();
 
         req_hdr.provider = ProviderID::CoreProvider as u8;
         req_hdr.opcode = 0xff_ff;
         req_hdr.version_maj = 1;
 
-        let resp = client.send_raw_request(req_hdr, Vec::new());
+        let resp = client
+            .send_raw_request(req_hdr, Vec::new())
+            .expect("Failed to read Response");
         assert_eq!(resp.header.status, ResponseStatus::OpcodeDoesNotExist);
     }
 
     #[test]
-    fn wrong_provider_mbed() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let ping = OpPing {};
-        let response_status = match client.send_operation(NativeOperation::Ping(ping)) {
-            Ok(_) => panic!("Mbed Provider should not support Ping operation!"),
-            Err(response_status) => response_status,
-        };
-        assert_eq!(response_status, ResponseStatus::UnsupportedOperation);
-    }
-
-    #[test]
     fn wrong_provider_core() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = TestClient::new();
+        client.set_provider(Some(ProviderID::CoreProvider));
 
-        let op = OpDestroyKey {
-            key_name: String::new(),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        let response_status = match client.send_operation(NativeOperation::DestroyKey(op)) {
-            Ok(_) => panic!("Core Provider should not support DestroyKey operation!"),
-            Err(response_status) => response_status,
-        };
+        let response_status = client
+            .destroy_key(String::new())
+            .expect_err("Core Provider should not support DestroyKey operation!");
         assert_eq!(response_status, ResponseStatus::UnsupportedOperation);
     }
 }
