@@ -14,114 +14,42 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::key_attributes::*;
-    use interface::operations::{NativeOperation, OpCreateKey, OpDestroyKey};
-    use interface::requests::request::RequestAuth;
     use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::TestClient;
 
     #[test]
-    fn two_auths_same_key_name() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        client.auth(RequestAuth::from_bytes(
-            String::from("first_client").into_bytes(),
-        ));
+    fn two_auths_same_key_name() -> Result<()> {
+        let key_name = String::from("two_auths_same_key_name");
+        let mut client = TestClient::new();
+        client.set_provider(Some(ProviderID::MbedProvider));
+        let auth1 = String::from("first_client").into_bytes();
+        let auth2 = String::from("second_client").into_bytes();
 
-        let create_key = OpCreateKey {
-            key_name: String::from("two_auths_same_key_name"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key.clone()))
-            .unwrap();
+        client.set_auth(auth1.clone());
+        client.create_rsa_sign_key(key_name.clone())?;
 
-        client.auth(RequestAuth::from_bytes(
-            String::from("second_client").into_bytes(),
-        ));
-        client
-            .send_operation(NativeOperation::CreateKey(create_key))
-            .unwrap();
-
-        client.auth(RequestAuth::from_bytes(
-            String::from("first_client").into_bytes(),
-        ));
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("two_auths_same_key_name"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key.clone()))
-            .unwrap();
-
-        client.auth(RequestAuth::from_bytes(
-            String::from("second_client").into_bytes(),
-        ));
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key.clone()))
-            .unwrap();
+        client.set_auth(auth2.clone());
+        client.create_rsa_sign_key(key_name.clone())
     }
 
     #[test]
-    fn delete_wrong_key() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        client.auth(RequestAuth::from_bytes(
-            String::from("first_client").into_bytes(),
-        ));
+    fn delete_wrong_key() -> Result<()> {
+        let key_name = String::from("delete_wrong_key");
+        let mut client = TestClient::new();
+        client.set_provider(Some(ProviderID::MbedProvider));
+        let auth1 = String::from("first_client").into_bytes();
+        let auth2 = String::from("second_client").into_bytes();
 
-        let create_key = OpCreateKey {
-            key_name: String::from("delete_wrong_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key.clone()))
-            .unwrap();
+        client.set_auth(auth1.clone());
+        client.create_rsa_sign_key(key_name.clone())?;
 
-        client.auth(RequestAuth::from_bytes(
-            String::from("second_client").into_bytes(),
-        ));
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("delete_wrong_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
+        client.set_auth(auth2.clone());
         let status = client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .expect_err("Key should not exist.");
+            .destroy_key(key_name.clone())
+            .expect_err("Destroying key should have failed");
         assert_eq!(status, ResponseStatus::KeyDoesNotExist);
 
-        client.auth(RequestAuth::from_bytes(
-            String::from("first_client").into_bytes(),
-        ));
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("delete_wrong_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        Ok(())
     }
 }

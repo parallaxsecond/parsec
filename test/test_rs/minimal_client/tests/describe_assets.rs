@@ -14,51 +14,37 @@
 // limitations under the License.
 #[cfg(test)]
 mod tests {
-    use interface::operations::{NativeOperation, NativeResult, OpListOpcodes, OpListProviders};
     use interface::requests::request::{Request, RequestBody};
     use interface::requests::Opcode;
     use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::{RequestTestClient, TestClient};
     use std::collections::HashSet;
 
     #[test]
     fn list_providers() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
-        let list_providers = OpListProviders {};
-        let result = client
-            .send_operation(NativeOperation::ListProviders(list_providers))
-            .expect("list providers failed");
-        if let NativeResult::ListProviders(list_result) = result {
-            assert_eq!(list_result.providers.len(), 2);
-            let mut ids: HashSet<ProviderID> = HashSet::new();
-            ids.insert(list_result.providers[0].id);
-            ids.insert(list_result.providers[1].id);
-            assert!(ids.contains(&ProviderID::CoreProvider));
-            assert!(ids.contains(&ProviderID::MbedProvider));
-        } else {
-            panic!("Got wrong type of result!");
-        }
+        let mut client = TestClient::new();
+        let providers = client.list_providers().expect("list providers failed");
+        assert_eq!(providers.len(), 2);
+        let ids: HashSet<ProviderID> = providers.iter().map(|p| p.id).collect();
+        assert!(ids.contains(&ProviderID::CoreProvider));
+        assert!(ids.contains(&ProviderID::MbedProvider));
     }
 
     #[test]
     fn list_opcodes() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let list_opcodes = OpListOpcodes {};
-        let result = client
-            .send_operation(NativeOperation::ListOpcodes(list_opcodes))
+        let mut client = TestClient::new();
+        client.set_provider(Some(ProviderID::MbedProvider));
+        let opcodes = client
+            .list_opcodes(ProviderID::MbedProvider)
             .expect("list providers failed");
-        if let NativeResult::ListOpcodes(list_result) = result {
-            assert_eq!(list_result.opcodes.len(), 7);
-        } else {
-            panic!("Got wrong type of result!");
-        }
+        assert_eq!(opcodes.len(), 7);
     }
 
     #[cfg(feature = "testing")]
     #[test]
     fn mangled_list_providers() {
-        let mut client = MinimalClient::new(ProviderID::CoreProvider);
+        let mut client = RequestTestClient::new();
         let mut req = Request::new();
         req.header.version_maj = 1;
         req.header.provider = ProviderID::CoreProvider;
@@ -66,7 +52,14 @@ mod tests {
 
         req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 
-        let resp = client.send_request(req);
+        let resp = client.send_request(req).expect("Failed to read response");
         assert_eq!(resp.header.status, ResponseStatus::DeserializingBodyFailed);
+    }
+
+    #[test]
+    fn sign_verify_with_provider_discovery() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("sign_verify_with_provider_discovery");
+        client.create_rsa_sign_key(key_name.clone())
     }
 }

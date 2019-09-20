@@ -15,163 +15,74 @@
 #[cfg(test)]
 mod tests {
     use interface::operations::key_attributes::*;
-    use interface::operations::{NativeOperation, OpCreateKey, OpDestroyKey, OpImportKey};
-    use interface::requests::ProviderID;
-    use interface::requests::ResponseStatus;
-    use minimal_client::MinimalClient;
+    use interface::requests::{ResponseStatus, Result};
+    use minimal_client::TestClient;
+
+    const KEY_DATA: [u8; 140] = [
+        48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20,
+        102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81,
+        135, 72, 112, 132, 150, 175, 128, 173, 182, 122, 227, 214, 196, 130, 54, 239, 93, 5, 203,
+        185, 233, 61, 159, 156, 7, 161, 87, 48, 234, 105, 161, 108, 215, 211, 150, 168, 156, 212,
+        6, 63, 81, 24, 101, 72, 160, 97, 243, 142, 86, 10, 160, 122, 8, 228, 178, 252, 35, 209,
+        222, 228, 16, 143, 99, 143, 146, 241, 186, 187, 22, 209, 86, 141, 24, 159, 12, 146, 44,
+        111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9, 128, 27, 57, 131, 2, 3,
+        1, 0, 1,
+    ];
 
     #[test]
-    fn import_key() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let key_data = vec![
-            48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247,
-            20, 102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109,
-            16, 81, 135, 72, 112, 132, 150, 175, 128, 173, 182, 122, 227, 214, 196, 130, 54, 239,
-            93, 5, 203, 185, 233, 61, 159, 156, 7, 161, 87, 48, 234, 105, 161, 108, 215, 211, 150,
-            168, 156, 212, 6, 63, 81, 24, 101, 72, 160, 97, 243, 142, 86, 10, 160, 122, 8, 228,
-            178, 252, 35, 209, 222, 228, 16, 143, 99, 143, 146, 241, 186, 187, 22, 209, 86, 141,
-            24, 159, 12, 146, 44, 111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9,
-            128, 27, 57, 131, 2, 3, 1, 0, 1,
-        ];
-        let import = OpImportKey {
-            key_name: String::from("import_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaPublicKey,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: key_data.len() as u32,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-            key_data,
-        };
-        client
-            .send_operation(NativeOperation::ImportKey(import))
-            .unwrap();
+    fn import_key() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("import_key");
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("import_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        client.import_key(
+            key_name.clone(),
+            KeyType::RsaPublicKey,
+            Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
+            KEY_DATA.to_vec(),
+        )
     }
 
     #[test]
-    fn create_and_import_key() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let create_key = OpCreateKey {
-            key_name: String::from("create_and_import_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaKeypair,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: 1024,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-        };
-        client
-            .send_operation(NativeOperation::CreateKey(create_key))
-            .unwrap();
+    fn create_and_import_key() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("create_and_import_key");
 
-        let key_data = vec![
-            48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247,
-            20, 102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109,
-            16, 81, 135, 72, 112, 132, 150, 175, 128, 173, 182, 122, 227, 214, 196, 130, 54, 239,
-            93, 5, 203, 185, 233, 61, 159, 156, 7, 161, 87, 48, 234, 105, 161, 108, 215, 211, 150,
-            168, 156, 212, 6, 63, 81, 24, 101, 72, 160, 97, 243, 142, 86, 10, 160, 122, 8, 228,
-            178, 252, 35, 209, 222, 228, 16, 143, 99, 143, 146, 241, 186, 187, 22, 209, 86, 141,
-            24, 159, 12, 146, 44, 111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9,
-            128, 27, 57, 131, 2, 3, 1, 0, 1,
-        ];
-        let import = OpImportKey {
-            key_name: String::from("create_and_import_key"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaPublicKey,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: key_data.len() as u32,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-            key_data,
-        };
+        client.create_rsa_sign_key(key_name.clone())?;
+
         let status = client
-            .send_operation(NativeOperation::ImportKey(import))
-            .expect_err("The key with the same name has already been created.");
+            .import_key(
+                key_name.clone(),
+                KeyType::RsaPublicKey,
+                Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
+                KEY_DATA.to_vec(),
+            )
+            .expect_err("Key should have already existed");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("create_and_import_key"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        Ok(())
     }
 
     #[test]
-    fn import_key_twice() {
-        let mut client = MinimalClient::new(ProviderID::MbedProvider);
-        let key_data = vec![
-            48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247,
-            20, 102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109,
-            16, 81, 135, 72, 112, 132, 150, 175, 128, 173, 182, 122, 227, 214, 196, 130, 54, 239,
-            93, 5, 203, 185, 233, 61, 159, 156, 7, 161, 87, 48, 234, 105, 161, 108, 215, 211, 150,
-            168, 156, 212, 6, 63, 81, 24, 101, 72, 160, 97, 243, 142, 86, 10, 160, 122, 8, 228,
-            178, 252, 35, 209, 222, 228, 16, 143, 99, 143, 146, 241, 186, 187, 22, 209, 86, 141,
-            24, 159, 12, 146, 44, 111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9,
-            128, 27, 57, 131, 2, 3, 1, 0, 1,
-        ];
-        let import_1 = OpImportKey {
-            key_name: String::from("import_key_twice"),
-            key_attributes: KeyAttributes {
-                key_lifetime: KeyLifetime::Persistent,
-                key_type: KeyType::RsaPublicKey,
-                ecc_curve: None,
-                algorithm: Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
-                key_size: key_data.len() as u32,
-                permit_sign: true,
-                permit_verify: true,
-                permit_export: true,
-                permit_derive: true,
-                permit_encrypt: true,
-                permit_decrypt: true,
-            },
-            key_data,
-        };
-        let import_2 = import_1.clone();
-        client
-            .send_operation(NativeOperation::ImportKey(import_1))
-            .unwrap();
+    fn import_key_twice() -> Result<()> {
+        let mut client = TestClient::new();
+        let key_name = String::from("import_key_twice");
+
+        client.import_key(
+            key_name.clone(),
+            KeyType::RsaPublicKey,
+            Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
+            KEY_DATA.to_vec(),
+        )?;
         let status = client
-            .send_operation(NativeOperation::ImportKey(import_2))
+            .import_key(
+                key_name.clone(),
+                KeyType::RsaPublicKey,
+                Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None),
+                KEY_DATA.to_vec(),
+            )
             .expect_err("The key with the same name has already been created.");
         assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
-        let destroy_key = OpDestroyKey {
-            key_name: String::from("import_key_twice"),
-            key_lifetime: KeyLifetime::Persistent,
-        };
-        client
-            .send_operation(NativeOperation::DestroyKey(destroy_key))
-            .unwrap();
+        Ok(())
     }
 }
