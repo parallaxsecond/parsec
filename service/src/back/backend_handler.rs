@@ -101,6 +101,10 @@ impl BackEndHandler {
                     unwrap_or_else_return!(self.provider.list_providers(op_list_providers));
                 self.result_to_response(NativeResult::ListProviders(result), header)
             }
+            NativeOperation::ListOpcodes(op_list_opcodes) => {
+                let result = unwrap_or_else_return!(self.provider.list_opcodes(op_list_opcodes));
+                self.result_to_response(NativeResult::ListOpcodes(result), header)
+            }
             NativeOperation::Ping(op_ping) => {
                 let result = unwrap_or_else_return!(self.provider.ping(op_ping));
                 self.result_to_response(NativeResult::Ping(result), header)

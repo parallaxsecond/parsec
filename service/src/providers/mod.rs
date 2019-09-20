@@ -20,8 +20,9 @@ pub mod mbed_provider;
 use crate::authenticators::ApplicationName;
 use interface::operations::{
     OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
-    OpListProviders, OpPing, ProviderInfo, ResultAsymSign, ResultAsymVerify, ResultCreateKey,
-    ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultListProviders, ResultPing,
+    OpListOpcodes, OpListProviders, OpPing, ProviderInfo, ResultAsymSign, ResultAsymVerify,
+    ResultCreateKey, ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultListOpcodes,
+    ResultListProviders, ResultPing,
 };
 use interface::requests::{ResponseStatus, Result};
 
@@ -37,6 +38,10 @@ pub trait Provide {
     fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
         Err(ResponseStatus::UnsupportedOperation)
     }
+
+    /// List the opcodes supported by the current provider.
+    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes>;
+
     /// Initialises the provider. Returns `true` or `false` if the initialisation was successfull
     /// or not. The service `main` function can decide to panic if the initialisation of one
     /// provider has failed.

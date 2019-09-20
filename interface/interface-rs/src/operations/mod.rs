@@ -20,6 +20,7 @@ mod export_public_key;
 mod destroy_key;
 mod asym_sign;
 mod asym_verify;
+mod list_opcodes;
 mod list_providers;
 
 use crate::requests::{request::RequestBody, response::ResponseBody, Opcode, Result};
@@ -29,6 +30,7 @@ pub use create_key::{OpCreateKey, ResultCreateKey};
 pub use destroy_key::{OpDestroyKey, ResultDestroyKey};
 pub use export_public_key::{OpExportPublicKey, ResultExportPublicKey};
 pub use import_key::{OpImportKey, ResultImportKey};
+pub use list_opcodes::{OpListOpcodes, ResultListOpcodes};
 pub use list_providers::{OpListProviders, ProviderInfo, ResultListProviders};
 pub use ping::{OpPing, ResultPing};
 
@@ -36,6 +38,7 @@ pub use ping::{OpPing, ResultPing};
 /// to be passed in/out of a converter.
 pub enum NativeOperation {
     ListProviders(OpListProviders),
+    ListOpcodes(OpListOpcodes),
     Ping(ping::OpPing),
     CreateKey(create_key::OpCreateKey),
     ImportKey(import_key::OpImportKey),
@@ -55,6 +58,7 @@ impl NativeOperation {
             NativeOperation::AsymVerify(_) => Opcode::AsymVerify,
             NativeOperation::ImportKey(_) => Opcode::ImportKey,
             NativeOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
+            NativeOperation::ListOpcodes(_) => Opcode::ListOpcodes,
             NativeOperation::ListProviders(_) => Opcode::ListProviders,
         }
     }
@@ -65,6 +69,7 @@ impl NativeOperation {
 #[derive(Debug)]
 pub enum NativeResult {
     ListProviders(ResultListProviders),
+    ListOpcodes(ResultListOpcodes),
     Ping(ping::ResultPing),
     CreateKey(create_key::ResultCreateKey),
     ImportKey(import_key::ResultImportKey),
@@ -84,6 +89,7 @@ impl NativeResult {
             NativeResult::AsymVerify(_) => Opcode::AsymVerify,
             NativeResult::ImportKey(_) => Opcode::ImportKey,
             NativeResult::ExportPublicKey(_) => Opcode::ExportPublicKey,
+            NativeResult::ListOpcodes(_) => Opcode::ListOpcodes,
             NativeResult::ListProviders(_) => Opcode::ListProviders,
         }
     }

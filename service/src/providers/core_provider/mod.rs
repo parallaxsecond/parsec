@@ -14,9 +14,12 @@
 // limitations under the License.
 use super::Provide;
 use interface::operations::ProviderInfo;
+use interface::operations::{OpListOpcodes, ResultListOpcodes};
 use interface::operations::{OpListProviders, ResultListProviders};
 use interface::operations::{OpPing, ResultPing};
-use interface::requests::{ProviderID, Result};
+use interface::requests::{Opcode, ProviderID, Result};
+
+const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
 
 pub struct CoreProvider {
     version_min: u8,
@@ -25,6 +28,12 @@ pub struct CoreProvider {
 }
 
 impl Provide for CoreProvider {
+    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
+        Ok(ResultListOpcodes {
+            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
+        })
+    }
+
     fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
         Ok(ResultListProviders {
             providers: self.providers.clone(),

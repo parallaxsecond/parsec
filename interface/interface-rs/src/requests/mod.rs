@@ -64,6 +64,7 @@ pub enum Opcode {
     ImportKey = 5,
     ExportPublicKey = 6,
     ListProviders = 7,
+    ListOpcodes = 8,
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
