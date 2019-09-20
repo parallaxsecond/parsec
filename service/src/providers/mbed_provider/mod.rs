@@ -63,64 +63,81 @@ pub struct MbedProvider {
     pub local_ids: RwLock<LocalIdStore>,
 }
 
-impl MbedProvider {
-    fn get_key_id(
-        &self,
-        app_name: &ApplicationName,
-        key_name: &str,
-        store_handle: &dyn ManageKeyIDs,
-    ) -> ::std::result::Result<psa_crypto_binding::psa_key_id_t, ResponseStatus> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
-        if let Some(key_id) = store_handle.get(key_triple) {
-            Ok(u32::from_ne_bytes(
-                key_id.try_into().expect("Stored key ID was not valid"),
-            ))
-        } else {
-            Err(ResponseStatus::KeyDoesNotExist)
+/// Gets a PSA Key ID from the Key ID Manager.
+/// Wrapper around the get method of the Key ID Manager to convert the key ID to the psa_key_id_t
+/// type.
+fn get_key_id(
+    key_triple: &KeyTriple,
+    store_handle: &dyn ManageKeyIDs,
+) -> Result<psa_crypto_binding::psa_key_id_t> {
+    match store_handle.get(key_triple) {
+        Ok(get_option) => {
+            if let Some(key_id) = get_option {
+                Ok(u32::from_ne_bytes(
+                    key_id.try_into().expect("Stored key ID was not valid"),
+                ))
+            } else {
+                Err(ResponseStatus::KeyDoesNotExist)
+            }
+        }
+        Err(string) => {
+            println!("Key ID Manager error: {}", string);
+            Err(ResponseStatus::KeyIDManagerError)
         }
     }
+}
 
-    fn create_key_id(
-        &self,
-        app_name: &ApplicationName,
-        key_name: &str,
-        store_handle: &mut dyn ManageKeyIDs,
-        local_ids_handle: &mut LocalIdStore,
-    ) -> psa_crypto_binding::psa_key_id_t {
-        let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
-        while !local_ids_handle.insert(key_id) {
-            key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
-        }
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
-        if store_handle
-            .insert(key_triple, key_id.to_ne_bytes().to_vec())
-            .is_some()
-        {
-            println!("Overwriting Key triple mapping ({})", key_triple);
-        }
-
-        key_id
+/// Creates a new PSA Key ID and stores it in the Key ID Manager.
+fn create_key_id(
+    key_triple: KeyTriple,
+    store_handle: &mut dyn ManageKeyIDs,
+    local_ids_handle: &mut LocalIdStore,
+) -> Result<psa_crypto_binding::psa_key_id_t> {
+    let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
+    while local_ids_handle.contains(&key_id) {
+        key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
     }
+    match store_handle.insert(key_triple.clone(), key_id.to_ne_bytes().to_vec()) {
+        Ok(insert_option) => {
+            if insert_option.is_some() {
+                println!("Overwriting Key triple mapping ({})", key_triple);
+            }
+            local_ids_handle.insert(key_id);
 
-    fn remove_key_id(
-        &self,
-        app_name: &ApplicationName,
-        key_name: &str,
-        key_id: psa_crypto_binding::psa_key_id_t,
-        store_handle: &mut dyn ManageKeyIDs,
-        local_ids_handle: &mut LocalIdStore,
-    ) {
-        local_ids_handle.remove(&key_id);
-        store_handle.remove(KeyTriple::new(app_name, ProviderID::MbedProvider, key_name));
+            Ok(key_id)
+        }
+        Err(string) => {
+            println!("Key ID Manager error: {}", string);
+            Err(ResponseStatus::KeyIDManagerError)
+        }
     }
+}
 
-    fn key_id_exists(
-        &self,
-        app_name: &ApplicationName,
-        key_name: &str,
-        store_handle: &dyn ManageKeyIDs,
-    ) -> bool {
-        store_handle.exists(KeyTriple::new(app_name, ProviderID::MbedProvider, key_name))
+fn remove_key_id(
+    key_triple: &KeyTriple,
+    key_id: psa_crypto_binding::psa_key_id_t,
+    store_handle: &mut dyn ManageKeyIDs,
+    local_ids_handle: &mut LocalIdStore,
+) -> Result<()> {
+    match store_handle.remove(key_triple) {
+        Ok(_) => {
+            local_ids_handle.remove(&key_id);
+            Ok(())
+        }
+        Err(string) => {
+            println!("Key ID Manager error: {}", string);
+            Err(ResponseStatus::KeyIDManagerError)
+        }
+    }
+}
+
+fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<bool> {
+    match store_handle.exists(key_triple) {
+        Ok(val) => Ok(val),
+        Err(string) => {
+            println!("Key ID Manager error: {}", string);
+            Err(ResponseStatus::KeyIDManagerError)
+        }
     }
 }
 
@@ -146,19 +163,21 @@ impl Provide for MbedProvider {
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
         println!("Mbed Provider - Create Key");
+        let key_name = op.key_name;
+        let key_attributes = op.key_attributes;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if self.key_id_exists(&app_name, &op.key_name, &*store_handle) {
+        if key_id_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::KeyAlreadyExists);
         }
-        let key_id = self.create_key_id(
-            &app_name,
-            &op.key_name,
+        let key_id = create_key_id(
+            key_triple.clone(),
             &mut *store_handle,
             &mut local_ids_handle,
-        );
+        )?;
 
-        let key_attrs = conversion_utils::convert_key_attributes(&op.key_attributes);
+        let key_attrs = conversion_utils::convert_key_attributes(&key_attributes);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let create_key_status = unsafe {
@@ -214,13 +233,12 @@ impl Provide for MbedProvider {
         }
 
         if ret_val.is_err() {
-            self.remove_key_id(
-                &app_name,
-                &op.key_name,
+            remove_key_id(
+                &key_triple,
                 key_id,
                 &mut *store_handle,
                 &mut local_ids_handle,
-            );
+            )?;
         }
 
         ret_val
@@ -228,19 +246,22 @@ impl Provide for MbedProvider {
 
     fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
         println!("Mbed Provider - Import Key");
+        let key_name = op.key_name;
+        let key_attributes = op.key_attributes;
+        let key_data = op.key_data;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if self.key_id_exists(&app_name, &op.key_name, &*store_handle) {
+        if key_id_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::KeyAlreadyExists);
         }
-        let key_id = self.create_key_id(
-            &app_name,
-            &op.key_name,
+        let key_id = create_key_id(
+            key_triple.clone(),
             &mut *store_handle,
             &mut local_ids_handle,
-        );
+        )?;
 
-        let key_attrs = conversion_utils::convert_key_attributes(&op.key_attributes);
+        let key_attrs = conversion_utils::convert_key_attributes(&key_attributes);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let create_key_status = unsafe {
@@ -270,7 +291,7 @@ impl Provide for MbedProvider {
                     psa_crypto_binding::psa_import_key(
                         key_handle,
                         key_attrs.key_type,
-                        op.key_data.as_ptr(),
+                        key_data.as_ptr(),
                         key_attrs.key_size,
                     )
                 };
@@ -295,13 +316,12 @@ impl Provide for MbedProvider {
         }
 
         if ret_val.is_err() {
-            self.remove_key_id(
-                &app_name,
-                &op.key_name,
+            remove_key_id(
+                &key_triple,
                 key_id,
                 &mut *store_handle,
                 &mut local_ids_handle,
-            );
+            )?;
         }
 
         ret_val
@@ -313,10 +333,13 @@ impl Provide for MbedProvider {
         op: OpExportPublicKey,
     ) -> Result<ResultExportPublicKey> {
         println!("Mbed Provider - Export Public Key");
+        let key_name = op.key_name;
+        let key_lifetime = op.key_lifetime;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
+        let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let ret_val: Result<ResultExportPublicKey>;
@@ -362,11 +385,14 @@ impl Provide for MbedProvider {
 
     fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
         println!("Mbed Provider - Destroy Key");
+        let key_name = op.key_name;
+        let key_lifetime = op.key_lifetime;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
+        let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status =
@@ -376,13 +402,12 @@ impl Provide for MbedProvider {
             let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
 
             if destroy_key_status == 0 {
-                self.remove_key_id(
-                    &app_name,
-                    &op.key_name,
+                remove_key_id(
+                    &key_triple,
                     key_id,
                     &mut *store_handle,
                     &mut local_ids_handle,
-                );
+                )?;
                 Ok(ResultDestroyKey {})
             } else {
                 Err(conversion_utils::convert_status(destroy_key_status))
@@ -394,10 +419,14 @@ impl Provide for MbedProvider {
 
     fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
         println!("Mbed Provider - Asym Sign");
+        let key_name = op.key_name;
+        let key_lifetime = op.key_lifetime;
+        let hash = op.hash;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
+        let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status =
@@ -426,8 +455,8 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_asymmetric_sign(
                     key_handle,
                     algorithm,
-                    op.hash.as_ptr(),
-                    op.hash.len(),
+                    hash.as_ptr(),
+                    hash.len(),
                     signature.as_mut_ptr(),
                     1024,
                     &mut signature_size,
@@ -456,10 +485,15 @@ impl Provide for MbedProvider {
 
     fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
         println!("Mbed Provider - Asym Verify");
+        let key_name = op.key_name;
+        let key_lifetime = op.key_lifetime;
+        let hash = op.hash;
+        let signature = op.signature;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = self.get_key_id(&app_name, &op.key_name, &*store_handle)?;
+        let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(op.key_lifetime);
+        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status =
@@ -484,10 +518,10 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_asymmetric_verify(
                     key_handle,
                     algorithm,
-                    op.hash.as_ptr(),
-                    op.hash.len(),
-                    op.signature.as_ptr(),
-                    op.signature.len(),
+                    hash.as_ptr(),
+                    hash.len(),
+                    signature.as_ptr(),
+                    signature.len(),
                 )
             };
 

@@ -38,5 +38,5 @@ pub trait Listen {
     /// # Panics
     ///
     /// If the listener has not been initialised before, with the `init` method.
-    fn wait_on_connection(&self) -> Option<Box<ReadWrite + Send>>;
+    fn wait_on_connection(&self) -> Option<Box<dyn ReadWrite + Send>>;
 }

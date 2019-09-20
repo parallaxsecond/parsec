@@ -60,7 +60,7 @@ impl Listen for DomainSocketListener {
         self.timeout = duration;
     }
 
-    fn wait_on_connection(&self) -> Option<Box<ReadWrite + Send>> {
+    fn wait_on_connection(&self) -> Option<Box<dyn ReadWrite + Send>> {
         if let Some(listener) = &self.listener {
             let stream_result = listener
                 .incoming()

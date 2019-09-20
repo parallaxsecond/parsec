@@ -24,6 +24,7 @@ pub mod simple_authenticator;
 use interface::requests::request::RequestAuth;
 use interface::requests::Result;
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApplicationName(String);
 
 pub trait Authenticate {
@@ -36,7 +37,6 @@ pub trait Authenticate {
 }
 
 impl ApplicationName {
-    #[cfg(test)]
     pub fn new(name: String) -> ApplicationName {
         ApplicationName(name)
     }
