@@ -26,6 +26,7 @@ use service::providers::{
     core_provider::CoreProviderBuilder, mbed_provider::MbedProvider, Provide,
 };
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
@@ -43,7 +44,10 @@ fn build_components() -> (FrontEndHandler, impl Listen) {
         CoreProviderBuilder::new().with_version(VERSION_MINOR, VERSION_MAJOR);
 
     let mbed_provider = MbedProvider {
-        key_id_store: Arc::new(RwLock::new(OnDiskKeyIDManager::new())),
+        key_id_store: Arc::new(RwLock::new(
+            OnDiskKeyIDManager::new(PathBuf::from("mappings"))
+                .expect("Error when loading the Key ID mappings."),
+        )),
         local_ids: RwLock::new(HashSet::new()),
     };
     if mbed_provider.init() {

@@ -22,6 +22,7 @@ pub mod response;
 pub use request::Request;
 pub use response::Response;
 pub use response_status::{ResponseStatus, Result};
+use std::convert::TryFrom;
 
 const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 
@@ -38,6 +39,17 @@ pub enum ProviderID {
 impl std::fmt::Display for ProviderID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+impl TryFrom<u8> for ProviderID {
+    type Error = ResponseStatus;
+
+    fn try_from(provider_id: u8) -> ::std::result::Result<Self, Self::Error> {
+        match num::FromPrimitive::from_u8(provider_id) {
+            Some(provider_id) => Ok(provider_id),
+            None => Err(ResponseStatus::ProviderDoesNotExist),
+        }
     }
 }
 

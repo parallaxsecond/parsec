@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 interface = { path = "../interface/interface-rs"  }
 rand = "0.7.0"
+base64 = "0.10.1"
 
 [build-dependencies]
 bindgen = "0.50.0"

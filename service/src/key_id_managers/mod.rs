@@ -17,8 +17,6 @@
 //! This module declares a `ManageKeyIDs` trait to help providers to store in a persistent manner
 //! the mapping between the name and the IDs of the keys they manage. Different implementors might
 //! store this mapping using different means but it has to be persistent.
-//! The mapping owns the key IDs but it does not own the key triple components (to avoid cloning
-//! from other components in the service).
 
 use crate::authenticators::ApplicationName;
 use interface::requests::ProviderID;
@@ -28,31 +26,25 @@ pub mod on_disk_manager;
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.
-/// This struct only containing references and small numbers, it has been made `Copy` for
-/// convenience.
-#[derive(Clone, Copy)]
-pub struct KeyTriple<'a> {
-    app_name: &'a ApplicationName,
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KeyTriple {
+    app_name: ApplicationName,
     provider_id: ProviderID,
-    key_name: &'a str,
+    key_name: String,
 }
 
-impl<'a> fmt::Display for KeyTriple<'a> {
+impl fmt::Display for KeyTriple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}/{}/{}",
+            "Application Name: {}\nProvider ID: {}\nKey Name: {}",
             self.app_name, self.provider_id, self.key_name
         )
     }
 }
 
-impl<'a> KeyTriple<'a> {
-    pub fn new(
-        app_name: &'a ApplicationName,
-        provider_id: ProviderID,
-        key_name: &'a str,
-    ) -> KeyTriple<'a> {
+impl KeyTriple {
+    pub fn new(app_name: ApplicationName, provider_id: ProviderID, key_name: String) -> KeyTriple {
         KeyTriple {
             app_name,
             provider_id,
@@ -64,16 +56,33 @@ impl<'a> KeyTriple<'a> {
 pub trait ManageKeyIDs {
     /// Returns a reference to the key ID corresponding to this key triple or `None` if it does not
     /// exist.
-    fn get(&self, key_triple: KeyTriple) -> Option<&[u8]>;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    fn get(&self, key_triple: &KeyTriple) -> Result<Option<&[u8]>, String>;
 
     /// Inserts a new mapping between the key triple and the key ID. If the triple already exists,
     /// overwrite the existing mapping and returns the old Key ID. Otherwise returns `None`.
-    fn insert(&mut self, key_triple: KeyTriple, key_id: Vec<u8>) -> Option<Vec<u8>>;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    fn insert(&mut self, key_triple: KeyTriple, key_id: Vec<u8>)
+        -> Result<Option<Vec<u8>>, String>;
 
     /// Removes a key triple mapping and returns it. Does nothing and returns `None` if the mapping
     /// does not exist.
-    fn remove(&mut self, key_triple: KeyTriple) -> Option<Vec<u8>>;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    fn remove(&mut self, key_triple: &KeyTriple) -> Result<Option<Vec<u8>>, String>;
 
     /// Check if a key triple mapping exists.
-    fn exists(&self, key_triple: KeyTriple) -> bool;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String>;
 }

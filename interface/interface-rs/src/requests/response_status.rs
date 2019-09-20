@@ -37,10 +37,11 @@ pub enum ResponseStatus {
     AuthenticatorNotRegistered = 14,
     KeyDoesNotExist = 15,
     KeyAlreadyExists = 16,
-    ConnectionError = 17,
-    InvalidEncoding = 18,
-    InvalidHeader = 19,
-    InvalidResponseStatus = 20,
+    KeyIDManagerError = 17,
+    ConnectionError = 18,
+    InvalidEncoding = 19,
+    InvalidHeader = 20,
+    InvalidResponseStatus = 21,
     PsaErrorGenericError = 1132,
     PsaErrorNotPermitted = 1133,
     PsaErrorNotSupported = 1134,
@@ -117,6 +118,9 @@ impl fmt::Display for ResponseStatus {
             }
             ResponseStatus::KeyAlreadyExists => {
                 write!(f, "key with requested name already exists in the specified provider")
+            }
+            ResponseStatus::KeyIDManagerError => {
+                write!(f, "internal error in the Key ID Manager")
             }
             ResponseStatus::ConnectionError => {
                 write!(f, "operation on underlying IPC connection failed")

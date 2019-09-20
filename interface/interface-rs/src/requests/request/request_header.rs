@@ -139,11 +139,6 @@ impl TryFrom<RawRequestHeader> for RequestHeader {
     type Error = ResponseStatus;
 
     fn try_from(header: RawRequestHeader) -> ::std::result::Result<Self, Self::Error> {
-        let provider: ProviderID = match FromPrimitive::from_u8(header.provider) {
-            Some(provider_id) => provider_id,
-            None => return Err(ResponseStatus::ProviderDoesNotExist),
-        };
-
         let content_type: BodyType = match FromPrimitive::from_u8(header.content_type) {
             Some(content_type) => content_type,
             None => return Err(ResponseStatus::ContentTypeNotSupported),
@@ -167,7 +162,7 @@ impl TryFrom<RawRequestHeader> for RequestHeader {
         Ok(RequestHeader {
             version_maj: header.version_maj,
             version_min: header.version_min,
-            provider,
+            provider: ProviderID::try_from(header.provider)?,
             session: header.session,
             content_type,
             accept_type,
