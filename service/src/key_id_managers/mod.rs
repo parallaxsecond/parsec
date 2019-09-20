@@ -44,12 +44,18 @@ impl fmt::Display for KeyTriple {
 }
 
 impl KeyTriple {
+    /// Creates a new instance of KeyTriple.
     pub fn new(app_name: ApplicationName, provider_id: ProviderID, key_name: String) -> KeyTriple {
         KeyTriple {
             app_name,
             provider_id,
             key_name,
         }
+    }
+
+    /// Checks if this key belongs to a specific provider.
+    pub fn belongs_to_provider(&self, provider_id: ProviderID) -> bool {
+        self.provider_id == provider_id
     }
 }
 
@@ -61,6 +67,13 @@ pub trait ManageKeyIDs {
     ///
     /// Returns an error as a String if there was a problem accessing the Key ID Manager.
     fn get(&self, key_triple: &KeyTriple) -> Result<Option<&[u8]>, String>;
+
+    /// Returns a Vec of reference to the key triples corresponding to this provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String>;
 
     /// Inserts a new mapping between the key triple and the key ID. If the triple already exists,
     /// overwrite the existing mapping and returns the old Key ID. Otherwise returns `None`.

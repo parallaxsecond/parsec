@@ -38,24 +38,20 @@ const VERSION_MAJOR: u8 = 1;
 /// Build all the components needed for the service.
 //TODO: The component should be configured with a .toml (or similar) kind of file.
 fn build_components() -> (FrontEndHandler, impl Listen) {
-    // Create the Core Provider and its associated BackEndHandler
-    let core_provider_id = ProviderID::CoreProvider;
-    let core_provider_builder =
-        CoreProviderBuilder::new().with_version(VERSION_MINOR, VERSION_MAJOR);
-
-    let mbed_provider = MbedProvider {
-        key_id_store: Arc::new(RwLock::new(
+    let mbed_provider = MbedProvider::new(
+        Arc::new(RwLock::new(
             OnDiskKeyIDManager::new(PathBuf::from("mappings"))
                 .expect("Error when loading the Key ID mappings."),
         )),
-        local_ids: RwLock::new(HashSet::new()),
-    };
-    if mbed_provider.init() {
-        println!("Init successful");
-    } else {
-        panic!("mbed not started");
-    }
-    let core_provider_builder = core_provider_builder.with_provider_info(mbed_provider.describe());
+        RwLock::new(HashSet::new()),
+    )
+    .expect("Error when creating the Mbed Provider.");
+
+    // Store provider descriptions in it.
+    let core_provider = CoreProviderBuilder::new()
+        .with_version(VERSION_MINOR, VERSION_MAJOR)
+        .with_provider_info(mbed_provider.describe())
+        .build();
 
     let mbed_backend_handler = BackEndHandlerBuilder::new()
         .with_provider(Box::from(mbed_provider))
@@ -67,16 +63,16 @@ fn build_components() -> (FrontEndHandler, impl Listen) {
         .build();
 
     let core_provider_backend = BackEndHandlerBuilder::new()
-        .with_provider(Box::from(core_provider_builder.build()))
+        .with_provider(Box::from(core_provider))
         .with_converter(Box::from(ProtobufConverter {}))
-        .with_provider_id(core_provider_id)
+        .with_provider_id(ProviderID::CoreProvider)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
         .with_version(VERSION_MINOR, VERSION_MAJOR)
         .build();
 
     let dispatcher = DispatcherBuilder::new()
-        .with_backend(core_provider_id, core_provider_backend)
+        .with_backend(ProviderID::CoreProvider, core_provider_backend)
         .with_backend(ProviderID::MbedProvider, mbed_backend_handler)
         .build();
 
