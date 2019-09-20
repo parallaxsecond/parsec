@@ -20,6 +20,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
+use interface::operations::ProviderInfo;
 use interface::operations::{OpAsymSign, ResultAsymSign};
 use interface::operations::{OpAsymVerify, ResultAsymVerify};
 use interface::operations::{OpCreateKey, ResultCreateKey};
@@ -111,6 +112,13 @@ impl MbedProvider {
 }
 
 impl Provide for MbedProvider {
+    fn describe(&self) -> ProviderInfo {
+        ProviderInfo {
+            id: ProviderID::MbedProvider,
+            description: String::from("User space software provider, based on MbedCrypto - the reference implementation of the PSA crypto API"),
+        }
+    }
+
     fn init(&self) -> bool {
         let init_status = unsafe { psa_crypto_binding::psa_crypto_init() };
 

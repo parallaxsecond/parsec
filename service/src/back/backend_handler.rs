@@ -96,6 +96,11 @@ impl BackEndHandler {
         }
 
         match unwrap_or_else_return!(self.converter.body_to_operation(request.body, opcode)) {
+            NativeOperation::ListProviders(op_list_providers) => {
+                let result =
+                    unwrap_or_else_return!(self.provider.list_providers(op_list_providers));
+                self.result_to_response(NativeResult::ListProviders(result), header)
+            }
             NativeOperation::Ping(op_ping) => {
                 let result = unwrap_or_else_return!(self.provider.ping(op_ping));
                 self.result_to_response(NativeResult::Ping(result), header)

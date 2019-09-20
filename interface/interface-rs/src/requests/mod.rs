@@ -53,7 +53,7 @@ pub enum BodyType {
 /// Listing of available operations and their associated opcode.
 ///
 /// Passed in headers as `opcode`.
-#[derive(FromPrimitive, Copy, Clone, PartialEq, Debug)]
+#[derive(FromPrimitive, Copy, Clone, PartialEq, Debug, Hash, Eq)]
 #[repr(u16)]
 pub enum Opcode {
     Ping = 0,
@@ -63,6 +63,7 @@ pub enum Opcode {
     AsymVerify = 4,
     ImportKey = 5,
     ExportPublicKey = 6,
+    ListProviders = 7,
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]

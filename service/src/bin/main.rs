@@ -33,20 +33,10 @@ const VERSION_MAJOR: u8 = 1;
 
 /// Construct a hardcoded version of the service, containing only the core provider.
 fn construct_app() -> impl Listen {
-    // Create the Core Provider and its associated BackEndHandler
+    // Create the Core Provider Builder; use it to store provider descriptions.
     let core_provider_id = ProviderID::CoreProvider;
-    let core_provider = CoreProviderBuilder::new()
-        .with_version(VERSION_MINOR, VERSION_MAJOR)
-        .build();
-
-    let core_provider_backend = BackEndHandlerBuilder::new()
-        .with_provider(Box::from(core_provider))
-        .with_converter(Box::from(ProtobufConverter {}))
-        .with_provider_id(core_provider_id)
-        .with_content_type(BodyType::Protobuf)
-        .with_accept_type(BodyType::Protobuf)
-        .with_version(VERSION_MINOR, VERSION_MAJOR)
-        .build();
+    let core_provider_builder =
+        CoreProviderBuilder::new().with_version(VERSION_MINOR, VERSION_MAJOR);
 
     let mbed_provider = MbedProvider {
         key_id_store: Arc::new(RwLock::new(SimpleKeyIDManager {
@@ -59,11 +49,21 @@ fn construct_app() -> impl Listen {
     } else {
         panic!("mbed not started");
     }
+    let core_provider_builder = core_provider_builder.with_provider_info(mbed_provider.describe());
 
     let mbed_backend_handler = BackEndHandlerBuilder::new()
         .with_provider(Box::from(mbed_provider))
         .with_converter(Box::from(ProtobufConverter {}))
         .with_provider_id(ProviderID::MbedProvider)
+        .with_content_type(BodyType::Protobuf)
+        .with_accept_type(BodyType::Protobuf)
+        .with_version(VERSION_MINOR, VERSION_MAJOR)
+        .build();
+
+    let core_provider_backend = BackEndHandlerBuilder::new()
+        .with_provider(Box::from(core_provider_builder.build()))
+        .with_converter(Box::from(ProtobufConverter {}))
+        .with_provider_id(core_provider_id)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
         .with_version(VERSION_MINOR, VERSION_MAJOR)

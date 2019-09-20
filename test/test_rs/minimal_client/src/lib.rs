@@ -21,8 +21,7 @@ use interface::operations::{Convert, NativeOperation, NativeResult};
 use interface::operations_protobuf::ProtobufConverter;
 use interface::requests::request::RawHeader;
 use interface::requests::{
-    request::RequestAuth, AuthType, BodyType, Opcode, ProviderID, Request, Response,
-    ResponseStatus, Result,
+    request::RequestAuth, AuthType, BodyType, ProviderID, Request, Response, ResponseStatus, Result,
 };
 use std::io::Write;
 use std::os::unix::net::UnixStream;
@@ -122,15 +121,7 @@ impl MinimalClient {
 
     fn operation_to_request(&self, operation: NativeOperation) -> Result<Request> {
         let mut request = Request::new();
-        let opcode = match operation {
-            NativeOperation::Ping(_) => Opcode::Ping,
-            NativeOperation::CreateKey(_) => Opcode::CreateKey,
-            NativeOperation::DestroyKey(_) => Opcode::DestroyKey,
-            NativeOperation::AsymSign(_) => Opcode::AsymSign,
-            NativeOperation::AsymVerify(_) => Opcode::AsymVerify,
-            NativeOperation::ImportKey(_) => Opcode::ImportKey,
-            NativeOperation::ExportPublicKey(_) => Opcode::ExportPublicKey,
-        };
+        let opcode = operation.opcode();
         let request_body = self.converter.operation_to_body(operation)?;
         request.body = request_body;
         request.auth = self.auth.clone();

@@ -19,20 +19,29 @@ pub mod mbed_provider;
 
 use crate::authenticators::ApplicationName;
 use interface::operations::{
-    OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey, OpPing,
-    ResultAsymSign, ResultAsymVerify, ResultCreateKey, ResultDestroyKey, ResultExportPublicKey,
-    ResultImportKey, ResultPing,
+    OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
+    OpListProviders, OpPing, ProviderInfo, ResultAsymSign, ResultAsymVerify, ResultCreateKey,
+    ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultListProviders, ResultPing,
 };
 use interface::requests::{ResponseStatus, Result};
 
 /// Definition of the interface that a provider must implement to
 /// be linked into the service through a backend handler.
 pub trait Provide {
+    /// Return a description of the current provider.
+    ///
+    /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
+    fn describe(&self) -> ProviderInfo;
+
+    /// List the providers running in the service.
+    fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
+        Err(ResponseStatus::UnsupportedOperation)
+    }
     /// Initialises the provider. Returns `true` or `false` if the initialisation was successfull
     /// or not. The service `main` function can decide to panic if the initialisation of one
     /// provider has failed.
     fn init(&self) -> bool {
-        unimplemented!();
+        true
     }
 
     /// Execute a Ping operation to get the version minor and version major information.

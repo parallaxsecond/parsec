@@ -20,6 +20,7 @@ mod convert_export_public_key;
 mod convert_destroy_key;
 mod convert_asym_sign;
 mod convert_asym_verify;
+mod convert_list_providers;
 
 #[rustfmt::skip]
 mod generated_ops;
@@ -34,6 +35,7 @@ use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
 use generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
+use generated_ops::list_providers::{OpListProvidersProto, ResultListProvidersProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
 use prost::Message;
 use std::convert::TryInto;
@@ -66,6 +68,10 @@ pub struct ProtobufConverter;
 impl Convert for ProtobufConverter {
     fn body_to_operation(&self, body: RequestBody, opcode: Opcode) -> Result<NativeOperation> {
         match opcode {
+            Opcode::ListProviders => Ok(NativeOperation::ListProviders(wire_to_native!(
+                body.bytes(),
+                OpListProvidersProto
+            ))),
             Opcode::Ping => Ok(NativeOperation::Ping(wire_to_native!(
                 body.bytes(),
                 OpPingProto
@@ -99,6 +105,9 @@ impl Convert for ProtobufConverter {
 
     fn operation_to_body(&self, operation: NativeOperation) -> Result<RequestBody> {
         match operation {
+            NativeOperation::ListProviders(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpListProvidersProto),
+            )),
             NativeOperation::Ping(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpPingProto
@@ -131,6 +140,10 @@ impl Convert for ProtobufConverter {
 
     fn body_to_result(&self, body: ResponseBody, opcode: Opcode) -> Result<NativeResult> {
         match opcode {
+            Opcode::ListProviders => Ok(NativeResult::ListProviders(wire_to_native!(
+                body.bytes(),
+                ResultListProvidersProto
+            ))),
             Opcode::Ping => Ok(NativeResult::Ping(wire_to_native!(
                 body.bytes(),
                 ResultPingProto
@@ -164,6 +177,10 @@ impl Convert for ProtobufConverter {
 
     fn result_to_body(&self, result: NativeResult) -> Result<ResponseBody> {
         match result {
+            NativeResult::ListProviders(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultListProvidersProto
+            ))),
             NativeResult::Ping(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultPingProto
