@@ -42,13 +42,6 @@ pub trait Provide {
     /// List the opcodes supported by the current provider.
     fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes>;
 
-    /// Initialises the provider. Returns `true` or `false` if the initialisation was successfull
-    /// or not. The service `main` function can decide to panic if the initialisation of one
-    /// provider has failed.
-    fn init(&self) -> bool {
-        true
-    }
-
     /// Execute a Ping operation to get the version minor and version major information.
     ///
     /// # Errors

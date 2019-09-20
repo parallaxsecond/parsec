@@ -269,6 +269,14 @@ impl ManageKeyIDs for OnDiskKeyIDManager {
         }
     }
 
+    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String> {
+        Ok(self
+            .key_store
+            .keys()
+            .filter(|key_triple| key_triple.belongs_to_provider(provider_id))
+            .collect())
+    }
+
     fn insert(
         &mut self,
         key_triple: KeyTriple,

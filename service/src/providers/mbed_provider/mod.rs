@@ -19,6 +19,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, RwLock};
 
+use interface::operations::key_attributes::KeyLifetime;
 use interface::operations::ProviderInfo;
 use interface::operations::{OpAsymSign, ResultAsymSign};
 use interface::operations::{OpAsymVerify, ResultAsymVerify};
@@ -59,8 +60,8 @@ pub struct MbedProvider {
     // std::sync::RwLockWriteGuard<dyn ManageKeyIDs + Send + Sync> is returned. We need to use the
     // dereference operator (*) to access the inner type dyn ManageKeyIDs + Send + Sync and then
     // reference it to match with the method prototypes.
-    pub key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
-    pub local_ids: RwLock<LocalIdStore>,
+    key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+    local_ids: RwLock<LocalIdStore>,
 }
 
 /// Gets a PSA Key ID from the Key ID Manager.
@@ -141,6 +142,83 @@ fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Res
     }
 }
 
+impl MbedProvider {
+    /// Creates and initialise a new instance of MbedProvider.
+    /// Checks if there are not more keys stored in the Key ID Manager than in the MbedProvider and
+    /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
+    /// Returns `None` if the initialisation failed.
+    pub fn new(
+        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        local_ids: RwLock<LocalIdStore>,
+    ) -> Option<MbedProvider> {
+        if unsafe { psa_crypto_binding::psa_crypto_init() } != constants::PSA_SUCCESS {
+            return None;
+        }
+        let mbed_provider = MbedProvider {
+            key_id_store,
+            local_ids,
+        };
+        {
+            // The local scope allows to drop store_handle and local_ids_handle in order to return
+            // the mbed_provider.
+            let mut store_handle = mbed_provider
+                .key_id_store
+                .write()
+                .expect("Key store lock poisoned");
+            let mut local_ids_handle = mbed_provider
+                .local_ids
+                .write()
+                .expect("Local ID lock poisoned");
+            let mut to_remove: Vec<KeyTriple> = Vec::new();
+            // Go through all MbedProvider key triple to key ID mappings and check if they are still
+            // present.
+            // Delete those who are not present and add to the local_store the ones present.
+            match store_handle.get_all(ProviderID::MbedProvider) {
+                Ok(key_triples) => {
+                    for key_triple in key_triples.iter().cloned() {
+                        let key_id = match get_key_id(key_triple, &*store_handle) {
+                            Ok(key_id) => key_id,
+                            Err(response_status) => {
+                                println!("Key ID Manager error: {}", response_status);
+                                return None;
+                            }
+                        };
+                        // Use psa_open_key to check if the key ID actually exists or not.
+                        let lifetime =
+                            conversion_utils::convert_key_lifetime(KeyLifetime::Persistent);
+                        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+                        let open_key_status = unsafe {
+                            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+                        };
+                        if open_key_status == constants::PSA_ERROR_DOES_NOT_EXIST {
+                            to_remove.push(key_triple.clone());
+                        } else if open_key_status != constants::PSA_SUCCESS {
+                            return None;
+                        } else {
+                            local_ids_handle.insert(key_id);
+                            unsafe {
+                                psa_crypto_binding::psa_close_key(key_handle);
+                            }
+                        }
+                    }
+                }
+                Err(string) => {
+                    println!("Key ID Manager error: {}", string);
+                    return None;
+                }
+            };
+            for key_triple in to_remove.iter() {
+                if let Err(string) = store_handle.remove(key_triple) {
+                    println!("Key ID Manager error: {}", string);
+                    return None;
+                }
+            }
+        }
+
+        Some(mbed_provider)
+    }
+}
+
 impl Provide for MbedProvider {
     fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
         Ok(ResultListOpcodes {
@@ -153,12 +231,6 @@ impl Provide for MbedProvider {
             id: ProviderID::MbedProvider,
             description: String::from("User space software provider, based on MbedCrypto - the reference implementation of the PSA crypto API"),
         }
-    }
-
-    fn init(&self) -> bool {
-        let init_status = unsafe { psa_crypto_binding::psa_crypto_init() };
-
-        init_status == 0
     }
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
@@ -186,7 +258,7 @@ impl Provide for MbedProvider {
 
         let ret_val: Result<ResultCreateKey>;
 
-        if create_key_status == 0 {
+        if create_key_status == constants::PSA_SUCCESS {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
                 alg: 0,
                 alg2: 0,
@@ -202,7 +274,7 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
             };
 
-            if set_policy_status == 0 {
+            if set_policy_status == constants::PSA_SUCCESS {
                 let generate_key_status = unsafe {
                     psa_crypto_binding::psa_generate_key(
                         key_handle,
@@ -213,7 +285,7 @@ impl Provide for MbedProvider {
                     )
                 };
 
-                if generate_key_status == 0 {
+                if generate_key_status == constants::PSA_SUCCESS {
                     ret_val = Ok(ResultCreateKey {});
                 } else {
                     ret_val = Err(conversion_utils::convert_status(generate_key_status));
@@ -270,7 +342,7 @@ impl Provide for MbedProvider {
 
         let ret_val: Result<ResultImportKey>;
 
-        if create_key_status == 0 {
+        if create_key_status == constants::PSA_SUCCESS {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
                 alg: 0,
                 alg2: 0,
@@ -286,7 +358,7 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
             };
 
-            if set_policy_status == 0 {
+            if set_policy_status == constants::PSA_SUCCESS {
                 let import_key_status = unsafe {
                     psa_crypto_binding::psa_import_key(
                         key_handle,
@@ -296,7 +368,7 @@ impl Provide for MbedProvider {
                     )
                 };
 
-                if import_key_status == 0 {
+                if import_key_status == constants::PSA_SUCCESS {
                     ret_val = Ok(ResultImportKey {});
                 } else {
                     ret_val = Err(conversion_utils::convert_status(import_key_status));
@@ -347,7 +419,7 @@ impl Provide for MbedProvider {
         let open_key_status =
             unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
 
-        if open_key_status == 0 {
+        if open_key_status == constants::PSA_SUCCESS {
             // TODO: There's no calculation of the buffer size here, nor is there any handling of the
             // PSA_ERROR_BUFFER_TOO_SMALL condition. Just allocating a "big" buffer and assuming/hoping it is
             // enough.
@@ -364,7 +436,7 @@ impl Provide for MbedProvider {
                 )
             };
 
-            if export_status == 0 {
+            if export_status == constants::PSA_SUCCESS {
                 buffer.resize(actual_size, 0);
                 ret_val = Ok(ResultExportPublicKey { key_data: buffer });
             } else {
@@ -398,10 +470,10 @@ impl Provide for MbedProvider {
         let open_key_status =
             unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
 
-        if open_key_status == 0 {
+        if open_key_status == constants::PSA_SUCCESS {
             let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
 
-            if destroy_key_status == 0 {
+            if destroy_key_status == constants::PSA_SUCCESS {
                 remove_key_id(
                     &key_triple,
                     key_id,
@@ -432,7 +504,7 @@ impl Provide for MbedProvider {
         let open_key_status =
             unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
 
-        if open_key_status == 0 {
+        if open_key_status == constants::PSA_SUCCESS {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
                 alg: 0,
                 alg2: 0,
@@ -467,7 +539,7 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_close_key(key_handle);
             }
 
-            if sign_status == 0 {
+            if sign_status == constants::PSA_SUCCESS {
                 let mut res = ResultAsymSign {
                     signature: Vec::new(),
                 };
@@ -499,7 +571,7 @@ impl Provide for MbedProvider {
         let open_key_status =
             unsafe { psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle) };
 
-        if open_key_status == 0 {
+        if open_key_status == constants::PSA_SUCCESS {
             let mut policy = psa_crypto_binding::psa_key_policy_t {
                 alg: 0,
                 alg2: 0,
@@ -529,7 +601,7 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_close_key(key_handle);
             }
 
-            if verify_status == 0 {
+            if verify_status == constants::PSA_SUCCESS {
                 Ok(ResultAsymVerify {})
             } else {
                 Err(conversion_utils::convert_status(verify_status))
