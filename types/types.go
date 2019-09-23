@@ -1,8 +1,5 @@
 package types
 
-import (
-)
-
 // Info defines all information related to Parsec server
 type Info struct {
 }
