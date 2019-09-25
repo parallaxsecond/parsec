@@ -29,7 +29,7 @@ pub struct TestClient {
     cached_opcodes: Option<HashMap<ProviderID, HashSet<Opcode>>>,
     provider: Option<ProviderID>,
     auth: RequestAuth,
-    created_keys: HashSet<(String, Vec<u8>, ProviderID)>,
+    created_keys: Option<HashSet<(String, Vec<u8>, ProviderID)>>,
 }
 
 impl TestClient {
@@ -39,7 +39,7 @@ impl TestClient {
             cached_opcodes: None,
             provider: None,
             auth: RequestAuth::from_bytes(Vec::new()),
-            created_keys: HashSet::new(),
+            created_keys: Some(HashSet::new()),
         }
     }
 
@@ -49,6 +49,12 @@ impl TestClient {
 
     pub fn set_auth(&mut self, auth: Vec<u8>) {
         self.auth = RequestAuth::from_bytes(auth);
+    }
+
+    /// By default the `TestClient` instance will destroy the keys it created when it is dropped,
+    /// unless this function is called.
+    pub fn do_not_destroy_keys(&mut self) {
+        self.created_keys.take();
     }
 
     fn build_cache(&mut self) {
@@ -146,7 +152,9 @@ impl TestClient {
         let provider = self.provider(Opcode::CreateKey);
         let auth = self.auth.bytes().to_vec();
 
-        self.created_keys.insert((key_name, auth, provider));
+        if let Some(ref mut created_keys) = self.created_keys {
+            created_keys.insert((key_name, auth, provider));
+        }
 
         Ok(())
     }
@@ -162,7 +170,9 @@ impl TestClient {
             let provider = self.provider(Opcode::CreateKey);
             let auth = self.auth.bytes().to_vec();
 
-            self.created_keys.insert((key_name, auth, provider));
+            if let Some(ref mut created_keys) = self.created_keys {
+                created_keys.insert((key_name, auth, provider));
+            }
         }
         result
     }
@@ -197,7 +207,9 @@ impl TestClient {
         let provider = self.provider(Opcode::ImportKey);
         let auth = self.auth.bytes().to_vec();
 
-        self.created_keys.insert((key_name, auth, provider));
+        if let Some(ref mut created_keys) = self.created_keys {
+            created_keys.insert((key_name, auth, provider));
+        }
 
         Ok(())
     }
@@ -228,7 +240,9 @@ impl TestClient {
         let provider = self.provider(Opcode::DestroyKey);
         let auth = self.auth.bytes().to_vec();
 
-        self.created_keys.remove(&(key_name, auth, provider));
+        if let Some(ref mut created_keys) = self.created_keys {
+            created_keys.remove(&(key_name, auth, provider));
+        }
 
         Ok(())
     }
@@ -302,11 +316,13 @@ impl Default for TestClient {
 
 impl Drop for TestClient {
     fn drop(&mut self) {
-        for (key_name, auth, provider) in self.created_keys.clone().iter() {
-            self.provider = Some(*provider);
-            self.auth = RequestAuth::from_bytes(auth.clone());
-            if self.destroy_key(key_name.clone()).is_err() {
-                println!("Failed to destroy key '{}'", key_name);
+        if let Some(ref mut created_keys) = self.created_keys {
+            for (key_name, auth, provider) in created_keys.clone().iter() {
+                self.provider = Some(*provider);
+                self.auth = RequestAuth::from_bytes(auth.clone());
+                if self.destroy_key(key_name.clone()).is_err() {
+                    println!("Failed to destroy key '{}'", key_name);
+                }
             }
         }
     }

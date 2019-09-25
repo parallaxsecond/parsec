@@ -50,17 +50,55 @@ done
 cargo fmt --all -- --check || exit 1
 cargo clippy || exit 1
 
-#####################
-# Integration tests #
-#####################
+############################
+# Normal Integration tests #
+############################
 pushd service || exit 1
 cargo run &
 SERVER_PID=$!
+sleep 2
 popd || exit 1
 
 pushd test/test_rs/minimal_client/ || exit 1
 cargo build || exit 1
-cargo test || exit 1
+cargo test --test normal || exit 1
+popd
+
+kill $SERVER_PID
+sleep 2
+
+#################################
+# Persistence Integration tests #
+#################################
+pushd service || exit 1
+cargo run &
+SERVER_PID=$!
+sleep 2
+popd || exit 1
+
+pushd test/test_rs/minimal_client/ || exit 1
+cargo test --test persistent-before || exit 1
+popd
+
+kill $SERVER_PID
+sleep 2
+
+# Create a fake mapping file for the root application, the Mbed Provider and a
+# key name of "Test Key". It contains a valid PSA Key ID.
+# It is tested in test "should_have_been_deleted".
+pushd service || exit 1
+mkdir -p mappings/cm9vdA==/1 || exit 1
+printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+popd || exit 1
+
+pushd service || exit 1
+cargo run &
+SERVER_PID=$!
+sleep 2
+popd || exit 1
+
+pushd test/test_rs/minimal_client/ || exit 1
+cargo test --test persistent-after || exit 1
 popd
 
 kill $SERVER_PID

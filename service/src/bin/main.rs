@@ -25,7 +25,6 @@ use service::key_id_managers::on_disk_manager::OnDiskKeyIDManager;
 use service::providers::{
     core_provider::CoreProviderBuilder, mbed_provider::MbedProvider, Provide,
 };
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -38,13 +37,10 @@ const VERSION_MAJOR: u8 = 1;
 /// Build all the components needed for the service.
 //TODO: The component should be configured with a .toml (or similar) kind of file.
 fn build_components() -> (FrontEndHandler, impl Listen) {
-    let mbed_provider = MbedProvider::new(
-        Arc::new(RwLock::new(
-            OnDiskKeyIDManager::new(PathBuf::from("mappings"))
-                .expect("Error when loading the Key ID mappings."),
-        )),
-        RwLock::new(HashSet::new()),
-    )
+    let mbed_provider = MbedProvider::new(Arc::new(RwLock::new(
+        OnDiskKeyIDManager::new(PathBuf::from("mappings"))
+            .expect("Error when loading the Key ID mappings."),
+    )))
     .expect("Error when creating the Mbed Provider.");
 
     // Store provider descriptions in it.

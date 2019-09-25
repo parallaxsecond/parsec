@@ -37,7 +37,7 @@ impl fmt::Display for KeyTriple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Application Name: {}\nProvider ID: {}\nKey Name: {}",
+            "Application Name: \"{}\"\nProvider ID: {}\nKey Name: \"{}\"",
             self.app_name, self.provider_id, self.key_name
         )
     }
