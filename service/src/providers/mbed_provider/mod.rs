@@ -74,9 +74,12 @@ fn get_key_id(
     match store_handle.get(key_triple) {
         Ok(get_option) => {
             if let Some(key_id) = get_option {
-                Ok(u32::from_ne_bytes(
-                    key_id.try_into().expect("Stored key ID was not valid"),
-                ))
+                if let Ok(key_id_bytes) = key_id.try_into() {
+                    Ok(u32::from_ne_bytes(key_id_bytes))
+                } else {
+                    println!("Stored Key ID is not valid.");
+                    Err(ResponseStatus::KeyIDManagerError)
+                }
             } else {
                 Err(ResponseStatus::KeyDoesNotExist)
             }
@@ -147,16 +150,13 @@ impl MbedProvider {
     /// Checks if there are not more keys stored in the Key ID Manager than in the MbedProvider and
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
-    pub fn new(
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
-        local_ids: RwLock<LocalIdStore>,
-    ) -> Option<MbedProvider> {
+    pub fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
         if unsafe { psa_crypto_binding::psa_crypto_init() } != constants::PSA_SUCCESS {
             return None;
         }
         let mbed_provider = MbedProvider {
             key_id_store,
-            local_ids,
+            local_ids: RwLock::new(HashSet::new()),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -179,8 +179,9 @@ impl MbedProvider {
                         let key_id = match get_key_id(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                println!("Key ID Manager error: {}", response_status);
-                                return None;
+                                println!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
+                                to_remove.push(key_triple.clone());
+                                continue;
                             }
                         };
                         // Use psa_open_key to check if the key ID actually exists or not.
