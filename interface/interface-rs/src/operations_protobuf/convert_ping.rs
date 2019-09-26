@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::ping::{OpPingProto, ResultPingProto};
 use crate::operations;
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 impl TryFrom<OpPingProto> for operations::OpPing {
@@ -50,8 +50,8 @@ impl TryFrom<ResultPingProto> for operations::ResultPing {
 
     fn try_from(response: ResultPingProto) -> Result<Self, Self::Error> {
         Ok(operations::ResultPing {
-            supp_version_maj: response.supported_version_maj as u8,
-            supp_version_min: response.supported_version_min as u8,
+            supp_version_maj: u8::try_from(response.supported_version_maj)?,
+            supp_version_min: u8::try_from(response.supported_version_min)?,
         })
     }
 }
@@ -61,7 +61,7 @@ mod test {
     // OpPing <-> Proto conversions are not tested since they're too simple
     use super::super::generated_ops::ping::ResultPingProto;
     use super::super::{Convert, ProtobufConverter};
-    use crate::operations::{ConvertOperation, ConvertResult, OpPing, ResultPing};
+    use crate::operations::{NativeOperation, NativeResult, OpPing, ResultPing};
     use crate::requests::{request::RequestBody, response::ResponseBody, Opcode};
     use std::convert::TryInto;
 
@@ -93,14 +93,14 @@ mod test {
     #[test]
     fn ping_req_to_native() {
         let req_body = RequestBody::from_bytes(Vec::new());
-        assert!(CONVERTER.body_to_operation(&req_body, Opcode::Ping).is_ok());
+        assert!(CONVERTER.body_to_operation(req_body, Opcode::Ping).is_ok());
     }
 
     #[test]
     fn op_ping_from_native() {
         let ping = OpPing {};
         let body = CONVERTER
-            .body_from_operation(ConvertOperation::Ping(ping))
+            .operation_to_body(NativeOperation::Ping(ping))
             .expect("Failed to convert request");
         assert!(body.len() == 0);
     }
@@ -108,11 +108,11 @@ mod test {
     #[test]
     fn op_ping_e2e() {
         let ping = OpPing {};
-        let body = CONVERTER
-            .body_from_operation(ConvertOperation::Ping(ping))
+        let req_body = CONVERTER
+            .operation_to_body(NativeOperation::Ping(ping))
             .expect("Failed to convert request");
 
-        assert!(CONVERTER.body_to_operation(&body, Opcode::Ping).is_ok());
+        assert!(CONVERTER.body_to_operation(req_body, Opcode::Ping).is_ok());
     }
 
     #[test]
@@ -120,15 +120,13 @@ mod test {
         let req_body =
             RequestBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
 
-        assert!(CONVERTER
-            .body_to_operation(&req_body, Opcode::Ping)
-            .is_err());
+        assert!(CONVERTER.body_to_operation(req_body, Opcode::Ping).is_err());
     }
 
     #[test]
     fn ping_body_to_native() {
         let resp_body = ResponseBody::from_bytes(Vec::new());
-        assert!(CONVERTER.body_to_result(&resp_body, Opcode::Ping).is_ok());
+        assert!(CONVERTER.body_to_result(resp_body, Opcode::Ping).is_ok());
     }
 
     #[test]
@@ -139,7 +137,7 @@ mod test {
         };
 
         let body = CONVERTER
-            .body_from_result(ConvertResult::Ping(ping))
+            .result_to_body(NativeResult::Ping(ping))
             .expect("Failed to convert response");
         assert!(!body.is_empty());
     }
@@ -152,16 +150,16 @@ mod test {
         };
 
         let body = CONVERTER
-            .body_from_result(ConvertResult::Ping(ping))
+            .result_to_body(NativeResult::Ping(ping))
             .expect("Failed to convert response");
         assert!(!body.is_empty());
 
         let result = CONVERTER
-            .body_to_result(&body, Opcode::Ping)
+            .body_to_result(body, Opcode::Ping)
             .expect("Failed to convert back to result");
 
         match result {
-            ConvertResult::Ping(result) => {
+            NativeResult::Ping(result) => {
                 assert_eq!(result.supp_version_maj, 1);
                 assert_eq!(result.supp_version_min, 0);
             }
@@ -173,6 +171,6 @@ mod test {
     fn resp_from_native_mangled_body() {
         let resp_body =
             ResponseBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
-        assert!(CONVERTER.body_to_result(&resp_body, Opcode::Ping).is_err());
+        assert!(CONVERTER.body_to_result(resp_body, Opcode::Ping).is_err());
     }
 }

@@ -22,8 +22,9 @@
 pub mod simple_authenticator;
 
 use interface::requests::request::RequestAuth;
-use interface::requests::response::ResponseStatus;
+use interface::requests::Result;
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApplicationName(String);
 
 pub trait Authenticate {
@@ -32,11 +33,10 @@ pub trait Authenticate {
     /// # Errors
     ///
     /// If the authentification fails, returns a `ResponseStatus::AuthenticationError`.
-    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName, ResponseStatus>;
+    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName>;
 }
 
 impl ApplicationName {
-    #[cfg(test)]
     pub fn new(name: String) -> ApplicationName {
         ApplicationName(name)
     }

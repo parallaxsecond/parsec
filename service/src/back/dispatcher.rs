@@ -15,8 +15,8 @@
 use super::backend_handler::BackEndHandler;
 use crate::authenticators::ApplicationName;
 use interface::requests::request::Request;
-use interface::requests::response::{Response, ResponseStatus};
 use interface::requests::ProviderID;
+use interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
 
 /// Component tasked with identifying the backend handler that can
@@ -25,7 +25,7 @@ use std::collections::HashMap;
 /// As such, it owns all the backend handlers and attempts to match
 /// the fields in the request header to the properties of the handlers.
 pub struct Dispatcher {
-    pub backends: HashMap<ProviderID, BackEndHandler>,
+    backends: HashMap<ProviderID, BackEndHandler>,
 }
 
 impl Dispatcher {
@@ -36,18 +36,50 @@ impl Dispatcher {
     /// containing a status code consistent with the error encountered during
     /// processing.
     pub fn dispatch_request(&self, request: Request, app_name: ApplicationName) -> Response {
-        if let Some(provider_id) = ::num::FromPrimitive::from_u8(request.header.provider) {
-            if let Some(backend) = self.backends.get(&provider_id) {
-                if let Err(status) = backend.is_capable(&request) {
-                    request.into_response(status)
-                } else {
-                    backend.execute_request(request, app_name)
-                }
+        if let Some(backend) = self.backends.get(&request.header.provider) {
+            if let Err(status) = backend.is_capable(&request) {
+                Response::from_request_header(request.header, status)
             } else {
-                request.into_response(ResponseStatus::ProviderNotRegistered)
+                backend.execute_request(request, app_name)
             }
         } else {
-            request.into_response(ResponseStatus::ProviderDoesNotExist)
+            Response::from_request_header(request.header, ResponseStatus::ProviderNotRegistered)
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct DispatcherBuilder {
+    backends: Option<HashMap<ProviderID, BackEndHandler>>,
+}
+
+impl DispatcherBuilder {
+    pub fn new() -> Self {
+        DispatcherBuilder { backends: None }
+    }
+
+    pub fn with_backend(
+        mut self,
+        provider_id: ProviderID,
+        backend_handler: BackEndHandler,
+    ) -> Self {
+        match &mut self.backends {
+            Some(backends) => {
+                backends.insert(provider_id, backend_handler);
+            }
+            None => {
+                let mut map = HashMap::new();
+                map.insert(provider_id, backend_handler);
+                self.backends = Some(map);
+            }
+        }
+
+        self
+    }
+
+    pub fn build(self) -> Dispatcher {
+        Dispatcher {
+            backends: self.backends.expect("Backends missing"),
         }
     }
 }

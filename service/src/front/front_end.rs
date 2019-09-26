@@ -14,9 +14,9 @@
 // limitations under the License.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
-use interface::requests::request::Request;
-use interface::requests::response::ResponseStatus;
 use interface::requests::AuthType;
+use interface::requests::ResponseStatus;
+use interface::requests::{Request, Response};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 
@@ -25,8 +25,9 @@ use std::io::{Read, Write};
 ///
 /// Requests are passed forward to the `Dispatcher`.
 pub struct FrontEndHandler {
-    pub dispatcher: Dispatcher,
-    pub authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
+    dispatcher: Dispatcher,
+    // Send and Sync are required for Arc<FrontEndHandler> to be Send.
+    authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
 }
 
 impl FrontEndHandler {
@@ -42,27 +43,31 @@ impl FrontEndHandler {
         // De-Serialise bytes into a request
         let request = match Request::read_from_stream(&mut stream) {
             Ok(request) => request,
-            Err(err) => {
-                println!("Failed to read request; error: {}", err);
+            Err(status) => {
+                println!("Failed to read request; status: {}", status);
+
+                let response = Response::from_status(status);
+                if let Err(status) = response.write_to_stream(&mut stream) {
+                    println!("Failed to write response; status: {}", status);
+                }
                 return;
             }
         };
         // Find an authenticator that is capable to authenticate the request
         let response =
-            if let Some(auth_type) = ::num::FromPrimitive::from_u8(request.header.auth_type) {
-                if let Some(authenticator) = self.authenticators.get(&auth_type) {
-                    // Authenticate the request
-                    match authenticator.authenticate(request.auth()) {
-                        // Send the request to the dispatcher
-                        // Get a response back
-                        Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
-                        Err(status) => request.into_response(status),
-                    }
-                } else {
-                    request.into_response(ResponseStatus::AuthenticatorNotRegistered)
+            if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
+                // Authenticate the request
+                match authenticator.authenticate(&request.auth) {
+                    // Send the request to the dispatcher
+                    // Get a response back
+                    Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
+                    Err(status) => Response::from_request_header(request.header, status),
                 }
             } else {
-                request.into_response(ResponseStatus::AuthenticatorDoesNotExist)
+                Response::from_request_header(
+                    request.header,
+                    ResponseStatus::AuthenticatorNotRegistered,
+                )
             };
 
         // Serialise the responso into bytes
@@ -70,6 +75,52 @@ impl FrontEndHandler {
         match response.write_to_stream(&mut stream) {
             Ok(_) => println!("Request handled successfully"),
             Err(err) => println!("Failed to send response; error: {}", err),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct FrontEndHandlerBuilder {
+    dispatcher: Option<Dispatcher>,
+    authenticators: Option<HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>>,
+}
+
+impl FrontEndHandlerBuilder {
+    pub fn new() -> Self {
+        FrontEndHandlerBuilder {
+            dispatcher: None,
+            authenticators: None,
+        }
+    }
+
+    pub fn with_dispatcher(mut self, dispatcher: Dispatcher) -> Self {
+        self.dispatcher = Some(dispatcher);
+        self
+    }
+
+    pub fn with_authenticator(
+        mut self,
+        auth_type: AuthType,
+        authenticator: Box<dyn Authenticate + Send + Sync>,
+    ) -> Self {
+        match &mut self.authenticators {
+            Some(authenticators) => {
+                authenticators.insert(auth_type, authenticator);
+            }
+            None => {
+                let mut map = HashMap::new();
+                map.insert(auth_type, authenticator);
+                self.authenticators = Some(map);
+            }
+        };
+
+        self
+    }
+
+    pub fn build(self) -> FrontEndHandler {
+        FrontEndHandler {
+            dispatcher: self.dispatcher.expect("Dispatcher missing"),
+            authenticators: self.authenticators.expect("Authenticators missing"),
         }
     }
 }

@@ -14,9 +14,15 @@
 // limitations under the License.
 use num_derive::FromPrimitive;
 
+mod response_status;
+
 pub mod utils;
 pub mod request;
 pub mod response;
+pub use request::Request;
+pub use response::Response;
+pub use response_status::{ResponseStatus, Result};
+use std::convert::TryFrom;
 
 const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 
@@ -24,6 +30,7 @@ const MAGIC_NUMBER: u32 = 0x5EC0_A710;
 ///
 /// Passed in headers as `provider`.
 #[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum ProviderID {
     CoreProvider = 0,
     MbedProvider = 1,
@@ -35,10 +42,22 @@ impl std::fmt::Display for ProviderID {
     }
 }
 
+impl TryFrom<u8> for ProviderID {
+    type Error = ResponseStatus;
+
+    fn try_from(provider_id: u8) -> ::std::result::Result<Self, Self::Error> {
+        match num::FromPrimitive::from_u8(provider_id) {
+            Some(provider_id) => Ok(provider_id),
+            None => Err(ResponseStatus::ProviderDoesNotExist),
+        }
+    }
+}
+
 /// Listing of body encoding types and their associated codes.
 ///
 /// Passed in headers as `content_type` and `accept_type`.
-#[derive(FromPrimitive, Copy, Clone)]
+#[derive(FromPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum BodyType {
     Protobuf = 0,
 }
@@ -46,7 +65,8 @@ pub enum BodyType {
 /// Listing of available operations and their associated opcode.
 ///
 /// Passed in headers as `opcode`.
-#[derive(FromPrimitive, Copy, Clone, PartialEq, Debug)]
+#[derive(FromPrimitive, Copy, Clone, PartialEq, Debug, Hash, Eq)]
+#[repr(u16)]
 pub enum Opcode {
     Ping = 0,
     CreateKey = 1,
@@ -55,9 +75,12 @@ pub enum Opcode {
     AsymVerify = 4,
     ImportKey = 5,
     ExportPublicKey = 6,
+    ListProviders = 7,
+    ListOpcodes = 8,
 }
 
-#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(FromPrimitive, PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum AuthType {
     Simple = 0,
 }

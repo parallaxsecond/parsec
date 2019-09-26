@@ -12,14 +12,24 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! Minimal PARSEC Client library
-//!
-//! This library exposes minimal functions to communicate with the PARSEC service through a Unix
-//! socket.
-mod abstract_test_client;
-mod operation_test_client;
-mod request_test_client;
+use crate::requests::ProviderID;
 
-pub use abstract_test_client::TestClient;
-pub use operation_test_client::OperationTestClient;
-pub use request_test_client::RequestTestClient;
+/// Structure holding the basic information that defines the providers in
+/// the service for client discovery.
+#[derive(Debug, Clone)]
+pub struct ProviderInfo {
+    pub id: ProviderID,
+    pub description: String,
+}
+
+/// Native object for provider listing operation.
+pub struct OpListProviders;
+
+/// Native object for provider listing result.
+///
+/// A list of `ProviderInfo` structures, one for each provider available in
+/// the service.
+#[derive(Debug)]
+pub struct ResultListProviders {
+    pub providers: Vec<ProviderInfo>,
+}

@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use crate::operations::{OpDestroyKey, ResultDestroyKey};
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 
@@ -61,7 +61,7 @@ impl TryFrom<ResultDestroyKey> for ResultDestroyKeyProto {
 mod test {
     use super::super::generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
     use super::super::{Convert, ProtobufConverter};
-    use crate::operations::{key_attributes, ConvertOperation, OpDestroyKey, ResultDestroyKey};
+    use crate::operations::{key_attributes, NativeOperation, OpDestroyKey, ResultDestroyKey};
     use crate::requests::{request::RequestBody, response::ResponseBody, Opcode};
     use std::convert::TryInto;
 
@@ -118,11 +118,11 @@ mod test {
             key_name: "test name".to_string(),
         };
         let body = CONVERTER
-            .body_from_operation(ConvertOperation::DestroyKey(op))
+            .operation_to_body(NativeOperation::DestroyKey(op))
             .expect("Failed to convert request");
 
         assert!(CONVERTER
-            .body_to_operation(&body, Opcode::DestroyKey)
+            .body_to_operation(body, Opcode::DestroyKey)
             .is_ok());
     }
 
@@ -131,7 +131,7 @@ mod test {
         let resp_body =
             ResponseBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
         assert!(CONVERTER
-            .body_to_result(&resp_body, Opcode::DestroyKey)
+            .body_to_result(resp_body, Opcode::DestroyKey)
             .is_err());
     }
 
@@ -141,7 +141,7 @@ mod test {
             RequestBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
 
         assert!(CONVERTER
-            .body_to_operation(&req_body, Opcode::DestroyKey)
+            .body_to_operation(req_body, Opcode::DestroyKey)
             .is_err());
     }
 }

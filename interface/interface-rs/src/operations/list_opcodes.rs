@@ -12,14 +12,17 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! Minimal PARSEC Client library
-//!
-//! This library exposes minimal functions to communicate with the PARSEC service through a Unix
-//! socket.
-mod abstract_test_client;
-mod operation_test_client;
-mod request_test_client;
+use crate::requests::Opcode;
+use std::collections::HashSet;
 
-pub use abstract_test_client::TestClient;
-pub use operation_test_client::OperationTestClient;
-pub use request_test_client::RequestTestClient;
+/// Native object for opcode listing operation.
+pub struct OpListOpcodes;
+
+/// Native object for opcode listing result.
+///
+/// `opcodes` holds a list of opcodes supported by the provider identified in
+/// the request.
+#[derive(Debug)]
+pub struct ResultListOpcodes {
+    pub opcodes: HashSet<Opcode>,
+}

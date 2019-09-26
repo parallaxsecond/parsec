@@ -12,14 +12,6 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! Minimal PARSEC Client library
-//!
-//! This library exposes minimal functions to communicate with the PARSEC service through a Unix
-//! socket.
-mod abstract_test_client;
-mod operation_test_client;
-mod request_test_client;
 
-pub use abstract_test_client::TestClient;
-pub use operation_test_client::OperationTestClient;
-pub use request_test_client::RequestTestClient;
+// This module combines all tests that can be run without having to restart the service.
+mod normal_tests;

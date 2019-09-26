@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::asym_verify::{OpAsymmetricVerifyProto, ResultAsymmetricVerifyProto};
 use crate::operations::{OpAsymVerify, ResultAsymVerify};
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use num::FromPrimitive;
 use std::convert::TryFrom;
 
@@ -68,7 +68,7 @@ mod test {
     };
     use super::super::{Convert, ProtobufConverter};
     use crate::operations::{
-        key_attributes, ConvertOperation, ConvertResult, OpAsymVerify, ResultAsymVerify,
+        key_attributes, NativeOperation, NativeResult, OpAsymVerify, ResultAsymVerify,
     };
     use crate::requests::{request::RequestBody, response::ResponseBody, Opcode};
     use std::convert::TryInto;
@@ -141,11 +141,11 @@ mod test {
             signature: vec![0x11, 0x22, 0x33],
         };
         let body = CONVERTER
-            .body_from_operation(ConvertOperation::AsymVerify(op))
+            .operation_to_body(NativeOperation::AsymVerify(op))
             .expect("Failed to convert request");
 
         assert!(CONVERTER
-            .body_to_operation(&body, Opcode::AsymVerify)
+            .body_to_operation(body, Opcode::AsymVerify)
             .is_ok());
     }
 
@@ -153,10 +153,10 @@ mod test {
     fn resp_asym_sign_e2e() {
         let result = ResultAsymVerify {};
         let body = CONVERTER
-            .body_from_result(ConvertResult::AsymVerify(result))
+            .result_to_body(NativeResult::AsymVerify(result))
             .expect("Failed to convert request");
 
-        assert!(CONVERTER.body_to_result(&body, Opcode::AsymVerify).is_ok());
+        assert!(CONVERTER.body_to_result(body, Opcode::AsymVerify).is_ok());
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod test {
         let resp_body =
             ResponseBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
         assert!(CONVERTER
-            .body_to_result(&resp_body, Opcode::AsymVerify)
+            .body_to_result(resp_body, Opcode::AsymVerify)
             .is_err());
     }
 
@@ -174,7 +174,7 @@ mod test {
             RequestBody::from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
 
         assert!(CONVERTER
-            .body_to_operation(&req_body, Opcode::AsymVerify)
+            .body_to_operation(req_body, Opcode::AsymVerify)
             .is_err());
     }
 }
