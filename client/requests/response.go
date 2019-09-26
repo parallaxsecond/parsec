@@ -3,11 +3,14 @@ package requests
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/sirupsen/logrus"
 )
 
-const responseHeaderSize uint16 = 20
+const responseHeaderSizeValue uint16 = 21
+const responseHeaderSize uint16 = responseHeaderSizeValue + 6
 
 // Response codes
 const (
@@ -66,7 +69,7 @@ type ResponseHeader struct {
 
 // ResponseBody represents a response body
 type ResponseBody struct {
-	body *bytes.Buffer
+	*bytes.Buffer
 }
 
 // Response represents a Parsec response
@@ -76,8 +79,25 @@ type Response struct {
 }
 
 func (r *ResponseHeader) parse(buf *bytes.Buffer) error {
-	err := binary.Read(buf, binary.LittleEndian, r)
-	return err
+	r.magicNumber = binary.LittleEndian.Uint32(buf.Next(4))
+	if r.magicNumber != magicNumber {
+		return errors.New("Invalid magic number")
+	}
+	r.hdrSize = binary.LittleEndian.Uint16(buf.Next(2))
+	if r.hdrSize != responseHeaderSizeValue {
+		logrus.Errorf("Invalid header size (%d != %d)", r.hdrSize, responseHeaderSizeValue)
+		return errors.New("Invalid header size")
+	}
+	r.versionMajor = buf.Next(1)[0]
+	r.versionMinor = buf.Next(1)[0]
+	r.Provider = buf.Next(1)[0]
+	r.Session = binary.LittleEndian.Uint64(buf.Next(8))
+	r.ContentType = buf.Next(1)[0]
+	r.AuthType = buf.Next(1)[0]
+	r.BodyLen = binary.LittleEndian.Uint32(buf.Next(4))
+	r.OpCode = binary.LittleEndian.Uint16(buf.Next(2))
+	r.Status = binary.LittleEndian.Uint16(buf.Next(2))
+	return nil
 }
 
 // NewResponse returns a response if it successfuly unmarshals the given byte buffer
@@ -85,13 +105,24 @@ func NewResponse(buf *bytes.Buffer, pb proto.Message) (*Response, error) {
 	r := &Response{}
 	hdrBuf := make([]byte, responseHeaderSize)
 	_, err := buf.Read(hdrBuf)
-
-	r.Header.parse(bytes.NewBuffer(hdrBuf))
-	//TODO sanity check r.Header values
+	if err != nil {
+		logrus.Errorf("Failed to read header")
+		return nil, err
+	}
+	err = r.Header.parse(bytes.NewBuffer(hdrBuf))
+	if err != nil {
+		logrus.Errorf("Failed to parse")
+		return nil, err
+	}
 
 	bodyBuf := make([]byte, r.Header.BodyLen)
-	r.Body.body = bytes.NewBuffer(bodyBuf)
-	err = proto.Unmarshal(r.Body.body.Bytes(), pb)
+	_, err = buf.Read(bodyBuf)
+	if err != nil {
+		logrus.Errorf("Failed to read body")
+		return nil, err
+	}
+	r.Body = ResponseBody{bytes.NewBuffer(bodyBuf)}
+	err = proto.Unmarshal(r.Body.Bytes(), pb)
 
 	return r, err
 }
