@@ -27,10 +27,30 @@ type SystemClient interface {
 
 // InitClient initializes a Parsec client
 func InitClient() (*Client, error) {
-	return nil, nil
+	client := &Client{
+		conn: &conn{},
+	}
+
+	err := client.conn.open()
+	if err != nil {
+		return nil, err
+	}
+	err = client.conn.close()
+	if err != nil {
+		return nil, err
+	}
+
+	//TODO version or other init
+	return client, nil
 }
 
 // KeyGet obtains a key from Parsec by KeyID
-func (c Client) KeyGet(keyid types.KeyID) (Key, error) {
-	return &key{}, nil
+func (c Client) KeyGet(keyid types.KeyID, attributes types.KeyAttributes) (Key, error) {
+	k := &key{
+		KeyID:      keyid,
+		conn:       c.conn,
+		attributes: attributes,
+	}
+	//TODO some method of testing key presence (ListKeys?)
+	return &k, nil
 }

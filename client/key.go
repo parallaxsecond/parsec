@@ -40,7 +40,6 @@ type DecryptingKey interface {
 
 type key struct {
 	KeyID      types.KeyID
-	lifetime   key_attributes.KeyLifetime
 	conn       *conn
 	attributes types.KeyAttributes
 }
@@ -49,7 +48,7 @@ type key struct {
 func (key key) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
 	asymSign := &asym_sign.OpAsymmetricSignProto{
 		KeyName:     string(key.KeyID),
-		KeyLifetime: key.lifetime,
+		KeyLifetime: key_attributes.KeyLifetime(key.attributes.Lifetime),
 		Hash:        digest,
 	}
 	req, err := requests.NewRequest(requests.OpAsymSign, asymSign)
@@ -77,7 +76,7 @@ func (key key) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (sign
 func (key key) Verify(digest []byte, signature []byte) (err error) {
 	asymVerify := &asym_verify.OpAsymmetricVerifyProto{
 		KeyName:     string(key.KeyID),
-		KeyLifetime: key.lifetime,
+		KeyLifetime: key_attributes.KeyLifetime(key.attributes.Lifetime),
 		Hash:        digest,
 		Signature:   signature,
 	}
