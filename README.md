@@ -14,12 +14,16 @@
   -- See the License for the specific language governing permissions and
   -- limitations under the License.
 --->
+![PARSEC logo](PARSEC.png)
 # Platform AbstRaction for SECurity
 
 The PARSEC project contains code to provide a Linux system daemon that will provide developer APIs to a set of crypto services that closely follow the PSA Crypto APIs.
 For more information, please read the following documents:
-* [Source Code Structure](docs/source_code_structure.md)
+* [API Overview](docs/api_overview.md)
 * [Interfaces and Dataflow](docs/interfaces_and_dataflow.md)
+* [Operation Directory](docs/operation_directory.md)
+* [Source Code Structure](docs/source_code_structure.md)
+* [System Architecture](docs/system_architecture.md)
 * [Wire Protocol](docs/wire_protocol.md)
 
 # DISCLAIMER
@@ -38,13 +42,6 @@ The software is provided under Apache-2.0. Contributions to this project are acc
 
 This project uses the following third party crates:
 * serde (Apache-2.0)
-* bincode (MIT)
-* num-traits (MIT and Apache-2.0)
-* num-derive (MIT and Apache-2.0)
-* prost-build (Apache-2.0)
-* prost (Apache-2.0)
-* bytes (MIT)
-* num (MIT and Apache-2.0)
 * bindgen (BSD-3-Clause)
 * cargo\_toml (Apache-2.0)
 * toml (MIT and Apache-2.0)
@@ -57,13 +54,14 @@ This project uses the following third party libraries:
 # User Guide
 
 This project is coded in the Rust Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
-To build and run the service, execute `cargo run` inside `service/`. The service will then wait for clients.
+To build and run the service, execute `cargo run`. `parsec` will then wait for clients.
 
 ## Testing
 
-You can unit test the `integration-rs` and `service` crates executing `cargo test` inside those.
-You can perform an integration test by running the service first and then executing `cargo test` inside the `minimal_client` crate in `test/test_rs/minimal_client`.
-The `test/ci/all.sh` script executes all of the unit tests and integration tests.
+You can execute unit tests with `cargo test`.
+You can perform an integration test by using the
+[test client](https://github.com/parallaxsecond/parsec-client-test). Check that repository for more details.
+The `ci/all.sh` script executes all of the unit tests and integration tests.
 
 # Contributing
 

@@ -1,2 +1,0 @@
-# The utils module has to be declared before to make its macros visible.
-reorder_modules = false

@@ -1,7 +1,24 @@
-[workspace]
+[package]
+name = "parsec"
+version = "0.1.0"
+authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
+           "Hugues de Valon <hugues.devalon@arm.com>"]
+edition = "2018"
 
-members = [
-    "service",
-    "test/test_rs/minimal_client",
-    "interface/interface-rs"
-]
+[dependencies]
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs"  }
+rand = "0.7.0"
+base64 = "0.10.1"
+
+[build-dependencies]
+bindgen = "0.50.0"
+cargo_toml = "0.7.0"
+toml = "0.4.2"
+serde = { version = "1.0", features = ["derive"] }
+
+[package.metadata.config]
+mbed-crypto-version = "mbedcrypto-1.1.0"
+
+[features]
+default = ["mbed"]
+mbed = []

@@ -14,7 +14,7 @@
   -- See the License for the specific language governing permissions and
   -- limitations under the License.
 --->
-# Contributing to PARSEC
+# Contributing to `parsec`
 
 Contributions to PARSEC need to follow the process below.
 

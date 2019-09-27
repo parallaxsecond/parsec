@@ -1,2 +1,4 @@
-target
-Cargo.lock
+/target
+*.psa_its
+*.swp
+tags
