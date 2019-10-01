@@ -14,7 +14,7 @@
 // limitations under the License.
 use super::generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
 use crate::operations;
-use crate::requests::response::ResponseStatus;
+use crate::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 impl TryFrom<OpImportKeyProto> for operations::OpImportKey {
@@ -70,7 +70,7 @@ mod test {
     };
     use super::super::{Convert, ProtobufConverter};
     use crate::operations::key_attributes::{self, KeyAttributes};
-    use crate::operations::{ConvertOperation, OpImportKey, ResultImportKey};
+    use crate::operations::{NativeOperation, OpImportKey, ResultImportKey};
     use crate::requests::Opcode;
     use std::convert::TryInto;
 
@@ -128,11 +128,11 @@ mod test {
         };
 
         let body = CONVERTER
-            .body_from_operation(ConvertOperation::ImportKey(op))
+            .operation_to_body(NativeOperation::ImportKey(op))
             .expect("Failed to convert to body");
 
         CONVERTER
-            .body_to_operation(&body, Opcode::ImportKey)
+            .body_to_operation(body, Opcode::ImportKey)
             .expect("Failed to convert to operation");
     }
 

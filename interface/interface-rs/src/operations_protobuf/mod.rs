@@ -20,15 +20,15 @@ mod convert_export_public_key;
 mod convert_destroy_key;
 mod convert_asym_sign;
 mod convert_asym_verify;
+mod convert_list_providers;
+mod convert_list_opcodes;
 
 #[rustfmt::skip]
 mod generated_ops;
 
-use crate::operations::{Convert, ConvertOperation, ConvertResult};
+use crate::operations::{Convert, NativeOperation, NativeResult};
 use crate::requests::{
-    request::RequestBody,
-    response::{ResponseBody, ResponseStatus},
-    Opcode,
+    request::RequestBody, response::ResponseBody, Opcode, ResponseStatus, Result,
 };
 use generated_ops::asym_sign::{OpAsymmetricSignProto, ResultAsymmetricSignProto};
 use generated_ops::asym_verify::{OpAsymmetricVerifyProto, ResultAsymmetricVerifyProto};
@@ -36,6 +36,8 @@ use generated_ops::create_key::{OpCreateKeyProto, ResultCreateKeyProto};
 use generated_ops::destroy_key::{OpDestroyKeyProto, ResultDestroyKeyProto};
 use generated_ops::export_public_key::{OpExportPublicKeyProto, ResultExportPublicKeyProto};
 use generated_ops::import_key::{OpImportKeyProto, ResultImportKeyProto};
+use generated_ops::list_opcodes::{OpListOpcodesProto, ResultListOpcodesProto};
+use generated_ops::list_providers::{OpListProvidersProto, ResultListProvidersProto};
 use generated_ops::ping::{OpPingProto, ResultPingProto};
 use prost::Message;
 use std::convert::TryInto;
@@ -66,139 +68,161 @@ macro_rules! native_to_wire {
 pub struct ProtobufConverter;
 
 impl Convert for ProtobufConverter {
-    fn body_to_operation(
-        &self,
-        body: &RequestBody,
-        opcode: Opcode,
-    ) -> Result<ConvertOperation, ResponseStatus> {
+    fn body_to_operation(&self, body: RequestBody, opcode: Opcode) -> Result<NativeOperation> {
         match opcode {
-            Opcode::Ping => Ok(ConvertOperation::Ping(wire_to_native!(
+            Opcode::ListProviders => Ok(NativeOperation::ListProviders(wire_to_native!(
+                body.bytes(),
+                OpListProvidersProto
+            ))),
+            Opcode::ListOpcodes => Ok(NativeOperation::ListOpcodes(wire_to_native!(
+                body.bytes(),
+                OpListOpcodesProto
+            ))),
+            Opcode::Ping => Ok(NativeOperation::Ping(wire_to_native!(
                 body.bytes(),
                 OpPingProto
             ))),
-            Opcode::CreateKey => Ok(ConvertOperation::CreateKey(wire_to_native!(
+            Opcode::CreateKey => Ok(NativeOperation::CreateKey(wire_to_native!(
                 body.bytes(),
                 OpCreateKeyProto
             ))),
-            Opcode::ImportKey => Ok(ConvertOperation::ImportKey(wire_to_native!(
+            Opcode::ImportKey => Ok(NativeOperation::ImportKey(wire_to_native!(
                 body.bytes(),
                 OpImportKeyProto
             ))),
-            Opcode::ExportPublicKey => Ok(ConvertOperation::ExportPublicKey(wire_to_native!(
+            Opcode::ExportPublicKey => Ok(NativeOperation::ExportPublicKey(wire_to_native!(
                 body.bytes(),
                 OpExportPublicKeyProto
             ))),
-            Opcode::DestroyKey => Ok(ConvertOperation::DestroyKey(wire_to_native!(
+            Opcode::DestroyKey => Ok(NativeOperation::DestroyKey(wire_to_native!(
                 body.bytes(),
                 OpDestroyKeyProto
             ))),
-            Opcode::AsymSign => Ok(ConvertOperation::AsymSign(wire_to_native!(
+            Opcode::AsymSign => Ok(NativeOperation::AsymSign(wire_to_native!(
                 body.bytes(),
                 OpAsymmetricSignProto
             ))),
-            Opcode::AsymVerify => Ok(ConvertOperation::AsymVerify(wire_to_native!(
+            Opcode::AsymVerify => Ok(NativeOperation::AsymVerify(wire_to_native!(
                 body.bytes(),
                 OpAsymmetricVerifyProto
             ))),
         }
     }
 
-    fn body_from_operation(
-        &self,
-        operation: ConvertOperation,
-    ) -> Result<RequestBody, ResponseStatus> {
+    fn operation_to_body(&self, operation: NativeOperation) -> Result<RequestBody> {
         match operation {
-            ConvertOperation::Ping(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+            NativeOperation::ListProviders(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpListProvidersProto),
+            )),
+            NativeOperation::ListOpcodes(operation) => Ok(RequestBody::from_bytes(
+                native_to_wire!(operation, OpListOpcodesProto),
+            )),
+            NativeOperation::Ping(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpPingProto
             ))),
-            ConvertOperation::CreateKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+            NativeOperation::CreateKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpCreateKeyProto
             ))),
-            ConvertOperation::ImportKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+            NativeOperation::ImportKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpImportKeyProto
             ))),
-            ConvertOperation::ExportPublicKey(operation) => Ok(RequestBody::from_bytes(
+            NativeOperation::ExportPublicKey(operation) => Ok(RequestBody::from_bytes(
                 native_to_wire!(operation, OpExportPublicKeyProto),
             )),
-            ConvertOperation::DestroyKey(operation) => Ok(RequestBody::from_bytes(
-                native_to_wire!(operation, OpDestroyKeyProto),
-            )),
-            ConvertOperation::AsymSign(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+            NativeOperation::DestroyKey(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+                operation,
+                OpDestroyKeyProto
+            ))),
+            NativeOperation::AsymSign(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
                 operation,
                 OpAsymmetricSignProto
             ))),
-            ConvertOperation::AsymVerify(operation) => Ok(RequestBody::from_bytes(
-                native_to_wire!(operation, OpAsymmetricVerifyProto),
-            )),
+            NativeOperation::AsymVerify(operation) => Ok(RequestBody::from_bytes(native_to_wire!(
+                operation,
+                OpAsymmetricVerifyProto
+            ))),
         }
     }
 
-    fn body_to_result(
-        &self,
-        body: &ResponseBody,
-        opcode: Opcode,
-    ) -> Result<ConvertResult, ResponseStatus> {
+    fn body_to_result(&self, body: ResponseBody, opcode: Opcode) -> Result<NativeResult> {
         match opcode {
-            Opcode::Ping => Ok(ConvertResult::Ping(wire_to_native!(
+            Opcode::ListProviders => Ok(NativeResult::ListProviders(wire_to_native!(
+                body.bytes(),
+                ResultListProvidersProto
+            ))),
+            Opcode::ListOpcodes => Ok(NativeResult::ListOpcodes(wire_to_native!(
+                body.bytes(),
+                ResultListOpcodesProto
+            ))),
+            Opcode::Ping => Ok(NativeResult::Ping(wire_to_native!(
                 body.bytes(),
                 ResultPingProto
             ))),
-            Opcode::CreateKey => Ok(ConvertResult::CreateKey(wire_to_native!(
+            Opcode::CreateKey => Ok(NativeResult::CreateKey(wire_to_native!(
                 body.bytes(),
                 ResultCreateKeyProto
             ))),
-            Opcode::ImportKey => Ok(ConvertResult::ImportKey(wire_to_native!(
+            Opcode::ImportKey => Ok(NativeResult::ImportKey(wire_to_native!(
                 body.bytes(),
                 ResultImportKeyProto
             ))),
-            Opcode::ExportPublicKey => Ok(ConvertResult::ExportPublicKey(wire_to_native!(
+            Opcode::ExportPublicKey => Ok(NativeResult::ExportPublicKey(wire_to_native!(
                 body.bytes(),
                 ResultExportPublicKeyProto
             ))),
-            Opcode::DestroyKey => Ok(ConvertResult::DestroyKey(wire_to_native!(
+            Opcode::DestroyKey => Ok(NativeResult::DestroyKey(wire_to_native!(
                 body.bytes(),
                 ResultDestroyKeyProto
             ))),
-            Opcode::AsymSign => Ok(ConvertResult::AsymSign(wire_to_native!(
+            Opcode::AsymSign => Ok(NativeResult::AsymSign(wire_to_native!(
                 body.bytes(),
                 ResultAsymmetricSignProto
             ))),
-            Opcode::AsymVerify => Ok(ConvertResult::AsymVerify(wire_to_native!(
+            Opcode::AsymVerify => Ok(NativeResult::AsymVerify(wire_to_native!(
                 body.bytes(),
                 ResultAsymmetricVerifyProto
             ))),
         }
     }
 
-    fn body_from_result(&self, result: ConvertResult) -> Result<ResponseBody, ResponseStatus> {
+    fn result_to_body(&self, result: NativeResult) -> Result<ResponseBody> {
         match result {
-            ConvertResult::Ping(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::ListProviders(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultListProvidersProto
+            ))),
+            NativeResult::ListOpcodes(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultListOpcodesProto
+            ))),
+            NativeResult::Ping(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultPingProto
             ))),
-            ConvertResult::CreateKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::CreateKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultCreateKeyProto
             ))),
-            ConvertResult::ImportKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::ImportKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultImportKeyProto
             ))),
-            ConvertResult::ExportPublicKey(result) => Ok(ResponseBody::from_bytes(
-                native_to_wire!(result, ResultExportPublicKeyProto),
-            )),
-            ConvertResult::DestroyKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::ExportPublicKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+                result,
+                ResultExportPublicKeyProto
+            ))),
+            NativeResult::DestroyKey(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultDestroyKeyProto
             ))),
-            ConvertResult::AsymSign(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::AsymSign(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultAsymmetricSignProto
             ))),
-            ConvertResult::AsymVerify(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
+            NativeResult::AsymVerify(result) => Ok(ResponseBody::from_bytes(native_to_wire!(
                 result,
                 ResultAsymmetricVerifyProto
             ))),

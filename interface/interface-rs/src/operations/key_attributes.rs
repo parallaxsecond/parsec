@@ -113,6 +113,7 @@ pub struct KeyAttributes {
 
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum KeyLifetime {
     Volatile = 0,
     Persistent = 1,
@@ -121,6 +122,7 @@ pub enum KeyLifetime {
 /// Enumeration of key types supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum KeyType {
     HmacKey = 0,
     DeriveKey = 1,
@@ -142,6 +144,7 @@ pub enum KeyType {
 /// or `EccKeypair`.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum EccCurve {
     Sect163k1 = 1,
     Sect163r1 = 2,
@@ -181,6 +184,7 @@ pub enum EccCurve {
 /// for algorithms defined through the key type (e.g. `AesKey`).
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum CipherAlgorithm {
     Arc4 = 0,
     Ctr = 1,
@@ -194,6 +198,7 @@ pub enum CipherAlgorithm {
 /// Enumeration of asymmetric encryption algorithms supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum AsymmetricEncryptionAlgorithm {
     RsaPkcs1v15Crypt = 0,
     RsaOaep = 1,
@@ -202,6 +207,7 @@ pub enum AsymmetricEncryptionAlgorithm {
 /// Enumeration of message authentication code algorithms supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum MacAlgorithm {
     Hmac = 0,
     CbcMac = 1,
@@ -213,6 +219,7 @@ pub enum MacAlgorithm {
 /// supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum AeadAlgorithm {
     Ccm = 0,
     Gcm = 1,
@@ -221,6 +228,7 @@ pub enum AeadAlgorithm {
 /// Enumeration of asymmetric signing algorithms supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum SignAlgorithm {
     RsaPkcs1v15Sign = 0,
     RsaPss = 1,
@@ -233,6 +241,7 @@ pub enum SignAlgorithm {
 /// Enumeration of key agreement algorithms supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum KeyAgreementAlgorithm {
     Ffdh = 0,
     Ecdh = 1,
@@ -241,6 +250,7 @@ pub enum KeyAgreementAlgorithm {
 /// Enumeration of hash algorithms supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum HashAlgorithm {
     Md2 = 1,
     Md4 = 2,
@@ -262,6 +272,7 @@ pub enum HashAlgorithm {
 /// Enumeration of key derivation functions supported.
 #[derive(FromPrimitive, Copy, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
+#[repr(i32)]
 pub enum KeyDerivationFunction {
     Hkdf = 0,
     Tls12Prf = 1,

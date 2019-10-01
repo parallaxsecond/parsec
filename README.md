@@ -45,11 +45,11 @@ This project uses the following third party crates:
 * prost (Apache-2.0)
 * bytes (MIT)
 * num (MIT and Apache-2.0)
-* crossbeam (MIT and Apache-2.0)
 * bindgen (BSD-3-Clause)
 * cargo\_toml (Apache-2.0)
 * toml (MIT and Apache-2.0)
 * rand (MIT and Apache-2.0)
+* base64 (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
