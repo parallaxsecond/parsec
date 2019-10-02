@@ -65,17 +65,17 @@ The granularity of application identities is not defined. In particular, there i
 ## **Authentication and Sessions**
 Clients present their identity strings to the service on each API call. As set out in the [**wire protocol specification**](wire_protocol.md), they do this using the **authentication** field of the API request.
 
-There are two ways in which the client can use the authentication field to share its identity with the service: **direct authentication** and **HMAC authentication**.
+There are two ways in which the client can use the authentication field to share its identity with the service: **direct authentication** and **authentication tokens**.
 
 With **direct authentication**, the client authenticates the request by directly copying the application identity string into the **authentication** field of the request.
 
-With **HMAC authentication**, the client authenticates the request by computing a Hash Message Authentication Code (HMAC) over the bytes of the request body. HMAC authentication requires the use of a **session**. The API includes operations to establish sessions. Sessions allow the the application identity to be shared with the service just once (for the lifetime of the session), rather than copying it into each request. Sessions also allow for the application identity to be shared in encrypted form. Once a sessions is created, HMAC can be used to authenticate all requests that occur in the context of that session.
+With **authentication tokens**, the client obtains a token from an identity provider and sends it as the **authentication** field of the request. The token is reusable for a specified duration of time, after which a new one must be issued. The application identity is contained in the token and can be extracted by the service after verifying the authenticity of the token. A more detailed description of authentication tokens and their lifecycle is present in the [**sytem architecture specification**](system_architecture.md).
 
 When it makes an API request, the client needs to tell the server which kind of authentication is being used. This is so that the server knows how to interepret the bytes in the **authentication** field of the request. As described in the [**wire protocol specification**](wire_protocol.md), the client does this by setting an integer value in the **auth type** field of the request header. The permitted numerical values for this field are given as follows:-
 
 * A value of 0 (`0x00`) indicates that there is no authentication. The service will not expect any content in the **authentication** field of the request. If any authentication bytes are present, they will be ignored, but the request will still be considered valid. (For clients, it is considered bad practice to supply a non-empty **authentication** field in this case, because it is contradictory to supply authentication material while indicating an unauthenticated call, and it indicates improper coding or a possible defect on the client side). See the section below on unauthenticated operations.
 * A value of 1 (`0x01`) indicates direct authentication. The service will expect the **authentication** field to contain a cleartext copy of the application identity.
-* A value of 2 (`0x02`) indicates HMAC authentication. The service will expect the **authentication** field to contain an HMAC computed over the request body. HMAC authentication is always done in the context of a session, and the client must populate the **session handle** field of the request header when using this type of authentication. If no session is specified, the service will reject the request.
+* A value of 2 (`0x02`) indicates authentication tokens. The service will expect the **authentication** field to contain a JWT token. Tokens must be signed with the private key of the identity provider and their validity period must cover the moment when the check is done.
 
 Other values are unsupported and will be rejected by the service.
 

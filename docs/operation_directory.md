@@ -34,11 +34,12 @@ Core operations are non-cryptographic operations supported by the core provider.
 
 ### **Service Health**
 
-* [**Ping**](operation_directory/core/ping.md)
+* [**Ping**](operation_directory/core/service_health/ping.md)
 
 ### **Service Configuration**
 
-* **GetProviders**
+* [**ListProviders**](operation_directory/core/service_configuration/list_providers.md)
+* [**ListOpcodes**](operation_directory/core/service_configuration/list_opcodes.md)
 
 ### **Trust**
 
