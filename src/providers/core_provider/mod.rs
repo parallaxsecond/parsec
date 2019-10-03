@@ -18,6 +18,7 @@ use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::operations::{OpListProviders, ResultListProviders};
 use parsec_interface::operations::{OpPing, ResultPing};
 use parsec_interface::requests::{Opcode, ProviderID, Result};
+use uuid::Uuid;
 
 const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
 
@@ -42,8 +43,14 @@ impl Provide for CoreProvider {
 
     fn describe(&self) -> ProviderInfo {
         ProviderInfo {
-            id: ProviderID::CoreProvider,
+            // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
+            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(),
             description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
+            vendor: String::new(),
+            version_maj: 0,
+            version_min: 1,
+            version_rev: 0,
+            id: ProviderID::CoreProvider,
         }
     }
 

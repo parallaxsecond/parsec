@@ -29,6 +29,7 @@ use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use parsec_interface::operations::{OpImportKey, ResultImportKey};
 use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use uuid::Uuid;
 
 #[allow(
     non_snake_case,
@@ -234,8 +235,14 @@ impl Provide for MbedProvider {
 
     fn describe(&self) -> ProviderInfo {
         ProviderInfo {
+            // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
+            uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(),
+            description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
+            vendor: String::from("Arm"),
+            version_maj: 0,
+            version_min: 1,
+            version_rev: 0,
             id: ProviderID::MbedProvider,
-            description: String::from("User space software provider, based on MbedCrypto - the reference implementation of the PSA crypto API"),
         }
     }
 
