@@ -14,13 +14,14 @@
   -- See the License for the specific language governing permissions and
   -- limitations under the License.
 --->
-# **Ping**
-
-## **Opcode: 1 (decimal), 0x0001 (hex)**
+# **ListOpcodes**
+## **Opcode: 9 (decimal), 0x0009 (hex)**
 
 ## **Summary**
-Determines whether the service is present and responsive on the expected endpoint.
+
+Gets a list of available opcodes supported by a PARSEC provider.
 
 ## **Contract**
-[Protobuf](/interface/protobuf/ping.proto)
+
+[Protobuf](https://github.com/parallaxsecond/parsec-operations/blob/master/protobuf/list_opcodes.proto)
 

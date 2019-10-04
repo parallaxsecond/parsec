@@ -94,7 +94,7 @@ The status value of zero is used universally to mean that the operation complete
 
 With the exception of zero as a special case, other status values are partitioned according to the same strategy as the opcodes. Status values from 1-999 are reserved for internal service housekeeping operations, and status values from 1000-1999 are reserved for status codes corresponding to the Platform Security Architecture (PSA) Cryptography API.
 
-All status values are defined within the API specification.
+All status values and their definition can be found on the [**Status Codes**](/status_codes.md) page.
 
 ## **Message Structure Specifications**
 
