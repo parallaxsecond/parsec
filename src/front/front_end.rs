@@ -53,22 +53,24 @@ impl FrontEndHandler {
                 return;
             }
         };
-        // Find an authenticator that is capable to authenticate the request
-        let response =
-            if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
-                // Authenticate the request
-                match authenticator.authenticate(&request.auth) {
-                    // Send the request to the dispatcher
-                    // Get a response back
-                    Ok(app_name) => self.dispatcher.dispatch_request(request, app_name),
-                    Err(status) => Response::from_request_header(request.header, status),
-                }
-            } else {
-                Response::from_request_header(
-                    request.header,
-                    ResponseStatus::AuthenticatorNotRegistered,
-                )
-            };
+        // Check if the request was sent without authentication
+        let response = if AuthType::NoAuth == request.header.auth_type {
+            self.dispatcher.dispatch_request(request, None)
+        // Otherwise find an authenticator that is capable to authenticate the request
+        } else if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
+            // Authenticate the request
+            match authenticator.authenticate(&request.auth) {
+                // Send the request to the dispatcher
+                // Get a response back
+                Ok(app_name) => self.dispatcher.dispatch_request(request, Some(app_name)),
+                Err(status) => Response::from_request_header(request.header, status),
+            }
+        } else {
+            Response::from_request_header(
+                request.header,
+                ResponseStatus::AuthenticatorNotRegistered,
+            )
+        };
 
         // Serialise the responso into bytes
         // Write bytes to stream
