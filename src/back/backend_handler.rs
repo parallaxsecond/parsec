@@ -84,7 +84,7 @@ impl BackEndHandler {
     ///
     /// If any of the steps fails, a response containing an appropriate status code is
     /// returned.
-    pub fn execute_request(&self, request: Request, app_name: ApplicationName) -> Response {
+    pub fn execute_request(&self, request: Request, app_name: Option<ApplicationName>) -> Response {
         let opcode = request.header.opcode;
         let header = request.header;
 
@@ -112,32 +112,44 @@ impl BackEndHandler {
                 self.result_to_response(NativeResult::Ping(result), header)
             }
             NativeOperation::CreateKey(op_create_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.create_key(app_name, op_create_key));
                 self.result_to_response(NativeResult::CreateKey(result), header)
             }
             NativeOperation::ImportKey(op_import_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.import_key(app_name, op_import_key));
                 self.result_to_response(NativeResult::ImportKey(result), header)
             }
             NativeOperation::ExportPublicKey(op_export_public_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
                     .export_public_key(app_name, op_export_public_key));
                 self.result_to_response(NativeResult::ExportPublicKey(result), header)
             }
             NativeOperation::DestroyKey(op_destroy_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.destroy_key(app_name, op_destroy_key));
                 self.result_to_response(NativeResult::DestroyKey(result), header)
             }
             NativeOperation::AsymSign(op_asym_sign) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.asym_sign(app_name, op_asym_sign));
                 self.result_to_response(NativeResult::AsymSign(result), header)
             }
             NativeOperation::AsymVerify(op_asym_verify) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.asym_verify(app_name, op_asym_verify));
                 self.result_to_response(NativeResult::AsymVerify(result), header)

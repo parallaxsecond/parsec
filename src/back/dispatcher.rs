@@ -35,7 +35,11 @@ impl Dispatcher {
     /// Returns either the response coming from the backend handler, or a response
     /// containing a status code consistent with the error encountered during
     /// processing.
-    pub fn dispatch_request(&self, request: Request, app_name: ApplicationName) -> Response {
+    pub fn dispatch_request(
+        &self,
+        request: Request,
+        app_name: Option<ApplicationName>,
+    ) -> Response {
         if let Some(backend) = self.backends.get(&request.header.provider) {
             if let Err(status) = backend.is_capable(&request) {
                 Response::from_request_header(request.header, status)

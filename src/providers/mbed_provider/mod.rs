@@ -29,6 +29,7 @@ use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use parsec_interface::operations::{OpImportKey, ResultImportKey};
 use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use uuid::Uuid;
 
 #[allow(
     non_snake_case,
@@ -72,18 +73,15 @@ fn get_key_id(
     store_handle: &dyn ManageKeyIDs,
 ) -> Result<psa_crypto_binding::psa_key_id_t> {
     match store_handle.get(key_triple) {
-        Ok(get_option) => {
-            if let Some(key_id) = get_option {
-                if let Ok(key_id_bytes) = key_id.try_into() {
-                    Ok(u32::from_ne_bytes(key_id_bytes))
-                } else {
-                    println!("Stored Key ID is not valid.");
-                    Err(ResponseStatus::KeyIDManagerError)
-                }
+        Ok(Some(key_id)) => {
+            if let Ok(key_id_bytes) = key_id.try_into() {
+                Ok(u32::from_ne_bytes(key_id_bytes))
             } else {
-                Err(ResponseStatus::KeyDoesNotExist)
+                println!("Stored Key ID is not valid.");
+                Err(ResponseStatus::KeyIDManagerError)
             }
         }
+        Ok(None) => Err(ResponseStatus::KeyDoesNotExist),
         Err(string) => {
             println!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
@@ -234,8 +232,14 @@ impl Provide for MbedProvider {
 
     fn describe(&self) -> ProviderInfo {
         ProviderInfo {
+            // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
+            uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(),
+            description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
+            vendor: String::from("Arm"),
+            version_maj: 0,
+            version_min: 1,
+            version_rev: 0,
             id: ProviderID::MbedProvider,
-            description: String::from("User space software provider, based on MbedCrypto - the reference implementation of the PSA crypto API"),
         }
     }
 
@@ -517,8 +521,6 @@ impl Provide for MbedProvider {
                 usage: 0,
             };
 
-            let algorithm: psa_crypto_binding::psa_algorithm_t;
-
             // Allocate a "big enough" buffer. (No handling of PSA_STATUS_BUFFER_TOO_SMALL here.)
             let mut signature = [0u8; 1024];
             let mut signature_size: usize = 0;
@@ -528,11 +530,10 @@ impl Provide for MbedProvider {
                 // the algorithm from the policy. No handling of failing status here. The key is open,
                 // and the policy is just data, so this shouldn't really fail.
                 psa_crypto_binding::psa_get_key_policy(key_handle, &mut policy);
-                algorithm = psa_crypto_binding::psa_key_policy_get_algorithm(&policy);
 
                 psa_crypto_binding::psa_asymmetric_sign(
                     key_handle,
-                    algorithm,
+                    psa_crypto_binding::psa_key_policy_get_algorithm(&policy),
                     hash.as_ptr(),
                     hash.len(),
                     signature.as_mut_ptr(),
