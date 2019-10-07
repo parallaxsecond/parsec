@@ -127,6 +127,12 @@ The application identity string will be carried as one of the JWT claim fields. 
 
 JWT tokens are not directly signed by client applications, since client applications do not participate in any of the trust relationships that this system architecture has defined. Instead, they are signed by the identity provider, and passed back to the client application in order to eventually be forwarded to (and verified by) the security service. The identity provider uses its private key to sign the JWT. The security service has the public part of this key, and is hence able to perform the verification. The identity provider and the security service share one of the trust relationships that were defined above.
 
+## **Block Architecture Summary**
+
+Refer to the figure below for a block representation of the key architectural components.
+
+![System Architecture Diagram](diagrams/system_architecture.png)
+
 ## **Flows**
 
 ### **System Lifecycle: Boot**
