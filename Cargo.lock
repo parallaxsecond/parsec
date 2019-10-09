@@ -388,11 +388,21 @@ dependencies = [
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bindgen 0.50.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cargo_toml 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parsec-client-test 0.1.0 (git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.0)",
  "parsec-interface 0.1.0 (git+https://github.com/parallaxsecond/parsec-interface-rs?tag=0.1.0)",
  "rand 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "parsec-client-test"
+version = "0.1.0"
+source = "git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.0#4190bd546ce24a8ddd762c7a199e51e970412660"
+dependencies = [
+ "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parsec-interface 0.1.0 (git+https://github.com/parallaxsecond/parsec-interface-rs?tag=0.1.0)",
 ]
 
 [[package]]
@@ -822,6 +832,7 @@ dependencies = [
 "checksum num-iter 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)" = "76bd5272412d173d6bf9afdf98db8612bbabc9a7a830b7bfc9c188911716132e"
 "checksum num-rational 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f2885278d5fe2adc2f75ced642d52d879bffaceb5a2e0b1d4309ffdfb239b454"
 "checksum num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "6ba9a427cfca2be13aa6f6403b0b7e7368fe982bfa16fccc450ce74c46cd9b32"
+"checksum parsec-client-test 0.1.0 (git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.0)" = "<none>"
 "checksum parsec-interface 0.1.0 (git+https://github.com/parallaxsecond/parsec-interface-rs?tag=0.1.0)" = "<none>"
 "checksum peeking_take_while 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 "checksum petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)" = "9c3659d1ee90221741f65dd128d9998311b0e40c5d3c23a62445938214abce4f"
