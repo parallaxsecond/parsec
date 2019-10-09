@@ -100,7 +100,7 @@ For a deeper dive into the modular structure of the PARSEC service, please take 
 
 Then delve into the [**source code**](docs/source_code_structure.md) to discover the back-end provider modules that exist. If you cannot find one that is compatible with the platform you intend to use, then please consider contributing a new provider.
 
-# **Beautiful Cient Libraries**
+# **Beautiful Client Libraries**
 A key aim of PARSEC is to evolve an ecosystem of developer-friendly client libraries in multiple programming languages.
 
 PARSEC avoids the cumbersome, auto-generated language bindings that are so often a part of standardized interfaces.
@@ -140,12 +140,12 @@ This project uses the following third party libraries:
 # **Source Code Structure**
 PARSEC is composed of multiple code repositories. The repository that you are currently viewing contains the PARSEC security service itself. For more information about how the code in the repository is organized, please see the [**source code structure**](docs/source_code_structure.md) document.
 
-# **Building The PARSEC Service**
+# **Building the PARSEC Service**
 
 This project is coded in the Rust Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
 To build and run the service, execute `cargo run`. `parsec` will then wait for clients.
 
-# **Testing The PARSEC Service**
+# **Testing the PARSEC Service**
 
 You can execute unit tests with `cargo test`.
 You can perform an integration test by using the
