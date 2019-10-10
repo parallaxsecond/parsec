@@ -3,12 +3,18 @@ name: Continuous Integration
 on: [push, pull_request]
 
 jobs:
-  formatting:
-    name: Check formatting
+  build-and-formatting:
+    name: Build and check formatting
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: cargo fmt --all -- --check
+    - name: Build
+      run: cargo build --verbose
+      # rustfmt will check if the code build before checking the formatting.
+      # Because the build script generated a new module in the code,
+      # building the code before checking it is needed.
+    - name: Check formatting
+      run: cargo fmt --all -- --check
 
   linting:
     name: Execute clippy
@@ -16,13 +22,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - run: cargo clippy
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - run: cargo build --verbose
 
   unit-test:
     name: Run unit and doc tests
