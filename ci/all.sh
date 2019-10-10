@@ -30,10 +30,11 @@
 ##############
 cargo build || exit 1
 
-##############
-# Unit tests #
-##############
-cargo test || exit 1
+############################
+# Unit tests and doc tests #
+############################
+cargo test --lib || exit 1
+cargo test --doc || exit 1
 
 #################
 # Static checks #
@@ -48,9 +49,7 @@ cargo run &
 SERVER_PID=$!
 sleep 5
 
-pushd $1 || exit 1
 cargo test --test normal || exit 1
-popd
 
 kill $SERVER_PID
 
@@ -61,9 +60,7 @@ cargo run &
 SERVER_PID=$!
 sleep 5
 
-pushd $1 || exit 1
 cargo test --test persistent-before || exit 1
-popd
 
 kill $SERVER_PID
 
@@ -77,8 +74,6 @@ cargo run &
 SERVER_PID=$!
 sleep 5
 
-pushd $1 || exit 1
 cargo test --test persistent-after || exit 1
-popd
 
 kill $SERVER_PID

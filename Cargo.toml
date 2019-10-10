@@ -11,6 +11,9 @@ rand = "0.7.0"
 base64 = "0.10.1"
 uuid = "0.7.4"
 
+[dev-dependencies]
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.0"  }
+
 [build-dependencies]
 bindgen = "0.50.0"
 cargo_toml = "0.7.0"
