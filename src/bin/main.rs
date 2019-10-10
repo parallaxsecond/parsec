@@ -18,8 +18,10 @@ use parsec::front::{
     domain_socket::DomainSocketListenerBuilder, front_end::FrontEndHandler,
     front_end::FrontEndHandlerBuilder, listener::Listen,
 };
-use parsec::key_id_managers::on_disk_manager::OnDiskKeyIDManager;
-use parsec::providers::{core_provider::CoreProviderBuilder, mbed_provider::MbedProvider, Provide};
+use parsec::key_id_managers::on_disk_manager::OnDiskKeyIDManagerBuilder;
+use parsec::providers::{
+    core_provider::CoreProviderBuilder, mbed_provider::MbedProviderBuilder, Provide,
+};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
@@ -35,11 +37,14 @@ const VERSION_MAJOR: u8 = 1;
 /// Build all the components needed for the service.
 //TODO: The component should be configured with a .toml (or similar) kind of file.
 fn build_components() -> (FrontEndHandler, impl Listen) {
-    let mbed_provider = MbedProvider::new(Arc::new(RwLock::new(
-        OnDiskKeyIDManager::new(PathBuf::from("mappings"))
-            .expect("Error when loading the Key ID mappings."),
-    )))
-    .expect("Error when creating the Mbed Provider.");
+    let on_disk_key_id_manager = Arc::new(RwLock::new(
+        OnDiskKeyIDManagerBuilder::new()
+            .with_mappings_dir_path(PathBuf::from("mappings"))
+            .build(),
+    ));
+    let mbed_provider = MbedProviderBuilder::new()
+        .with_key_id_store(on_disk_key_id_manager)
+        .build();
 
     // Store provider descriptions in it.
     let core_provider = CoreProviderBuilder::new()
@@ -87,13 +92,11 @@ fn build_components() -> (FrontEndHandler, impl Listen) {
 }
 
 fn main() {
-    let (front_end_handler, mut listener) = build_components();
+    let (front_end_handler, listener) = build_components();
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
     let front_end_handler = Arc::from(front_end_handler);
-
-    listener.init();
 
     loop {
         if let Some(stream) = listener.wait_on_connection() {

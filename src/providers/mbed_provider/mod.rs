@@ -148,7 +148,7 @@ impl MbedProvider {
     /// Checks if there are not more keys stored in the Key ID Manager than in the MbedProvider and
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
-    pub fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
+    fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
         if unsafe { psa_crypto_binding::psa_crypto_init() } != constants::PSA_SUCCESS {
             println!("Error when initialising Mbed Crypto");
             return None;
@@ -616,5 +616,30 @@ impl Provide for MbedProvider {
         } else {
             Err(conversion_utils::convert_status(open_key_status))
         }
+    }
+}
+
+#[derive(Default)]
+pub struct MbedProviderBuilder {
+    key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
+}
+
+impl MbedProviderBuilder {
+    pub fn new() -> MbedProviderBuilder {
+        MbedProviderBuilder { key_id_store: None }
+    }
+
+    pub fn with_key_id_store(
+        mut self,
+        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+    ) -> MbedProviderBuilder {
+        self.key_id_store = Some(key_id_store);
+
+        self
+    }
+
+    pub fn build(self) -> MbedProvider {
+        MbedProvider::new(self.key_id_store.expect("Missing key ID store"))
+            .expect("Failed to initialise Mbed Provider")
     }
 }
