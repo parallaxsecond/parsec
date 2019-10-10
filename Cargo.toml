@@ -10,6 +10,7 @@ parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-r
 rand = "0.7.0"
 base64 = "0.10.1"
 uuid = "0.7.4"
+threadpool = "1.7.1"
 
 [dev-dependencies]
 parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.0"  }

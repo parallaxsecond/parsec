@@ -28,8 +28,8 @@ use parsec_interface::requests::{BodyType, ProviderID};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread;
 use std::time::Duration;
+use threadpool::Builder;
 
 const VERSION_MINOR: u8 = 0;
 const VERSION_MAJOR: u8 = 1;
@@ -98,10 +98,12 @@ fn main() {
     // through an Arc.
     let front_end_handler = Arc::from(front_end_handler);
 
+    let threadpool = Builder::new().build();
+
     loop {
         if let Some(stream) = listener.wait_on_connection() {
             let front_end_handler = front_end_handler.clone();
-            thread::spawn(move || {
+            threadpool.execute(move || {
                 front_end_handler.handle_request(stream);
             });
         } else {
