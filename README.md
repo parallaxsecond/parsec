@@ -147,10 +147,12 @@ To build and run the service, execute `cargo run`. `parsec` will then wait for c
 
 # **Testing the PARSEC Service**
 
-You can execute unit tests with `cargo test`.
-You can perform an integration test by using the
-[test client](https://github.com/parallaxsecond/parsec-client-test). Check that repository for more details.
-The `ci/all.sh` script executes all of the unit tests and integration tests.
+The `tests/all.sh` script executes all tests.
+
+You can execute unit tests with `cargo test --lib`.
+
+The [test client](https://github.com/parallaxsecond/parsec-client-test) is used for integration
+testing. Check that repository for more details.
 
 # **Contributing**
 

@@ -20,10 +20,7 @@
 # This script executes static checks, unit and integration tests for the PARSEC
 # service.
 #
-# It is meant to be executed by the Docker image available in the same
-# directory.
-#
-# Usage: ./ci/all.sh [PARSEC-CLIENT-TEST-PATH]
+# Usage: ./ci/all.sh
 
 ##############
 # Build test #
