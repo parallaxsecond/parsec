@@ -105,9 +105,12 @@ impl DomainSocketListenerBuilder {
     }
 
     pub fn build(self) -> DomainSocketListener {
-        DomainSocketListener {
+        let mut listener = DomainSocketListener {
             timeout: self.timeout.expect("FrontEndHandler missing"),
             listener: None,
-        }
+        };
+        listener.init();
+
+        listener
     }
 }

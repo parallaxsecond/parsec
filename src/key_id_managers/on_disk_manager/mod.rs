@@ -181,7 +181,7 @@ impl OnDiskKeyIDManager {
     /// # Errors
     ///
     /// Returns an std::io error if the function failed reading the mapping files.
-    pub fn new(mappings_dir_path: PathBuf) -> std::io::Result<OnDiskKeyIDManager> {
+    fn new(mappings_dir_path: PathBuf) -> std::io::Result<OnDiskKeyIDManager> {
         let mut key_store = HashMap::new();
 
         // Will ignore if the mappings directory already exists.
@@ -301,6 +301,33 @@ impl ManageKeyIDs for OnDiskKeyIDManager {
 
     fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String> {
         Ok(self.key_store.contains_key(key_triple))
+    }
+}
+
+#[derive(Default)]
+pub struct OnDiskKeyIDManagerBuilder {
+    mappings_dir_path: Option<PathBuf>,
+}
+
+impl OnDiskKeyIDManagerBuilder {
+    pub fn new() -> OnDiskKeyIDManagerBuilder {
+        OnDiskKeyIDManagerBuilder {
+            mappings_dir_path: None,
+        }
+    }
+
+    pub fn with_mappings_dir_path(mut self, path: PathBuf) -> OnDiskKeyIDManagerBuilder {
+        self.mappings_dir_path = Some(path);
+
+        self
+    }
+
+    pub fn build(self) -> OnDiskKeyIDManager {
+        OnDiskKeyIDManager::new(
+            self.mappings_dir_path
+                .expect("Mappings directory path is missing"),
+        )
+        .unwrap()
     }
 }
 
