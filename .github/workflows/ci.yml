@@ -1,0 +1,69 @@
+name: Continuous Integration
+
+on: [push, pull_request]
+
+jobs:
+  formatting:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: cargo fmt --all -- --check
+
+  linting:
+    name: Execute clippy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: cargo clippy
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: cargo build --verbose
+
+  unit-test:
+    name: Run unit and doc tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: cargo test --lib --verbose
+    - run: cargo test --doc --verbose
+
+  integ-test-normal:
+    name: Normal integration tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: |
+        cargo run &
+        sleep 5
+        cargo test --test normal
+
+  integ-test-persistence:
+    name: Persistence integration tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Tests executed before the shutdown
+      run: |
+        cargo run &
+        SERVER_PID=$!
+        sleep 5
+        cargo test --test persistent-before
+        kill $SERVER_PID
+    # Create a fake mapping file for the root application, the Mbed Provider and
+    # a key name of "Test Key". It contains a valid PSA Key ID.
+    # It is tested in test "should_have_been_deleted".
+    - name: Create a fake mapping file
+      run: |
+        mkdir -p mappings/cm9vdA==/1 || exit 1
+        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+    - name: Tests executed after the shutdown
+      run: |
+        cargo run &
+        sleep 5
+        cargo test --test persistent-after
+
