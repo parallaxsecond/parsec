@@ -18,6 +18,8 @@
 ![PARSEC](PARSEC.png)
 # **Welcome to PARSEC**
 
+![](https://github.com/parallaxsecond/parsec/workflows/Continuous%20Integration/badge.svg)
+
 **PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative to provide a common API to secure services in a platform-agnostic way.
 
 PARSEC aims to define a universal software standard for interacting with secure object storage and cryptography services, creating a common way to interface with functions that would traditionally have been accessed by more specialised APIs. PARSEC establishes an ecosystem of developer-friendly libraries in a variety of popular programming languages. Each library is designed to be highly ergonomic and simple to consume. This growing ecosystem will put secure facilities at the fingertips of developers across a broad range of use cases in infrastructure computing, edge computing and the secure Internet of Things.
