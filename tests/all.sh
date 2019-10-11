@@ -44,7 +44,6 @@ cargo clippy || exit 1
 ############################
 cargo run &
 SERVER_PID=$!
-sleep 5
 
 cargo test --test normal || exit 1
 
@@ -55,7 +54,6 @@ kill $SERVER_PID
 #################################
 cargo run &
 SERVER_PID=$!
-sleep 5
 
 cargo test --test persistent-before || exit 1
 
@@ -69,7 +67,6 @@ printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
 
 cargo run &
 SERVER_PID=$!
-sleep 5
 
 cargo test --test persistent-after || exit 1
 

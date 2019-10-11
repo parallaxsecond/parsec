@@ -36,9 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - run: cargo build --verbose
     - run: |
         cargo run &
-        sleep 5
         cargo test --test normal
 
   integ-test-persistence:
@@ -46,11 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - run: cargo build --verbose
     - name: Tests executed before the shutdown
       run: |
         cargo run &
         SERVER_PID=$!
-        sleep 5
         cargo test --test persistent-before
         kill $SERVER_PID
     # Create a fake mapping file for the root application, the Mbed Provider and
@@ -63,6 +63,5 @@ jobs:
     - name: Tests executed after the shutdown
       run: |
         cargo run &
-        sleep 5
         cargo test --test persistent-after
 
