@@ -13,7 +13,7 @@ uuid = "0.7.4"
 threadpool = "1.7.1"
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.0"  }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.1"  }
 
 [build-dependencies]
 bindgen = "0.50.0"
