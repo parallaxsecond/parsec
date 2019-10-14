@@ -25,9 +25,14 @@ use parsec::providers::{
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
+use signal_hook::flag;
+use signal_hook::SIGTERM;
+use std::io::Error;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
 use std::time::Duration;
 use threadpool::Builder;
 
@@ -91,23 +96,38 @@ fn build_components() -> (FrontEndHandler, impl Listen) {
     (front_end, listener)
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     let (front_end_handler, listener) = build_components();
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
     let front_end_handler = Arc::from(front_end_handler);
 
+    // Register a boolean set to true when the SIGTERM signal is received.
+    let kill_signal = Arc::new(AtomicBool::new(false));
+    flag::register(SIGTERM, kill_signal.clone())?;
+
     let threadpool = Builder::new().build();
 
     loop {
-        if let Some(stream) = listener.wait_on_connection() {
+        if kill_signal.load(Ordering::Relaxed) {
+            println!("SIGTERM signal received.");
+            break;
+        }
+
+        if let Some(stream) = listener.accept() {
             let front_end_handler = front_end_handler.clone();
             threadpool.execute(move || {
                 front_end_handler.handle_request(stream);
             });
         } else {
-            println!("Error on establishing last connection, continuing...");
+            //TODO: this value should come from the configuration.
+            thread::sleep(Duration::from_millis(10));
         }
     }
+
+    println!("Shutting down PARSEC, waiting for all threads to finish.");
+    threadpool.join();
+
+    Ok(())
 }

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use std::fs;
+use std::io::ErrorKind;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::time::Duration;
@@ -34,7 +35,7 @@ pub struct DomainSocketListener {
     timeout: Duration,
 }
 
-impl Listen for DomainSocketListener {
+impl DomainSocketListener {
     /// Initialise the connection to the Unix socket.
     ///
     /// # Panics
@@ -53,21 +54,25 @@ impl Listen for DomainSocketListener {
             Err(err) => panic!(err),
         };
 
+        // Set the socket as non-blocking.
+        listener_val
+            .set_nonblocking(true)
+            .expect("Could not set the socket as non-blocking");
+
         self.listener = Some(listener_val);
     }
+}
 
+impl Listen for DomainSocketListener {
     fn set_timeout(&mut self, duration: Duration) {
         self.timeout = duration;
     }
 
-    fn wait_on_connection(&self) -> Option<Box<dyn ReadWrite + Send>> {
+    fn accept(&self) -> Option<Box<dyn ReadWrite + Send>> {
         if let Some(listener) = &self.listener {
-            let stream_result = listener
-                .incoming()
-                .next()
-                .expect("The Incoming iterator should never return None!");
+            let stream_result = listener.accept();
             match stream_result {
-                Ok(stream) => {
+                Ok((stream, _)) => {
                     if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
                         println!("Failed to set read timeout ({})", err);
                         None
@@ -79,7 +84,11 @@ impl Listen for DomainSocketListener {
                     }
                 }
                 Err(err) => {
-                    println!("Failed to connect with a UnixStream ({})", err);
+                    // Check if the error is because no connections are currently present.
+                    if err.kind() != ErrorKind::WouldBlock {
+                        // Only log the real errors.
+                        println!("Failed to connect with a UnixStream ({})", err);
+                    }
                     None
                 }
             }

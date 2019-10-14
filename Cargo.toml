@@ -5,6 +5,10 @@ authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
            "Hugues de Valon <hugues.devalon@arm.com>"]
 edition = "2018"
 
+[[bin]]
+name = "parsec"
+path = "src/bin/main.rs"
+
 [dependencies]
 parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.1.0"  }
 rand = "0.7.2"
@@ -12,6 +16,7 @@ base64 = "0.10.1"
 uuid = "0.7.4"
 threadpool = "1.7.1"
 std-semaphore = "0.1.0"
+signal-hook = "0.1.10"
 
 [dev-dependencies]
 parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.2"  }
