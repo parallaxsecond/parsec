@@ -109,6 +109,10 @@ fn main() -> Result<(), Error> {
 
     let threadpool = Builder::new().build();
 
+    #[cfg(feature = "systemd-daemon")]
+    // Notify systemd that the daemon is ready, the start command will block until this point.
+    let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Ready]);
+
     loop {
         if kill_signal.load(Ordering::Relaxed) {
             println!("SIGTERM signal received.");
