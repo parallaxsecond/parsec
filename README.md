@@ -136,6 +136,7 @@ This project uses the following third party crates:
 * base64 (MIT and Apache-2.0)
 * uuid (Apache-2.0)
 * threadpool (Apache-2.0)
+* std-semaphore (MIT and Apache-2.0)
 * num_cpus (MIT and Apache-2.0)
 
 This project uses the following third party libraries:

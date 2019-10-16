@@ -38,6 +38,7 @@ pub const PSA_ERROR_INVALID_PADDING: psa_status_t = -150;
 pub const PSA_ERROR_INSUFFICIENT_DATA: psa_status_t = -143;
 pub const PSA_ERROR_INVALID_HANDLE: psa_status_t = -136;
 
+pub const PSA_KEY_SLOT_COUNT: isize = 32;
 pub const EMPTY_KEY_HANDLE: psa_key_handle_t = 0;
 pub const PSA_KEY_TYPE_NONE: psa_key_type_t = 0x0000_0000;
 pub const PSA_KEY_TYPE_VENDOR_FLAG: psa_key_type_t = 0x8000_0000;
