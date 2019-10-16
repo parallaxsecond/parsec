@@ -71,3 +71,13 @@ SERVER_PID=$!
 cargo test --test persistent-after || exit 1
 
 kill $SERVER_PID
+
+################
+# Stress tests #
+################
+cargo run &
+SERVER_PID=$!
+
+cargo test --test stress_test || exit 1
+
+kill $SERVER_PID

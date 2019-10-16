@@ -65,3 +65,13 @@ jobs:
         cargo run &
         cargo test --test persistent-after
 
+  stress-test:
+    name: Stress tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: cargo build --verbose
+    - run: |
+        cargo run &
+        cargo test --test stress_test
+

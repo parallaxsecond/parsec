@@ -7,14 +7,15 @@ edition = "2018"
 
 [dependencies]
 parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.1.0"  }
-rand = "0.7.0"
+rand = "0.7.2"
 base64 = "0.10.1"
 uuid = "0.7.4"
 threadpool = "1.7.1"
 std-semaphore = "0.1.0"
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.1"  }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.2"  }
+num_cpus = "1.10.1"
 
 [build-dependencies]
 bindgen = "0.50.0"
