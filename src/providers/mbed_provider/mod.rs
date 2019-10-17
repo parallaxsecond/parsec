@@ -107,7 +107,10 @@ fn create_key_id(
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<psa_crypto_binding::psa_key_id_t> {
     let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
-    while local_ids_handle.contains(&key_id) {
+    while local_ids_handle.contains(&key_id)
+        && key_id != 0
+        && key_id < constants::PSA_MAX_PERSISTENT_KEY_IDENTIFIER
+    {
         key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
     }
     match store_handle.insert(key_triple.clone(), key_id.to_ne_bytes().to_vec()) {
