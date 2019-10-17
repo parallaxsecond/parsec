@@ -26,6 +26,7 @@
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use super::{KeyTriple, ManageKeyIDs};
 use crate::authenticators::ApplicationName;
+use log::{error, info};
 use parsec_interface::requests::ProviderID;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -192,7 +193,7 @@ impl OnDiskKeyIDManager {
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(&provider_dir_path)?.iter() {
-                    println!("Found mapping file: {:?}.", key_name_file_path);
+                    info!("Found mapping file: {:?}.", key_name_file_path);
                     let mut key_id = Vec::new();
                     let mut key_id_file = File::open(&key_name_file_path)?;
                     key_id_file.read_to_end(&mut key_id)?;
@@ -211,7 +212,7 @@ impl OnDiskKeyIDManager {
                             key_store.insert(key_triple, key_id);
                         }
                         Err(string) => {
-                            println!("Failed to convert the mapping path found to an UTF-8 string (error: {}).", string);
+                            error!("Failed to convert the mapping path found to an UTF-8 string (error: {}).", string);
                         }
                     }
                 }

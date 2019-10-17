@@ -19,6 +19,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex, RwLock};
 
+use log::{error, info, warn};
 use parsec_interface::operations::key_attributes::KeyLifetime;
 use parsec_interface::operations::ProviderInfo;
 use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
@@ -88,13 +89,13 @@ fn get_key_id(
             if let Ok(key_id_bytes) = key_id.try_into() {
                 Ok(u32::from_ne_bytes(key_id_bytes))
             } else {
-                println!("Stored Key ID is not valid.");
+                error!("Stored Key ID is not valid.");
                 Err(ResponseStatus::KeyIDManagerError)
             }
         }
         Ok(None) => Err(ResponseStatus::KeyDoesNotExist),
         Err(string) => {
-            println!("Key ID Manager error: {}", string);
+            error!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
         }
     }
@@ -116,14 +117,14 @@ fn create_key_id(
     match store_handle.insert(key_triple.clone(), key_id.to_ne_bytes().to_vec()) {
         Ok(insert_option) => {
             if insert_option.is_some() {
-                println!("Overwriting Key triple mapping ({})", key_triple);
+                warn!("Overwriting Key triple mapping ({})", key_triple);
             }
             local_ids_handle.insert(key_id);
 
             Ok(key_id)
         }
         Err(string) => {
-            println!("Key ID Manager error: {}", string);
+            error!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
         }
     }
@@ -141,7 +142,7 @@ fn remove_key_id(
             Ok(())
         }
         Err(string) => {
-            println!("Key ID Manager error: {}", string);
+            error!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
         }
     }
@@ -151,7 +152,7 @@ fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Res
     match store_handle.exists(key_triple) {
         Ok(val) => Ok(val),
         Err(string) => {
-            println!("Key ID Manager error: {}", string);
+            error!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
         }
     }
@@ -164,7 +165,7 @@ impl MbedProvider {
     /// Returns `None` if the initialisation failed.
     fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
         if unsafe { psa_crypto_binding::psa_crypto_init() } != constants::PSA_SUCCESS {
-            println!("Error when initialising Mbed Crypto");
+            error!("Error when initialising Mbed Crypto");
             return None;
         }
         let mbed_provider = MbedProvider {
@@ -194,7 +195,7 @@ impl MbedProvider {
                         let key_id = match get_key_id(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                println!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
+                                error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
                                 to_remove.push(key_triple.clone());
                                 continue;
                             }
@@ -209,7 +210,7 @@ impl MbedProvider {
                         if open_key_status == constants::PSA_ERROR_DOES_NOT_EXIST {
                             to_remove.push(key_triple.clone());
                         } else if open_key_status != constants::PSA_SUCCESS {
-                            println!(
+                            error!(
                                 "Error {} when opening a persistent Mbed Crypto key.",
                                 open_key_status
                             );
@@ -223,13 +224,13 @@ impl MbedProvider {
                     }
                 }
                 Err(string) => {
-                    println!("Key ID Manager error: {}", string);
+                    error!("Key ID Manager error: {}", string);
                     return None;
                 }
             };
             for key_triple in to_remove.iter() {
                 if let Err(string) = store_handle.remove(key_triple) {
-                    println!("Key ID Manager error: {}", string);
+                    error!("Key ID Manager error: {}", string);
                     return None;
                 }
             }
@@ -260,7 +261,7 @@ impl Provide for MbedProvider {
     }
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
-        println!("Mbed Provider - Create Key");
+        info!("Mbed Provider - Create Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_attributes = op.key_attributes;
@@ -320,11 +321,11 @@ impl Provide for MbedProvider {
                     ret_val = Ok(ResultCreateKey {});
                 } else {
                     ret_val = Err(conversion_utils::convert_status(generate_key_status));
-                    println!("Generate key status: {}", generate_key_status);
+                    error!("Generate key status: {}", generate_key_status);
                 }
             } else {
                 ret_val = Err(conversion_utils::convert_status(set_policy_status));
-                println!("Set policy status: {}", set_policy_status);
+                error!("Set policy status: {}", set_policy_status);
             }
 
             unsafe {
@@ -336,7 +337,7 @@ impl Provide for MbedProvider {
             }
         } else {
             ret_val = Err(conversion_utils::convert_status(create_key_status));
-            println!("Create key status: {}", create_key_status);
+            error!("Create key status: {}", create_key_status);
         }
 
         if ret_val.is_err() {
@@ -352,7 +353,7 @@ impl Provide for MbedProvider {
     }
 
     fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
-        println!("Mbed Provider - Import Key");
+        info!("Mbed Provider - Import Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_attributes = op.key_attributes;
@@ -412,11 +413,11 @@ impl Provide for MbedProvider {
                     ret_val = Ok(ResultImportKey {});
                 } else {
                     ret_val = Err(conversion_utils::convert_status(import_key_status));
-                    println!("Import key status: {}", import_key_status);
+                    error!("Import key status: {}", import_key_status);
                 }
             } else {
                 ret_val = Err(conversion_utils::convert_status(set_policy_status));
-                println!("Set policy status: {}", set_policy_status);
+                error!("Set policy status: {}", set_policy_status);
             }
 
             unsafe {
@@ -428,7 +429,7 @@ impl Provide for MbedProvider {
             }
         } else {
             ret_val = Err(conversion_utils::convert_status(create_key_status));
-            println!("Create key status: {}", create_key_status);
+            error!("Create key status: {}", create_key_status);
         }
 
         if ret_val.is_err() {
@@ -448,7 +449,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: OpExportPublicKey,
     ) -> Result<ResultExportPublicKey> {
-        println!("Mbed Provider - Export Public Key");
+        info!("Mbed Provider - Export Public Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_lifetime = op.key_lifetime;
@@ -490,7 +491,7 @@ impl Provide for MbedProvider {
                 buffer.resize(actual_size, 0);
                 ret_val = Ok(ResultExportPublicKey { key_data: buffer });
             } else {
-                println!("Export status: {}", export_status);
+                error!("Export status: {}", export_status);
                 ret_val = Err(conversion_utils::convert_status(export_status));
             }
 
@@ -502,7 +503,7 @@ impl Provide for MbedProvider {
                 psa_crypto_binding::psa_close_key(key_handle);
             }
         } else {
-            println!("Open key status: {}", open_key_status);
+            error!("Open key status: {}", open_key_status);
             ret_val = Err(conversion_utils::convert_status(open_key_status));
         }
 
@@ -510,7 +511,7 @@ impl Provide for MbedProvider {
     }
 
     fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
-        println!("Mbed Provider - Destroy Key");
+        info!("Mbed Provider - Destroy Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_lifetime = op.key_lifetime;
@@ -550,7 +551,7 @@ impl Provide for MbedProvider {
     }
 
     fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
-        println!("Mbed Provider - Asym Sign");
+        info!("Mbed Provider - Asym Sign");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_lifetime = op.key_lifetime;
@@ -623,7 +624,7 @@ impl Provide for MbedProvider {
     }
 
     fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
-        println!("Mbed Provider - Asym Verify");
+        info!("Mbed Provider - Asym Verify");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_lifetime = op.key_lifetime;

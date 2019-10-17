@@ -12,17 +12,16 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use super::listener;
+use listener::Listen;
+use listener::ReadWrite;
+use log::error;
 use std::fs;
 use std::io::ErrorKind;
+use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::time::Duration;
-
-use super::listener;
-
-use listener::Listen;
-use listener::ReadWrite;
-use std::os::unix::io::FromRawFd;
 
 static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 
@@ -87,13 +86,13 @@ impl Listen for DomainSocketListener {
             match stream_result {
                 Ok((stream, _)) => {
                     if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
-                        println!("Failed to set read timeout ({})", err);
+                        error!("Failed to set read timeout ({})", err);
                         None
                     } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
-                        println!("Failed to set write timeout ({})", err);
+                        error!("Failed to set write timeout ({})", err);
                         None
                     } else if let Err(err) = stream.set_nonblocking(false) {
-                        println!("Failed to set stream as blocking ({})", err);
+                        error!("Failed to set stream as blocking ({})", err);
                         None
                     } else {
                         Some(Box::from(stream))
@@ -113,7 +112,7 @@ impl Listen for DomainSocketListener {
                     // Check if the error is because no connections are currently present.
                     if err.kind() != ErrorKind::WouldBlock {
                         // Only log the real errors.
-                        println!("Failed to connect with a UnixStream ({})", err);
+                        error!("Failed to connect with a UnixStream ({})", err);
                     }
                     None
                 }

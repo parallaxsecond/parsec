@@ -14,6 +14,7 @@
 // limitations under the License.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
+use log::{error, info};
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::{Request, Response};
@@ -44,11 +45,11 @@ impl FrontEndHandler {
         let request = match Request::read_from_stream(&mut stream) {
             Ok(request) => request,
             Err(status) => {
-                println!("Failed to read request; status: {}", status);
+                error!("Failed to read request; status: {}", status);
 
                 let response = Response::from_status(status);
                 if let Err(status) = response.write_to_stream(&mut stream) {
-                    println!("Failed to write response; status: {}", status);
+                    error!("Failed to write response; status: {}", status);
                 }
                 return;
             }
@@ -75,8 +76,8 @@ impl FrontEndHandler {
         // Serialise the responso into bytes
         // Write bytes to stream
         match response.write_to_stream(&mut stream) {
-            Ok(_) => println!("Request handled successfully"),
-            Err(err) => println!("Failed to send response; error: {}", err),
+            Ok(_) => info!("Request handled successfully"),
+            Err(err) => error!("Failed to send response; error: {}", err),
         }
     }
 }
