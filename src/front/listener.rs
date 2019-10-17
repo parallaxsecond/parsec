@@ -12,6 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use serde::Deserialize;
 use std::time::Duration;
 
 // This trait is created to allow the iterator returned by incoming to iterate over a trait object
@@ -19,6 +20,17 @@ use std::time::Duration;
 pub trait ReadWrite: std::io::Read + std::io::Write {}
 // Automatically implements ReadWrite for all types that implement Read and Write.
 impl<T: std::io::Read + std::io::Write> ReadWrite for T {}
+
+#[derive(Deserialize)]
+pub enum ListenerType {
+    DomainSocket,
+}
+
+#[derive(Deserialize)]
+pub struct ListenerConfig {
+    pub listener_type: ListenerType,
+    pub timeout: u64,
+}
 
 pub trait Listen {
     /// Set the timeout on read and write calls on any stream returned by this listener.
