@@ -1,0 +1,9 @@
+[Unit]
+Description=PARSEC Socket
+Documentation=https://github.com/parallaxsecond/parsec
+
+[Socket]
+ListenStream=/home/parsec/parsec.sock
+
+[Install]
+WantedBy=sockets.target

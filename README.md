@@ -139,6 +139,7 @@ This project uses the following third party crates:
 * std-semaphore (MIT and Apache-2.0)
 * num_cpus (MIT and Apache-2.0)
 * signal-hook (MIT and Apache-2.0)
+* sd-notify (Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
@@ -159,6 +160,39 @@ You can execute unit tests with `cargo test --lib`.
 
 The [test client](https://github.com/parallaxsecond/parsec-client-test) is used for integration
 testing. Check that repository for more details.
+
+# **Installing the PARSEC service (Linux only)**
+
+PARSEC can be built and installed as a Linux daemon using systemd. The PARSEC daemon uses socket
+activation which means that the daemon will be automatically started when a client request is
+made on the socket. The daemon is a systemd user daemon run by the `parsec` user.
+
+If your Linux system uses systemd to manage daemons, you can follow these steps.
+
+* Create and log in to a new user named `parsec`
+* In its home directory, pull and install PARSEC as a daemon
+```bash
+$ git pull https://github.com/parallaxsecond/parsec.git
+$ cargo install --features "systemd-daemon" --path parsec
+```
+* Install the systemd unit files and activate the PARSEC socket
+```bash
+$ mkdir -p ~/.config/systemd/user
+$ cp -r systemd-daemon/parsec.service systemd-daemon/parsec.socket ~/.config/systemd/user
+$ systemctl --user enable parsec.socket
+$ systemctl --user start parsec.socket
+```
+
+Every user on the system can now use PARSEC!
+
+You can test it going inside the `parsec` directory and:
+```bash
+$ cargo test --test normal
+```
+Check the logs with:
+```bash
+$ journalclt --user -u parsec
+```
 
 # **Contributing**
 

@@ -22,6 +22,7 @@ use super::listener;
 
 use listener::Listen;
 use listener::ReadWrite;
+use std::os::unix::io::FromRawFd;
 
 static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 
@@ -43,23 +44,35 @@ impl DomainSocketListener {
     /// fails
     /// - if binding to the socket path fails
     fn init(&mut self) {
-        let socket = Path::new(SOCKET_PATH);
+        if cfg!(feature = "systemd-daemon") {
+            // The PARSEC service is socket activated (see parsec.socket file).
+            // systemd creates the PARSEC service giving it an initialised socket as the file
+            // descriptor number 3 (see sd_listen_fds(3) man page).
+            // If an instance of PARSEC compiled with the "systemd-daemon" feature is run directly
+            // instead of by systemd, this call will still work but the next accept call on the
+            // UnixListener will generate a Linux error 9 (Bad file number), as checked below.
+            unsafe {
+                self.listener = Some(UnixListener::from_raw_fd(3));
+            }
+        } else {
+            let socket = Path::new(SOCKET_PATH);
 
-        if socket.exists() {
-            fs::remove_file(&socket).unwrap();
+            if socket.exists() {
+                fs::remove_file(&socket).unwrap();
+            }
+
+            let listener_val = match UnixListener::bind(SOCKET_PATH) {
+                Ok(listener) => listener,
+                Err(err) => panic!(err),
+            };
+
+            // Set the socket as non-blocking.
+            listener_val
+                .set_nonblocking(true)
+                .expect("Could not set the socket as non-blocking");
+
+            self.listener = Some(listener_val);
         }
-
-        let listener_val = match UnixListener::bind(SOCKET_PATH) {
-            Ok(listener) => listener,
-            Err(err) => panic!(err),
-        };
-
-        // Set the socket as non-blocking.
-        listener_val
-            .set_nonblocking(true)
-            .expect("Could not set the socket as non-blocking");
-
-        self.listener = Some(listener_val);
     }
 }
 
@@ -84,6 +97,16 @@ impl Listen for DomainSocketListener {
                     }
                 }
                 Err(err) => {
+                    if cfg!(feature = "systemd-daemon") {
+                        // When run as a systemd daemon, a file descriptor mapping to the Domain Socket
+                        // should have been passed to this process.
+                        if let Some(os_error) = err.raw_os_error() {
+                            // On Linux, 9 is EBADF (Bad file number)
+                            if os_error == 9 {
+                                panic!("The Unix Domain Socket file descriptor (number 3) should have been given to this process.");
+                            }
+                        }
+                    }
                     // Check if the error is because no connections are currently present.
                     if err.kind() != ErrorKind::WouldBlock {
                         // Only log the real errors.

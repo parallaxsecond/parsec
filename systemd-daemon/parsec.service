@@ -1,0 +1,8 @@
+[Unit]
+Description=PARSEC Service
+Documentation=https://github.com/parallaxsecond/parsec
+
+[Service]
+Type=notify
+NonBlocking=true
+ExecStart=/home/parsec/.cargo/bin/parsec
