@@ -21,16 +21,14 @@ pub trait ReadWrite: std::io::Read + std::io::Write {}
 impl<T: std::io::Read + std::io::Write> ReadWrite for T {}
 
 pub trait Listen {
-    /// Initialise the internals of the listener.
-    fn init(&mut self);
-
     /// Set the timeout on read and write calls on any stream returned by this listener.
     fn set_timeout(&mut self, duration: Duration);
 
-    /// Blocking call that waits for incoming connections and returns a stream (a Read and Write
-    /// trait object). Requests are read from the stream and responses are written to it.
-    /// Streams returned by this method should have a timeout period as set by the `set_timeout`
-    /// method.
+    /// Non-blocking call that gets the next client connection and returns a stream
+    /// (a Read and Write trait object). Requests are read from the stream and responses are written
+    /// to it. Streams returned by this method should have a timeout period as set by the
+    /// `set_timeout` method.
+    /// If no connections are present, return `None`.
     /// If there are any errors in establishing the connection other than the missing
     /// initialization, the implementation should log them and return `None`.
     /// `Send` is needed because the stream is moved to a thread.
@@ -38,5 +36,5 @@ pub trait Listen {
     /// # Panics
     ///
     /// If the listener has not been initialised before, with the `init` method.
-    fn wait_on_connection(&self) -> Option<Box<dyn ReadWrite + Send>>;
+    fn accept(&self) -> Option<Box<dyn ReadWrite + Send>>;
 }

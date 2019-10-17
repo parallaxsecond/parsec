@@ -138,6 +138,7 @@ This project uses the following third party crates:
 * threadpool (Apache-2.0)
 * std-semaphore (MIT and Apache-2.0)
 * num_cpus (MIT and Apache-2.0)
+* signal-hook (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
