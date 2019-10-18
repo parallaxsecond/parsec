@@ -1,0 +1,26 @@
+# PARSEC Service Configuration File
+
+# (Required) Core settings apply to the service as a whole rather than to individual components within it.
+[core_settings]
+# Size of the thread pool used for processing requests. Defaults to the number of processors on 
+# the machine.
+#thread_pool_size = 8
+
+# Duration of sleep when the connection pool is empty. This can limit the response
+# times for requests and so should be set to a low number. Default value is 10.
+#idle_listener_sleep_duration = 10 # in milliseconds
+
+# (Required) Configuration for the service IPC listener component.
+[listener]
+# (Required) Defines the type of IPC that the service will support. 
+listener_type = "DomainSocket"
+# (Required) Defines the timeout of the read and write operations on the IPC channel. After the
+# timeout expires, the connection is dropped.
+timeout = 200 # in milliseconds
+
+# (Required) Configuration for the component managing key IDs for providers.
+[key_manager]
+# (Required) Defines the type of key ID manager to be used.
+manager_type = "OnDisk"
+# Defines the path to the directory on disk where the mapping will be persisted. 
+#store_path = "./mappings"

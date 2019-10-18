@@ -12,9 +12,6 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-pub mod authenticators;
-pub mod back;
-pub mod front;
-pub mod key_id_managers;
-pub mod providers;
-pub mod utils;
+mod service_builder;
+
+pub use service_builder::{CoreSettings, ServiceBuilder, ServiceConfig};

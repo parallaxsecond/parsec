@@ -20,9 +20,21 @@
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::requests::ProviderID;
+use serde::Deserialize;
 use std::fmt;
 
 pub mod on_disk_manager;
+
+#[derive(Deserialize)]
+pub enum KeyIdManagerType {
+    OnDisk,
+}
+
+#[derive(Deserialize)]
+pub struct KeyIdManagerConfig {
+    pub manager_type: KeyIdManagerType,
+    pub store_path: Option<String>,
+}
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.

@@ -35,6 +35,8 @@ use std::fs::{DirEntry, File};
 use std::io::{Error, ErrorKind, Read, Write};
 use std::path::PathBuf;
 
+pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
+
 pub struct OnDiskKeyIDManager {
     /// Internal mapping, used for non-modifying operations.
     key_store: HashMap<KeyTriple, Vec<u8>>,
