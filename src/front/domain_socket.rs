@@ -92,6 +92,9 @@ impl Listen for DomainSocketListener {
                     } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
                         println!("Failed to set write timeout ({})", err);
                         None
+                    } else if let Err(err) = stream.set_nonblocking(false) {
+                        println!("Failed to set stream as blocking ({})", err);
+                        None
                     } else {
                         Some(Box::from(stream))
                     }
