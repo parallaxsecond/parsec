@@ -12,6 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use log::info;
 use parsec::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGTERM};
 use std::io::Error;
@@ -25,6 +26,15 @@ const CONFIG_FILE_PATH: &str = "./config.toml";
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
 fn main() -> Result<(), Error> {
+    if cfg!(feature = "systemd-daemon") {
+        // Logs viewed with journalctl already contain timestamps.
+        env_logger::builder().format_timestamp(None).init();
+    } else {
+        env_logger::init();
+    }
+
+    info!("PARSEC started.");
+
     let config_file =
         ::std::fs::read_to_string(CONFIG_FILE_PATH).expect("Failed to read configuration file");
     let config: ServiceConfig =
@@ -33,6 +43,7 @@ fn main() -> Result<(), Error> {
     let front_end_handler = ServiceBuilder::build_service(&config);
 
     let listener = ServiceBuilder::start_listener(&config.listener);
+
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
@@ -44,13 +55,15 @@ fn main() -> Result<(), Error> {
 
     let threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
+    info!("PARSEC is ready.");
+
     #[cfg(feature = "systemd-daemon")]
     // Notify systemd that the daemon is ready, the start command will block until this point.
     let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Ready]);
 
     loop {
         if kill_signal.load(Ordering::Relaxed) {
-            println!("SIGTERM signal received.");
+            info!("SIGTERM signal received.");
             break;
         }
 
@@ -69,7 +82,7 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    println!("Shutting down PARSEC, waiting for all threads to finish.");
+    info!("Shutting down PARSEC, waiting for all threads to finish.");
     threadpool.join();
 
     Ok(())

@@ -5,4 +5,5 @@ Documentation=https://github.com/parallaxsecond/parsec
 [Service]
 Type=notify
 NonBlocking=true
+Environment=RUST_LOG=info
 ExecStart=/home/parsec/.cargo/bin/parsec

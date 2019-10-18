@@ -20,7 +20,7 @@
 # This script executes static checks, unit and integration tests for the PARSEC
 # service.
 #
-# Usage: ./ci/all.sh
+# Usage: ./tests/all.sh
 
 ##############
 # Build test #
@@ -42,7 +42,7 @@ cargo clippy || exit 1
 ############################
 # Normal Integration tests #
 ############################
-cargo run &
+RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
 cargo test --test normal || exit 1
@@ -52,7 +52,7 @@ kill $SERVER_PID
 #################################
 # Persistence Integration tests #
 #################################
-cargo run &
+RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
 cargo test --test persistent-before || exit 1
@@ -65,7 +65,7 @@ kill $SERVER_PID
 mkdir -p mappings/cm9vdA==/1 || exit 1
 printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
 
-cargo run &
+RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
 cargo test --test persistent-after || exit 1
@@ -75,7 +75,7 @@ kill $SERVER_PID
 ################
 # Stress tests #
 ################
-cargo run &
+RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
 cargo test --test stress_test || exit 1
