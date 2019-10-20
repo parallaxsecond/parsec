@@ -128,19 +128,19 @@ You will need to understand the [**wire protocol specification**](docs/wire_prot
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
 
 This project uses the following third party crates:
-* serde (Apache-2.0)
+* serde (MIT and Apache-2.0)
 * bindgen (BSD-3-Clause)
 * cargo\_toml (Apache-2.0)
 * toml (MIT and Apache-2.0)
 * rand (MIT and Apache-2.0)
 * base64 (MIT and Apache-2.0)
-* uuid (Apache-2.0)
-* threadpool (Apache-2.0)
+* uuid (MIT and Apache-2.0)
+* threadpool (MIT and Apache-2.0)
 * std-semaphore (MIT and Apache-2.0)
 * num\_cpus (MIT and Apache-2.0)
 * signal-hook (MIT and Apache-2.0)
-* sd-notify (Apache-2.0)
-* log (Apache-2.0)
+* sd-notify (MIT and Apache-2.0)
+* log (MIT and Apache-2.0)
 * env\_logger (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
