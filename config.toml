@@ -2,7 +2,7 @@
 
 # (Required) Core settings apply to the service as a whole rather than to individual components within it.
 [core_settings]
-# Size of the thread pool used for processing requests. Defaults to the number of processors on 
+# Size of the thread pool used for processing requests. Defaults to the number of processors on
 # the machine.
 #thread_pool_size = 8
 
@@ -10,17 +10,39 @@
 # times for requests and so should be set to a low number. Default value is 10.
 #idle_listener_sleep_duration = 10 # in milliseconds
 
+# Log level to be applied across the service. Can be overwritten for certain modules which have the same
+# configuration key. Possible values: "debug", "info", "warn", "error", "trace"
+#log_level = "warn"
+
+# Control whether log entries contain a timestamp.
+#log_timestamp = false
+
 # (Required) Configuration for the service IPC listener component.
 [listener]
-# (Required) Defines the type of IPC that the service will support. 
+# (Required) Type of IPC that the service will support.
 listener_type = "DomainSocket"
-# (Required) Defines the timeout of the read and write operations on the IPC channel. After the
+
+# (Required) Timeout of the read and write operations on the IPC channel. After the
 # timeout expires, the connection is dropped.
 timeout = 200 # in milliseconds
 
-# (Required) Configuration for the component managing key IDs for providers.
-[key_manager]
-# (Required) Defines the type of key ID manager to be used.
+# (Required) Configuration for the components managing key IDs for providers.
+# Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
+[[key_manager]]
+# (Required) Name of the key ID manager. Used to tie providers to the manager supporting them.
+name = "on-disk-manager"
+
+# (Required) Type of key ID manager to be used.
 manager_type = "OnDisk"
-# Defines the path to the directory on disk where the mapping will be persisted. 
+
+# Path to the location where the mapping will be persisted (in this case, the filesystem path)
 #store_path = "./mappings"
+
+# (Required) Provider configurations.
+# Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
+[[provider]]
+# (Required) Type of provider.
+provider_type = "MbedProvider"
+
+# (Required) Name of key ID manager that will support this provider.
+key_id_manager = "on-disk-manager"

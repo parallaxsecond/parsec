@@ -2,3 +2,5 @@
 *.psa_its
 *.swp
 tags
+*DS_Store
+*.patch

@@ -12,10 +12,32 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use parsec_interface::requests::ProviderID;
+use serde::Deserialize;
+
 pub mod core_provider;
 
 #[cfg(feature = "mbed")]
 pub mod mbed_provider;
+
+#[derive(Deserialize)]
+pub enum ProviderType {
+    MbedProvider,
+}
+
+impl ProviderType {
+    pub fn to_provider_id(&self) -> ProviderID {
+        match self {
+            ProviderType::MbedProvider => ProviderID::MbedProvider,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ProviderConfig {
+    pub provider_type: ProviderType,
+    pub key_id_manager: String,
+}
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
