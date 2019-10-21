@@ -31,7 +31,7 @@ static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 ///
 /// Only works on Unix systems.
 pub struct DomainSocketListener {
-    listener: Option<UnixListener>,
+    listener: UnixListener,
     timeout: Duration,
 }
 
@@ -42,36 +42,39 @@ impl DomainSocketListener {
     /// - if a file/socket exists at the path specified for the socket and `remove_file`
     /// fails
     /// - if binding to the socket path fails
-    fn init(&mut self) {
-        if cfg!(feature = "systemd-daemon") {
-            // The PARSEC service is socket activated (see parsec.socket file).
-            // systemd creates the PARSEC service giving it an initialised socket as the file
-            // descriptor number 3 (see sd_listen_fds(3) man page).
-            // If an instance of PARSEC compiled with the "systemd-daemon" feature is run directly
-            // instead of by systemd, this call will still work but the next accept call on the
-            // UnixListener will generate a Linux error 9 (Bad file number), as checked below.
-            unsafe {
-                self.listener = Some(UnixListener::from_raw_fd(3));
-            }
-        } else {
-            let socket = Path::new(SOCKET_PATH);
+    pub fn new(timeout: Duration) -> Self {
+        // If this PARSEC instance was socket activated (see the `parsec.socket`
+        // file), the listener will be opened by systemd and passed to the
+        // process.
+        // If PARSEC was service activated or not started under systemd, this
+        // will return `0`.
+        let listener =
+            match sd_notify::listen_fds().expect("Could not retrieve listener from systemd") {
+                0 => {
+                    let socket = Path::new(SOCKET_PATH);
 
-            if socket.exists() {
-                fs::remove_file(&socket).unwrap();
-            }
+                    if socket.exists() {
+                        fs::remove_file(&socket).unwrap();
+                    }
 
-            let listener_val = match UnixListener::bind(SOCKET_PATH) {
-                Ok(listener) => listener,
-                Err(err) => panic!(err),
+                    let listener =
+                        UnixListener::bind(SOCKET_PATH).expect("Could not bind listen socket");
+                    listener
+                        .set_nonblocking(true)
+                        .expect("Could not set the socket as non-blocking");
+
+                    listener
+                }
+                1 => {
+                    // No need to set the socket as non-blocking, parsec.service
+                    // already requests that.
+                    let nfd = sd_notify::SD_LISTEN_FDS_START;
+                    unsafe { UnixListener::from_raw_fd(nfd) }
+                }
+                _ => panic!("Received too many file descriptors"),
             };
 
-            // Set the socket as non-blocking.
-            listener_val
-                .set_nonblocking(true)
-                .expect("Could not set the socket as non-blocking");
-
-            self.listener = Some(listener_val);
-        }
+        Self { listener, timeout }
     }
 }
 
@@ -81,44 +84,30 @@ impl Listen for DomainSocketListener {
     }
 
     fn accept(&self) -> Option<Box<dyn ReadWrite + Send>> {
-        if let Some(listener) = &self.listener {
-            let stream_result = listener.accept();
-            match stream_result {
-                Ok((stream, _)) => {
-                    if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
-                        error!("Failed to set read timeout ({})", err);
-                        None
-                    } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
-                        error!("Failed to set write timeout ({})", err);
-                        None
-                    } else if let Err(err) = stream.set_nonblocking(false) {
-                        error!("Failed to set stream as blocking ({})", err);
-                        None
-                    } else {
-                        Some(Box::from(stream))
-                    }
-                }
-                Err(err) => {
-                    if cfg!(feature = "systemd-daemon") {
-                        // When run as a systemd daemon, a file descriptor mapping to the Domain Socket
-                        // should have been passed to this process.
-                        if let Some(os_error) = err.raw_os_error() {
-                            // On Linux, 9 is EBADF (Bad file number)
-                            if os_error == 9 {
-                                panic!("The Unix Domain Socket file descriptor (number 3) should have been given to this process.");
-                            }
-                        }
-                    }
-                    // Check if the error is because no connections are currently present.
-                    if err.kind() != ErrorKind::WouldBlock {
-                        // Only log the real errors.
-                        error!("Failed to connect with a UnixStream ({})", err);
-                    }
+        let stream_result = self.listener.accept();
+        match stream_result {
+            Ok((stream, _)) => {
+                if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
+                    error!("Failed to set read timeout ({})", err);
                     None
+                } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
+                    error!("Failed to set write timeout ({})", err);
+                    None
+                } else if let Err(err) = stream.set_nonblocking(false) {
+                    error!("Failed to set stream as blocking ({})", err);
+                    None
+                } else {
+                    Some(Box::from(stream))
                 }
             }
-        } else {
-            panic!("The Unix Domain Socket has not been initialised.");
+            Err(err) => {
+                // Check if the error is because no connections are currently present.
+                if err.kind() != ErrorKind::WouldBlock {
+                    // Only log the real errors.
+                    error!("Failed to connect with a UnixStream ({})", err);
+                }
+                None
+            }
         }
     }
 }
@@ -139,12 +128,7 @@ impl DomainSocketListenerBuilder {
     }
 
     pub fn build(self) -> DomainSocketListener {
-        let mut listener = DomainSocketListener {
-            timeout: self.timeout.expect("FrontEndHandler missing"),
-            listener: None,
-        };
-        listener.init();
-
-        listener
+        let timeout = self.timeout.expect("The listener timeout was not set");
+        DomainSocketListener::new(timeout)
     }
 }

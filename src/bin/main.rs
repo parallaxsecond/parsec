@@ -57,7 +57,6 @@ fn main() -> Result<(), Error> {
 
     info!("PARSEC is ready.");
 
-    #[cfg(feature = "systemd-daemon")]
     // Notify systemd that the daemon is ready, the start command will block until this point.
     let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Ready]);
 
