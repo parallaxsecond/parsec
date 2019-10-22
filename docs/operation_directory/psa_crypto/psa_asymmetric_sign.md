@@ -26,7 +26,6 @@ Note that to perform a hash-and-sign signature algorithm, you must first calcula
 ## **Parameters**
 
 **`key_name`**  Name of the key used for signing the hash
-**`key_lifetime`**  Lifetime of the key named in the request (see the [**key attributes**](/key_attributes.md) file for more details)
 **`hash`**  Hash of the data that must be signed
 
 ## **Result values**

@@ -13,16 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use super::constants::*;
-use super::psa_crypto_binding::{
-    psa_algorithm_t, psa_key_lifetime_t, psa_key_type_t, psa_key_usage_t, psa_status_t,
-};
+use super::psa_crypto_binding::{psa_algorithm_t, psa_key_type_t, psa_key_usage_t, psa_status_t};
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::requests::ResponseStatus;
 use std::convert::TryFrom;
 
 /// This structure holds key attribute values to be used by the Mbed Crypto library.
 pub struct MbedKeyAttributes {
-    pub key_lifetime: psa_key_lifetime_t,
     pub key_type: psa_key_type_t,
     pub algorithm: psa_algorithm_t,
     pub key_size: usize,
@@ -32,19 +29,10 @@ pub struct MbedKeyAttributes {
 /// Converts between native and Mbed Crypto key attributes values.
 pub fn convert_key_attributes(attrs: &KeyAttributes) -> MbedKeyAttributes {
     MbedKeyAttributes {
-        key_lifetime: convert_key_lifetime(attrs.key_lifetime),
         key_type: convert_key_type(attrs.key_type),
         algorithm: convert_algorithm(&attrs.algorithm),
         key_size: usize::try_from(attrs.key_size).expect("Key size cannot be represented as usize"),
         key_usage: convert_key_usage(attrs),
-    }
-}
-
-/// Converts between native and Mbed Crypto key lifetime values.
-pub fn convert_key_lifetime(lifetime: KeyLifetime) -> psa_key_lifetime_t {
-    match lifetime {
-        KeyLifetime::Persistent => PSA_KEY_LIFETIME_PERSISTENT,
-        KeyLifetime::Volatile => PSA_KEY_LIFETIME_VOLATILE,
     }
 }
 
