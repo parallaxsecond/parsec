@@ -32,6 +32,7 @@ pub enum KeyIdManagerType {
 
 #[derive(Deserialize)]
 pub struct KeyIdManagerConfig {
+    pub name: String,
     pub manager_type: KeyIdManagerType,
     pub store_path: Option<String>,
 }

@@ -26,19 +26,14 @@ const CONFIG_FILE_PATH: &str = "./config.toml";
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
 fn main() -> Result<(), Error> {
-    if cfg!(feature = "systemd-daemon") {
-        // Logs viewed with journalctl already contain timestamps.
-        env_logger::builder().format_timestamp(None).init();
-    } else {
-        env_logger::init();
-    }
-
-    info!("PARSEC started.");
-
     let config_file =
         ::std::fs::read_to_string(CONFIG_FILE_PATH).expect("Failed to read configuration file");
     let config: ServiceConfig =
         toml::from_str(&config_file).expect("Failed to parse service configuration");
+
+    log_setup(&config);
+
+    info!("PARSEC started.");
 
     let front_end_handler = ServiceBuilder::build_service(&config);
 
@@ -85,4 +80,18 @@ fn main() -> Result<(), Error> {
     threadpool.join();
 
     Ok(())
+}
+
+fn log_setup(config: &ServiceConfig) {
+    let mut env_log_builder = env_logger::builder();
+
+    if let Some(level) = config.core_settings.log_level {
+        env_log_builder.filter_level(level);
+    }
+    if let Some(true) = config.core_settings.log_timestamp {
+        env_log_builder.format_timestamp_millis();
+    } else {
+        env_log_builder.format_timestamp(None);
+    }
+    env_log_builder.init();
 }

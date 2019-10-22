@@ -67,16 +67,17 @@ impl DispatcherBuilder {
         provider_id: ProviderID,
         backend_handler: BackEndHandler,
     ) -> Self {
-        match &mut self.backends {
-            Some(backends) => {
-                backends.insert(provider_id, backend_handler);
-            }
-            None => {
-                let mut map = HashMap::new();
-                map.insert(provider_id, backend_handler);
-                self.backends = Some(map);
-            }
-        }
+        let mut backends = self.backends.unwrap_or_default();
+        backends.insert(provider_id, backend_handler);
+        self.backends = Some(backends);
+
+        self
+    }
+
+    pub fn with_backends(mut self, new_backends: HashMap<ProviderID, BackEndHandler>) -> Self {
+        let mut backends = self.backends.unwrap_or_default();
+        backends.extend(new_backends);
+        self.backends = Some(backends);
 
         self
     }
