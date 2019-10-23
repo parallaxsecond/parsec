@@ -16,12 +16,6 @@
 --->
 # **PSA Crypto Key Attributes**
 
-## **Key Lifetime**
-
-Key lifetime is an attribute that determines when the key is destroyed:
-* *volatile* - key is destroyed as soon as application closes the handle of the key (e.g. when the application terminates)
-* *persistent* - key is destroyed only when the [**PSA Destroy Key**](/psa_destroy_key.md) operation is executed
-
 ## **Key Type and Algorithm**
 
 Types of cryptographic keys and cryptographic algorithms are encoded separately. Each is encoded as a field in the *Key Attributes* structure.

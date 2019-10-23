@@ -30,10 +30,10 @@ For standard key types, the output format is as follows:
       RSAPublicKey ::= SEQUENCE {
         modulus             INTEGER, -- n
         publicExponent      INTEGER } -- e
-* For elliptic curve public keys (key of type [`ECC_Public_Key`](/key_attributes.md)), the format is the uncompressed representation defined by *SEC1 §2.3.3* as the content of an ECPoint. Let m be the bit size associated with the curve, i.e. the bit size of q for a curve over F_q. The representation consists of:
+* For elliptic curve public keys (key of type [`ECC_Public_Key`](/key_attributes.md)), the format is the uncompressed representation defined by *SEC1 §2.3.3* as the content of an ECPoint. Let m be the bit size associated with the curve, i.e. the bit size of q for a curve over F\_q. The representation consists of:
   – The byte 0x04;
-  – x_P as a ceiling(m/8)-byte string, big-endian;
-  – y_P as a ceiling(m/8)-byte string, big-endian.
+  – x\_P as a ceiling(m/8)-byte string, big-endian;
+  – y\_P as a ceiling(m/8)-byte string, big-endian.
 * For DSA public keys ([`DSA_Public_Key`](/key_attributes.md)), the `subjectPublicKey` format is defined by *RFC 3279 §2.3.2* as `DSAPublicKey`,  with the OID `id-dsa`, and with the parameters `DSS-Parms`.
       id-dsa OBJECT IDENTIFIER ::= {
          iso(1) member-body(2) us(840) x9-57(10040) x9cm(4) 1 }
@@ -47,7 +47,6 @@ For standard key types, the output format is as follows:
 ## **Parameters**
 
 **`key_name`**  Name of the key used for signing the hash
-**`key_lifetime`**  Lifetime of the key named in the request (see the [**key attributes**](/key_attributes.md) file for more details)
 
 ## **Result values**
 

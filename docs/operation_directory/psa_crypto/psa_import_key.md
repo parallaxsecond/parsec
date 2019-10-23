@@ -28,7 +28,6 @@ This specification supports a single format for each key type. Implementations m
 ## **Parameters**
 
 **`key_name`**  Name of the key used for signing the hash
-**`key_lifetime`**  Lifetime of the key named in the request (see the [**key attributes**](/key_attributes.md) file for more details)
 **`key_data`**  Bytes of the key in one of the formats described above
 
 ## **Contract**

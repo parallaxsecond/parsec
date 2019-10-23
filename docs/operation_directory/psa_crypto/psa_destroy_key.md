@@ -28,7 +28,6 @@ This function also erases any metadata such as policies and frees all resources 
 ## **Parameters**
 
 **`key_name`**  Name of the key used for signing the hash
-**`key_lifetime`**  Lifetime of the key named in the request (see the [**key attributes**](/key_attributes.md) file for more details)
 
 ## **Contract**
 

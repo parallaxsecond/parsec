@@ -20,7 +20,6 @@ use std::convert::TryInto;
 use std::sync::{Arc, Mutex, RwLock};
 
 use log::{error, info, warn};
-use parsec_interface::operations::key_attributes::KeyLifetime;
 use parsec_interface::operations::ProviderInfo;
 use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
 use parsec_interface::operations::{OpAsymVerify, ResultAsymVerify};
@@ -201,11 +200,13 @@ impl MbedProvider {
                             }
                         };
                         // Use psa_open_key to check if the key ID actually exists or not.
-                        let lifetime =
-                            conversion_utils::convert_key_lifetime(KeyLifetime::Persistent);
                         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
                         let open_key_status = unsafe {
-                            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+                            psa_crypto_binding::psa_open_key(
+                                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                                key_id,
+                                &mut key_handle,
+                            )
                         };
                         if open_key_status == constants::PSA_ERROR_DOES_NOT_EXIST {
                             to_remove.push(key_triple.clone());
@@ -285,7 +286,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_create_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         let ret_val: Result<ResultCreateKey>;
@@ -378,7 +383,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_create_key(key_attrs.key_lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_create_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         let ret_val: Result<ResultImportKey>;
@@ -452,12 +461,10 @@ impl Provide for MbedProvider {
         info!("Mbed Provider - Export Public Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_lifetime = op.key_lifetime;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let ret_val: Result<ResultExportPublicKey>;
@@ -467,7 +474,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_open_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         if open_key_status == constants::PSA_SUCCESS {
@@ -514,13 +525,11 @@ impl Provide for MbedProvider {
         info!("Mbed Provider - Destroy Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_lifetime = op.key_lifetime;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status = unsafe {
@@ -528,7 +537,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_open_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         if open_key_status == constants::PSA_SUCCESS {
@@ -554,13 +567,11 @@ impl Provide for MbedProvider {
         info!("Mbed Provider - Asym Sign");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_lifetime = op.key_lifetime;
         let hash = op.hash;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status = unsafe {
@@ -568,7 +579,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_open_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         if open_key_status == constants::PSA_SUCCESS {
@@ -627,14 +642,12 @@ impl Provide for MbedProvider {
         info!("Mbed Provider - Asym Verify");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_lifetime = op.key_lifetime;
         let hash = op.hash;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let lifetime = conversion_utils::convert_key_lifetime(key_lifetime);
         let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
 
         let open_key_status = unsafe {
@@ -642,7 +655,11 @@ impl Provide for MbedProvider {
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(lifetime, key_id, &mut key_handle)
+            psa_crypto_binding::psa_open_key(
+                constants::PSA_KEY_LIFETIME_PERSISTENT,
+                key_id,
+                &mut key_handle,
+            )
         };
 
         if open_key_status == constants::PSA_SUCCESS {
