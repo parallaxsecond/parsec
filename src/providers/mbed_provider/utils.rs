@@ -13,27 +13,64 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use super::constants::*;
-use super::psa_crypto_binding::{psa_algorithm_t, psa_key_type_t, psa_key_usage_t, psa_status_t};
+use super::psa_crypto_binding::{
+    psa_algorithm_t, psa_core_key_attributes_t, psa_key_attributes_t, psa_key_bits_t, psa_key_id_t,
+    psa_key_policy_s, psa_key_type_t, psa_key_usage_t, psa_status_t,
+};
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::requests::ResponseStatus;
 use std::convert::TryFrom;
 
-/// This structure holds key attribute values to be used by the Mbed Crypto library.
-pub struct MbedKeyAttributes {
-    pub key_type: psa_key_type_t,
-    pub algorithm: psa_algorithm_t,
-    pub key_size: usize,
-    pub key_usage: psa_key_usage_t,
+/// Converts between native PARSEC key attributes and ID and the
+/// `psa_key_attributes_t` structure required by Mbed Crypto.
+///
+/// # Panics
+///
+/// If either algorithm or key type conversion fails. See docs for
+/// `convert_key_type` and `convert_algorithm` for more details.
+pub fn convert_key_attributes(attrs: &KeyAttributes, key_id: psa_key_id_t) -> psa_key_attributes_t {
+    psa_key_attributes_t {
+        core: psa_core_key_attributes_t {
+            type_: convert_key_type(attrs.key_type),
+            lifetime: PSA_KEY_LIFETIME_PERSISTENT,
+            id: key_id,
+            policy: psa_key_policy_s {
+                usage: convert_key_usage(&attrs),
+                alg: convert_algorithm(&attrs.algorithm),
+                alg2: 0,
+            },
+            bits: convert_key_bits(attrs.key_size),
+            flags: 0,
+        },
+        domain_parameters: ::std::ptr::null_mut(),
+        domain_parameters_size: 0,
+    }
 }
 
-/// Converts between native and Mbed Crypto key attributes values.
-pub fn convert_key_attributes(attrs: &KeyAttributes) -> MbedKeyAttributes {
-    MbedKeyAttributes {
-        key_type: convert_key_type(attrs.key_type),
-        algorithm: convert_algorithm(&attrs.algorithm),
-        key_size: usize::try_from(attrs.key_size).expect("Key size cannot be represented as usize"),
-        key_usage: convert_key_usage(attrs),
+/// Generates a blank `psa_key_attributes_t` object.
+pub fn get_empty_key_attributes() -> psa_key_attributes_t {
+    psa_key_attributes_t {
+        core: psa_core_key_attributes_t {
+            type_: 0,
+            lifetime: 0,
+            id: 0,
+            policy: psa_key_policy_s {
+                usage: 0,
+                alg: 0,
+                alg2: 0,
+            },
+            bits: 0,
+            flags: 0,
+        },
+        domain_parameters: ::std::ptr::null_mut(),
+        domain_parameters_size: 0,
     }
+}
+
+/// Convert down from a `u32` value to a `u16` (`psa_key_bits_t`), capping the
+/// result at `PSA_KEY_BITS_TOO_LARGE`.
+pub fn convert_key_bits(key_size: u32) -> psa_key_bits_t {
+    psa_key_bits_t::try_from(key_size).unwrap_or(PSA_KEY_BITS_TOO_LARGE)
 }
 
 /// Converts between native and Mbed Crypto type values.
