@@ -19,6 +19,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex, RwLock};
 
+use constants::PSA_SUCCESS;
 use log::{error, info, warn};
 use parsec_interface::operations::ProviderInfo;
 use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
@@ -165,11 +166,28 @@ fn open_key(key_id: KeyId, key_handle_mutex: &Mutex<()>) -> Result<KeyHandle> {
         psa_crypto_binding::psa_open_key(key_id, &mut key_handle)
     };
 
-    if open_key_status != constants::PSA_SUCCESS {
+    if open_key_status != PSA_SUCCESS {
         error!("Open key status: {}", open_key_status);
         Err(utils::convert_status(open_key_status))
     } else {
         Ok(key_handle)
+    }
+}
+
+fn get_key_attributes(
+    key_handle: KeyHandle,
+    key_handle_mutex: &Mutex<()>,
+) -> Result<psa_crypto_binding::psa_key_attributes_t> {
+    let mut key_attrs = utils::get_empty_key_attributes();
+    let get_attrs_status =
+        unsafe { psa_crypto_binding::psa_get_key_attributes(key_handle, &mut key_attrs) };
+
+    if get_attrs_status != PSA_SUCCESS {
+        error!("Get key attributes status: {}", get_attrs_status);
+        release_key(key_handle, key_handle_mutex);
+        Err(utils::convert_status(get_attrs_status))
+    } else {
+        Ok(key_attrs)
     }
 }
 
@@ -188,7 +206,7 @@ impl MbedProvider {
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
     fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
-        if unsafe { psa_crypto_binding::psa_crypto_init() } != constants::PSA_SUCCESS {
+        if unsafe { psa_crypto_binding::psa_crypto_init() } != PSA_SUCCESS {
             error!("Error when initialising Mbed Crypto");
             return None;
         }
@@ -229,7 +247,7 @@ impl MbedProvider {
                             unsafe { psa_crypto_binding::psa_open_key(key_id, &mut key_handle) };
                         if open_key_status == constants::PSA_ERROR_DOES_NOT_EXIST {
                             to_remove.push(key_triple.clone());
-                        } else if open_key_status != constants::PSA_SUCCESS {
+                        } else if open_key_status != PSA_SUCCESS {
                             error!(
                                 "Error {} when opening a persistent Mbed Crypto key.",
                                 open_key_status
@@ -308,7 +326,7 @@ impl Provide for MbedProvider {
             psa_crypto_binding::psa_generate_key(&key_attrs, &mut key_handle)
         };
 
-        if generate_key_status != constants::PSA_SUCCESS {
+        if generate_key_status != PSA_SUCCESS {
             remove_key_id(
                 &key_triple,
                 key_id,
@@ -358,7 +376,7 @@ impl Provide for MbedProvider {
             )
         };
 
-        if import_key_status != constants::PSA_SUCCESS {
+        if import_key_status != PSA_SUCCESS {
             remove_key_id(
                 &key_triple,
                 key_id,
@@ -386,33 +404,31 @@ impl Provide for MbedProvider {
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
         let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
-        let ret_val: Result<ResultExportPublicKey>;
-        // TODO: There's no calculation of the buffer size here, nor is there any handling of the
-        // PSA_ERROR_BUFFER_TOO_SMALL condition. Just allocating a "big" buffer and assuming/hoping it is
-        // enough.
-        let mut buffer = vec![0u8; 1024];
+
+        let key_attrs = get_key_attributes(key_handle, &self.key_handle_mutex)?;
+        let buffer_size = utils::psa_export_public_key_size(&key_attrs)?;
+        let mut buffer = vec![0u8; buffer_size];
         let mut actual_size = 0;
 
         let export_status = unsafe {
             psa_crypto_binding::psa_export_public_key(
                 key_handle,
                 buffer.as_mut_ptr(),
-                1024,
+                buffer_size,
                 &mut actual_size,
             )
         };
 
-        if export_status == constants::PSA_SUCCESS {
-            buffer.resize(actual_size, 0);
-            ret_val = Ok(ResultExportPublicKey { key_data: buffer });
-        } else {
+        if export_status != PSA_SUCCESS {
             error!("Export status: {}", export_status);
-            ret_val = Err(utils::convert_status(export_status));
+            release_key(key_handle, &self.key_handle_mutex);
+            return Err(utils::convert_status(export_status));
         }
 
         release_key(key_handle, &self.key_handle_mutex);
 
-        ret_val
+        buffer.resize(actual_size, 0);
+        Ok(ResultExportPublicKey { key_data: buffer })
     }
 
     fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
@@ -427,7 +443,7 @@ impl Provide for MbedProvider {
 
         let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
 
-        if destroy_key_status == constants::PSA_SUCCESS {
+        if destroy_key_status == PSA_SUCCESS {
             remove_key_id(
                 &key_triple,
                 key_id,
@@ -450,31 +466,27 @@ impl Provide for MbedProvider {
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
         let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
-        let mut key_attrs = utils::get_empty_key_attributes();
-        // Allocate a "big enough" buffer. (No handling of PSA_STATUS_BUFFER_TOO_SMALL here.)
-        let mut signature = [0u8; 1024];
+        let key_attrs = get_key_attributes(key_handle, &self.key_handle_mutex)?;
+
+        let buffer_size = utils::psa_asymmetric_sign_output_size(&key_attrs)?;
+        let mut signature = vec![0u8; buffer_size];
         let mut signature_size: usize = 0;
 
         let sign_status = unsafe {
-            // Determine the algorithm by getting the key policy, and then getting
-            // the algorithm from the policy. No handling of failing status here. The key is open,
-            // and the policy is just data, so this shouldn't really fail.
-            psa_crypto_binding::psa_get_key_attributes(key_handle, &mut key_attrs);
-
             psa_crypto_binding::psa_asymmetric_sign(
                 key_handle,
                 key_attrs.core.policy.alg,
                 hash.as_ptr(),
                 hash.len(),
                 signature.as_mut_ptr(),
-                1024,
+                buffer_size,
                 &mut signature_size,
             )
         };
 
         release_key(key_handle, &self.key_handle_mutex);
 
-        if sign_status == constants::PSA_SUCCESS {
+        if sign_status == PSA_SUCCESS {
             let mut res = ResultAsymSign {
                 signature: Vec::new(),
             };
@@ -498,14 +510,9 @@ impl Provide for MbedProvider {
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
         let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
-        let mut key_attrs = utils::get_empty_key_attributes();
+        let key_attrs = get_key_attributes(key_handle, &self.key_handle_mutex)?;
 
         let verify_status = unsafe {
-            // Determine the algorithm by getting the key policy, and then getting
-            // the algorithm from the policy. No handling of failing status here. The key is open,
-            // and the policy is just data, so this shouldn't really fail.
-            psa_crypto_binding::psa_get_key_attributes(key_handle, &mut key_attrs);
-
             psa_crypto_binding::psa_asymmetric_verify(
                 key_handle,
                 key_attrs.core.policy.alg,
@@ -518,7 +525,7 @@ impl Provide for MbedProvider {
 
         release_key(key_handle, &self.key_handle_mutex);
 
-        if verify_status == constants::PSA_SUCCESS {
+        if verify_status == PSA_SUCCESS {
             Ok(ResultAsymVerify {})
         } else {
             Err(utils::convert_status(verify_status))
