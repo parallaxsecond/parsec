@@ -29,6 +29,8 @@ use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use parsec_interface::operations::{OpImportKey, ResultImportKey};
 use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use psa_crypto_binding::psa_key_handle_t as KeyHandle;
+use psa_crypto_binding::psa_key_id_t as KeyId;
 use std_semaphore::Semaphore;
 use uuid::Uuid;
 
@@ -43,9 +45,9 @@ mod psa_crypto_binding;
 
 #[allow(dead_code)]
 mod constants;
-mod conversion_utils;
+mod utils;
 
-type LocalIdStore = HashSet<psa_crypto_binding::psa_key_id_t>;
+type LocalIdStore = HashSet<KeyId>;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::CreateKey,
@@ -79,10 +81,7 @@ pub struct MbedProvider {
 /// Gets a PSA Key ID from the Key ID Manager.
 /// Wrapper around the get method of the Key ID Manager to convert the key ID to the psa_key_id_t
 /// type.
-fn get_key_id(
-    key_triple: &KeyTriple,
-    store_handle: &dyn ManageKeyIDs,
-) -> Result<psa_crypto_binding::psa_key_id_t> {
+fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<KeyId> {
     match store_handle.get(key_triple) {
         Ok(Some(key_id)) => {
             if let Ok(key_id_bytes) = key_id.try_into() {
@@ -105,13 +104,13 @@ fn create_key_id(
     key_triple: KeyTriple,
     store_handle: &mut dyn ManageKeyIDs,
     local_ids_handle: &mut LocalIdStore,
-) -> Result<psa_crypto_binding::psa_key_id_t> {
-    let mut key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
+) -> Result<KeyId> {
+    let mut key_id = rand::random::<KeyId>();
     while local_ids_handle.contains(&key_id)
-        && key_id != 0
-        && key_id < constants::PSA_MAX_PERSISTENT_KEY_IDENTIFIER
+        || key_id == 0
+        || key_id > constants::PSA_MAX_PERSISTENT_KEY_IDENTIFIER
     {
-        key_id = rand::random::<psa_crypto_binding::psa_key_id_t>();
+        key_id = rand::random::<KeyId>();
     }
     match store_handle.insert(key_triple.clone(), key_id.to_ne_bytes().to_vec()) {
         Ok(insert_option) => {
@@ -131,7 +130,7 @@ fn create_key_id(
 
 fn remove_key_id(
     key_triple: &KeyTriple,
-    key_id: psa_crypto_binding::psa_key_id_t,
+    key_id: KeyId,
     store_handle: &mut dyn ManageKeyIDs,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<()> {
@@ -154,6 +153,32 @@ fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Res
             error!("Key ID Manager error: {}", string);
             Err(ResponseStatus::KeyIDManagerError)
         }
+    }
+}
+
+fn open_key(key_id: KeyId, key_handle_mutex: &Mutex<()>) -> Result<KeyHandle> {
+    let mut key_handle: KeyHandle = Default::default();
+    let open_key_status = unsafe {
+        let _guard = key_handle_mutex
+            .lock()
+            .expect("Grabbing key handle mutex failed");
+        psa_crypto_binding::psa_open_key(key_id, &mut key_handle)
+    };
+
+    if open_key_status != constants::PSA_SUCCESS {
+        error!("Open key status: {}", open_key_status);
+        Err(utils::convert_status(open_key_status))
+    } else {
+        Ok(key_handle)
+    }
+}
+
+fn release_key(key_handle: KeyHandle, key_handle_mutex: &Mutex<()>) {
+    unsafe {
+        let _guard = key_handle_mutex
+            .lock()
+            .expect("Grabbing key handle mutex failed");
+        psa_crypto_binding::psa_close_key(key_handle);
     }
 }
 
@@ -199,15 +224,9 @@ impl MbedProvider {
                                 continue;
                             }
                         };
-                        // Use psa_open_key to check if the key ID actually exists or not.
-                        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
-                        let open_key_status = unsafe {
-                            psa_crypto_binding::psa_open_key(
-                                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                                key_id,
-                                &mut key_handle,
-                            )
-                        };
+                        let mut key_handle: KeyHandle = Default::default();
+                        let open_key_status =
+                            unsafe { psa_crypto_binding::psa_open_key(key_id, &mut key_handle) };
                         if open_key_status == constants::PSA_ERROR_DOES_NOT_EXIST {
                             to_remove.push(key_triple.clone());
                         } else if open_key_status != constants::PSA_SUCCESS {
@@ -278,83 +297,31 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = conversion_utils::convert_key_attributes(&key_attributes);
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id);
+        let mut key_handle: KeyHandle = Default::default();
 
-        let create_key_status = unsafe {
+        let generate_key_status = unsafe {
             let _guard = self
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_create_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                key_id,
-                &mut key_handle,
-            )
+            psa_crypto_binding::psa_generate_key(&key_attrs, &mut key_handle)
         };
 
-        let ret_val: Result<ResultCreateKey>;
-
-        if create_key_status == constants::PSA_SUCCESS {
-            let mut policy = psa_crypto_binding::psa_key_policy_t {
-                alg: 0,
-                alg2: 0,
-                usage: 0,
-            };
-
-            let set_policy_status = unsafe {
-                psa_crypto_binding::psa_key_policy_set_usage(
-                    &mut policy,
-                    key_attrs.key_usage,
-                    key_attrs.algorithm,
-                );
-                psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
-            };
-
-            if set_policy_status == constants::PSA_SUCCESS {
-                let generate_key_status = unsafe {
-                    psa_crypto_binding::psa_generate_key(
-                        key_handle,
-                        key_attrs.key_type,
-                        key_attrs.key_size,
-                        std::ptr::null(),
-                        0,
-                    )
-                };
-
-                if generate_key_status == constants::PSA_SUCCESS {
-                    ret_val = Ok(ResultCreateKey {});
-                } else {
-                    ret_val = Err(conversion_utils::convert_status(generate_key_status));
-                    error!("Generate key status: {}", generate_key_status);
-                }
-            } else {
-                ret_val = Err(conversion_utils::convert_status(set_policy_status));
-                error!("Set policy status: {}", set_policy_status);
-            }
-
-            unsafe {
-                let _guard = self
-                    .key_handle_mutex
-                    .lock()
-                    .expect("Grabbing key handle mutex failed");
-                psa_crypto_binding::psa_close_key(key_handle);
-            }
-        } else {
-            ret_val = Err(conversion_utils::convert_status(create_key_status));
-            error!("Create key status: {}", create_key_status);
-        }
-
-        if ret_val.is_err() {
+        if generate_key_status != constants::PSA_SUCCESS {
             remove_key_id(
                 &key_triple,
                 key_id,
                 &mut *store_handle,
                 &mut local_ids_handle,
             )?;
+            error!("Generate key status: {}", generate_key_status);
+            return Err(utils::convert_status(generate_key_status));
         }
 
-        ret_val
+        release_key(key_handle, &self.key_handle_mutex);
+
+        Ok(ResultCreateKey {})
     }
 
     fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
@@ -375,82 +342,36 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = conversion_utils::convert_key_attributes(&key_attributes);
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id);
+        let mut key_handle: KeyHandle = Default::default();
 
-        let create_key_status = unsafe {
+        let import_key_status = unsafe {
             let _guard = self
                 .key_handle_mutex
                 .lock()
                 .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_create_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                key_id,
+            psa_crypto_binding::psa_import_key(
+                &key_attrs,
+                key_data.as_ptr(),
+                key_data.len(),
                 &mut key_handle,
             )
         };
 
-        let ret_val: Result<ResultImportKey>;
-
-        if create_key_status == constants::PSA_SUCCESS {
-            let mut policy = psa_crypto_binding::psa_key_policy_t {
-                alg: 0,
-                alg2: 0,
-                usage: 0,
-            };
-
-            let set_policy_status = unsafe {
-                psa_crypto_binding::psa_key_policy_set_usage(
-                    &mut policy,
-                    key_attrs.key_usage,
-                    key_attrs.algorithm,
-                );
-                psa_crypto_binding::psa_set_key_policy(key_handle, &policy)
-            };
-
-            if set_policy_status == constants::PSA_SUCCESS {
-                let import_key_status = unsafe {
-                    psa_crypto_binding::psa_import_key(
-                        key_handle,
-                        key_attrs.key_type,
-                        key_data.as_ptr(),
-                        key_attrs.key_size,
-                    )
-                };
-
-                if import_key_status == constants::PSA_SUCCESS {
-                    ret_val = Ok(ResultImportKey {});
-                } else {
-                    ret_val = Err(conversion_utils::convert_status(import_key_status));
-                    error!("Import key status: {}", import_key_status);
-                }
-            } else {
-                ret_val = Err(conversion_utils::convert_status(set_policy_status));
-                error!("Set policy status: {}", set_policy_status);
-            }
-
-            unsafe {
-                let _guard = self
-                    .key_handle_mutex
-                    .lock()
-                    .expect("Grabbing key handle mutex failed");
-                psa_crypto_binding::psa_close_key(key_handle);
-            }
-        } else {
-            ret_val = Err(conversion_utils::convert_status(create_key_status));
-            error!("Create key status: {}", create_key_status);
-        }
-
-        if ret_val.is_err() {
+        if import_key_status != constants::PSA_SUCCESS {
             remove_key_id(
                 &key_triple,
                 key_id,
                 &mut *store_handle,
                 &mut local_ids_handle,
             )?;
+            error!("Import key status: {}", import_key_status);
+            return Err(utils::convert_status(import_key_status));
         }
 
-        ret_val
+        release_key(key_handle, &self.key_handle_mutex);
+
+        Ok(ResultImportKey {})
     }
 
     fn export_public_key(
@@ -464,59 +385,32 @@ impl Provide for MbedProvider {
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
-
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
-
+        let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
         let ret_val: Result<ResultExportPublicKey>;
+        // TODO: There's no calculation of the buffer size here, nor is there any handling of the
+        // PSA_ERROR_BUFFER_TOO_SMALL condition. Just allocating a "big" buffer and assuming/hoping it is
+        // enough.
+        let mut buffer = vec![0u8; 1024];
+        let mut actual_size = 0;
 
-        let open_key_status = unsafe {
-            let _guard = self
-                .key_handle_mutex
-                .lock()
-                .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                key_id,
-                &mut key_handle,
+        let export_status = unsafe {
+            psa_crypto_binding::psa_export_public_key(
+                key_handle,
+                buffer.as_mut_ptr(),
+                1024,
+                &mut actual_size,
             )
         };
 
-        if open_key_status == constants::PSA_SUCCESS {
-            // TODO: There's no calculation of the buffer size here, nor is there any handling of the
-            // PSA_ERROR_BUFFER_TOO_SMALL condition. Just allocating a "big" buffer and assuming/hoping it is
-            // enough.
-
-            let mut buffer = vec![0u8; 1024];
-            let mut actual_size = 0;
-
-            let export_status = unsafe {
-                psa_crypto_binding::psa_export_public_key(
-                    key_handle,
-                    buffer.as_mut_ptr(),
-                    1024,
-                    &mut actual_size,
-                )
-            };
-
-            if export_status == constants::PSA_SUCCESS {
-                buffer.resize(actual_size, 0);
-                ret_val = Ok(ResultExportPublicKey { key_data: buffer });
-            } else {
-                error!("Export status: {}", export_status);
-                ret_val = Err(conversion_utils::convert_status(export_status));
-            }
-
-            unsafe {
-                let _guard = self
-                    .key_handle_mutex
-                    .lock()
-                    .expect("Grabbing key handle mutex failed");
-                psa_crypto_binding::psa_close_key(key_handle);
-            }
+        if export_status == constants::PSA_SUCCESS {
+            buffer.resize(actual_size, 0);
+            ret_val = Ok(ResultExportPublicKey { key_data: buffer });
         } else {
-            error!("Open key status: {}", open_key_status);
-            ret_val = Err(conversion_utils::convert_status(open_key_status));
+            error!("Export status: {}", export_status);
+            ret_val = Err(utils::convert_status(export_status));
         }
+
+        release_key(key_handle, &self.key_handle_mutex);
 
         ret_val
     }
@@ -529,37 +423,21 @@ impl Provide for MbedProvider {
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
 
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+        let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
 
-        let open_key_status = unsafe {
-            let _guard = self
-                .key_handle_mutex
-                .lock()
-                .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
+        if destroy_key_status == constants::PSA_SUCCESS {
+            remove_key_id(
+                &key_triple,
                 key_id,
-                &mut key_handle,
-            )
-        };
-
-        if open_key_status == constants::PSA_SUCCESS {
-            let destroy_key_status = unsafe { psa_crypto_binding::psa_destroy_key(key_handle) };
-
-            if destroy_key_status == constants::PSA_SUCCESS {
-                remove_key_id(
-                    &key_triple,
-                    key_id,
-                    &mut *store_handle,
-                    &mut local_ids_handle,
-                )?;
-                Ok(ResultDestroyKey {})
-            } else {
-                Err(conversion_utils::convert_status(destroy_key_status))
-            }
+                &mut *store_handle,
+                &mut local_ids_handle,
+            )?;
+            Ok(ResultDestroyKey {})
         } else {
-            Err(conversion_utils::convert_status(open_key_status))
+            error!("Destroy key status: {}", destroy_key_status);
+            Err(utils::convert_status(destroy_key_status))
         }
     }
 
@@ -571,70 +449,42 @@ impl Provide for MbedProvider {
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
+        let mut key_attrs = utils::get_empty_key_attributes();
+        // Allocate a "big enough" buffer. (No handling of PSA_STATUS_BUFFER_TOO_SMALL here.)
+        let mut signature = [0u8; 1024];
+        let mut signature_size: usize = 0;
 
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+        let sign_status = unsafe {
+            // Determine the algorithm by getting the key policy, and then getting
+            // the algorithm from the policy. No handling of failing status here. The key is open,
+            // and the policy is just data, so this shouldn't really fail.
+            psa_crypto_binding::psa_get_key_attributes(key_handle, &mut key_attrs);
 
-        let open_key_status = unsafe {
-            let _guard = self
-                .key_handle_mutex
-                .lock()
-                .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                key_id,
-                &mut key_handle,
+            psa_crypto_binding::psa_asymmetric_sign(
+                key_handle,
+                key_attrs.core.policy.alg,
+                hash.as_ptr(),
+                hash.len(),
+                signature.as_mut_ptr(),
+                1024,
+                &mut signature_size,
             )
         };
 
-        if open_key_status == constants::PSA_SUCCESS {
-            let mut policy = psa_crypto_binding::psa_key_policy_t {
-                alg: 0,
-                alg2: 0,
-                usage: 0,
+        release_key(key_handle, &self.key_handle_mutex);
+
+        if sign_status == constants::PSA_SUCCESS {
+            let mut res = ResultAsymSign {
+                signature: Vec::new(),
             };
+            res.signature.resize(signature_size, 0);
+            res.signature.copy_from_slice(&signature[0..signature_size]);
 
-            // Allocate a "big enough" buffer. (No handling of PSA_STATUS_BUFFER_TOO_SMALL here.)
-            let mut signature = [0u8; 1024];
-            let mut signature_size: usize = 0;
-
-            let sign_status = unsafe {
-                // Determine the algorithm by getting the key policy, and then getting
-                // the algorithm from the policy. No handling of failing status here. The key is open,
-                // and the policy is just data, so this shouldn't really fail.
-                psa_crypto_binding::psa_get_key_policy(key_handle, &mut policy);
-
-                psa_crypto_binding::psa_asymmetric_sign(
-                    key_handle,
-                    psa_crypto_binding::psa_key_policy_get_algorithm(&policy),
-                    hash.as_ptr(),
-                    hash.len(),
-                    signature.as_mut_ptr(),
-                    1024,
-                    &mut signature_size,
-                )
-            };
-
-            unsafe {
-                let _guard = self
-                    .key_handle_mutex
-                    .lock()
-                    .expect("Grabbing key handle mutex failed");
-                psa_crypto_binding::psa_close_key(key_handle);
-            }
-
-            if sign_status == constants::PSA_SUCCESS {
-                let mut res = ResultAsymSign {
-                    signature: Vec::new(),
-                };
-                res.signature.resize(signature_size, 0);
-                res.signature.copy_from_slice(&signature[0..signature_size]);
-
-                Ok(res)
-            } else {
-                Err(conversion_utils::convert_status(sign_status))
-            }
+            Ok(res)
         } else {
-            Err(conversion_utils::convert_status(open_key_status))
+            error!("Sign status: {}", sign_status);
+            Err(utils::convert_status(sign_status))
         }
     }
 
@@ -647,62 +497,31 @@ impl Provide for MbedProvider {
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_handle: KeyHandle = open_key(key_id, &self.key_handle_mutex)?;
+        let mut key_attrs = utils::get_empty_key_attributes();
 
-        let mut key_handle: psa_crypto_binding::psa_key_handle_t = 0;
+        let verify_status = unsafe {
+            // Determine the algorithm by getting the key policy, and then getting
+            // the algorithm from the policy. No handling of failing status here. The key is open,
+            // and the policy is just data, so this shouldn't really fail.
+            psa_crypto_binding::psa_get_key_attributes(key_handle, &mut key_attrs);
 
-        let open_key_status = unsafe {
-            let _guard = self
-                .key_handle_mutex
-                .lock()
-                .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(
-                constants::PSA_KEY_LIFETIME_PERSISTENT,
-                key_id,
-                &mut key_handle,
+            psa_crypto_binding::psa_asymmetric_verify(
+                key_handle,
+                key_attrs.core.policy.alg,
+                hash.as_ptr(),
+                hash.len(),
+                signature.as_ptr(),
+                signature.len(),
             )
         };
 
-        if open_key_status == constants::PSA_SUCCESS {
-            let mut policy = psa_crypto_binding::psa_key_policy_t {
-                alg: 0,
-                alg2: 0,
-                usage: 0,
-            };
+        release_key(key_handle, &self.key_handle_mutex);
 
-            let algorithm: psa_crypto_binding::psa_algorithm_t;
-
-            let verify_status = unsafe {
-                // Determine the algorithm by getting the key policy, and then getting
-                // the algorithm from the policy. No handling of failing status here. The key is open,
-                // and the policy is just data, so this shouldn't really fail.
-                psa_crypto_binding::psa_get_key_policy(key_handle, &mut policy);
-                algorithm = psa_crypto_binding::psa_key_policy_get_algorithm(&policy);
-
-                psa_crypto_binding::psa_asymmetric_verify(
-                    key_handle,
-                    algorithm,
-                    hash.as_ptr(),
-                    hash.len(),
-                    signature.as_ptr(),
-                    signature.len(),
-                )
-            };
-
-            unsafe {
-                let _guard = self
-                    .key_handle_mutex
-                    .lock()
-                    .expect("Grabbing key handle mutex failed");
-                psa_crypto_binding::psa_close_key(key_handle);
-            }
-
-            if verify_status == constants::PSA_SUCCESS {
-                Ok(ResultAsymVerify {})
-            } else {
-                Err(conversion_utils::convert_status(verify_status))
-            }
+        if verify_status == constants::PSA_SUCCESS {
+            Ok(ResultAsymVerify {})
         } else {
-            Err(conversion_utils::convert_status(open_key_status))
+            Err(utils::convert_status(verify_status))
         }
     }
 }

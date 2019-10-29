@@ -24,7 +24,7 @@ env_logger = "0.7.1"
 log = { version = "0.4.8", features = ["serde"] }
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.4" }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.5" }
 num_cpus = "1.10.1"
 
 [build-dependencies]
@@ -34,7 +34,7 @@ toml = "0.4.2"
 serde = { version = "1.0", features = ["derive"] }
 
 [package.metadata.config]
-mbed-crypto-version = "mbedcrypto-1.1.0"
+mbed-crypto-version = "mbedcrypto-2.0.0"
 
 [features]
 default = ["mbed"]
