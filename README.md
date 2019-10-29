@@ -154,6 +154,16 @@ PARSEC is composed of multiple code repositories. The repository that you are cu
 This project is coded in the Rust Programming Language. To build it, you first need to [install Rust](https://www.rust-lang.org/tools/install).
 To build and run the service, execute `cargo run`. `parsec` will then wait for clients.
 
+To cross-compile the service for the Linux on Arm64 target, you will need to install the
+appropriate toolchain for this target. By default the Arm GNU toolchain is used to
+compile Mbed Crypto and link everything together. The `aarch64-linux-gnu-*` tools will be
+needed. Change `build-conf.toml` and `.cargo/config` files to change the cross-compiling
+toolchain used.
+Just execute the following command to cross-compile for the Linux on Arm64 target:
+```bash
+$ cargo build --target aarch64-unknown-linux-gnu
+```
+
 # **Testing the PARSEC Service**
 
 The `tests/all.sh` script executes all tests.
