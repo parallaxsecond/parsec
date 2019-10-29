@@ -18,7 +18,7 @@ use super::psa_crypto_binding::{
     psa_key_policy_s, psa_key_type_t, psa_key_usage_t, psa_status_t,
 };
 use parsec_interface::operations::key_attributes::*;
-use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
 
 /// Converts between native PARSEC key attributes and ID and the
@@ -185,4 +185,37 @@ pub fn convert_status(psa_status: psa_status_t) -> ResponseStatus {
         "Mapping operation result in a value that can not be represented in a u16 variable.",
     );
     ResponseStatus::from_u16(psa_status)
+}
+
+macro_rules! bits_to_bytes {
+    ($size:expr) => {
+        ($size + 7) / 8
+    };
+}
+
+/// Compute the size of the asymmetric signature, given the key attributes of the signing key.
+/// Implementing `PSA_ASYMMETRIC_SIGN_OUTPUT_SIZE` as defined in `crypto_sizes.h` (Mbed Crypto).
+pub fn psa_asymmetric_sign_output_size(key_attrs: &psa_key_attributes_t) -> Result<usize> {
+    match key_attrs.core.type_ {
+        PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits))),
+        PSA_KEY_TYPE_ECC_KEYPAIR_BASE => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits) * 2)),
+        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+    }
+}
+
+/// Compute the size of the public key material to be exported, given the attributes of the key.
+/// Implementing `PSA_KEY_EXPORT_MAX_SIZE` for public keys only, as defined in `crypto_sizes.h` (Mbed Crypto).
+pub fn psa_export_public_key_size(key_attrs: &psa_key_attributes_t) -> Result<usize> {
+    macro_rules! export_asn1_int_max_size {
+        ($size:expr) => {
+            ($size) / 8 + 5
+        };
+    };
+
+    match key_attrs.core.type_ {
+        PSA_KEY_TYPE_RSA_PUBLIC_KEY | PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(
+            export_asn1_int_max_size!(key_attrs.core.bits) + 11,
+        )),
+        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+    }
 }
