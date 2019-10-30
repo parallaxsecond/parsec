@@ -1,11 +1,18 @@
-# Configuration values for setting up and building the Mbed Crypto library that Plasma depends on
+# Configuration values for setting up and building the Mbed Crypto library that
+# PARSEC depends on
 [mbed_config]
+    # Path (either relative or absolute) where the Mbed Crypto source code will be
+    # persisted
+    mbed_path = "./target/"
 
-# The compiler to use when building the Mbed Crypto library
-# mbed_compiler = "clang"
+    # When compiling natively
+    [mbed_config.native]
+    # The compiler to use when building the Mbed Crypto library
+    # mbed_compiler = "clang"
+    # The archiver to use when building the Mbed Crypto library
+    # mbed_archiver = "ar"
 
-# The archiver to use when building the Mbed Crypto library
-# mbed_archiver = "ar"
-
-# Path (either relative or absolute) where the Mbed Crypto source code will be persisted
-mbed_path = "./target/"
+    # When cross-compiling for aarch64-unknown-linux-gnu target
+    [mbed_config.aarch64_unknown_linux_gnu]
+    # mbed_compiler = "aarch64-linux-gnu-gcc"
+    # mbed_archiver = "aarch64-linux-gnu-ar"

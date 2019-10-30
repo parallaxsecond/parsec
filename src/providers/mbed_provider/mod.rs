@@ -42,7 +42,9 @@ use uuid::Uuid;
     dead_code
 )]
 #[allow(clippy::all)]
-mod psa_crypto_binding;
+mod psa_crypto_binding {
+    include!(concat!(env!("OUT_DIR"), "/psa_crypto_bindings.rs"));
+}
 
 #[allow(dead_code)]
 mod constants;
