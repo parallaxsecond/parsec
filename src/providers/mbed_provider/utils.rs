@@ -14,12 +14,15 @@
 // limitations under the License.
 use super::constants::*;
 use super::psa_crypto_binding::{
-    psa_algorithm_t, psa_core_key_attributes_t, psa_key_attributes_t, psa_key_bits_t, psa_key_id_t,
-    psa_key_policy_s, psa_key_type_t, psa_key_usage_t, psa_status_t,
+    self, psa_algorithm_t, psa_core_key_attributes_t, psa_key_attributes_t, psa_key_bits_t,
+    psa_key_handle_t, psa_key_id_t, psa_key_policy_s, psa_key_type_t, psa_key_usage_t,
+    psa_status_t,
 };
+use log::error;
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
+use std::sync::Mutex;
 
 /// Converts between native PARSEC key attributes and ID and the
 /// `psa_key_attributes_t` structure required by Mbed Crypto.
@@ -217,5 +220,82 @@ pub fn psa_export_public_key_size(key_attrs: &psa_key_attributes_t) -> Result<us
             export_asn1_int_max_size!(key_attrs.core.bits) + 11,
         )),
         _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+    }
+}
+
+/// Wrapper around raw `psa_key_handle_t` which allows for easier manipulation of
+/// handles and the attributes associated with them.
+pub struct Key<'a>(psa_key_handle_t, &'a Mutex<()>);
+
+impl Key<'_> {
+    /// Create a new key with an empty handle.
+    pub fn new<'a>(key_handle_mutex: &'a Mutex<()>) -> Key<'a> {
+        Key(Default::default(), key_handle_mutex)
+    }
+
+    /// Open a key and store the allocated handle for it.
+    pub fn open_key<'a>(key_id: psa_key_id_t, key_handle_mutex: &'a Mutex<()>) -> Result<Key<'a>> {
+        let mut key_handle: psa_key_handle_t = Default::default();
+        let open_key_status = unsafe {
+            let _guard = key_handle_mutex
+                .lock()
+                .expect("Grabbing key handle mutex failed");
+            psa_crypto_binding::psa_open_key(key_id, &mut key_handle)
+        };
+
+        if open_key_status != PSA_SUCCESS {
+            error!("Open key status: {}", open_key_status);
+            Err(convert_status(open_key_status))
+        } else {
+            Ok(Key(key_handle, key_handle_mutex))
+        }
+    }
+
+    /// Get the attributes associated with the key stored in this handle.
+    pub fn get_attributes(&self) -> Result<psa_crypto_binding::psa_key_attributes_t> {
+        let mut key_attrs = get_empty_key_attributes();
+        let get_attrs_status =
+            unsafe { psa_crypto_binding::psa_get_key_attributes(self.0, &mut key_attrs) };
+
+        if get_attrs_status != PSA_SUCCESS {
+            error!("Get key attributes status: {}", get_attrs_status);
+            Err(convert_status(get_attrs_status))
+        } else {
+            Ok(key_attrs)
+        }
+    }
+
+    /// Release the key stored under this handle.
+    pub fn release_key(&mut self) {
+        if self.0 == EMPTY_KEY_HANDLE {
+            return;
+        }
+        unsafe {
+            let _guard = self.1.lock().expect("Grabbing key handle mutex failed");
+            psa_crypto_binding::psa_close_key(self.0);
+        }
+    }
+
+    /// Extract the raw handle value.
+    pub fn raw_handle(&self) -> psa_key_handle_t {
+        self.0
+    }
+}
+
+impl Drop for Key<'_> {
+    fn drop(&mut self) {
+        self.release_key();
+    }
+}
+
+impl AsRef<psa_key_handle_t> for Key<'_> {
+    fn as_ref(&self) -> &psa_key_handle_t {
+        &self.0
+    }
+}
+
+impl AsMut<psa_key_handle_t> for Key<'_> {
+    fn as_mut(&mut self) -> &mut psa_key_handle_t {
+        &mut self.0
     }
 }
