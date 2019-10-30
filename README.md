@@ -164,6 +164,14 @@ Just execute the following command to cross-compile for the Linux on Arm64 targe
 $ cargo build --target aarch64-unknown-linux-gnu
 ```
 
+Alternatively, you can install and use [`cross`](https://github.com/rust-embedded/cross)
+to do the same without having to install the toolchain!
+```bash
+$ cargo install cross
+$ docker build -t parsec-cross tests/
+$ cross build --target aarch64-unknown-linux-gnu
+```
+
 # **Testing the PARSEC Service**
 
 The `tests/all.sh` script executes all tests.
