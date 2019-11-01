@@ -35,7 +35,7 @@ struct Configuration {
 
 #[derive(Debug, Deserialize)]
 struct MbedConfig {
-    mbed_path: String,
+    mbed_path: Option<String>,
     native: Option<Toolchain>,
     aarch64_unknown_linux_gnu: Option<Toolchain>,
 }
@@ -67,25 +67,14 @@ fn get_value_from_table<'a>(table: &'a Value, key: &str) -> &'a Value {
 // Get the Mbed Crypto version to branch on from Cargo.toml file. Use that and MbedConfig to pass
 // parameters to the setup_mbed_crypto.sh script which clones and builds Mbed Crypto and create
 // a static library.
-fn setup_mbed_crypto(mbed_config: &MbedConfig) {
-    let toml_path = std::path::Path::new("./Cargo.toml");
-    if !toml_path.exists() {
-        panic!("Could not find Cargo.toml.");
-    }
-    let manifest = Manifest::from_path(&toml_path).expect("Could not parse Cargo.toml.");
-    let mbed_path = &mbed_config.mbed_path;
-
-    let package = manifest
-        .package
-        .expect("Cargo.toml does not contain package information.");
-    let metadata = package
-        .metadata
-        .expect("Cargo.toml does not contain package metadata.");
-    let parsec_config = get_value_from_table(&metadata, CONFIG_TABLE_NAME);
-    let mbed_version = get_configuration_string(&parsec_config, MBED_CRYPTO_VERSION_KEY);
-
+fn setup_mbed_crypto(mbed_config: &MbedConfig, mbed_version: &str) {
     let mut run_script = ::std::process::Command::new(SETUP_MBED_SCRIPT_PATH);
-    run_script.arg(mbed_version).arg(mbed_path);
+    run_script.arg(mbed_version).arg(
+        mbed_config
+            .mbed_path
+            .clone()
+            .unwrap_or(String::from(env::var("OUT_DIR").unwrap())),
+    );
 
     let toolchain;
     let mbed_compiler;
@@ -124,8 +113,14 @@ fn setup_mbed_crypto(mbed_config: &MbedConfig) {
     }
 }
 
-fn generate_mbed_bindings(mbed_config: &MbedConfig) {
-    let mbed_include_dir = mbed_config.mbed_path.clone() + "mbed-crypto/include";
+fn generate_mbed_bindings(mbed_config: &MbedConfig, mbed_version: &str) {
+    let mbed_include_dir = mbed_config
+        .mbed_path
+        .clone()
+        .unwrap_or(String::from(env::var("OUT_DIR").unwrap()))
+        + "/mbed-crypto-"
+        + mbed_version
+        + "/include";
     let header = mbed_include_dir.clone() + "/psa/crypto.h";
 
     println!("cargo:rerun-if-changed={}", header);
@@ -152,7 +147,23 @@ fn parse_config_file() -> Configuration {
 }
 
 fn main() {
+    // Parsing build-conf.toml
     let config = parse_config_file();
+
+    // Parsing Cargo.toml
+    let toml_path = std::path::Path::new("./Cargo.toml");
+    if !toml_path.exists() {
+        panic!("Could not find Cargo.toml.");
+    }
+    let manifest = Manifest::from_path(&toml_path).expect("Could not parse Cargo.toml.");
+
+    let package = manifest
+        .package
+        .expect("Cargo.toml does not contain package information.");
+    let metadata = package
+        .metadata
+        .expect("Cargo.toml does not contain package metadata.");
+    let parsec_config = get_value_from_table(&metadata, CONFIG_TABLE_NAME);
 
     if cfg!(feature = "mbed") {
         let mbed_config = config.mbed_config.expect(&format!(
@@ -160,13 +171,18 @@ fn main() {
             BUILD_CONFIG_FILE_PATH
         ));
 
-        setup_mbed_crypto(&mbed_config);
-        generate_mbed_bindings(&mbed_config);
+        let mbed_version = get_configuration_string(&parsec_config, MBED_CRYPTO_VERSION_KEY);
+
+        setup_mbed_crypto(&mbed_config, &mbed_version);
+        generate_mbed_bindings(&mbed_config, &mbed_version);
 
         // Request rustc to link the Mbed Crypto static library
         println!(
-            "cargo:rustc-link-search=native={}/mbed-crypto/library/",
-            mbed_config.mbed_path
+            "cargo:rustc-link-search=native={}/mbed-crypto-{}/library/",
+            mbed_config
+                .mbed_path
+                .unwrap_or(String::from(env::var("OUT_DIR").unwrap())),
+            mbed_version,
         );
         println!("cargo:rustc-link-lib=static=mbedcrypto");
     }

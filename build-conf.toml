@@ -2,8 +2,9 @@
 # PARSEC depends on
 [mbed_config]
     # Path (either relative or absolute) where the Mbed Crypto source code will be
-    # persisted
-    mbed_path = "./target/"
+    # persisted.
+    # This value default to the OUT_DIR environment variable.
+    # mbed_path = "/tmp/"
 
     # When compiling natively
     [mbed_config.native]

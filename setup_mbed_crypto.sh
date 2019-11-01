@@ -17,15 +17,15 @@
 # limitations under the License.
 # ------------------------------------------------------------------------------
 
-MBED_GITHUB_URL="https://github.com/ARMmbed/mbed-crypto.git"
-MBED_ROOT_FOLDER_NAME="mbed-crypto"
-MBED_LIB_FILENAME="libmbedcrypto.a"
-
 MBED_VERSION=$1
 if [[ -z "$MBED_VERSION" ]]; then
     >&2 echo "No mbed version provided."
     exit 1
 fi
+
+MBED_GITHUB_URL="https://github.com/ARMmbed/mbed-crypto"
+MBED_ROOT_FOLDER_NAME="mbed-crypto-$MBED_VERSION"
+MBED_LIB_FILENAME="libmbedcrypto.a"
 
 # Where to clone the Mbed Crypto library
 TEMP_FOLDER=$2
@@ -44,14 +44,9 @@ fi
 
 get_mbed_repo() {
     echo "No mbed-crypto present locally. Cloning."
-    git clone $MBED_GITHUB_URL --branch $MBED_VERSION &> /dev/null
+    wget $MBED_GITHUB_URL/archive/$MBED_VERSION.tar.gz
+    tar xf $MBED_VERSION.tar.gz
     pushd $MBED_ROOT_FOLDER_NAME
-}
-
-update_mbed_version() {
-    echo "Existing version of mbed-crypto is not the expected one, fetching required version."
-    git fetch origin $MBED_VERSION &> /dev/null
-    git checkout $MBED_VERSION &> /dev/null
 }
 
 setup_mbed_library() {
@@ -65,12 +60,6 @@ mkdir -p $TEMP_FOLDER
 pushd $TEMP_FOLDER
 if [[ -d "$MBED_ROOT_FOLDER_NAME" ]]; then
     pushd $MBED_ROOT_FOLDER_NAME
-    HAS_CURRENT_MBED=$(git tag -l --points-at HEAD | grep ^$MBED_VERSION$)
-    if [[ -n "$HAS_CURRENT_MBED" ]]; then
-        echo "Version $MBED_VERSION of mbed-crypto is already available."
-    else
-        update_mbed_version
-    fi
 else
     get_mbed_repo
 fi

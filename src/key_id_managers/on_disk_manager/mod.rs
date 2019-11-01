@@ -345,7 +345,7 @@ mod test {
 
     #[test]
     fn insert_get_key_id() {
-        let path = PathBuf::from("target/insert_get_key_id_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_get_key_id_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_get_key_id".to_string());
@@ -372,7 +372,7 @@ mod test {
 
     #[test]
     fn insert_remove_key() {
-        let path = PathBuf::from("target/insert_remove_key_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_remove_key_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_remove_key".to_string());
@@ -386,7 +386,7 @@ mod test {
 
     #[test]
     fn remove_unexisting_key() {
-        let path = PathBuf::from("target/remove_unexisting_key_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/remove_unexisting_key_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("remove_unexisting_key".to_string());
@@ -396,7 +396,7 @@ mod test {
 
     #[test]
     fn exists() {
-        let path = PathBuf::from("target/exists_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/exists_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("exists".to_string());
@@ -414,7 +414,7 @@ mod test {
 
     #[test]
     fn insert_overwrites() {
-        let path = PathBuf::from("target/insert_overwrites_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_overwrites_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_overwrites".to_string());
@@ -442,7 +442,7 @@ mod test {
 
     #[test]
     fn big_names_ascii() {
-        let path = PathBuf::from("target/big_names_ascii_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_ascii_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let big_app_name_ascii = ApplicationName::new("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
@@ -462,7 +462,7 @@ mod test {
 
     #[test]
     fn big_names_emoticons() {
-        let path = PathBuf::from("target/big_names_emoticons_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_emoticons_mappings");
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let big_app_name_emoticons = ApplicationName::new("😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string());
@@ -482,7 +482,7 @@ mod test {
 
     #[test]
     fn create_and_load() {
-        let path = PathBuf::from("target/create_and_load_mappings");
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/create_and_load_mappings");
 
         let app_name1 = ApplicationName::new("😀 Application One 😀".to_string());
         let key_name1 = "😀 Key One 😀".to_string();
