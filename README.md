@@ -63,6 +63,7 @@ Check the [user](https://parallaxsecond.github.io/parsec-book/user_guides/) and 
 ## Community channel and meetings
 
 Come and talk to us in [our Slack channel](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
+[Here](http://dockr.ly/slack) is how to join the workspace.
 
 Also join the [**biweekly meeting**](https://calendar.google.com/calendar?cid=ZG9ja2VyLmNvbV9xcHAzbzl2aXBhbmE0NGllcmV1MjlvcHZkNEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
 with Parsec maintainers and community members.
