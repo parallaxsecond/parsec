@@ -15,7 +15,6 @@
 #[cfg(test)]
 mod tests {
     use parsec_client_test::TestClient;
-    use parsec_interface::requests::ProviderID;
     use parsec_interface::requests::{ResponseStatus, Result};
 
     const HASH: [u8; 32] = [
@@ -28,7 +27,6 @@ mod tests {
     fn asym_sign_no_key() {
         let key_name = String::from("asym_sign_no_key");
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
         let status = client
             .sign(key_name, HASH.to_vec())
             .expect_err("Key should not exist.");
@@ -40,7 +38,6 @@ mod tests {
         let key_name = String::from("asym_verify_no_key");
         let signature = vec![0xDE, 0xAD, 0xBE, 0xEF];
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
         let status = client
             .verify(key_name, HASH.to_vec(), signature)
             .expect_err("Verification should have failed");
@@ -51,7 +48,6 @@ mod tests {
     fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
         let key_name = String::from("asym_sign_and_verify_rsa_pkcs");
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
 
         client.create_rsa_sign_key(key_name.clone())?;
 
@@ -65,14 +61,18 @@ mod tests {
         let key_name = String::from("asym_verify_fail");
         let signature = vec![0xff; 128];
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
 
         client.create_rsa_sign_key(key_name.clone())?;
 
-        client
+        let status = client
             .verify(key_name.clone(), HASH.to_vec(), signature)
-            .expect_err("Verification should have failed");
-
-        Ok(())
+            .expect_err("Verification should fail.");
+        if !(status == ResponseStatus::PsaErrorInvalidSignature
+            || status == ResponseStatus::PsaErrorTamperingDetected)
+        {
+            panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing.");
+        } else {
+            Ok(())
+        }
     }
 }

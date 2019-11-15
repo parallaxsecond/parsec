@@ -20,11 +20,11 @@ mod tests {
     #[test]
     fn create_and_destroy() -> Result<()> {
         let mut client = TestClient::new();
+        client.do_not_destroy_keys();
         let key_name = String::from("create_and_destroy");
 
         client.create_rsa_sign_key(key_name.clone())?;
-
-        client.destroy_key(key_name)
+        client.destroy_key(key_name.clone())
     }
 
     #[test]

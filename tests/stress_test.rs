@@ -19,6 +19,8 @@ mod tests {
 
     #[test]
     fn stress_test() {
+        env_logger::init();
+
         let config = StressTestConfig {
             no_threads: num_cpus::get(),
             req_per_thread: 250,

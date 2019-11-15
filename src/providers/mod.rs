@@ -17,26 +17,34 @@ use serde::Deserialize;
 
 pub mod core_provider;
 
+#[cfg(feature = "pkcs11-provider")]
+pub mod pkcs11_provider;
+
 #[cfg(feature = "mbed")]
 pub mod mbed_provider;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum ProviderType {
     MbedProvider,
+    Pkcs11Provider,
 }
 
 impl ProviderType {
     pub fn to_provider_id(&self) -> ProviderID {
         match self {
             ProviderType::MbedProvider => ProviderID::MbedProvider,
+            ProviderType::Pkcs11Provider => ProviderID::Pkcs11Provider,
         }
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ProviderConfig {
     pub provider_type: ProviderType,
     pub key_id_manager: String,
+    pub library_path: Option<String>,
+    pub slot_number: Option<usize>,
+    pub user_pin: Option<String>,
 }
 
 use crate::authenticators::ApplicationName;
