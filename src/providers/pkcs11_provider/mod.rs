@@ -900,6 +900,14 @@ impl Provide for Pkcs11Provider {
     }
 }
 
+impl Drop for Pkcs11Provider {
+    fn drop(&mut self) {
+        if let Err(e) = self.backend.finalize() {
+            error!("Error when dropping the PKCS 11 provider: {}", e);
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Pkcs11ProviderBuilder {
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,

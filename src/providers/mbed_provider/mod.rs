@@ -482,6 +482,14 @@ impl Provide for MbedProvider {
     }
 }
 
+impl Drop for MbedProvider {
+    fn drop(&mut self) {
+        unsafe {
+            psa_crypto_binding::mbedtls_psa_crypto_free();
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct MbedProviderBuilder {
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
