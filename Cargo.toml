@@ -1,7 +1,8 @@
 [package]
 name = "parsec"
 version = "0.1.0"
-authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
+authors = ["Paul Howard <paul.howard@arm.com>",
+           "Ionut Mihalcea <ionut.mihalcea@arm.com>",
            "Hugues de Valon <hugues.devalon@arm.com>"]
 edition = "2018"
 
@@ -10,7 +11,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.2.1" }
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.3.0" }
 rand = "0.7.2"
 base64 = "0.10.1"
 uuid = "0.7.4"
@@ -22,9 +23,15 @@ toml = "0.4.2"
 serde = { version = "1.0", features = ["derive"] }
 env_logger = "0.7.1"
 log = { version = "0.4.8", features = ["serde"] }
+pkcs11 = { version = "0.4.0", optional = true }
+# Using a fork of the serde_asn1_der crate to have big integer support. Check https://github.com/KizzyCode/serde_asn1_der/issues/1
+serde_asn1_der = { git = "https://github.com/Devolutions/serde_asn1_der", rev = "ec1035879034ac9f09f1242fb49ed04c9aecdcae", optional = true, features = ["extra_types"] }
+der-parser = "3.0.2"
+nom = "5.0.1"
+num-bigint-dig = "0.5"
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.6" }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.7" }
 num_cpus = "1.10.1"
 
 [build-dependencies]
@@ -37,6 +44,6 @@ serde = { version = "1.0", features = ["derive"] }
 mbed-crypto-version = "mbedcrypto-2.0.0"
 
 [features]
-default = ["mbed"]
+default = ["mbed", "pkcs11-provider"]
 mbed = []
-
+pkcs11-provider = ["pkcs11", "serde_asn1_der"]

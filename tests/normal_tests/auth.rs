@@ -15,14 +15,12 @@
 #[cfg(test)]
 mod tests {
     use parsec_client_test::TestClient;
-    use parsec_interface::requests::ProviderID;
     use parsec_interface::requests::{ResponseStatus, Result};
 
     #[test]
     fn two_auths_same_key_name() -> Result<()> {
         let key_name = String::from("two_auths_same_key_name");
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
         let auth1 = String::from("first_client").into_bytes();
         let auth2 = String::from("second_client").into_bytes();
 
@@ -37,7 +35,6 @@ mod tests {
     fn delete_wrong_key() -> Result<()> {
         let key_name = String::from("delete_wrong_key");
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
         let auth1 = String::from("first_client").into_bytes();
         let auth2 = String::from("second_client").into_bytes();
 

@@ -63,7 +63,10 @@ kill $SERVER_PID
 # key name of "Test Key". It contains a valid PSA Key ID.
 # It is tested in test "should_have_been_deleted".
 mkdir -p mappings/cm9vdA==/1 || exit 1
+# For Mbed Provider
 printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+# For PKCS 11 Provider
+printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
 
 RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
@@ -78,6 +81,6 @@ kill $SERVER_PID
 RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
-cargo test --test stress_test || exit 1
+RUST_LOG=info cargo test --test stress_test || exit 1
 
 kill $SERVER_PID

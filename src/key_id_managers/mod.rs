@@ -25,12 +25,12 @@ use std::fmt;
 
 pub mod on_disk_manager;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum KeyIdManagerType {
     OnDisk,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct KeyIdManagerConfig {
     pub name: String,
     pub manager_type: KeyIdManagerType,
@@ -50,7 +50,7 @@ impl fmt::Display for KeyTriple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Application Name: \"{}\"\nProvider ID: {}\nKey Name: \"{}\"",
+            "Application Name: \"{}\", Provider ID: {}, Key Name: \"{}\"",
             self.app_name, self.provider_id, self.key_name
         )
     }

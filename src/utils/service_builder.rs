@@ -25,10 +25,10 @@ use crate::front::{
 use crate::key_id_managers::on_disk_manager::{OnDiskKeyIDManagerBuilder, DEFAULT_MAPPINGS_PATH};
 use crate::key_id_managers::{KeyIdManagerConfig, KeyIdManagerType, ManageKeyIDs};
 use crate::providers::{
-    core_provider::CoreProviderBuilder, mbed_provider::MbedProviderBuilder, Provide,
-    ProviderConfig, ProviderType,
+    core_provider::CoreProviderBuilder, mbed_provider::MbedProviderBuilder,
+    pkcs11_provider::Pkcs11ProviderBuilder, Provide, ProviderConfig, ProviderType,
 };
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
@@ -46,7 +46,7 @@ const VERSION_MAJOR: u8 = 1;
 type KeyIdManager = Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>;
 type Provider = Box<dyn Provide + Send + Sync>;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CoreSettings {
     pub thread_pool_size: Option<usize>,
     pub idle_listener_sleep_duration: Option<u64>,
@@ -54,7 +54,7 @@ pub struct CoreSettings {
     pub log_timestamp: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ServiceConfig {
     pub core_settings: CoreSettings,
     pub listener: ListenerConfig,
@@ -164,11 +164,29 @@ fn build_providers(
 
 fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Provider {
     match config.provider_type {
-        ProviderType::MbedProvider => Box::from(
-            MbedProviderBuilder::new()
+        ProviderType::MbedProvider => {
+            info!("Creating a Mbed Crypto Provider.");
+            Box::from(
+                MbedProviderBuilder::new()
+                    .with_key_id_store(key_id_manager)
+                    .build(),
+            )
+        }
+        ProviderType::Pkcs11Provider => {
+            info!("Creating a PKCS 11 Provider.");
+            Box::from(
+                Pkcs11ProviderBuilder::new()
                 .with_key_id_store(key_id_manager)
-                .build(),
-        ),
+                .with_pkcs11_library_path(config.library_path.clone().expect(
+                        "The PKCS 11 provider needs a library path in the configuration file.",
+                        ))
+                .with_slot_number(config.slot_number.expect(
+                        "The slot number of the device is needed to communicate with PKCS 11 library."
+                        ))
+                .with_user_pin(config.user_pin.clone())
+                .build()
+                )
+        }
     }
 }
 
