@@ -14,7 +14,7 @@
 // limitations under the License.
 use log::info;
 use parsec::utils::{ServiceBuilder, ServiceConfig};
-use signal_hook::{flag, SIGTERM};
+use signal_hook::{flag, SIGHUP, SIGTERM};
 use std::io::Error;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -26,39 +26,57 @@ const CONFIG_FILE_PATH: &str = "./config.toml";
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
 fn main() -> Result<(), Error> {
-    let config_file =
+    // Register a boolean set to true when the SIGTERM signal is received.
+    let kill_signal = Arc::new(AtomicBool::new(false));
+    // Register a boolean set to true when the SIGHUP signal is received.
+    let reload_signal = Arc::new(AtomicBool::new(false));
+    flag::register(SIGTERM, kill_signal.clone())?;
+    flag::register(SIGHUP, reload_signal.clone())?;
+
+    let mut config_file =
         ::std::fs::read_to_string(CONFIG_FILE_PATH).expect("Failed to read configuration file");
-    let config: ServiceConfig =
+    let mut config: ServiceConfig =
         toml::from_str(&config_file).expect("Failed to parse service configuration");
 
     log_setup(&config);
 
-    info!("PARSEC started.");
-
-    let front_end_handler = ServiceBuilder::build_service(&config);
-
-    let listener = ServiceBuilder::start_listener(&config.listener);
+    info!("Parsec started. Configuring the service...");
 
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
-    let front_end_handler = Arc::from(front_end_handler);
-
-    // Register a boolean set to true when the SIGTERM signal is received.
-    let kill_signal = Arc::new(AtomicBool::new(false));
-    flag::register(SIGTERM, kill_signal.clone())?;
-
-    let threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
-
-    info!("PARSEC is ready.");
+    let mut front_end_handler = Arc::from(ServiceBuilder::build_service(&config));
+    let mut listener = ServiceBuilder::start_listener(&config.listener);
+    let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
     // Notify systemd that the daemon is ready, the start command will block until this point.
-    let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Ready]);
+    let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
 
-    loop {
-        if kill_signal.load(Ordering::Relaxed) {
-            info!("SIGTERM signal received.");
-            break;
+    info!("Parsec is ready.");
+
+    while !kill_signal.load(Ordering::Relaxed) {
+        if reload_signal.swap(false, Ordering::Relaxed) {
+            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Reloading]);
+            info!("SIGHUP signal received. Reloading the configuration...");
+
+            threadpool.join();
+
+            // Explicitely call drop now because otherwise Rust will drop these variables only
+            // after they have been overwritten, in which case some values/libraries might be
+            // initialized twice.
+            drop(front_end_handler);
+            drop(listener);
+            drop(threadpool);
+
+            config_file = ::std::fs::read_to_string(CONFIG_FILE_PATH)
+                .expect("Failed to read configuration file");
+            config = toml::from_str(&config_file).expect("Failed to parse service configuration");
+            front_end_handler = Arc::from(ServiceBuilder::build_service(&config));
+            listener = ServiceBuilder::start_listener(&config.listener);
+            threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
+
+            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+            info!("Parsec configuration reloaded.");
         }
 
         if let Some(stream) = listener.accept() {
@@ -76,8 +94,10 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    info!("Shutting down PARSEC, waiting for all threads to finish.");
+    let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Stopping]);
+    info!("SIGTERM signal received. Shutting down Parsec, waiting for all threads to finish...");
     threadpool.join();
+    info!("Parsec is now terminated.");
 
     Ok(())
 }

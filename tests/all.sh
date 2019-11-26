@@ -39,25 +39,15 @@ cargo test --doc || exit 1
 cargo fmt --all -- --check || exit 1
 cargo clippy || exit 1
 
-############################
-# Normal Integration tests #
-############################
+#####################
+# Integration tests #
+#####################
 RUST_BACKTRACE=1 RUST_LOG=info cargo run &
 SERVER_PID=$!
 
 cargo test --test normal || exit 1
 
-kill $SERVER_PID
-
-#################################
-# Persistence Integration tests #
-#################################
-RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-SERVER_PID=$!
-
 cargo test --test persistent-before || exit 1
-
-kill $SERVER_PID
 
 # Create a fake mapping file for the root application, the Mbed Provider and a
 # key name of "Test Key". It contains a valid PSA Key ID.
@@ -68,18 +58,10 @@ printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
 # For PKCS 11 Provider
 printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
 
-RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-SERVER_PID=$!
+# Trigger a configuration reload to load the new mappings.
+kill -s SIGHUP $SERVER_PID
 
 cargo test --test persistent-after || exit 1
-
-kill $SERVER_PID
-
-################
-# Stress tests #
-################
-RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-SERVER_PID=$!
 
 RUST_LOG=info cargo test --test stress_test || exit 1
 
