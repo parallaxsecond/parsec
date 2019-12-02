@@ -11,7 +11,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.3.0" }
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", tag = "0.4.0" }
 rand = "0.7.2"
 base64 = "0.10.1"
 uuid = "0.7.4"
@@ -26,12 +26,12 @@ log = { version = "0.4.8", features = ["serde"] }
 pkcs11 = { version = "0.4.0", optional = true }
 # Using a fork of the serde_asn1_der crate to have big integer support. Check https://github.com/KizzyCode/serde_asn1_der/issues/1
 serde_asn1_der = { git = "https://github.com/Devolutions/serde_asn1_der", rev = "ec1035879034ac9f09f1242fb49ed04c9aecdcae", optional = true, features = ["extra_types"] }
-der-parser = "3.0.2"
-nom = "5.0.1"
 num-bigint-dig = "0.5"
+tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi", tag = "0.4.0", optional = true }
+bincode = "1.1.4"
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.7" }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.1.8" }
 num_cpus = "1.10.1"
 
 [build-dependencies]
@@ -47,3 +47,4 @@ mbed-crypto-version = "mbedcrypto-2.0.0"
 default = ["mbed-crypto-provider", "pkcs11-provider"]
 mbed-crypto-provider = []
 pkcs11-provider = ["pkcs11", "serde_asn1_der"]
+tpm-provider = ["tss-esapi", "serde_asn1_der"]
