@@ -165,7 +165,7 @@ fn main() {
         .expect("Cargo.toml does not contain package metadata.");
     let parsec_config = get_value_from_table(&metadata, CONFIG_TABLE_NAME);
 
-    if cfg!(feature = "mbed") {
+    if cfg!(feature = "mbed-crypto-provider") {
         let mbed_config = config.mbed_config.expect(&format!(
             "Could not find mbed_config table in the {} file.",
             BUILD_CONFIG_FILE_PATH

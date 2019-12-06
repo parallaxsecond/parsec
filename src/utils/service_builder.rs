@@ -24,11 +24,8 @@ use crate::front::{
 };
 use crate::key_id_managers::on_disk_manager::{OnDiskKeyIDManagerBuilder, DEFAULT_MAPPINGS_PATH};
 use crate::key_id_managers::{KeyIdManagerConfig, KeyIdManagerType, ManageKeyIDs};
-use crate::providers::{
-    core_provider::CoreProviderBuilder, mbed_provider::MbedProviderBuilder,
-    pkcs11_provider::Pkcs11ProviderBuilder, Provide, ProviderConfig, ProviderType,
-};
-use log::{info, LevelFilter};
+use crate::providers::{core_provider::CoreProviderBuilder, Provide, ProviderConfig};
+use log::{error, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
@@ -39,6 +36,15 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
+
+#[cfg(feature = "mbed-crypto-provider")]
+use crate::providers::mbed_provider::MbedProviderBuilder;
+#[cfg(feature = "pkcs11-provider")]
+use crate::providers::pkcs11_provider::Pkcs11ProviderBuilder;
+#[cfg(not(all(feature = "mbed-crypto-provider", feature = "pkcs11-provider")))]
+use log::warn;
+#[cfg(any(feature = "mbed-crypto-provider", feature = "pkcs11-provider"))]
+use {crate::providers::ProviderType, log::info};
 
 const VERSION_MINOR: u8 = 0;
 const VERSION_MAJOR: u8 = 1;
@@ -65,10 +71,15 @@ pub struct ServiceConfig {
 pub struct ServiceBuilder;
 
 impl ServiceBuilder {
-    pub fn build_service(config: &ServiceConfig) -> FrontEndHandler {
+    pub fn build_service(config: &ServiceConfig) -> Option<FrontEndHandler> {
         let key_id_managers = build_key_id_managers(&config.key_manager);
 
         let providers = build_providers(&config.provider, key_id_managers);
+
+        if providers.is_empty() {
+            error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
+            return None;
+        }
 
         let backend_handlers = build_backend_handlers(providers);
 
@@ -78,10 +89,12 @@ impl ServiceBuilder {
 
         let simple_authenticator = Box::from(SimpleAuthenticator {});
 
-        FrontEndHandlerBuilder::new()
-            .with_dispatcher(dispatcher)
-            .with_authenticator(AuthType::Simple, simple_authenticator)
-            .build()
+        Some(
+            FrontEndHandlerBuilder::new()
+                .with_dispatcher(dispatcher)
+                .with_authenticator(AuthType::Simple, simple_authenticator)
+                .build(),
+        )
     }
 
     pub fn start_listener(config: &ListenerConfig) -> Box<dyn Listen> {
@@ -145,36 +158,41 @@ fn build_providers(
 ) -> HashMap<ProviderID, Provider> {
     let mut map = HashMap::new();
     for config in configs {
-        let key_id_manager = key_id_managers
-            .get(&config.key_id_manager)
-            .unwrap_or_else(|| {
-                panic!(
+        let key_id_manager = match key_id_managers.get(&config.key_id_manager) {
+            Some(key_id_manager) => key_id_manager,
+            None => {
+                error!(
                     "Key ID manager with specified name was not found ({})",
                     config.key_id_manager
-                )
-            });
-        map.insert(
-            config.provider_type.to_provider_id(),
-            get_provider(config, key_id_manager.clone()),
-        );
+                );
+                continue;
+            }
+        };
+        let provider = match get_provider(config, key_id_manager.clone()) {
+            Some(provider) => provider,
+            None => continue,
+        };
+        map.insert(config.provider_type.to_provider_id(), provider);
     }
 
     map
 }
 
-fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Provider {
+fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option<Provider> {
     match config.provider_type {
+        #[cfg(feature = "mbed-crypto-provider")]
         ProviderType::MbedProvider => {
             info!("Creating a Mbed Crypto Provider.");
-            Box::from(
+            Some(Box::from(
                 MbedProviderBuilder::new()
                     .with_key_id_store(key_id_manager)
                     .build(),
-            )
+            ))
         }
+        #[cfg(feature = "pkcs11-provider")]
         ProviderType::Pkcs11Provider => {
             info!("Creating a PKCS 11 Provider.");
-            Box::from(
+            Some(Box::from(
                 Pkcs11ProviderBuilder::new()
                 .with_key_id_store(key_id_manager)
                 .with_pkcs11_library_path(config.library_path.clone().expect(
@@ -185,7 +203,15 @@ fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Provid
                         ))
                 .with_user_pin(config.user_pin.clone())
                 .build()
-                )
+                ))
+        }
+        #[cfg(not(all(feature = "mbed-crypto-provider", feature = "pkcs11-provider")))]
+        _ => {
+            warn!(
+                "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
+                config.provider_type
+            );
+            None
         }
     }
 }

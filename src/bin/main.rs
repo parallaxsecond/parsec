@@ -15,7 +15,7 @@
 use log::info;
 use parsec::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -42,10 +42,12 @@ fn main() -> Result<(), Error> {
 
     info!("Parsec started. Configuring the service...");
 
+    let front_end_handler = ServiceBuilder::build_service(&config)
+        .ok_or_else(|| Error::new(ErrorKind::Other, "Parsec can not be configured."))?;
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
-    let mut front_end_handler = Arc::from(ServiceBuilder::build_service(&config));
+    let mut front_end_handler = Arc::from(front_end_handler);
     let mut listener = ServiceBuilder::start_listener(&config.listener);
     let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
@@ -71,7 +73,10 @@ fn main() -> Result<(), Error> {
             config_file = ::std::fs::read_to_string(CONFIG_FILE_PATH)
                 .expect("Failed to read configuration file");
             config = toml::from_str(&config_file).expect("Failed to parse service configuration");
-            front_end_handler = Arc::from(ServiceBuilder::build_service(&config));
+            front_end_handler =
+                Arc::from(ServiceBuilder::build_service(&config).ok_or_else(|| {
+                    Error::new(ErrorKind::Other, "Parsec can not be configured.")
+                })?);
             listener = ServiceBuilder::start_listener(&config.listener);
             threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 

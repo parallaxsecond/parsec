@@ -20,7 +20,7 @@ pub mod core_provider;
 #[cfg(feature = "pkcs11-provider")]
 pub mod pkcs11_provider;
 
-#[cfg(feature = "mbed")]
+#[cfg(feature = "mbed-crypto-provider")]
 pub mod mbed_provider;
 
 #[derive(Deserialize, Debug)]
