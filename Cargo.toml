@@ -44,6 +44,6 @@ serde = { version = "1.0", features = ["derive"] }
 mbed-crypto-version = "mbedcrypto-2.0.0"
 
 [features]
-default = ["mbed", "pkcs11-provider"]
-mbed = []
+default = ["mbed-crypto-provider", "pkcs11-provider"]
+mbed-crypto-provider = []
 pkcs11-provider = ["pkcs11", "serde_asn1_der"]
