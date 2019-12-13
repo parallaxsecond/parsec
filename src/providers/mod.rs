@@ -23,10 +23,14 @@ pub mod pkcs11_provider;
 #[cfg(feature = "mbed-crypto-provider")]
 pub mod mbed_provider;
 
+#[cfg(feature = "tpm-provider")]
+pub mod tpm_provider;
+
 #[derive(Deserialize, Debug)]
 pub enum ProviderType {
     MbedProvider,
     Pkcs11Provider,
+    TpmProvider,
 }
 
 impl ProviderType {
@@ -34,6 +38,7 @@ impl ProviderType {
         match self {
             ProviderType::MbedProvider => ProviderID::MbedProvider,
             ProviderType::Pkcs11Provider => ProviderID::Pkcs11Provider,
+            ProviderType::TpmProvider => ProviderID::TpmProvider,
         }
     }
 }
@@ -45,6 +50,7 @@ pub struct ProviderConfig {
     pub library_path: Option<String>,
     pub slot_number: Option<usize>,
     pub user_pin: Option<String>,
+    pub tcti: Option<String>,
 }
 
 use crate::authenticators::ApplicationName;

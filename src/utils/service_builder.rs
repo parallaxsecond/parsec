@@ -41,9 +41,19 @@ use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 use crate::providers::mbed_provider::MbedProviderBuilder;
 #[cfg(feature = "pkcs11-provider")]
 use crate::providers::pkcs11_provider::Pkcs11ProviderBuilder;
-#[cfg(not(all(feature = "mbed-crypto-provider", feature = "pkcs11-provider")))]
+#[cfg(feature = "tpm-provider")]
+use crate::providers::tpm_provider::TpmProviderBuilder;
+#[cfg(not(all(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "tpm-provider"
+)))]
 use log::warn;
-#[cfg(any(feature = "mbed-crypto-provider", feature = "pkcs11-provider"))]
+#[cfg(any(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "tpm-provider"
+))]
 use {crate::providers::ProviderType, log::info};
 
 const VERSION_MINOR: u8 = 0;
@@ -205,7 +215,26 @@ fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option
                 .build()
                 ))
         }
-        #[cfg(not(all(feature = "mbed-crypto-provider", feature = "pkcs11-provider")))]
+        #[cfg(feature = "tpm-provider")]
+        ProviderType::TpmProvider => {
+            info!("Creating a TPM Provider.");
+            Some(Box::from(
+                TpmProviderBuilder::new()
+                    .with_key_id_store(key_id_manager)
+                    .with_tcti(
+                        config
+                            .tcti
+                            .as_ref()
+                            .expect("The TPM provider needs a TCTI device."),
+                    )
+                    .build(),
+            ))
+        }
+        #[cfg(not(all(
+            feature = "mbed-crypto-provider",
+            feature = "pkcs11-provider",
+            feature = "tpm-provider"
+        )))]
         _ => {
             warn!(
                 "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",

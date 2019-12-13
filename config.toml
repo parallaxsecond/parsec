@@ -59,3 +59,13 @@ key_id_manager = "on-disk-manager"
 # (Optional) User pin for authentication with the specific slot. If not set, no authentication will
 # be used.
 #user_pin = "123456"
+
+# Example of a TPM provider configuration
+#[[provider]]
+#provider_type = "TpmProvider"
+#key_id_manager = "on-disk-manager"
+# (Required) TPM TCTI device to use with this provider. Options are:
+# - "device": uses the TPM device on /dev/tpm0
+# - "mssim": uses the simulation TPM with the socket
+# - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon
+#tcti = "mssim"

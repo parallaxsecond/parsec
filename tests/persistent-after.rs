@@ -18,7 +18,7 @@
 #[cfg(test)]
 mod tests {
     use parsec_client_test::TestClient;
-    use parsec_interface::requests::{ResponseStatus, Result};
+    use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 
     const HASH: [u8; 32] = [
         0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84,
@@ -42,7 +42,12 @@ mod tests {
     fn should_have_been_deleted() {
         let mut client = TestClient::new();
 
-        // A fake mapping file was created for this key, it should have been deleted by the Mbed
+        if client.get_cached_provider(Opcode::DestroyKey) == ProviderID::TpmProvider {
+            // This test does not make sense for the TPM Provider.
+            return;
+        }
+
+        // A fake mapping file was created for this key, it should have been deleted by the
         // Provider.
         let key_name = String::from("Test Key");
         assert_eq!(
