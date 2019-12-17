@@ -21,11 +21,30 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
+use structopt::StructOpt;
 
-const CONFIG_FILE_PATH: &str = "./config.toml";
+/// Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
+/// common API to secure services in a platform-agnostic way.
+///
+/// Parsec documentation is available at:
+/// https://parallaxsecond.github.io/parsec-book/index.html
+///
+/// Most of Parsec configuration comes from its configuration file.
+/// Please check the documentation to find more about configuration:
+/// https://parallaxsecond.github.io/parsec-book/user_guides/configuration.html
+#[derive(StructOpt)]
+struct Opts {
+    /// Sets the configuration file path
+    #[structopt(short, long, default_value = "config.toml")]
+    config: String,
+}
+
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
 fn main() -> Result<(), Error> {
+    // Parsing the command line arguments.
+    let opts: Opts = Opts::from_args();
+
     // Register a boolean set to true when the SIGTERM signal is received.
     let kill_signal = Arc::new(AtomicBool::new(false));
     // Register a boolean set to true when the SIGHUP signal is received.
@@ -34,7 +53,7 @@ fn main() -> Result<(), Error> {
     flag::register(SIGHUP, reload_signal.clone())?;
 
     let mut config_file =
-        ::std::fs::read_to_string(CONFIG_FILE_PATH).expect("Failed to read configuration file");
+        ::std::fs::read_to_string(opts.config.clone()).expect("Failed to read configuration file");
     let mut config: ServiceConfig =
         toml::from_str(&config_file).expect("Failed to parse service configuration");
 
@@ -70,7 +89,7 @@ fn main() -> Result<(), Error> {
             drop(listener);
             drop(threadpool);
 
-            config_file = ::std::fs::read_to_string(CONFIG_FILE_PATH)
+            config_file = ::std::fs::read_to_string(opts.config.clone())
                 .expect("Failed to read configuration file");
             config = toml::from_str(&config_file).expect("Failed to parse service configuration");
             front_end_handler =
