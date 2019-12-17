@@ -3,82 +3,55 @@ name: Continuous Integration
 on: [push, pull_request]
 
 jobs:
-  build-and-formatting:
-    name: Build and check formatting
+  all-providers:
+    name: Various tests targeting a Parsec image with all providers included
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Build
-      run: cargo build --verbose
-      # rustfmt will check if the code build before checking the formatting.
-      # Because the build script generated a new module in the code,
-      # building the code before checking it is needed.
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+    - name: Build the container
+      run: docker build -t all-providers tests/all_providers
+    - name: Run the container to execute the test script
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/all_providers/ci.sh
 
-  linting:
-    name: Execute clippy
+  mbed-crypto-provider:
+    name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: cargo clippy
+    - name: Build the container
+      run: docker build -t mbed-crypto-provider tests/per_provider/provider_cfg/mbed-crypto
+    - name: Run the container to execute the test script
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/per_provider/ci.sh mbed-crypto
 
-  unit-test:
-    name: Run unit and doc tests
+  pkcs11-provider:
+    name: Integration tests using PKCS 11 provider
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: cargo test --lib --verbose
-    - run: cargo test --doc --verbose
+    - name: Build the container
+      run: docker build -t pkcs11-provider tests/per_provider/provider_cfg/pkcs11
+    - name: Run the container to execute the test script
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/per_provider/ci.sh pkcs11
 
-  integ-test-normal:
-    name: Normal integration tests
+  tpm-provider:
+    name: Integration tests using TPM provider
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - run: cargo build --verbose
-    - run: |
-        RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-        cargo test --test normal
+    - name: Build the container
+      run: docker build -t tpm-provider tests/per_provider/provider_cfg/tpm
+    - name: Run the container to execute the test script
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/per_provider/ci.sh tpm
 
-  integ-test-persistence:
-    name: Persistence integration tests
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - run: cargo build --verbose
-    - run: |
-        RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-        SERVER_PID=$!
-        cargo test --test persistent-before
-        # Create a fake mapping file for the root application, the Mbed Provider and
-        # a key name of "Test Key". It contains a valid PSA Key ID.
-        # It is tested in test "should_have_been_deleted".
-        mkdir -p mappings/cm9vdA==/1 || exit 1
-        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        kill -s SIGHUP $SERVER_PID
-        cargo test --test persistent-after
-
-  stress-test:
-    name: Stress tests
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - run: cargo build --verbose
-    - run: |
-        RUST_BACKTRACE=1 RUST_LOG=info cargo run &
-        cargo test --test stress_test
-
-  cross-testing-arm64-linux:
-    name: Cross testing for the aarch64-unknown-linux-gnu target
+  cross-compilation-arm64-linux:
+    name: Cross compilation for the aarch64-unknown-linux-gnu target
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
     - name: Install cross
       run: cargo install cross
     - name: Build the cross Dockerfile
-      run: docker build -t parsec-cross tests/
+      run: docker build -t parsec-cross tests/cross_compilation
     - name: Cross-compile with cross
-      run: cross build --target aarch64-unknown-linux-gnu --verbose
-    - name: Execute the unit tests with cross
-      run: cross test --lib --target aarch64-unknown-linux-gnu --verbose
+      #TODO: compile will all features included by setting up the right Dockerfile
+      run: cross build --target aarch64-unknown-linux-gnu --verbose --no-default-features

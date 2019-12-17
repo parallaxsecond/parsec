@@ -16,7 +16,6 @@ mod asym_sign_verify;
 mod auth;
 mod basic;
 mod create_destroy_key;
-mod describe_assets;
 mod export_public_key;
 mod import_key;
 mod ping;

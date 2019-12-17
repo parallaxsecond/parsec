@@ -1,0 +1,16 @@
+[core_settings]
+log_level = "debug"
+# The CI already timestamps the logs
+log_timestamp = false
+
+[listener]
+listener_type = "DomainSocket"
+timeout = 200 # in milliseconds
+
+[[key_manager]]
+name = "on-disk-manager"
+manager_type = "OnDisk"
+
+[[provider]]
+provider_type = "MbedProvider"
+key_id_manager = "on-disk-manager"

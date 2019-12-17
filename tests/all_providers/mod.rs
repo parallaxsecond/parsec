@@ -19,26 +19,21 @@ mod tests {
     use parsec_interface::requests::Result;
     use std::collections::HashSet;
 
-    //TODO: put those two first tests in a separate target which is executed with an
-    //appropriate config file so that all providers are there.
-
     #[test]
-    #[ignore]
     fn list_providers() {
         let mut client = TestClient::new();
         let providers = client.list_providers().expect("list providers failed");
-        assert_eq!(providers.len(), 3);
+        assert_eq!(providers.len(), 4);
         let ids: HashSet<ProviderID> = providers.iter().map(|p| p.id).collect();
         assert!(ids.contains(&ProviderID::CoreProvider));
         assert!(ids.contains(&ProviderID::MbedProvider));
         assert!(ids.contains(&ProviderID::Pkcs11Provider));
+        assert!(ids.contains(&ProviderID::TpmProvider));
     }
 
     #[test]
-    #[ignore]
     fn list_opcodes() {
         let mut client = TestClient::new();
-        client.set_provider(Some(ProviderID::MbedProvider));
         let opcodes = client
             .list_opcodes(ProviderID::MbedProvider)
             .expect("list providers failed");
