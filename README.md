@@ -100,6 +100,7 @@ This project uses the following third party crates:
 * a fork of serde\_asn1\_der at `https://github.com/Devolutions/serde_asn1_der` (BSD-3-Clause and MIT)
 * num-bigint-dig (MIT and Apache-2.0)
 * bincode (MIT)
+* structopt (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
