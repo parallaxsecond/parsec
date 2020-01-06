@@ -97,8 +97,8 @@ This project uses the following third party crates:
 * log (MIT and Apache-2.0)
 * env\_logger (MIT and Apache-2.0)
 * pkcs11 (Apache-2.0)
-* a fork of serde\_asn1\_der at `https://github.com/Devolutions/serde_asn1_der` (BSD-3-Clause and MIT)
-* num-bigint-dig (MIT and Apache-2.0)
+* picky-asn1-der (MIT and Apache-2.0)
+* picky-asn1 (MIT and Apache-2.0)
 * bincode (MIT)
 * structopt (MIT and Apache-2.0)
 

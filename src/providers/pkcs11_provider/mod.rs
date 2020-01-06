@@ -26,6 +26,7 @@ use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use parsec_interface::operations::{OpImportKey, ResultImportKey};
 use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use picky_asn1::wrapper::IntegerAsn1;
 use pkcs11::types::{
     CKF_OS_LOCKING_OK, CKF_RW_SESSION, CKF_SERIAL_SESSION, CKR_OK, CKR_SIGNATURE_INVALID, CKU_USER,
     CK_ATTRIBUTE, CK_C_INITIALIZE_ARGS, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE,
@@ -33,12 +34,9 @@ use pkcs11::types::{
 };
 use pkcs11::Ctx;
 use serde::{Deserialize, Serialize};
-use serde_asn1_der::asn1_wrapper::*;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, RwLock};
 use uuid::Uuid;
-extern crate num_bigint_dig as num_bigint;
-use num_bigint::{BigInt, Sign};
 
 type LocalIdStore = HashSet<[u8; 4]>;
 
@@ -600,10 +598,10 @@ impl Provide for Pkcs11Provider {
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
-        let public_key: RsaPublicKey = serde_asn1_der::from_bytes(&op.key_data).unwrap();
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.key_data).unwrap();
 
-        let (_, modulus_object) = &public_key.modulus.to_bytes_be();
-        let (_, exponent_object) = &public_key.public_exponent.to_bytes_be();
+        let modulus_object = &public_key.modulus.as_bytes_be();
+        let exponent_object = &public_key.public_exponent.as_bytes_be();
 
         template.push(
             CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
@@ -725,16 +723,10 @@ impl Provide for Pkcs11Provider {
                     Err(ResponseStatus::PsaErrorCommunicationFailure)
                 } else {
                     let key = RsaPublicKey {
-                        modulus: IntegerAsn1(BigInt::from_bytes_be(
-                            Sign::Plus,
-                            &attrs[0].get_bytes(),
-                        )),
-                        public_exponent: IntegerAsn1(BigInt::from_bytes_be(
-                            Sign::Plus,
-                            &attrs[1].get_bytes(),
-                        )),
+                        modulus: IntegerAsn1::from_signed_bytes_be(attrs[0].get_bytes()),
+                        public_exponent: IntegerAsn1::from_signed_bytes_be(attrs[1].get_bytes()),
                     };
-                    let key_data = serde_asn1_der::to_vec(&key).or_else(|err| {
+                    let key_data = picky_asn1_der::to_vec(&key).or_else(|err| {
                         error!("Could not serialise key elements: {}.", err);
                         Err(ResponseStatus::PsaErrorCommunicationFailure)
                     })?;

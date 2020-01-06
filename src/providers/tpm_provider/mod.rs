@@ -26,16 +26,14 @@ use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
 use parsec_interface::operations::{OpImportKey, ResultImportKey};
 use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
-use serde_asn1_der::asn1_wrapper::*;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::{
     constants::TPM2_ALG_SHA256, response_code::Tss2ResponseCodeKind, utils::AsymSchemeUnion,
     utils::Signature, utils::TpmsContext, Tcti,
 };
 use uuid::Uuid;
-extern crate num_bigint_dig as num_bigint;
-use num_bigint::{BigInt, Sign};
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::CreateKey,
@@ -229,15 +227,15 @@ impl Provide for TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let public_key: RsaPublicKey = serde_asn1_der::from_bytes(&key_data).or_else(|err| {
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&key_data).or_else(|err| {
             error!("Could not deserialise key elements: {}.", err);
             Err(ResponseStatus::PsaErrorCommunicationFailure)
         })?;
-        if public_key.public_exponent.to_bytes_be().1 != PUBLIC_EXPONENT {
-            error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.to_bytes_be());
+        if public_key.public_exponent.as_bytes_be() != PUBLIC_EXPONENT {
+            error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_bytes_be());
             return Err(ResponseStatus::UnsupportedOperation);
         }
-        let key_data = public_key.modulus.to_bytes_be().1;
+        let key_data = public_key.modulus.as_bytes_be();
 
         let len = key_data.len();
         if len < 128 {
@@ -291,10 +289,10 @@ impl Provide for TpmProvider {
             })?;
 
         let key = RsaPublicKey {
-            modulus: IntegerAsn1(BigInt::from_bytes_be(Sign::Plus, &pub_key_data)),
-            public_exponent: IntegerAsn1(BigInt::from_bytes_be(Sign::Plus, &PUBLIC_EXPONENT)),
+            modulus: IntegerAsn1::from_signed_bytes_be(pub_key_data),
+            public_exponent: IntegerAsn1::from_signed_bytes_be(PUBLIC_EXPONENT.to_vec()),
         };
-        let key_data = serde_asn1_der::to_vec(&key).or_else(|err| {
+        let key_data = picky_asn1_der::to_vec(&key).or_else(|err| {
             error!("Could not serialise key elements: {}.", err);
             Err(ResponseStatus::PsaErrorCommunicationFailure)
         })?;
