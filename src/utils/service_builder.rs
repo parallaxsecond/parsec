@@ -74,17 +74,21 @@ pub struct CoreSettings {
 pub struct ServiceConfig {
     pub core_settings: CoreSettings,
     pub listener: ListenerConfig,
-    pub key_manager: Vec<KeyIdManagerConfig>,
-    pub provider: Vec<ProviderConfig>,
+    pub key_manager: Option<Vec<KeyIdManagerConfig>>,
+    pub provider: Option<Vec<ProviderConfig>>,
 }
 
 pub struct ServiceBuilder;
 
 impl ServiceBuilder {
     pub fn build_service(config: &ServiceConfig) -> Option<FrontEndHandler> {
-        let key_id_managers = build_key_id_managers(&config.key_manager);
+        let key_id_managers =
+            build_key_id_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()));
 
-        let providers = build_providers(&config.provider, key_id_managers);
+        let providers = build_providers(
+            config.provider.as_ref().unwrap_or(&Vec::new()),
+            key_id_managers,
+        );
 
         if providers.is_empty() {
             error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
