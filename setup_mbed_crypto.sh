@@ -65,7 +65,7 @@ else
 fi
 
 # Set up lib
-if [[ -n "$HAS_CURRENT_MBED" && -e "library/$MBED_LIB_FILENAME" ]]; then
+if [[ -e "library/$MBED_LIB_FILENAME" ]]; then
     echo "Library is set up."
 else 
     setup_mbed_library
