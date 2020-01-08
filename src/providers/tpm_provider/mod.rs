@@ -231,6 +231,12 @@ impl Provide for TpmProvider {
             error!("Could not deserialise key elements: {}.", err);
             Err(ResponseStatus::PsaErrorCommunicationFailure)
         })?;
+
+        if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
+            error!("Only positive modulus and public exponent are supported.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         if public_key.public_exponent.as_bytes_be() != PUBLIC_EXPONENT {
             error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_bytes_be());
             return Err(ResponseStatus::UnsupportedOperation);
@@ -238,9 +244,9 @@ impl Provide for TpmProvider {
         let key_data = public_key.modulus.as_bytes_be();
 
         let len = key_data.len();
-        if len < 128 {
+        if len != 128 && len != 256 {
             error!(
-                "The TPM provider only supports 1024 bits or bigger RSA public keys ({} bits given).",
+                "The TPM provider only supports 1024 and 2048 bits RSA public keys ({} bits given).",
                 len * 8
             );
             return Err(ResponseStatus::UnsupportedOperation);
@@ -281,12 +287,18 @@ impl Provide for TpmProvider {
 
         let password_context = get_password_context(&*store_handle, key_triple)?;
 
-        let pub_key_data = esapi_context
+        let mut pub_key_data = esapi_context
             .read_public_key(password_context.context)
             .or_else(|e| {
                 error!("Error reading a public key: {}.", e);
                 Err(ResponseStatus::PsaErrorHardwareFailure)
             })?;
+
+        // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
+        // modulus if highest significant bit is one, to differentiate it from a negative number.
+        if pub_key_data[0] & 0x80 == 0x80 {
+            pub_key_data.insert(0, 0x00);
+        }
 
         let key = RsaPublicKey {
             modulus: IntegerAsn1::from_signed_bytes_be(pub_key_data),
