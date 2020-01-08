@@ -15,11 +15,12 @@
   -- limitations under the License.
 --->
 
-![Parsec](parsec.png)
-# Parsec
-
-[![CI tests](https://github.com/parallaxsecond/parsec/workflows/Continuous%20Integration/badge.svg)](https://github.com/parallaxsecond/parsec/actions?query=workflow%3A%22Continuous+Integration%22)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<p align="center">
+  <img src="https://github.com/parallaxsecond/parsec/blob/master/parsec.png?raw=true" alt="Parsec logo"/>
+  <br><br>
+  <a href="https://github.com/parallaxsecond/parsec/actions?query=workflow%3A%22Continuous+Integration%22"><img src="https://github.com/parallaxsecond/parsec/workflows/Continuous%20Integration/badge.svg" alt="CI tests"/></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"/></a>
+</p>
 
 **Parsec** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
 to provide a common API to secure services in a platform-agnostic way.
