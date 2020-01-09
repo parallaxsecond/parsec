@@ -15,11 +15,8 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
-use std::collections::HashSet;
-use std::convert::TryInto;
-use std::sync::{Arc, Mutex, RwLock};
-
 use constants::PSA_SUCCESS;
+use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::ProviderInfo;
 use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
@@ -32,6 +29,9 @@ use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto_binding::psa_key_handle_t as KeyHandle;
 use psa_crypto_binding::psa_key_id_t as KeyId;
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
 use utils::Key;
 use uuid::Uuid;
@@ -40,7 +40,8 @@ use uuid::Uuid;
     non_snake_case,
     non_camel_case_types,
     non_upper_case_globals,
-    dead_code
+    dead_code,
+    trivial_casts
 )]
 #[allow(clippy::all)]
 mod psa_crypto_binding {
@@ -63,11 +64,14 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::ListOpcodes,
 ];
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct MbedProvider {
     // When calling write on a reference of key_id_store, a type
     // std::sync::RwLockWriteGuard<dyn ManageKeyIDs + Send + Sync> is returned. We need to use the
     // dereference operator (*) to access the inner type dyn ManageKeyIDs + Send + Sync and then
     // reference it to match with the method prototypes.
+    #[derivative(Debug = "ignore")]
     key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
     local_ids: RwLock<LocalIdStore>,
     // Calls to `psa_open_key`, `psa_create_key` and `psa_close_key` are not thread safe - the slot
@@ -79,6 +83,7 @@ pub struct MbedProvider {
     // As mentioned above, calls dealing with key slot allocation are not secured for concurrency.
     // `key_slot_semaphore` is used to ensure that only `PSA_KEY_SLOT_COUNT` threads can have slots
     // assigned at any time.
+    #[derivative(Debug = "ignore")]
     key_slot_semaphore: Semaphore,
 }
 
@@ -121,7 +126,7 @@ fn create_key_id(
             if insert_option.is_some() {
                 warn!("Overwriting Key triple mapping ({})", key_triple);
             }
-            local_ids_handle.insert(key_id);
+            let _ = local_ids_handle.insert(key_id);
 
             Ok(key_id)
         }
@@ -140,7 +145,7 @@ fn remove_key_id(
 ) -> Result<()> {
     match store_handle.remove(key_triple) {
         Ok(_) => {
-            local_ids_handle.remove(&key_id);
+            let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
         Err(string) => {
@@ -214,9 +219,9 @@ impl MbedProvider {
                             );
                             return None;
                         } else {
-                            local_ids_handle.insert(key_id);
+                            let _ = local_ids_handle.insert(key_id);
                             unsafe {
-                                psa_crypto_binding::psa_close_key(key_handle);
+                                let _ = psa_crypto_binding::psa_close_key(key_handle);
                             }
                         }
                     }
@@ -490,8 +495,10 @@ impl Drop for MbedProvider {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Derivative)]
+#[derivative(Debug)]
 pub struct MbedProviderBuilder {
+    #[derivative(Debug = "ignore")]
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
 }
 

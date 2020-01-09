@@ -15,6 +15,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
+use derivative::Derivative;
 use log::{error, info};
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::operations::ProviderInfo;
@@ -30,8 +31,8 @@ use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::{
-    constants::TPM2_ALG_SHA256, response_code::Tss2ResponseCodeKind, utils::AsymSchemeUnion,
-    utils::Signature, utils::TpmsContext, Tcti,
+    constants::TPM2_ALG_SHA256, response_code::Error, response_code::Tss2ResponseCodeKind,
+    utils::AsymSchemeUnion, utils::Signature, utils::TpmsContext, Tcti,
 };
 use uuid::Uuid;
 
@@ -48,6 +49,8 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
 const ROOT_KEY_SIZE: usize = 2048;
 const ROOT_KEY_AUTH_SIZE: usize = 32;
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct TpmProvider {
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
@@ -55,6 +58,7 @@ pub struct TpmProvider {
     esapi_context: Mutex<tss_esapi::TransientObjectContext>,
     // The Key ID Manager stores the key context and its associated authValue (a PasswordContext
     // structure).
+    #[derivative(Debug = "ignore")]
     key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
 }
 
@@ -396,12 +400,17 @@ impl Provide for TpmProvider {
 
         let password_context = get_password_context(&*store_handle, key_triple)?;
 
-        esapi_context
+        let _ = esapi_context
             .verify_signature(password_context.context, &hash, signature)
             .or_else(|e| {
-                if e.kind() == Some(Tss2ResponseCodeKind::Signature) {
-                    error!("The verification failed.");
-                    Err(ResponseStatus::PsaErrorInvalidSignature)
+                if let Error::Tss2Error(rc) = e {
+                    if rc.kind() == Some(Tss2ResponseCodeKind::Signature) {
+                        error!("The verification failed.");
+                        Err(ResponseStatus::PsaErrorInvalidSignature)
+                    } else {
+                        error!("Error verifying: {}.", rc);
+                        Err(ResponseStatus::PsaErrorHardwareFailure)
+                    }
                 } else {
                     error!("Error verifying: {}.", e);
                     Err(ResponseStatus::PsaErrorHardwareFailure)
@@ -418,8 +427,10 @@ impl Drop for TpmProvider {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Derivative)]
+#[derivative(Debug)]
 pub struct TpmProviderBuilder {
+    #[derivative(Debug = "ignore")]
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
     tcti: Option<Tcti>,
 }

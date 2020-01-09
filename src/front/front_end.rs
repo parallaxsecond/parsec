@@ -14,6 +14,7 @@
 // limitations under the License.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
+use derivative::Derivative;
 use log::{error, info};
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::ResponseStatus;
@@ -25,9 +26,12 @@ use std::io::{Read, Write};
 /// from/to the stream provided by the listener.
 ///
 /// Requests are passed forward to the `Dispatcher`.
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct FrontEndHandler {
     dispatcher: Dispatcher,
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
+    #[derivative(Debug = "ignore")]
     authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
 }
 
@@ -82,9 +86,11 @@ impl FrontEndHandler {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Derivative)]
+#[derivative(Debug)]
 pub struct FrontEndHandlerBuilder {
     dispatcher: Option<Dispatcher>,
+    #[derivative(Debug = "ignore")]
     authenticators: Option<HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>>,
 }
 
@@ -108,11 +114,11 @@ impl FrontEndHandlerBuilder {
     ) -> Self {
         match &mut self.authenticators {
             Some(authenticators) => {
-                authenticators.insert(auth_type, authenticator);
+                let _ = authenticators.insert(auth_type, authenticator);
             }
             None => {
                 let mut map = HashMap::new();
-                map.insert(auth_type, authenticator);
+                let _ = map.insert(auth_type, authenticator);
                 self.authenticators = Some(map);
             }
         };

@@ -15,6 +15,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
+use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::operations::ProviderInfo;
@@ -53,7 +54,10 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Pkcs11Provider {
+    #[derivative(Debug = "ignore")]
     key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
     // TODO: the local ID store is currently only used to prevent creating a key that does not
     // exist, it should also act as a cache for non-desctrucitve operations. Same for Mbed Crypto.
@@ -288,7 +292,7 @@ fn create_key_id(
             if insert_option.is_some() {
                 warn!("Overwriting Key triple mapping ({})", key_triple);
             }
-            local_ids_handle.insert(key_id);
+            let _ = local_ids_handle.insert(key_id);
 
             Ok(key_id)
         }
@@ -307,7 +311,7 @@ fn remove_key_id(
 ) -> Result<()> {
     match store_handle.remove(key_triple) {
         Ok(_) => {
-            local_ids_handle.remove(&key_id);
+            let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
         Err(string) => {
@@ -385,7 +389,7 @@ impl Pkcs11Provider {
                                     "Key {} found in the PKCS 11 library, adding it.",
                                     key_triple
                                 );
-                                local_ids_handle.insert(key_id);
+                                let _ = local_ids_handle.insert(key_id);
                             }
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
                                 warn!(
@@ -829,7 +833,7 @@ impl Provide for Pkcs11Provider {
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let mech = pkcs11::types::CK_MECHANISM {
+        let mech = CK_MECHANISM {
             mechanism: pkcs11::types::CKM_RSA_PKCS,
             pParameter: std::ptr::null_mut(),
             ulParameterLen: 0,
@@ -869,7 +873,7 @@ impl Provide for Pkcs11Provider {
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
-        let mech = pkcs11::types::CK_MECHANISM {
+        let mech = CK_MECHANISM {
             mechanism: pkcs11::types::CKM_RSA_PKCS,
             pParameter: std::ptr::null_mut(),
             ulParameterLen: 0,
@@ -920,8 +924,10 @@ impl Drop for Pkcs11Provider {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Derivative)]
+#[derivative(Debug)]
 pub struct Pkcs11ProviderBuilder {
+    #[derivative(Debug = "ignore")]
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,

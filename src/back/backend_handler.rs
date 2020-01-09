@@ -14,6 +14,7 @@
 // limitations under the License.
 use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
+use derivative::Derivative;
 use parsec_interface::operations::Convert;
 use parsec_interface::operations::{NativeOperation, NativeResult};
 use parsec_interface::requests::{
@@ -26,9 +27,14 @@ use parsec_interface::requests::{BodyType, ProviderID};
 ///
 /// It also provides assessment capabilities, letting the dispatcher know if
 /// it can process a request.
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct BackEndHandler {
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
+    #[derivative(Debug = "ignore")]
     provider: Box<dyn Provide + Send + Sync>,
+    #[derivative(Debug = "ignore")]
     converter: Box<dyn Convert + Send + Sync>,
     provider_id: ProviderID,
     content_type: BodyType,
@@ -158,9 +164,12 @@ impl BackEndHandler {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Derivative)]
+#[derivative(Debug)]
 pub struct BackEndHandlerBuilder {
+    #[derivative(Debug = "ignore")]
     provider: Option<Box<dyn Provide + Send + Sync>>,
+    #[derivative(Debug = "ignore")]
     converter: Option<Box<dyn Convert + Send + Sync>>,
     provider_id: Option<ProviderID>,
     content_type: Option<BodyType>,

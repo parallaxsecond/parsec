@@ -30,6 +30,7 @@ static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 /// Holds references to a `UnixListener`.
 ///
 /// Only works on Unix systems.
+#[derive(Debug)]
 pub struct DomainSocketListener {
     listener: UnixListener,
     timeout: Duration,
@@ -112,7 +113,7 @@ impl Listen for DomainSocketListener {
     }
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct DomainSocketListenerBuilder {
     timeout: Option<Duration>,
 }

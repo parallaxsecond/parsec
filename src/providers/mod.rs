@@ -26,7 +26,7 @@ pub mod mbed_provider;
 #[cfg(feature = "tpm-provider")]
 pub mod tpm_provider;
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 pub enum ProviderType {
     MbedProvider,
     Pkcs11Provider,
@@ -34,7 +34,7 @@ pub enum ProviderType {
 }
 
 impl ProviderType {
-    pub fn to_provider_id(&self) -> ProviderID {
+    pub fn to_provider_id(self) -> ProviderID {
         match self {
             ProviderType::MbedProvider => ProviderID::MbedProvider,
             ProviderType::Pkcs11Provider => ProviderID::Pkcs11Provider,
