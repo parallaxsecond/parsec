@@ -25,7 +25,7 @@ use std::fmt;
 
 pub mod on_disk_manager;
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 pub enum KeyIdManagerType {
     OnDisk,
 }

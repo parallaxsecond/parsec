@@ -12,6 +12,38 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![deny(
+    nonstandard_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    legacy_directory_ownership,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    plugin_as_library,
+    private_in_public,
+    safe_extern_statics,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true,
+    missing_debug_implementations,
+    //TODO: activate this!
+    //missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    missing_copy_implementations
+)]
+
 pub mod authenticators;
 pub mod back;
 pub mod front;

@@ -29,7 +29,7 @@ Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-b
 
 ## Disclaimer
 
-PARSEC is a new open source project and is under development. This code repository is being made
+Parsec is a new open source project and is under development. This code repository is being made
 available so that the developer community can learn and give feedback about the new interfaces and the concepts of platform-agnostic security.
 The implementation that is provided is suitable for exploratory testing and experimentation only.
 This test implementation does not offer any tangible security benefits and therefore is not
@@ -102,6 +102,7 @@ This project uses the following third party crates:
 * picky-asn1 (MIT and Apache-2.0)
 * bincode (MIT)
 * structopt (MIT and Apache-2.0)
+* derivative (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)

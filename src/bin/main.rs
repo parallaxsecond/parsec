@@ -12,6 +12,38 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![deny(
+    nonstandard_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    legacy_directory_ownership,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    plugin_as_library,
+    private_in_public,
+    safe_extern_statics,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true,
+    missing_debug_implementations,
+    //TODO: activate this!
+    //missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    missing_copy_implementations
+)]
+
 use log::info;
 use parsec::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
@@ -49,8 +81,8 @@ fn main() -> Result<(), Error> {
     let kill_signal = Arc::new(AtomicBool::new(false));
     // Register a boolean set to true when the SIGHUP signal is received.
     let reload_signal = Arc::new(AtomicBool::new(false));
-    flag::register(SIGTERM, kill_signal.clone())?;
-    flag::register(SIGHUP, reload_signal.clone())?;
+    let _ = flag::register(SIGTERM, kill_signal.clone())?;
+    let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
     let mut config_file =
         ::std::fs::read_to_string(opts.config.clone()).expect("Failed to read configuration file");
@@ -67,7 +99,7 @@ fn main() -> Result<(), Error> {
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
     let mut front_end_handler = Arc::from(front_end_handler);
-    let mut listener = ServiceBuilder::start_listener(&config.listener);
+    let mut listener = ServiceBuilder::start_listener(config.listener);
     let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
     // Notify systemd that the daemon is ready, the start command will block until this point.
@@ -96,7 +128,7 @@ fn main() -> Result<(), Error> {
                 Arc::from(ServiceBuilder::build_service(&config).ok_or_else(|| {
                     Error::new(ErrorKind::Other, "Parsec can not be configured.")
                 })?);
-            listener = ServiceBuilder::start_listener(&config.listener);
+            listener = ServiceBuilder::start_listener(config.listener);
             threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
             let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
@@ -130,12 +162,12 @@ fn log_setup(config: &ServiceConfig) {
     let mut env_log_builder = env_logger::builder();
 
     if let Some(level) = config.core_settings.log_level {
-        env_log_builder.filter_level(level);
+        let _ = env_log_builder.filter_level(level);
     }
     if let Some(true) = config.core_settings.log_timestamp {
-        env_log_builder.format_timestamp_millis();
+        let _ = env_log_builder.format_timestamp_millis();
     } else {
-        env_log_builder.format_timestamp(None);
+        let _ = env_log_builder.format_timestamp(None);
     }
     env_log_builder.init();
 }

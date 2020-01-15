@@ -62,7 +62,7 @@ const VERSION_MAJOR: u8 = 1;
 type KeyIdManager = Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>;
 type Provider = Box<dyn Provide + Send + Sync>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 pub struct CoreSettings {
     pub thread_pool_size: Option<usize>,
     pub idle_listener_sleep_duration: Option<u64>,
@@ -78,6 +78,7 @@ pub struct ServiceConfig {
     pub provider: Option<Vec<ProviderConfig>>,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct ServiceBuilder;
 
 impl ServiceBuilder {
@@ -111,7 +112,7 @@ impl ServiceBuilder {
         )
     }
 
-    pub fn start_listener(config: &ListenerConfig) -> Box<dyn Listen> {
+    pub fn start_listener(config: ListenerConfig) -> Box<dyn Listen> {
         let listener = match config.listener_type {
             ListenerType::DomainSocket => DomainSocketListenerBuilder::new()
                 .with_timeout(Duration::from_millis(config.timeout))
@@ -149,7 +150,7 @@ fn build_backend_handlers(
             .with_accept_type(BodyType::Protobuf)
             .with_version(VERSION_MINOR, VERSION_MAJOR)
             .build();
-        map.insert(provider_id, backend_handler);
+        let _ = map.insert(provider_id, backend_handler);
     }
 
     let core_provider_backend = BackEndHandlerBuilder::new()
@@ -161,7 +162,7 @@ fn build_backend_handlers(
         .with_version(VERSION_MINOR, VERSION_MAJOR)
         .build();
 
-    map.insert(ProviderID::CoreProvider, core_provider_backend);
+    let _ = map.insert(ProviderID::CoreProvider, core_provider_backend);
 
     map
 }
@@ -186,12 +187,22 @@ fn build_providers(
             Some(provider) => provider,
             None => continue,
         };
-        map.insert(config.provider_type.to_provider_id(), provider);
+        let _ = map.insert(config.provider_type.to_provider_id(), provider);
     }
 
     map
 }
 
+// This cfg_attr is used to allow the fact that key_id_manager is not used when there is no
+// providers.
+#[cfg_attr(
+    not(all(
+        feature = "mbed-crypto-provider",
+        feature = "pkcs11-provider",
+        feature = "tpm-provider"
+    )),
+    allow(unused_variables)
+)]
 fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option<Provider> {
     match config.provider_type {
         #[cfg(feature = "mbed-crypto-provider")]
@@ -252,7 +263,7 @@ fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option
 fn build_key_id_managers(configs: &[KeyIdManagerConfig]) -> HashMap<String, KeyIdManager> {
     let mut map = HashMap::new();
     for config in configs {
-        map.insert(config.name.clone(), get_key_id_manager(config));
+        let _ = map.insert(config.name.clone(), get_key_id_manager(config));
     }
 
     map

@@ -252,7 +252,7 @@ impl Key<'_> {
     }
 
     /// Get the attributes associated with the key stored in this handle.
-    pub fn get_attributes(&self) -> Result<psa_crypto_binding::psa_key_attributes_t> {
+    pub fn get_attributes(&self) -> Result<psa_key_attributes_t> {
         let mut key_attrs = get_empty_key_attributes();
         let get_attrs_status =
             unsafe { psa_crypto_binding::psa_get_key_attributes(self.0, &mut key_attrs) };
@@ -272,7 +272,7 @@ impl Key<'_> {
         }
         unsafe {
             let _guard = self.1.lock().expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_close_key(self.0);
+            let _ = psa_crypto_binding::psa_close_key(self.0);
         }
     }
 

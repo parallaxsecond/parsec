@@ -24,6 +24,7 @@ use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::str;
 
+#[derive(Copy, Clone, Debug)]
 pub struct SimpleAuthenticator;
 
 impl Authenticate for SimpleAuthenticator {
@@ -63,7 +64,7 @@ mod test {
     #[should_panic(expected = "Failed to authenticate")]
     fn failed_authentication() {
         let authenticator = SimpleAuthenticator {};
-        authenticator
+        let _ = authenticator
             .authenticate(&RequestAuth::from_bytes(vec![0xff; 5]))
             .expect("Failed to authenticate");
     }

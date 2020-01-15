@@ -22,6 +22,7 @@ use uuid::Uuid;
 
 const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
 
+#[derive(Debug)]
 pub struct CoreProvider {
     version_min: u8,
     version_maj: u8,
@@ -64,7 +65,7 @@ impl Provide for CoreProvider {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct CoreProviderBuilder {
     version_maj: Option<u8>,
     version_min: Option<u8>,

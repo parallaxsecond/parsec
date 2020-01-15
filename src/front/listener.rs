@@ -21,12 +21,12 @@ pub trait ReadWrite: std::io::Read + std::io::Write {}
 // Automatically implements ReadWrite for all types that implement Read and Write.
 impl<T: std::io::Read + std::io::Write> ReadWrite for T {}
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 pub enum ListenerType {
     DomainSocket,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Copy, Clone, Deserialize, Debug)]
 pub struct ListenerConfig {
     pub listener_type: ListenerType,
     pub timeout: u64,

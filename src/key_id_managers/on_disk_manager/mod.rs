@@ -38,6 +38,7 @@ use std::path::PathBuf;
 
 pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
 
+#[derive(Debug)]
 pub struct OnDiskKeyIDManager {
     /// Internal mapping, used for non-modifying operations.
     key_store: HashMap<KeyTriple, Vec<u8>>,
@@ -196,7 +197,7 @@ impl OnDiskKeyIDManager {
                     info!("Found mapping file: {:?}.", key_name_file_path);
                     let mut key_id = Vec::new();
                     let mut key_id_file = File::open(&key_name_file_path)?;
-                    key_id_file.read_to_end(&mut key_id)?;
+                    let _ = key_id_file.read_to_end(&mut key_id)?;
                     match base64_data_triple_to_key_triple(
                         os_str_to_u8_ref(app_name_dir_path.file_name().expect(
                             "The application name directory path should contain a final component.",
@@ -209,7 +210,7 @@ impl OnDiskKeyIDManager {
                         ))?,
                     ) {
                         Ok(key_triple) => {
-                            key_store.insert(key_triple, key_id);
+                            let _ = key_store.insert(key_triple, key_id);
                         }
                         Err(string) => {
                             error!("Failed to convert the mapping path found to an UTF-8 string (error: {}).", string);
@@ -307,7 +308,7 @@ impl ManageKeyIDs for OnDiskKeyIDManager {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct OnDiskKeyIDManagerBuilder {
     mappings_dir_path: Option<PathBuf>,
 }
@@ -378,7 +379,7 @@ mod test {
         let key_triple = new_key_triple("insert_remove_key".to_string());
         let key_id = vec![0x11, 0x22, 0x33];
 
-        manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
 
         assert!(manager.remove(&key_triple).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
@@ -404,10 +405,10 @@ mod test {
 
         assert!(!manager.exists(&key_triple).unwrap());
 
-        manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
         assert!(manager.exists(&key_triple).unwrap());
 
-        manager.remove(&key_triple).unwrap();
+        let _ = manager.remove(&key_triple).unwrap();
         assert!(!manager.exists(&key_triple).unwrap());
         fs::remove_dir_all(path).unwrap();
     }
@@ -421,10 +422,10 @@ mod test {
         let key_id_1 = vec![0x11, 0x22, 0x33];
         let key_id_2 = vec![0xaa, 0xbb, 0xcc];
 
-        manager
+        let _ = manager
             .insert(key_triple.clone(), key_id_1.clone())
             .unwrap();
-        manager
+        let _ = manager
             .insert(key_triple.clone(), key_id_2.clone())
             .unwrap();
 
@@ -455,7 +456,7 @@ mod test {
         );
         let key_id = vec![0x11, 0x22, 0x33];
 
-        manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
         assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_id);
         fs::remove_dir_all(path).unwrap();
     }
@@ -475,7 +476,7 @@ mod test {
         );
         let key_id = vec![0x11, 0x22, 0x33];
 
-        manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
         assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_id);
         fs::remove_dir_all(path).unwrap();
     }
@@ -501,13 +502,13 @@ mod test {
         {
             let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
-            manager
+            let _ = manager
                 .insert(key_triple1.clone(), key_id1.clone())
                 .unwrap();
-            manager
+            let _ = manager
                 .insert(key_triple2.clone(), key_id2.clone())
                 .unwrap();
-            manager
+            let _ = manager
                 .insert(key_triple3.clone(), key_id3.clone())
                 .unwrap();
         }

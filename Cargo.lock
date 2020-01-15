@@ -224,6 +224,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derivative"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "942ca430eef7a3806595a6737bc388bf51adb888d3fc0dd1b50f1c170167ee3a"
+dependencies = [
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
+ "syn 0.15.44",
+]
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -527,6 +538,7 @@ dependencies = [
  "bincode",
  "bindgen 0.50.1",
  "cargo_toml",
+ "derivative",
  "env_logger 0.7.1",
  "log",
  "num_cpus",
@@ -619,6 +631,12 @@ dependencies = [
  "libloading",
  "num-bigint",
 ]
+
+[[package]]
+name = "pkg-config"
+version = "0.3.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
 
 [[package]]
 name = "ppv-lite86"
@@ -1038,13 +1056,14 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "0.4.0"
-source = "git+https://github.com/parallaxsecond/rust-tss-esapi?tag=0.4.0#68ab83440f06d8a2fe2e5ade4da79434c5508038"
+version = "0.5.0"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi?tag=0.5.0#47f404a2939cb7f65e9f121bec7c14cdaeebb0f9"
 dependencies = [
  "bindgen 0.52.0",
  "bitfield",
  "log",
  "mbox",
+ "pkg-config",
  "serde",
 ]
 
