@@ -12,74 +12,71 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#[cfg(test)]
-mod tests {
-    use parsec_client_test::TestClient;
-    use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_client_test::TestClient;
+use parsec_interface::requests::{ResponseStatus, Result};
 
-    #[test]
-    fn create_and_destroy() -> Result<()> {
-        let mut client = TestClient::new();
-        client.do_not_destroy_keys();
-        let key_name = String::from("create_and_destroy");
+#[test]
+fn create_and_destroy() -> Result<()> {
+    let mut client = TestClient::new();
+    client.do_not_destroy_keys();
+    let key_name = String::from("create_and_destroy");
 
-        client.create_rsa_sign_key(key_name.clone())?;
-        client.destroy_key(key_name.clone())
-    }
+    client.create_rsa_sign_key(key_name.clone())?;
+    client.destroy_key(key_name)
+}
 
-    #[test]
-    fn create_twice() -> Result<()> {
-        let mut client = TestClient::new();
-        let key_name = String::from("create_twice");
+#[test]
+fn create_twice() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("create_twice");
 
-        client.create_rsa_sign_key(key_name.clone())?;
-        let status = client
-            .create_rsa_sign_key(key_name.clone())
-            .expect_err("A key with the same name can not be created twice.");
-        assert_eq!(status, ResponseStatus::KeyAlreadyExists);
+    client.create_rsa_sign_key(key_name.clone())?;
+    let status = client
+        .create_rsa_sign_key(key_name)
+        .expect_err("A key with the same name can not be created twice.");
+    assert_eq!(status, ResponseStatus::KeyAlreadyExists);
 
-        Ok(())
-    }
+    Ok(())
+}
 
-    #[test]
-    fn destroy_without_create() {
-        let mut client = TestClient::new();
-        let key_name = String::from("destroy_without_create");
+#[test]
+fn destroy_without_create() {
+    let mut client = TestClient::new();
+    let key_name = String::from("destroy_without_create");
 
-        let status = client
-            .destroy_key(key_name)
-            .expect_err("The key should not already exist.");
-        assert_eq!(status, ResponseStatus::KeyDoesNotExist);
-    }
+    let status = client
+        .destroy_key(key_name)
+        .expect_err("The key should not already exist.");
+    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+}
 
-    #[test]
-    fn create_destroy_and_operation() -> Result<()> {
-        let mut client = TestClient::new();
-        let hash = vec![0xDE, 0xAD, 0xBE, 0xEF];
-        let key_name = String::from("create_destroy_and_operation");
+#[test]
+fn create_destroy_and_operation() -> Result<()> {
+    let mut client = TestClient::new();
+    let hash = vec![0xDE, 0xAD, 0xBE, 0xEF];
+    let key_name = String::from("create_destroy_and_operation");
 
-        client.create_rsa_sign_key(key_name.clone())?;
+    client.create_rsa_sign_key(key_name.clone())?;
 
-        client.destroy_key(key_name.clone())?;
+    client.destroy_key(key_name.clone())?;
 
-        let status = client
-            .sign(key_name, hash)
-            .expect_err("The key used by this operation should have been deleted.");
-        assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    let status = client
+        .sign(key_name, hash)
+        .expect_err("The key used by this operation should have been deleted.");
+    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
 
-        Ok(())
-    }
+    Ok(())
+}
 
-    #[test]
-    fn create_destroy_twice() -> Result<()> {
-        let mut client = TestClient::new();
-        let key_name = String::from("create_destroy_twice_1");
-        let key_name_2 = String::from("create_destroy_twice_2");
+#[test]
+fn create_destroy_twice() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("create_destroy_twice_1");
+    let key_name_2 = String::from("create_destroy_twice_2");
 
-        client.create_rsa_sign_key(key_name.clone())?;
-        client.create_rsa_sign_key(key_name_2.clone())?;
+    client.create_rsa_sign_key(key_name.clone())?;
+    client.create_rsa_sign_key(key_name_2.clone())?;
 
-        client.destroy_key(key_name)?;
-        client.destroy_key(key_name_2)
-    }
+    client.destroy_key(key_name)?;
+    client.destroy_key(key_name_2)
 }

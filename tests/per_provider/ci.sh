@@ -57,6 +57,7 @@ then
 fi
 
 RUST_BACKTRACE=1 cargo build -vv $FEATURES
+cargo clippy --all-targets $FEATURES -- -D warnings
 RUST_BACKTRACE=1 cargo run -vv $FEATURES -- --config tests/per_provider/provider_cfg/$1/config.toml &
 SERVER_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.

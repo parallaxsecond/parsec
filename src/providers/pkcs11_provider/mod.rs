@@ -36,6 +36,7 @@ use pkcs11::types::{
 use pkcs11::Ctx;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::mem;
 use std::sync::{Arc, Mutex, RwLock};
 use uuid::Uuid;
 
@@ -490,9 +491,11 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Create Key");
 
         if op.key_attributes.key_type != KeyType::RsaKeypair
-            || op.key_attributes.algorithm != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None)
+            || op.key_attributes.algorithm
+                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
         {
-            error!("The PKCS 11 provider currently only supports creating RSA key pairs for signing and verifying.");
+            error!(
+                "The PKCS11 provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::UnsupportedOperation);
         }
 
@@ -540,6 +543,8 @@ impl Provide for Pkcs11Provider {
         pub_template.push(
             CK_ATTRIBUTE::new(pkcs11::types::CKA_PRIVATE).with_bool(&pkcs11::types::CK_FALSE),
         );
+        pub_template
+            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ENCRYPT).with_bool(&pkcs11::types::CK_TRUE));
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
             error!("Error creating a new session: {}.", err);
@@ -581,9 +586,11 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Import Key");
 
         if op.key_attributes.key_type != KeyType::RsaPublicKey
-            || op.key_attributes.algorithm != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None)
+            || op.key_attributes.algorithm
+                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
         {
-            error!("The PKCS 11 provider currently only supports importing RSA public key for verifying.");
+            error!(
+                "The PKCS 11 provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::UnsupportedOperation);
         }
 
@@ -609,8 +616,8 @@ impl Provide for Pkcs11Provider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        let modulus_object = &public_key.modulus.as_bytes_be();
-        let exponent_object = &public_key.public_exponent.as_bytes_be();
+        let modulus_object = &public_key.modulus.as_unsigned_bytes_be();
+        let exponent_object = &public_key.public_exponent.as_unsigned_bytes_be();
 
         template.push(
             CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
@@ -627,7 +634,24 @@ impl Provide for Pkcs11Provider {
         );
         template
             .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_VERIFY).with_bool(&pkcs11::types::CK_TRUE));
+        template
+            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ENCRYPT).with_bool(&pkcs11::types::CK_TRUE));
         template.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(&key_id));
+        template.push(
+            CK_ATTRIBUTE::new(pkcs11::types::CKA_PRIVATE).with_bool(&pkcs11::types::CK_FALSE),
+        );
+
+        // Restrict to RSA.
+        let allowed_mechanisms = [pkcs11::types::CKM_RSA_PKCS];
+        // The attribute contains a pointer to the allowed_mechanism array and its size as
+        // ulValueLen.
+        let mut allowed_mechanisms_attribute =
+            CK_ATTRIBUTE::new(pkcs11::types::CKA_ALLOWED_MECHANISMS);
+        allowed_mechanisms_attribute.ulValueLen = mem::size_of_val(&allowed_mechanisms);
+        allowed_mechanisms_attribute.pValue = &allowed_mechanisms
+            as *const pkcs11::types::CK_MECHANISM_TYPE
+            as pkcs11::types::CK_VOID_PTR;
+        template.push(allowed_mechanisms_attribute);
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
             error!("Error creating a new session: {}.", err);
@@ -731,20 +755,13 @@ impl Provide for Pkcs11Provider {
                     error!("Error when extracting attribute: {}.", rv);
                     Err(ResponseStatus::PsaErrorCommunicationFailure)
                 } else {
-                    let mut modulus = attrs[0].get_bytes();
-                    let mut public_exponent = attrs[1].get_bytes();
+                    let modulus = attrs[0].get_bytes();
+                    let public_exponent = attrs[1].get_bytes();
 
                     // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
                     // integer if highest significant bit is one, to differentiate it from a negative number.
-                    if modulus[0] & 0x80 == 0x80 {
-                        modulus.insert(0, 0x00);
-                    }
-                    if public_exponent[0] & 0x80 == 0x80 {
-                        public_exponent.insert(0, 0x00);
-                    }
-
-                    let modulus = IntegerAsn1::from_signed_bytes_be(modulus);
-                    let public_exponent = IntegerAsn1::from_signed_bytes_be(public_exponent);
+                    let modulus = IntegerAsn1::from_unsigned_bytes_be(modulus);
+                    let public_exponent = IntegerAsn1::from_unsigned_bytes_be(public_exponent);
 
                     let key = RsaPublicKey {
                         modulus,
@@ -828,7 +845,7 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Sign");
 
         let key_name = op.key_name;
-        let hash = op.hash;
+        let mut hash = op.hash;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
@@ -839,6 +856,11 @@ impl Provide for Pkcs11Provider {
             ulParameterLen: 0,
         };
 
+        if hash.len() != 32 {
+            error!("The PKCS11 provider currently only supports 256 bits long digests.");
+            return Err(ResponseStatus::UnsupportedOperation);
+        }
+
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!("Asymmetric sign in session {}", session.session_handle());
 
@@ -848,7 +870,20 @@ impl Provide for Pkcs11Provider {
         match self.backend.sign_init(session.session_handle(), &mech, key) {
             Ok(_) => {
                 info!("Signing operation initialized.");
-                match self.backend.sign(session.session_handle(), &hash) {
+
+                // Build a valid ASN.1 DigestInfo DER-encoded structure by appending the hash to a
+                // DigestAlgorithmIdentifier value representing the SHA256 OID with no parameters.
+                // The OID used is: "2.16.840.1.101.3.4.2.1".
+                // It would be better to use the DigestInfo structure defined in this file but the
+                // AlgorithmIdentifier structure does not currently support the simple SHA256 OID.
+                // See Devolutions/picky-rs#19
+                let mut digest_info = vec![
+                    0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
+                    0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
+                ];
+                digest_info.append(&mut hash);
+
+                match self.backend.sign(session.session_handle(), &digest_info) {
                     Ok(signature) => Ok(ResultAsymSign { signature }),
                     Err(e) => {
                         error!("Failed to execute signing operation. Error: {}", e);
@@ -867,17 +902,23 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Verify");
 
         let key_name = op.key_name;
-        let hash = op.hash;
+        let mut hash = op.hash;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
         let mech = CK_MECHANISM {
+            // Verify without hashing.
             mechanism: pkcs11::types::CKM_RSA_PKCS,
             pParameter: std::ptr::null_mut(),
             ulParameterLen: 0,
         };
+
+        if hash.len() != 32 {
+            error!("The PKCS11 provider currently only supports 256 bits long digests.");
+            return Err(ResponseStatus::UnsupportedOperation);
+        }
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!("Asymmetric verify in session {}", session.session_handle());
@@ -891,9 +932,22 @@ impl Provide for Pkcs11Provider {
         {
             Ok(_) => {
                 info!("Verify operation initialized.");
+
+                // Build a valid ASN.1 DigestInfo DER-encoded structure by appending the hash to a
+                // DigestAlgorithmIdentifier value representing the SHA256 OID with no parameters.
+                // The OID used is: "2.16.840.1.101.3.4.2.1".
+                // It would be better to use the DigestInfo structure defined in this file but the
+                // AlgorithmIdentifier structure does not currently support the simple SHA256 OID.
+                // See Devolutions/picky-rs#19
+                let mut digest_info = vec![
+                    0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
+                    0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
+                ];
+                digest_info.append(&mut hash);
+
                 match self
                     .backend
-                    .verify(session.session_handle(), &hash, &signature)
+                    .verify(session.session_handle(), &digest_info, &signature)
                 {
                     Ok(_) => Ok(ResultAsymVerify {}),
                     Err(e) => match e {
@@ -909,7 +963,7 @@ impl Provide for Pkcs11Provider {
                 }
             }
             Err(e) => {
-                error!("Failed to initialize signing operation. Error: {}", e);
+                error!("Failed to initialize verifying operation. Error: {}", e);
                 Err(ResponseStatus::PsaErrorGenericError)
             }
         }

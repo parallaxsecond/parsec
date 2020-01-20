@@ -12,23 +12,20 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#[cfg(test)]
-mod tests {
-    use parsec_client_test::{StressTestClient, StressTestConfig};
-    use std::time::Duration;
+use parsec_client_test::{StressTestClient, StressTestConfig};
+use std::time::Duration;
 
-    #[test]
-    fn stress_test() {
-        env_logger::init();
+#[test]
+fn stress_test() {
+    env_logger::init();
 
-        let config = StressTestConfig {
-            no_threads: num_cpus::get(),
-            req_per_thread: 250,
-            req_interval: Some(Duration::from_millis(10)),
-            req_interval_deviation_millis: Some(4),
-            check_interval: Some(Duration::from_millis(500)),
-        };
+    let config = StressTestConfig {
+        no_threads: num_cpus::get(),
+        req_per_thread: 250,
+        req_interval: Some(Duration::from_millis(10)),
+        req_interval_deviation_millis: Some(4),
+        check_interval: Some(Duration::from_millis(500)),
+    };
 
-        StressTestClient::execute(config);
-    }
+    StressTestClient::execute(config);
 }

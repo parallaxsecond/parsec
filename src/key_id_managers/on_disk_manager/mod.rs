@@ -379,7 +379,7 @@ mod test {
         let key_triple = new_key_triple("insert_remove_key".to_string());
         let key_id = vec![0x11, 0x22, 0x33];
 
-        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id).unwrap();
 
         assert!(manager.remove(&key_triple).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
@@ -405,7 +405,7 @@ mod test {
 
         assert!(!manager.exists(&key_triple).unwrap());
 
-        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id).unwrap();
         assert!(manager.exists(&key_triple).unwrap());
 
         let _ = manager.remove(&key_triple).unwrap();
@@ -422,9 +422,7 @@ mod test {
         let key_id_1 = vec![0x11, 0x22, 0x33];
         let key_id_2 = vec![0xaa, 0xbb, 0xcc];
 
-        let _ = manager
-            .insert(key_triple.clone(), key_id_1.clone())
-            .unwrap();
+        let _ = manager.insert(key_triple.clone(), key_id_1).unwrap();
         let _ = manager
             .insert(key_triple.clone(), key_id_2.clone())
             .unwrap();
