@@ -1,4 +1,0 @@
-# cross configuration file to use the Dockerfile in tests/Dockerfile
-
-[target.aarch64-unknown-linux-gnu]
-image = "parsec-cross"

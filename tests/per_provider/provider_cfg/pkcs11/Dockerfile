@@ -2,7 +2,7 @@ FROM ubuntu:latest
 
 RUN apt-get update && \
     apt-get install -y wget automake autoconf libtool pkg-config && \
-    apt-get install -y curl libssl-dev
+    apt-get install -y curl libssl-dev libgcc1
 
 WORKDIR /tmp
 RUN wget https://github.com/opendnssec/SoftHSMv2/archive/2.5.0.tar.gz

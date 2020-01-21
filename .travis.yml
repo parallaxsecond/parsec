@@ -1,24 +1,21 @@
 # Executing our tests on Arm64 with Travis CI
+# The TPM provider Dockerfile does not build on Arm so the all-providers and tpm-provider tests
+# are not executed on Aarch64.
 arch: arm64
 services:
     - docker
 jobs:
     include:
-    - name: "Various tests targeting a Parsec image with all providers included"
-      env:
-      - DOCKER_IMAGE_NAME=all-providers
-      - DOCKER_IMAGE_PATH=tests/all_providers
-      - SCRIPT=tests/all_providers/ci.sh
     - name: "Integration tests using Mbed Crypto provider"
       env:
       - DOCKER_IMAGE_NAME=mbed-crypto-provider
       - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/mbed-crypto
-      - SCRIPT="tests/per_provider/ci.sh mbed-crypto"
+      - SCRIPT="tests/ci.sh mbed-crypto"
     - name: "Integration tests using PKCS 11 provider"
       env:
       - DOCKER_IMAGE_NAME=pkcs11-provider
       - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/pkcs11
-      - SCRIPT="tests/per_provider/ci.sh pkcs11"
+      - SCRIPT="tests/ci.sh pkcs11"
 script:
 - docker build -t $DOCKER_IMAGE_NAME $DOCKER_IMAGE_PATH
 - docker run -v $(pwd):/tmp/parsec -w /tmp/parsec $DOCKER_IMAGE_NAME /tmp/parsec/$SCRIPT

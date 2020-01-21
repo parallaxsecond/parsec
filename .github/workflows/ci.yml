@@ -11,7 +11,7 @@ jobs:
     - name: Build the container
       run: docker build -t all-providers tests/all_providers
     - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/all_providers/ci.sh
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/ci.sh all
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
@@ -21,7 +21,7 @@ jobs:
     - name: Build the container
       run: docker build -t mbed-crypto-provider tests/per_provider/provider_cfg/mbed-crypto
     - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/per_provider/ci.sh mbed-crypto
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
@@ -31,7 +31,7 @@ jobs:
     - name: Build the container
       run: docker build -t pkcs11-provider tests/per_provider/provider_cfg/pkcs11
     - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/per_provider/ci.sh pkcs11
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/ci.sh pkcs11
 
   tpm-provider:
     name: Integration tests using TPM provider
@@ -41,17 +41,4 @@ jobs:
     - name: Build the container
       run: docker build -t tpm-provider tests/per_provider/provider_cfg/tpm
     - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/per_provider/ci.sh tpm
-
-  cross-compilation-arm64-linux:
-    name: Cross compilation for the aarch64-unknown-linux-gnu target
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: Install cross
-      run: cargo install cross
-    - name: Build the cross Dockerfile
-      run: docker build -t parsec-cross tests/cross_compilation
-    - name: Cross-compile with cross
-      #TODO: compile will all features included by setting up the right Dockerfile
-      run: cross build --target aarch64-unknown-linux-gnu --verbose --no-default-features
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/ci.sh tpm
