@@ -46,7 +46,7 @@ RUST_BACKTRACE=1 cargo build $FEATURES --verbose
 # Static checks #
 #################
 cargo fmt --all -- --check
-cargo clippy
+cargo clippy --all-targets $FEATURES -- -D warnings
 
 ############################
 # Unit tests and doc tests #

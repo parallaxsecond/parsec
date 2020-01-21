@@ -174,9 +174,11 @@ impl Provide for TpmProvider {
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
         if op.key_attributes.key_type != KeyType::RsaKeypair
-            || op.key_attributes.algorithm != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None)
+            || op.key_attributes.algorithm
+                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
         {
-            error!("The TPM provider currently only supports creating RSA key pairs for signing and verifying.");
+            error!(
+                "The TPM provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::UnsupportedOperation);
         }
 
@@ -213,11 +215,11 @@ impl Provide for TpmProvider {
 
     fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
         if op.key_attributes.key_type != KeyType::RsaPublicKey
-            || op.key_attributes.algorithm != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, None)
+            || op.key_attributes.algorithm
+                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
         {
             error!(
-                "The TPM provider currently only supports importing RSA public key for verifying."
-            );
+                "The TPM provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::UnsupportedOperation);
         }
 
@@ -241,11 +243,11 @@ impl Provide for TpmProvider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        if public_key.public_exponent.as_bytes_be() != PUBLIC_EXPONENT {
-            error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_bytes_be());
+        if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT {
+            error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
             return Err(ResponseStatus::UnsupportedOperation);
         }
-        let key_data = public_key.modulus.as_bytes_be();
+        let key_data = public_key.modulus.as_unsigned_bytes_be();
 
         let len = key_data.len();
         if len != 128 && len != 256 {
@@ -291,21 +293,17 @@ impl Provide for TpmProvider {
 
         let password_context = get_password_context(&*store_handle, key_triple)?;
 
-        let mut pub_key_data = esapi_context
+        let pub_key_data = esapi_context
             .read_public_key(password_context.context)
             .or_else(|e| {
                 error!("Error reading a public key: {}.", e);
                 Err(ResponseStatus::PsaErrorHardwareFailure)
             })?;
 
-        // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
-        // modulus if highest significant bit is one, to differentiate it from a negative number.
-        if pub_key_data[0] & 0x80 == 0x80 {
-            pub_key_data.insert(0, 0x00);
-        }
-
         let key = RsaPublicKey {
-            modulus: IntegerAsn1::from_signed_bytes_be(pub_key_data),
+            // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
+            // modulus if highest significant bit is one, to differentiate it from a negative number.
+            modulus: IntegerAsn1::from_unsigned_bytes_be(pub_key_data),
             public_exponent: IntegerAsn1::from_signed_bytes_be(PUBLIC_EXPONENT.to_vec()),
         };
         let key_data = picky_asn1_der::to_vec(&key).or_else(|err| {
@@ -466,7 +464,13 @@ impl TpmProviderBuilder {
         self
     }
 
-    pub fn build(self) -> TpmProvider {
+    /// Create an instance of TpmProvider
+    ///
+    /// # Safety
+    ///
+    /// Undefined behaviour might appear if two instances of TransientObjectContext are created
+    /// using a same TCTI that does not handle multiple applications concurrently.
+    pub unsafe fn build(self) -> TpmProvider {
         TpmProvider::new(
             self.key_id_store.expect("Missing key ID store."),
             tss_esapi::TransientObjectContext::new(

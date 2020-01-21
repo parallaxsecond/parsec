@@ -25,7 +25,7 @@ use crate::front::{
 use crate::key_id_managers::on_disk_manager::{OnDiskKeyIDManagerBuilder, DEFAULT_MAPPINGS_PATH};
 use crate::key_id_managers::{KeyIdManagerConfig, KeyIdManagerType, ManageKeyIDs};
 use crate::providers::{core_provider::CoreProviderBuilder, Provide, ProviderConfig};
-use log::{error, LevelFilter};
+use log::{error, warn, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
@@ -43,12 +43,6 @@ use crate::providers::mbed_provider::MbedProviderBuilder;
 use crate::providers::pkcs11_provider::Pkcs11ProviderBuilder;
 #[cfg(feature = "tpm-provider")]
 use crate::providers::tpm_provider::TpmProviderBuilder;
-#[cfg(not(all(
-    feature = "mbed-crypto-provider",
-    feature = "pkcs11-provider",
-    feature = "tpm-provider"
-)))]
-use log::warn;
 #[cfg(any(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",
@@ -173,6 +167,12 @@ fn build_providers(
 ) -> HashMap<ProviderID, Provider> {
     let mut map = HashMap::new();
     for config in configs {
+        let provider_id = config.provider_type.to_provider_id();
+        if map.contains_key(&provider_id) {
+            warn!("Parsec currently only supports one instance of each provider type. Ignoring {} and continuing...", provider_id);
+            continue;
+        }
+
         let key_id_manager = match key_id_managers.get(&config.key_id_manager) {
             Some(key_id_manager) => key_id_manager,
             None => {
@@ -183,11 +183,12 @@ fn build_providers(
                 continue;
             }
         };
-        let provider = match get_provider(config, key_id_manager.clone()) {
+        // The safety is checked by the fact that only one instance per provider type is enforced.
+        let provider = match unsafe { get_provider(config, key_id_manager.clone()) } {
             Some(provider) => provider,
             None => continue,
         };
-        let _ = map.insert(config.provider_type.to_provider_id(), provider);
+        let _ = map.insert(provider_id, provider);
     }
 
     map
@@ -203,7 +204,7 @@ fn build_providers(
     )),
     allow(unused_variables)
 )]
-fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option<Provider> {
+unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option<Provider> {
     match config.provider_type {
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderType::MbedProvider => {
