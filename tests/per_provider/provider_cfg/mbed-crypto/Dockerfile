@@ -1,9 +1,9 @@
 FROM ubuntu:latest
 
 RUN apt-get update && \
-    apt-get install -y git make gcc python3 python curl wget && \
+    apt-get install -y git make gcc python3 python curl wget libgcc1 && \
 	# These libraries are needed for bindgen as it uses libclang.so
-    apt-get install -y clang libclang-dev libc6-dev-i386
+    apt-get install -y clang libclang-dev
 
 WORKDIR /tmp
 RUN wget https://github.com/ARMmbed/mbed-crypto/archive/mbedcrypto-2.0.0.tar.gz
