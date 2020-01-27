@@ -20,6 +20,7 @@ use parsec_interface::requests::AuthType;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::{Request, Response};
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
 
 /// Service component that serializes requests and deserializes responses
@@ -126,10 +127,14 @@ impl FrontEndHandlerBuilder {
         self
     }
 
-    pub fn build(self) -> FrontEndHandler {
-        FrontEndHandler {
-            dispatcher: self.dispatcher.expect("Dispatcher missing"),
-            authenticators: self.authenticators.expect("Authenticators missing"),
-        }
+    pub fn build(self) -> Result<FrontEndHandler> {
+        Ok(FrontEndHandler {
+            dispatcher: self
+                .dispatcher
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "dispatcher is missing"))?,
+            authenticators: self
+                .authenticators
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "authenticators is missing"))?,
+        })
     }
 }

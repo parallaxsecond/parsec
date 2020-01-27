@@ -29,6 +29,7 @@ use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
+use std::io::ErrorKind;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::{
     constants::TPM2_ALG_SHA256, response_code::Error, response_code::Tss2ResponseCodeKind,
@@ -470,17 +471,28 @@ impl TpmProviderBuilder {
     ///
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
-    pub unsafe fn build(self) -> TpmProvider {
+    pub unsafe fn build(self) -> std::io::Result<TpmProvider> {
         TpmProvider::new(
-            self.key_id_store.expect("Missing key ID store."),
+            self.key_id_store.ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, "missing key ID store")
+            })?,
             tss_esapi::TransientObjectContext::new(
-                self.tcti.expect("Missing TCTI."),
+                self.tcti
+                    .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
                 ROOT_KEY_SIZE,
                 ROOT_KEY_AUTH_SIZE,
                 &[],
             )
-            .expect("Failed to create a new ESAPI transient context"),
+            .or_else(|e| {
+                error!("Error creating TSS Transient Object Context ({}).", e);
+                Err(std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "failed initializing TSS context",
+                ))
+            })?,
         )
-        .expect("Failed to initialise TPM Provider")
+        .ok_or_else(|| {
+            std::io::Error::new(ErrorKind::InvalidData, "failed initializing TPM provider")
+        })
     }
 }

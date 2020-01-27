@@ -22,6 +22,7 @@ use log::error;
 use parsec_interface::operations::key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::sync::Mutex;
 
 /// Converts between native PARSEC key attributes and ID and the
@@ -31,15 +32,18 @@ use std::sync::Mutex;
 ///
 /// If either algorithm or key type conversion fails. See docs for
 /// `convert_key_type` and `convert_algorithm` for more details.
-pub fn convert_key_attributes(attrs: &KeyAttributes, key_id: psa_key_id_t) -> psa_key_attributes_t {
-    psa_key_attributes_t {
+pub fn convert_key_attributes(
+    attrs: &KeyAttributes,
+    key_id: psa_key_id_t,
+) -> Result<psa_key_attributes_t> {
+    Ok(psa_key_attributes_t {
         core: psa_core_key_attributes_t {
-            type_: convert_key_type(attrs.key_type),
+            type_: convert_key_type(attrs.key_type)?,
             lifetime: PSA_KEY_LIFETIME_PERSISTENT,
             id: key_id,
             policy: psa_key_policy_s {
                 usage: convert_key_usage(&attrs),
-                alg: convert_algorithm(&attrs.algorithm),
+                alg: convert_algorithm(&attrs.algorithm)?,
                 alg2: 0,
             },
             bits: convert_key_bits(attrs.key_size),
@@ -47,7 +51,7 @@ pub fn convert_key_attributes(attrs: &KeyAttributes, key_id: psa_key_id_t) -> ps
         },
         domain_parameters: ::std::ptr::null_mut(),
         domain_parameters_size: 0,
-    }
+    })
 }
 
 /// Generates a blank `psa_key_attributes_t` object.
@@ -78,16 +82,15 @@ pub fn convert_key_bits(key_size: u32) -> psa_key_bits_t {
 
 /// Converts between native and Mbed Crypto type values.
 ///
-/// # Panics
+/// # Errors
 ///
-/// Only `KeyType::RsaKeypair` and `KeyType::RsaPublicKey` are supported. Panics otherwise.
-pub fn convert_key_type(key_type: KeyType) -> psa_key_type_t {
+/// Only `KeyType::RsaKeypair` and `KeyType::RsaPublicKey` are supported. Returns
+/// ResponseStatus::UnsupportedParameters otherwise.
+pub fn convert_key_type(key_type: KeyType) -> Result<psa_key_type_t> {
     match key_type {
-        KeyType::RsaKeypair => PSA_KEY_TYPE_RSA_KEYPAIR,
-        KeyType::RsaPublicKey => PSA_KEY_TYPE_RSA_PUBLIC_KEY,
-        _ => {
-            unimplemented!();
-        }
+        KeyType::RsaKeypair => Ok(PSA_KEY_TYPE_RSA_KEYPAIR),
+        KeyType::RsaPublicKey => Ok(PSA_KEY_TYPE_RSA_PUBLIC_KEY),
+        _ => Err(ResponseStatus::UnsupportedParameters),
     }
 }
 
@@ -127,29 +130,26 @@ pub fn convert_key_usage(operation: &KeyAttributes) -> psa_key_usage_t {
 
 /// Converts between native and Mbed Crypto algorithm values.
 ///
-/// # Panics
+/// # Errors
 ///
 /// Only `AlgorithmInner::Sign` is supported as algorithm with only the
-/// `SignAlgorithm::RsaPkcs1v15Sign` signing algorithm. Will panic otherwise.
-pub fn convert_algorithm(alg: &Algorithm) -> psa_algorithm_t {
+/// `SignAlgorithm::RsaPkcs1v15Sign` signing algorithm. Will return
+/// ResponseStatus::UnsupportedParameters otherwise.
+pub fn convert_algorithm(alg: &Algorithm) -> Result<psa_algorithm_t> {
     let mut algo_val: psa_algorithm_t;
     match alg.inner() {
         AlgorithmInner::Sign(sign, hash) => {
             algo_val = match sign {
                 SignAlgorithm::RsaPkcs1v15Sign => PSA_ALG_RSA_PKCS1V15_SIGN_BASE,
-                _ => {
-                    unimplemented!();
-                }
+                _ => return Err(ResponseStatus::UnsupportedParameters),
             };
-            if hash.is_some() {
-                algo_val |= convert_hash_algorithm(hash.unwrap()) & PSA_ALG_HASH_MASK;
+            if let Some(hash_alg) = hash {
+                algo_val |= convert_hash_algorithm(*hash_alg) & PSA_ALG_HASH_MASK;
             }
         }
-        _ => {
-            unimplemented!();
-        }
+        _ => return Err(ResponseStatus::UnsupportedParameters),
     }
-    algo_val
+    Ok(algo_val)
 }
 
 /// Converts between native and Mbed Crypto hash algorithm values.
@@ -176,18 +176,15 @@ pub fn convert_hash_algorithm(hash: HashAlgorithm) -> psa_algorithm_t {
 const PSA_STATUS_TO_RESPONSE_STATUS_OFFSET: psa_status_t = 1000;
 
 /// Converts between Mbed Crypto and native status values.
-pub fn convert_status(psa_status: psa_status_t) -> ResponseStatus {
+/// Returns None if the conversion can not happen.
+pub fn convert_status(psa_status: psa_status_t) -> Option<ResponseStatus> {
     // psa_status_t errors are i32, negative values between -132 and -151. To map them to u16
     // ResponseStatus values between 1000 and 1999 (as per the Wire Protocol), they are taken their
     // absolute values and added 1000.
-    let psa_status = psa_status.checked_abs().expect("Overflow of psa_status.");
-    let psa_status = psa_status
-        .checked_add(PSA_STATUS_TO_RESPONSE_STATUS_OFFSET)
-        .expect("Overflow of psa_status.");
-    let psa_status = u16::try_from(psa_status).expect(
-        "Mapping operation result in a value that can not be represented in a u16 variable.",
-    );
-    ResponseStatus::from_u16(psa_status)
+    let psa_status = psa_status.checked_abs()?;
+    let psa_status = psa_status.checked_add(PSA_STATUS_TO_RESPONSE_STATUS_OFFSET)?;
+    let psa_status = u16::try_from(psa_status).ok()?;
+    Some(psa_status.try_into().ok()?)
 }
 
 macro_rules! bits_to_bytes {
@@ -202,7 +199,7 @@ pub fn psa_asymmetric_sign_output_size(key_attrs: &psa_key_attributes_t) -> Resu
     match key_attrs.core.type_ {
         PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits))),
         PSA_KEY_TYPE_ECC_KEYPAIR_BASE => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits) * 2)),
-        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+        _ => Err(ResponseStatus::UnsupportedParameters),
     }
 }
 
@@ -219,7 +216,7 @@ pub fn psa_export_public_key_size(key_attrs: &psa_key_attributes_t) -> Result<us
         PSA_KEY_TYPE_RSA_PUBLIC_KEY | PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(
             export_asn1_int_max_size!(key_attrs.core.bits) + 11,
         )),
-        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+        _ => Err(ResponseStatus::UnsupportedParameters),
     }
 }
 
@@ -245,7 +242,10 @@ impl Key<'_> {
 
         if open_key_status != PSA_SUCCESS {
             error!("Open key status: {}", open_key_status);
-            Err(convert_status(open_key_status))
+            Err(convert_status(open_key_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::InvalidEncoding
+            })?)
         } else {
             Ok(Key(key_handle, key_handle_mutex))
         }
@@ -259,7 +259,10 @@ impl Key<'_> {
 
         if get_attrs_status != PSA_SUCCESS {
             error!("Get key attributes status: {}", get_attrs_status);
-            Err(convert_status(get_attrs_status))
+            Err(convert_status(get_attrs_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::InvalidEncoding
+            })?)
         } else {
             Ok(key_attrs)
         }

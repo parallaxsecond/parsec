@@ -47,7 +47,7 @@
 use log::info;
 use parsec::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Result};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -73,7 +73,7 @@ struct Opts {
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<()> {
     // Parsing the command line arguments.
     let opts: Opts = Opts::from_args();
 
@@ -84,22 +84,24 @@ fn main() -> Result<(), Error> {
     let _ = flag::register(SIGTERM, kill_signal.clone())?;
     let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
-    let mut config_file =
-        ::std::fs::read_to_string(opts.config.clone()).expect("Failed to read configuration file");
-    let mut config: ServiceConfig =
-        toml::from_str(&config_file).expect("Failed to parse service configuration");
+    let mut config_file = ::std::fs::read_to_string(opts.config.clone())?;
+    let mut config: ServiceConfig = toml::from_str(&config_file).or_else(|_| {
+        Err(Error::new(
+            ErrorKind::InvalidInput,
+            "Failed to parse service configuration",
+        ))
+    })?;
 
     log_setup(&config);
 
     info!("Parsec started. Configuring the service...");
 
-    let front_end_handler = ServiceBuilder::build_service(&config)
-        .ok_or_else(|| Error::new(ErrorKind::Other, "Parsec can not be configured."))?;
+    let front_end_handler = ServiceBuilder::build_service(&config)?;
     // Multiple threads can not just have a reference of the front end handler because they could
     // outlive the run function. It is needed to give them all ownership of the front end handler
     // through an Arc.
     let mut front_end_handler = Arc::from(front_end_handler);
-    let mut listener = ServiceBuilder::start_listener(config.listener);
+    let mut listener = ServiceBuilder::start_listener(config.listener)?;
     let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
     // Notify systemd that the daemon is ready, the start command will block until this point.
@@ -121,14 +123,15 @@ fn main() -> Result<(), Error> {
             drop(listener);
             drop(threadpool);
 
-            config_file = ::std::fs::read_to_string(opts.config.clone())
-                .expect("Failed to read configuration file");
-            config = toml::from_str(&config_file).expect("Failed to parse service configuration");
-            front_end_handler =
-                Arc::from(ServiceBuilder::build_service(&config).ok_or_else(|| {
-                    Error::new(ErrorKind::Other, "Parsec can not be configured.")
-                })?);
-            listener = ServiceBuilder::start_listener(config.listener);
+            config_file = ::std::fs::read_to_string(opts.config.clone())?;
+            config = toml::from_str(&config_file).or_else(|_| {
+                Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "Failed to parse service configuration",
+                ))
+            })?;
+            front_end_handler = Arc::from(ServiceBuilder::build_service(&config)?);
+            listener = ServiceBuilder::start_listener(config.listener)?;
             threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
             let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
