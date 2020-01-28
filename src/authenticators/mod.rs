@@ -21,9 +21,12 @@
 
 pub mod simple_authenticator;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApplicationName(String);
 

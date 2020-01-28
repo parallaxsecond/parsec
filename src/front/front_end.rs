@@ -138,3 +138,14 @@ impl FrontEndHandlerBuilder {
         })
     }
 }
+
+#[cfg(feature = "fuzz")]
+impl FrontEndHandler {
+    pub fn bypass_to_dispatcher(
+        &self,
+        req: Request,
+        app_name: crate::authenticators::ApplicationName,
+    ) -> Response {
+        self.dispatcher.dispatch_request(req, Some(app_name))
+    }
+}

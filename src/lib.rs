@@ -50,3 +50,8 @@ pub mod front;
 pub mod key_id_managers;
 pub mod providers;
 pub mod utils;
+
+#[cfg(feature = "fuzz")]
+pub mod fuzz_utils {
+    pub use parsec_interface::*;
+}
