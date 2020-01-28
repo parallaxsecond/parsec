@@ -17,7 +17,7 @@ use listener::Listen;
 use listener::ReadWrite;
 use log::error;
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{Error, ErrorKind, Result};
 use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
@@ -43,39 +43,46 @@ impl DomainSocketListener {
     /// - if a file/socket exists at the path specified for the socket and `remove_file`
     /// fails
     /// - if binding to the socket path fails
-    pub fn new(timeout: Duration) -> Self {
-        // If this PARSEC instance was socket activated (see the `parsec.socket`
+    pub fn new(timeout: Duration) -> Result<Self> {
+        // If this Parsec instance was socket activated (see the `parsec.socket`
         // file), the listener will be opened by systemd and passed to the
         // process.
-        // If PARSEC was service activated or not started under systemd, this
+        // If Parsec was service activated or not started under systemd, this
         // will return `0`.
-        let listener =
-            match sd_notify::listen_fds().expect("Could not retrieve listener from systemd") {
-                0 => {
-                    let socket = Path::new(SOCKET_PATH);
+        let listener = match sd_notify::listen_fds()? {
+            0 => {
+                let socket = Path::new(SOCKET_PATH);
 
-                    if socket.exists() {
-                        fs::remove_file(&socket).unwrap();
-                    }
-
-                    let listener =
-                        UnixListener::bind(SOCKET_PATH).expect("Could not bind listen socket");
-                    listener
-                        .set_nonblocking(true)
-                        .expect("Could not set the socket as non-blocking");
-
-                    listener
+                if socket.exists() {
+                    fs::remove_file(&socket)?;
                 }
-                1 => {
-                    // No need to set the socket as non-blocking, parsec.service
-                    // already requests that.
-                    let nfd = sd_notify::SD_LISTEN_FDS_START;
-                    unsafe { UnixListener::from_raw_fd(nfd) }
-                }
-                _ => panic!("Received too many file descriptors"),
-            };
 
-        Self { listener, timeout }
+                let listener = UnixListener::bind(SOCKET_PATH)?;
+                listener.set_nonblocking(true)?;
+
+                listener
+            }
+            1 => {
+                // No need to set the socket as non-blocking, parsec.service
+                // already requests that.
+                let nfd = sd_notify::SD_LISTEN_FDS_START;
+                // Safe as listen_fds gives us the information that one file descriptor was
+                // received and its value starts from SD_LISTEN_FDS_START.
+                unsafe { UnixListener::from_raw_fd(nfd) }
+            }
+            n => {
+                error!(
+                    "Received too many file descriptors ({} received, 0 or 1 expected).",
+                    n
+                );
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "too many file descriptors received",
+                ));
+            }
+        };
+
+        Ok(Self { listener, timeout })
     }
 }
 
@@ -128,8 +135,10 @@ impl DomainSocketListenerBuilder {
         self
     }
 
-    pub fn build(self) -> DomainSocketListener {
-        let timeout = self.timeout.expect("The listener timeout was not set");
-        DomainSocketListener::new(timeout)
+    pub fn build(self) -> Result<DomainSocketListener> {
+        DomainSocketListener::new(self.timeout.ok_or_else(|| {
+            error!("The listener timeout was not set.");
+            Error::new(ErrorKind::InvalidInput, "listener timeout missing")
+        })?)
     }
 }

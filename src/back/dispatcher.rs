@@ -18,6 +18,7 @@ use parsec_interface::requests::request::Request;
 use parsec_interface::requests::ProviderID;
 use parsec_interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind, Result};
 
 /// Component tasked with identifying the backend handler that can
 /// service a request.
@@ -83,9 +84,11 @@ impl DispatcherBuilder {
         self
     }
 
-    pub fn build(self) -> Dispatcher {
-        Dispatcher {
-            backends: self.backends.expect("Backends missing"),
-        }
+    pub fn build(self) -> Result<Dispatcher> {
+        Ok(Dispatcher {
+            backends: self
+                .backends
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "backends is missing"))?,
+        })
     }
 }

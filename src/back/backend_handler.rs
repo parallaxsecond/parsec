@@ -21,6 +21,7 @@ use parsec_interface::requests::{
     request::RequestHeader, Request, Response, ResponseStatus, Result,
 };
 use parsec_interface::requests::{BodyType, ProviderID};
+use std::io::{Error, ErrorKind};
 
 /// Component responsible for unmarshalling requests, passing the operation
 /// to the provider and marshalling the result.
@@ -222,15 +223,29 @@ impl BackEndHandlerBuilder {
         self
     }
 
-    pub fn build(self) -> BackEndHandler {
-        BackEndHandler {
-            provider: self.provider.expect("Provider missing"),
-            converter: self.converter.expect("Converter missing"),
-            provider_id: self.provider_id.expect("Provider ID missing"),
-            content_type: self.content_type.expect("Content type missing"),
-            accept_type: self.accept_type.expect("Accept type missing"),
-            version_min: self.version_min.expect("Version min missing"),
-            version_maj: self.version_maj.expect("Version maj missing"),
-        }
+    pub fn build(self) -> std::io::Result<BackEndHandler> {
+        Ok(BackEndHandler {
+            provider: self
+                .provider
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "provider is missing"))?,
+            converter: self
+                .converter
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "converter is missing"))?,
+            provider_id: self
+                .provider_id
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "provider_id is missing"))?,
+            content_type: self
+                .content_type
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "content_type is missing"))?,
+            accept_type: self
+                .accept_type
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "accept_type is missing"))?,
+            version_min: self
+                .version_min
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version_min is missing"))?,
+            version_maj: self
+                .version_maj
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version_maj is missing"))?,
+        })
     }
 }

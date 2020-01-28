@@ -31,6 +31,7 @@ use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -76,9 +77,9 @@ pub struct ServiceConfig {
 pub struct ServiceBuilder;
 
 impl ServiceBuilder {
-    pub fn build_service(config: &ServiceConfig) -> Option<FrontEndHandler> {
+    pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
         let key_id_managers =
-            build_key_id_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()));
+            build_key_id_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
 
         let providers = build_providers(
             config.provider.as_ref().unwrap_or(&Vec::new()),
@@ -87,33 +88,31 @@ impl ServiceBuilder {
 
         if providers.is_empty() {
             error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
-            return None;
+            return Err(Error::new(ErrorKind::InvalidData, "need one provider"));
         }
 
-        let backend_handlers = build_backend_handlers(providers);
+        let backend_handlers = build_backend_handlers(providers)?;
 
         let dispatcher = DispatcherBuilder::new()
             .with_backends(backend_handlers)
-            .build();
+            .build()?;
 
         let simple_authenticator = Box::from(SimpleAuthenticator {});
 
-        Some(
-            FrontEndHandlerBuilder::new()
-                .with_dispatcher(dispatcher)
-                .with_authenticator(AuthType::Simple, simple_authenticator)
-                .build(),
-        )
+        Ok(FrontEndHandlerBuilder::new()
+            .with_dispatcher(dispatcher)
+            .with_authenticator(AuthType::Simple, simple_authenticator)
+            .build()?)
     }
 
-    pub fn start_listener(config: ListenerConfig) -> Box<dyn Listen> {
+    pub fn start_listener(config: ListenerConfig) -> Result<Box<dyn Listen>> {
         let listener = match config.listener_type {
             ListenerType::DomainSocket => DomainSocketListenerBuilder::new()
                 .with_timeout(Duration::from_millis(config.timeout))
                 .build(),
-        };
+        }?;
 
-        Box::new(listener)
+        Ok(Box::new(listener))
     }
 
     pub fn build_threadpool(num_threads: Option<usize>) -> ThreadPool {
@@ -127,7 +126,7 @@ impl ServiceBuilder {
 
 fn build_backend_handlers(
     mut providers: HashMap<ProviderID, Provider>,
-) -> HashMap<ProviderID, BackEndHandler> {
+) -> Result<HashMap<ProviderID, BackEndHandler>> {
     let mut map = HashMap::new();
 
     let mut core_provider_builder =
@@ -143,22 +142,22 @@ fn build_backend_handlers(
             .with_content_type(BodyType::Protobuf)
             .with_accept_type(BodyType::Protobuf)
             .with_version(VERSION_MINOR, VERSION_MAJOR)
-            .build();
+            .build()?;
         let _ = map.insert(provider_id, backend_handler);
     }
 
     let core_provider_backend = BackEndHandlerBuilder::new()
-        .with_provider(Box::from(core_provider_builder.build()))
+        .with_provider(Box::from(core_provider_builder.build()?))
         .with_converter(Box::from(ProtobufConverter {}))
         .with_provider_id(ProviderID::CoreProvider)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
         .with_version(VERSION_MINOR, VERSION_MAJOR)
-        .build();
+        .build()?;
 
     let _ = map.insert(ProviderID::CoreProvider, core_provider_backend);
 
-    map
+    Ok(map)
 }
 
 fn build_providers(
@@ -185,8 +184,11 @@ fn build_providers(
         };
         // The safety is checked by the fact that only one instance per provider type is enforced.
         let provider = match unsafe { get_provider(config, key_id_manager.clone()) } {
-            Some(provider) => provider,
-            None => continue,
+            Ok(provider) => provider,
+            Err(e) => {
+                error!("Provider {} can not be created ({}).", provider_id, e);
+                continue;
+            }
         };
         let _ = map.insert(provider_id, provider);
     }
@@ -204,46 +206,46 @@ fn build_providers(
     )),
     allow(unused_variables)
 )]
-unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Option<Provider> {
+unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Result<Provider> {
     match config.provider_type {
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderType::MbedProvider => {
             info!("Creating a Mbed Crypto Provider.");
-            Some(Box::from(
+            Ok(Box::from(
                 MbedProviderBuilder::new()
                     .with_key_id_store(key_id_manager)
-                    .build(),
+                    .build()?,
             ))
         }
         #[cfg(feature = "pkcs11-provider")]
         ProviderType::Pkcs11Provider => {
             info!("Creating a PKCS 11 Provider.");
-            Some(Box::from(
+            Ok(Box::from(
                 Pkcs11ProviderBuilder::new()
                 .with_key_id_store(key_id_manager)
-                .with_pkcs11_library_path(config.library_path.clone().expect(
-                        "The PKCS 11 provider needs a library path in the configuration file.",
-                        ))
-                .with_slot_number(config.slot_number.expect(
-                        "The slot number of the device is needed to communicate with PKCS 11 library."
-                        ))
+                .with_pkcs11_library_path(config.library_path.clone().ok_or_else(|| {
+                        error!("The PKCS 11 provider needs a library path in the configuration file.");
+                        Error::new(ErrorKind::InvalidData, "missing PKCS 11 library path")
+                })?)
+                .with_slot_number(config.slot_number.ok_or_else(|| {
+                        error!("The slot number of the device is needed to communicate with PKCS 11 library.");
+                        Error::new(ErrorKind::InvalidData, "missing slot number")
+                })?)
                 .with_user_pin(config.user_pin.clone())
-                .build()
+                .build()?,
                 ))
         }
         #[cfg(feature = "tpm-provider")]
         ProviderType::TpmProvider => {
             info!("Creating a TPM Provider.");
-            Some(Box::from(
+            Ok(Box::from(
                 TpmProviderBuilder::new()
                     .with_key_id_store(key_id_manager)
-                    .with_tcti(
-                        config
-                            .tcti
-                            .as_ref()
-                            .expect("The TPM provider needs a TCTI device."),
-                    )
-                    .build(),
+                    .with_tcti(config.tcti.as_ref().ok_or_else(|| {
+                        error!("The TPM provider needs a TCTI in his configuration.");
+                        Error::new(ErrorKind::InvalidData, "missing TCTI")
+                    })?)
+                    .build()?,
             ))
         }
         #[cfg(not(all(
@@ -252,25 +254,25 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             feature = "tpm-provider"
         )))]
         _ => {
-            warn!(
+            error!(
                 "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
                 config.provider_type
             );
-            None
+            Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
         }
     }
 }
 
-fn build_key_id_managers(configs: &[KeyIdManagerConfig]) -> HashMap<String, KeyIdManager> {
+fn build_key_id_managers(configs: &[KeyIdManagerConfig]) -> Result<HashMap<String, KeyIdManager>> {
     let mut map = HashMap::new();
     for config in configs {
-        let _ = map.insert(config.name.clone(), get_key_id_manager(config));
+        let _ = map.insert(config.name.clone(), get_key_id_manager(config)?);
     }
 
-    map
+    Ok(map)
 }
 
-fn get_key_id_manager(config: &KeyIdManagerConfig) -> KeyIdManager {
+fn get_key_id_manager(config: &KeyIdManagerConfig) -> Result<KeyIdManager> {
     let manager = match config.manager_type {
         KeyIdManagerType::OnDisk => {
             let store_path = if let Some(store_path) = &config.store_path {
@@ -281,9 +283,9 @@ fn get_key_id_manager(config: &KeyIdManagerConfig) -> KeyIdManager {
 
             OnDiskKeyIDManagerBuilder::new()
                 .with_mappings_dir_path(PathBuf::from(store_path))
-                .build()
+                .build()?
         }
     };
 
-    Arc::new(RwLock::new(manager))
+    Ok(Arc::new(RwLock::new(manager)))
 }

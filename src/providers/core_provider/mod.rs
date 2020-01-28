@@ -18,6 +18,7 @@ use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::operations::{OpListProviders, ResultListProviders};
 use parsec_interface::operations::{OpPing, ResultPing};
 use parsec_interface::requests::{Opcode, ProviderID, Result};
+use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
@@ -104,16 +105,22 @@ impl CoreProviderBuilder {
         self
     }
 
-    pub fn build(self) -> CoreProvider {
+    pub fn build(self) -> std::io::Result<CoreProvider> {
         let mut core_provider = CoreProvider {
-            version_maj: self.version_maj.expect("Version Maj missing"),
-            version_min: self.version_min.expect("Version Min missing"),
-            providers: self.providers.expect("Providers info is missing"),
+            version_maj: self
+                .version_maj
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version maj is missing"))?,
+            version_min: self
+                .version_min
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version min is missing"))?,
+            providers: self
+                .providers
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "provider info is missing"))?,
         };
 
         core_provider.providers.push(core_provider.describe());
 
-        core_provider
+        Ok(core_provider)
     }
 }
 

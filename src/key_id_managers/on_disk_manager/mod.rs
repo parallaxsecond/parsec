@@ -326,12 +326,11 @@ impl OnDiskKeyIDManagerBuilder {
         self
     }
 
-    pub fn build(self) -> OnDiskKeyIDManager {
-        OnDiskKeyIDManager::new(
-            self.mappings_dir_path
-                .expect("Mappings directory path is missing"),
-        )
-        .unwrap()
+    pub fn build(self) -> std::io::Result<OnDiskKeyIDManager> {
+        OnDiskKeyIDManager::new(self.mappings_dir_path.ok_or_else(|| {
+            error!("Mappings directory path is missing");
+            Error::new(ErrorKind::InvalidData, "mappings directory path is missing")
+        })?)
     }
 }
 

@@ -36,6 +36,7 @@ use pkcs11::types::{
 use pkcs11::Ctx;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::io::{Error, ErrorKind};
 use std::mem;
 use std::sync::{Arc, Mutex, RwLock};
 use uuid::Uuid;
@@ -609,7 +610,10 @@ impl Provide for Pkcs11Provider {
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.key_data).unwrap();
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.key_data).or_else(|e| {
+            error!("Failed to parse RsaPublicKey data ({}).", e);
+            Err(ResponseStatus::PsaErrorInvalidArgument)
+        })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
@@ -1028,18 +1032,24 @@ impl Pkcs11ProviderBuilder {
         self
     }
 
-    pub fn build(self) -> Pkcs11Provider {
+    pub fn build(self) -> std::io::Result<Pkcs11Provider> {
         let library_path = self
             .pkcs11_library_path
-            .expect("Missing PKCS 11 library path");
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing library path"))?;
         info!(
             "Building a PKCS 11 provider with library \'{}\'",
             library_path
         );
         let slot_number = self
             .slot_number
-            .expect("The slot number of the device is needed to communicate with PKCS 11 library.");
-        let mut backend = Ctx::new(library_path).unwrap();
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing slot number"))?;
+        let mut backend = Ctx::new(library_path).or_else(|e| {
+            error!("Error creating a PKCS 11 context ({}).", e);
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "error creating PKCS 11 context",
+            ))
+        })?;
         let mut args = CK_C_INITIALIZE_ARGS::new();
         // Allow the PKCS 11 library to use OS native locking mechanism.
         args.CreateMutex = None;
@@ -1047,13 +1057,20 @@ impl Pkcs11ProviderBuilder {
         args.LockMutex = None;
         args.UnlockMutex = None;
         args.flags = CKF_OS_LOCKING_OK;
-        backend.initialize(Some(args)).unwrap();
-        Pkcs11Provider::new(
-            self.key_id_store.expect("Missing key ID store"),
+        backend.initialize(Some(args)).or_else(|e| {
+            error!("Error initializing the PKCS 11 backend ({}).", e);
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "PKCS 11 backend initializing failed",
+            ))
+        })?;
+        Ok(Pkcs11Provider::new(
+            self.key_id_store
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key ID store"))?,
             backend,
             slot_number,
             self.user_pin,
         )
-        .expect("Failed to initialise PKCS 11 Provider")
+        .ok_or_else(|| Error::new(ErrorKind::InvalidData, "PKCS 11 initialization failed"))?)
     }
 }

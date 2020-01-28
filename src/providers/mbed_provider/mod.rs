@@ -31,6 +31,7 @@ use psa_crypto_binding::psa_key_handle_t as KeyHandle;
 use psa_crypto_binding::psa_key_id_t as KeyId;
 use std::collections::HashSet;
 use std::convert::TryInto;
+use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
 use utils::Key;
@@ -280,7 +281,7 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id);
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id)?;
         let mut key = Key::new(&self.key_handle_mutex);
 
         let generate_key_status = unsafe {
@@ -299,7 +300,10 @@ impl Provide for MbedProvider {
                 &mut local_ids_handle,
             )?;
             error!("Generate key status: {}", generate_key_status);
-            return Err(utils::convert_status(generate_key_status));
+            return Err(utils::convert_status(generate_key_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?);
         }
 
         Ok(ResultCreateKey {})
@@ -323,7 +327,7 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id);
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id)?;
         let mut key = Key::new(&self.key_handle_mutex);
 
         let import_key_status = unsafe {
@@ -347,7 +351,10 @@ impl Provide for MbedProvider {
                 &mut local_ids_handle,
             )?;
             error!("Import key status: {}", import_key_status);
-            return Err(utils::convert_status(import_key_status));
+            return Err(utils::convert_status(import_key_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?);
         }
 
         Ok(ResultImportKey {})
@@ -382,7 +389,10 @@ impl Provide for MbedProvider {
 
         if export_status != PSA_SUCCESS {
             error!("Export status: {}", export_status);
-            return Err(utils::convert_status(export_status));
+            return Err(utils::convert_status(export_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?);
         }
 
         buffer.resize(actual_size, 0);
@@ -411,7 +421,10 @@ impl Provide for MbedProvider {
             Ok(ResultDestroyKey {})
         } else {
             error!("Destroy key status: {}", destroy_key_status);
-            Err(utils::convert_status(destroy_key_status))
+            Err(utils::convert_status(destroy_key_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?)
         }
     }
 
@@ -452,7 +465,10 @@ impl Provide for MbedProvider {
             Ok(res)
         } else {
             error!("Sign status: {}", sign_status);
-            Err(utils::convert_status(sign_status))
+            Err(utils::convert_status(sign_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?)
         }
     }
 
@@ -482,7 +498,10 @@ impl Provide for MbedProvider {
         if verify_status == PSA_SUCCESS {
             Ok(ResultAsymVerify {})
         } else {
-            Err(utils::convert_status(verify_status))
+            Err(utils::convert_status(verify_status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::PsaErrorGenericError
+            })?)
         }
     }
 }
@@ -516,8 +535,16 @@ impl MbedProviderBuilder {
         self
     }
 
-    pub fn build(self) -> MbedProvider {
-        MbedProvider::new(self.key_id_store.expect("Missing key ID store"))
-            .expect("Failed to initialise Mbed Provider")
+    pub fn build(self) -> std::io::Result<MbedProvider> {
+        MbedProvider::new(
+            self.key_id_store
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key ID store"))?,
+        )
+        .ok_or_else(|| {
+            Error::new(
+                ErrorKind::InvalidData,
+                "Mbed Provider initialization failed",
+            )
+        })
     }
 }
