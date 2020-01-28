@@ -19,21 +19,23 @@ use super::psa_crypto_binding::{
     psa_status_t,
 };
 use log::error;
-use parsec_interface::operations::key_attributes::*;
+use parsec_interface::operations::key_attributes;
+use parsec_interface::operations::key_attributes::{
+    Algorithm, AlgorithmInner, HashAlgorithm, KeyType, SignAlgorithm,
+};
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::sync::Mutex;
 
-/// Converts between native PARSEC key attributes and ID and the
+/// Converts between native Parsec key attributes and ID and the
 /// `psa_key_attributes_t` structure required by Mbed Crypto.
 ///
-/// # Panics
+/// # Errors
 ///
 /// If either algorithm or key type conversion fails. See docs for
 /// `convert_key_type` and `convert_algorithm` for more details.
 pub fn convert_key_attributes(
-    attrs: &KeyAttributes,
+    attrs: &key_attributes::KeyAttributes,
     key_id: psa_key_id_t,
 ) -> Result<psa_key_attributes_t> {
     Ok(psa_key_attributes_t {
@@ -95,7 +97,7 @@ pub fn convert_key_type(key_type: KeyType) -> Result<psa_key_type_t> {
 }
 
 /// Converts between native and Mbed Crypto key usage values.
-pub fn convert_key_usage(operation: &KeyAttributes) -> psa_key_usage_t {
+pub fn convert_key_usage(operation: &key_attributes::KeyAttributes) -> psa_key_usage_t {
     let mut usage: psa_key_usage_t = 0;
 
     // Build up the individual usage flags in the OpKeyCreateBase, and use them to bitwise-combine the equivalent flags
@@ -220,26 +222,59 @@ pub fn psa_export_public_key_size(key_attrs: &psa_key_attributes_t) -> Result<us
     }
 }
 
-/// Wrapper around raw `psa_key_handle_t` which allows for easier manipulation of
-/// handles and the attributes associated with them.
-pub struct Key<'a>(psa_key_handle_t, &'a Mutex<()>);
+/// Wrapper around raw `psa_key_attributes_t`
+pub struct KeyAttributes(psa_key_attributes_t);
 
-impl Key<'_> {
-    /// Create a new key with an empty handle.
-    pub fn new<'a>(key_handle_mutex: &'a Mutex<()>) -> Key<'a> {
-        Key(Default::default(), key_handle_mutex)
+impl KeyAttributes {
+    /// Reset the key attribute structure to a freshly initialized state.
+    /// Also frees any auxiliary resources that the structure may contain.
+    /// This method needs to be called on the KeyAttributes structure returned by the attributes
+    /// method when not needed anymore.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    ///
+    /// It is not safe to put this method in a Drop trait as it might be called after the Mbed
+    /// Crypto library is freed.
+    pub unsafe fn reset(&mut self) {
+        psa_crypto_binding::psa_reset_key_attributes(&mut self.0);
     }
 
-    /// Open a key and store the allocated handle for it.
-    pub fn open_key<'a>(key_id: psa_key_id_t, key_handle_mutex: &'a Mutex<()>) -> Result<Key<'a>> {
-        let mut key_handle: psa_key_handle_t = Default::default();
-        let open_key_status = unsafe {
-            let _guard = key_handle_mutex
-                .lock()
-                .expect("Grabbing key handle mutex failed");
-            psa_crypto_binding::psa_open_key(key_id, &mut key_handle)
-        };
+    pub fn raw(&self) -> psa_key_attributes_t {
+        self.0
+    }
+}
 
+impl AsRef<psa_key_attributes_t> for KeyAttributes {
+    fn as_ref(&self) -> &psa_key_attributes_t {
+        &self.0
+    }
+}
+
+impl AsMut<psa_key_attributes_t> for KeyAttributes {
+    fn as_mut(&mut self) -> &mut psa_key_attributes_t {
+        &mut self.0
+    }
+}
+
+/// Wrapper around raw `psa_key_handle_t` which allows for easier manipulation of
+/// handles and the attributes associated with them.
+pub struct KeyHandle(psa_key_handle_t);
+
+impl KeyHandle {
+    /// Open a key and store the allocated handle for it.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    /// * calls to open, generate, import and close are protected by the same mutex
+    /// * only PSA_KEY_SLOT_COUNT slots are used at any given time
+    pub unsafe fn open(key_id: psa_key_id_t) -> Result<KeyHandle> {
+        let mut key_handle: psa_key_handle_t = Default::default();
+        let open_key_status = psa_crypto_binding::psa_open_key(key_id, &mut key_handle);
         if open_key_status != PSA_SUCCESS {
             error!("Open key status: {}", open_key_status);
             Err(convert_status(open_key_status).ok_or_else(|| {
@@ -247,15 +282,68 @@ impl Key<'_> {
                 ResponseStatus::InvalidEncoding
             })?)
         } else {
-            Ok(Key(key_handle, key_handle_mutex))
+            Ok(KeyHandle(key_handle))
+        }
+    }
+
+    /// Generate a key or a key pair.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    /// * calls to open, generate, import and close are protected by the same mutex
+    /// * only PSA_KEY_SLOT_COUNT slots are used at any given time
+    pub unsafe fn generate(attributes: &psa_key_attributes_t) -> Result<Self> {
+        let mut key_handle: psa_key_handle_t = Default::default();
+        let status = psa_crypto_binding::psa_generate_key(attributes, &mut key_handle);
+        if status != PSA_SUCCESS {
+            error!("Generate key status: {}", status);
+            Err(convert_status(status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::InvalidEncoding
+            })?)
+        } else {
+            Ok(KeyHandle(key_handle))
+        }
+    }
+
+    /// Import a key in binary format.
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    /// * calls to open, generate, import and close are protected by the same mutex
+    /// * only PSA_KEY_SLOT_COUNT slots are used at any given time
+    pub unsafe fn import(attributes: &psa_key_attributes_t, key_data: Vec<u8>) -> Result<Self> {
+        let mut key_handle: psa_key_handle_t = Default::default();
+        let status = psa_crypto_binding::psa_import_key(
+            attributes,
+            key_data.as_ptr(),
+            key_data.len(),
+            &mut key_handle,
+        );
+        if status != PSA_SUCCESS {
+            error!("Import key status: {}", status);
+            Err(convert_status(status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::InvalidEncoding
+            })?)
+        } else {
+            Ok(KeyHandle(key_handle))
         }
     }
 
     /// Get the attributes associated with the key stored in this handle.
-    pub fn get_attributes(&self) -> Result<psa_key_attributes_t> {
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    pub unsafe fn attributes(&self) -> Result<KeyAttributes> {
         let mut key_attrs = get_empty_key_attributes();
-        let get_attrs_status =
-            unsafe { psa_crypto_binding::psa_get_key_attributes(self.0, &mut key_attrs) };
+        let get_attrs_status = psa_crypto_binding::psa_get_key_attributes(self.0, &mut key_attrs);
 
         if get_attrs_status != PSA_SUCCESS {
             error!("Get key attributes status: {}", get_attrs_status);
@@ -264,40 +352,47 @@ impl Key<'_> {
                 ResponseStatus::InvalidEncoding
             })?)
         } else {
-            Ok(key_attrs)
+            Ok(KeyAttributes(key_attrs))
         }
     }
 
     /// Release the key stored under this handle.
-    pub fn release_key(&mut self) {
-        if self.0 == EMPTY_KEY_HANDLE {
-            return;
-        }
-        unsafe {
-            let _guard = self.1.lock().expect("Grabbing key handle mutex failed");
-            let _ = psa_crypto_binding::psa_close_key(self.0);
+    ///
+    /// # Safety
+    ///
+    /// Calling this function is only safe if:
+    /// * the Mbed Crypto library has already been initialized
+    /// * calls to open, generate, import and close are protected by the same mutex
+    /// * only PSA_KEY_SLOT_COUNT slots are used at any given time
+    ///
+    /// Because of the conditions above, it is not safe to put this function inside a Drop trait as
+    /// it would make possible for this function to be executed in an unsafe context.
+    pub unsafe fn close(&mut self) -> Result<()> {
+        let status = psa_crypto_binding::psa_close_key(self.0);
+
+        if status != PSA_SUCCESS {
+            error!("Close key status: {}", status);
+            Err(convert_status(status).ok_or_else(|| {
+                error!("Failed to convert error status.");
+                ResponseStatus::InvalidEncoding
+            })?)
+        } else {
+            Ok(())
         }
     }
 
-    /// Extract the raw handle value.
-    pub fn raw_handle(&self) -> psa_key_handle_t {
+    pub fn raw(&self) -> psa_key_handle_t {
         self.0
     }
 }
 
-impl Drop for Key<'_> {
-    fn drop(&mut self) {
-        self.release_key();
-    }
-}
-
-impl AsRef<psa_key_handle_t> for Key<'_> {
+impl AsRef<psa_key_handle_t> for KeyHandle {
     fn as_ref(&self) -> &psa_key_handle_t {
         &self.0
     }
 }
 
-impl AsMut<psa_key_handle_t> for Key<'_> {
+impl AsMut<psa_key_handle_t> for KeyHandle {
     fn as_mut(&mut self) -> &mut psa_key_handle_t {
         &mut self.0
     }
