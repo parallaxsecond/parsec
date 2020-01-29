@@ -1,5 +1,4 @@
 [core_settings]
-log_level = "error"
 # The CI already timestamps the logs
 log_timestamp = false
 

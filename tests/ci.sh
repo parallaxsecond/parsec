@@ -89,7 +89,7 @@ fi
 ##############
 # Build test #
 ##############
-RUST_BACKTRACE=1 cargo build -vv $FEATURES
+RUST_BACKTRACE=1 cargo build $FEATURES
 
 #################
 # Static checks #
@@ -101,7 +101,7 @@ then
 fi
 if rustup component list | grep -q clippy
 then
-	cargo clippy --all-targets $FEATURES -- -D warnings
+	cargo clippy --all-targets $FEATURES -- -D clippy::all
 fi
 
 ############################
@@ -113,7 +113,7 @@ RUST_BACKTRACE=1 cargo test --doc $FEATURES
 ######################################
 # Start Parsec for integration tests #
 ######################################
-RUST_BACKTRACE=1 cargo run -vv $FEATURES -- --config $CONFIG_PATH &
+RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
 SERVER_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.
 sleep 5
@@ -121,18 +121,18 @@ sleep 5
 if [[ $1 = "all" ]]
 then
 	# All providers tests
-	RUST_BACKTRACE=1 cargo test -vv $FEATURES all_providers
+	RUST_BACKTRACE=1 cargo test $FEATURES all_providers
 else
 	# Per provider tests
 	################
 	# Normal tests #
 	################
-	RUST_BACKTRACE=1 cargo test -vv $FEATURES normal_tests
+	RUST_BACKTRACE=1 cargo test $FEATURES normal_tests
 
 	#####################
 	# Persistence tests #
 	#####################
-	RUST_BACKTRACE=1 cargo test -vv $FEATURES persistent-before
+	RUST_BACKTRACE=1 cargo test $FEATURES persistent-before
 
 	# Create a fake mapping file for the root application, the provider and a
 	# key name of "Test Key". It contains a valid PSA Key ID.
@@ -152,13 +152,25 @@ else
 
 	# Trigger a configuration reload to load the new mappings.
 	kill -s SIGHUP $SERVER_PID
+	# Sleep time needed to make sure Parsec is ready before launching the tests.
+	sleep 5
 
-	RUST_BACKTRACE=1 cargo test -vv $FEATURES persistent-after
+	RUST_BACKTRACE=1 cargo test $FEATURES persistent-after
+
+	kill $SERVER_PID
+	# Sleep time needed to make sure Parsec is killed.
+	sleep 2
 
 	################
 	# Stress tests #
 	################
-	RUST_BACKTRACE=1 cargo test -vv $FEATURES stress_test
+	# Change the log level for the stress tests because logging is limited on the
+	# CI servers.
+	RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
+	SERVER_PID=$!
+	sleep 5
+
+	RUST_BACKTRACE=1 cargo test $FEATURES stress_test
 fi
 
 kill $SERVER_PID
