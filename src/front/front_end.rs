@@ -34,6 +34,8 @@ pub struct FrontEndHandler {
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
     #[derivative(Debug = "ignore")]
     authenticators: HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>,
+    /// Value used to limit the size of the request body to be that can be accepted by the service.
+    body_len_limit: usize,
 }
 
 impl FrontEndHandler {
@@ -47,7 +49,7 @@ impl FrontEndHandler {
     pub fn handle_request<T: Read + Write>(&self, mut stream: T) {
         // Read bytes from stream
         // De-Serialise bytes into a request
-        let request = match Request::read_from_stream(&mut stream) {
+        let request = match Request::read_from_stream(&mut stream, self.body_len_limit) {
             Ok(request) => request,
             Err(status) => {
                 error!("Failed to read request; status: {}", status);
@@ -93,6 +95,7 @@ pub struct FrontEndHandlerBuilder {
     dispatcher: Option<Dispatcher>,
     #[derivative(Debug = "ignore")]
     authenticators: Option<HashMap<AuthType, Box<dyn Authenticate + Send + Sync>>>,
+    body_len_limit: Option<usize>,
 }
 
 impl FrontEndHandlerBuilder {
@@ -100,6 +103,7 @@ impl FrontEndHandlerBuilder {
         FrontEndHandlerBuilder {
             dispatcher: None,
             authenticators: None,
+            body_len_limit: None,
         }
     }
 
@@ -127,6 +131,11 @@ impl FrontEndHandlerBuilder {
         self
     }
 
+    pub fn with_body_len_limit(mut self, body_len_limit: usize) -> Self {
+        self.body_len_limit = Some(body_len_limit);
+        self
+    }
+
     pub fn build(self) -> Result<FrontEndHandler> {
         Ok(FrontEndHandler {
             dispatcher: self
@@ -135,6 +144,9 @@ impl FrontEndHandlerBuilder {
             authenticators: self
                 .authenticators
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "authenticators is missing"))?,
+            body_len_limit: self
+                .body_len_limit
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "body_len_limit is missing"))?,
         })
     }
 }

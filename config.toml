@@ -17,6 +17,10 @@
 # Control whether log entries contain a timestamp.
 #log_timestamp = false
 
+# Decide how large (in bytes) request bodies can be before they get rejected automatically.
+# Defaults to 1MB.
+#body_len_limit = 1048576
+
 # (Required) Configuration for the service IPC listener component.
 [listener]
 # (Required) Type of IPC that the service will support.
