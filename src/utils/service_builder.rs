@@ -54,6 +54,9 @@ use {crate::providers::ProviderType, log::info};
 const VERSION_MINOR: u8 = 0;
 const VERSION_MAJOR: u8 = 1;
 
+/// Default value for the limit on the request body size (in bytes) - equal to 1MB
+const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
+
 type KeyIdManager = Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>;
 type Provider = Box<dyn Provide + Send + Sync>;
 
@@ -63,6 +66,7 @@ pub struct CoreSettings {
     pub idle_listener_sleep_duration: Option<u64>,
     pub log_level: Option<LevelFilter>,
     pub log_timestamp: Option<bool>,
+    pub body_len_limit: Option<usize>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -102,6 +106,12 @@ impl ServiceBuilder {
         Ok(FrontEndHandlerBuilder::new()
             .with_dispatcher(dispatcher)
             .with_authenticator(AuthType::Simple, simple_authenticator)
+            .with_body_len_limit(
+                config
+                    .core_settings
+                    .body_len_limit
+                    .unwrap_or(DEFAULT_BODY_LEN_LIMIT),
+            )
             .build()?)
     }
 
