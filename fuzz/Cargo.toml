@@ -1,0 +1,28 @@
+
+[package]
+name = "parsec-fuzz"
+version = "0.0.0"
+authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
+           "Hugues de Valon <hugues.devalon@arm.com>"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+parsec = { path = "..", features = ["mbed-crypto-provider", "pkcs11-provider", "tpm-provider"] }
+libfuzzer-sys = "0.3.0"
+flexi_logger = "0.14.5"
+log = "0.4.8"
+toml = "0.4.2"
+lazy_static = "1.4.0"
+arbitrary = { version = "0.4.0", features = ["derive"] }
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_service"
+path = "fuzz_targets/fuzz_service.rs"

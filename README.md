@@ -104,6 +104,10 @@ This project uses the following third party crates:
 * bincode (MIT)
 * structopt (MIT and Apache-2.0)
 * derivative (MIT and Apache-2.0)
+* arbitrary (MIT and Apache-2.0)
+* libfuzzer-sys (MIT, Apache-2.0 and NCSA)
+* flexi_logger (MIT and Apache-2.0)
+* lazy_static (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
