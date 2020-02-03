@@ -12,6 +12,36 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#![deny(
+    nonstandard_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    private_in_public,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    missing_copy_implementations
+)]
+// This one is hard to avoid.
+#![allow(clippy::multiple_crate_versions)]
+
 use cargo_toml::{Manifest, Value};
 use serde::Deserialize;
 use std::env;
@@ -75,63 +105,67 @@ fn get_value_from_table<'a>(table: &'a Value, key: &str) -> Result<&'a Value> {
 // parameters to the setup_mbed_crypto.sh script which clones and builds Mbed Crypto and create
 // a static library.
 fn setup_mbed_crypto(mbed_config: &MbedConfig, mbed_version: &str) -> Result<()> {
-    let mut run_script = ::std::process::Command::new(SETUP_MBED_SCRIPT_PATH);
-    run_script.arg(mbed_version).arg(
-        mbed_config
-            .mbed_path
-            .clone()
-            .unwrap_or(String::from(env::var("OUT_DIR").unwrap())),
-    );
-
-    let toolchain;
-    let mbed_compiler;
-    let mbed_archiver;
-    if std::env::var("TARGET").unwrap() == "aarch64-unknown-linux-gnu" {
-        toolchain = mbed_config
-            .aarch64_unknown_linux_gnu
-            .as_ref()
-            .ok_or_else(|| {
+    let (mbed_compiler, mbed_archiver) =
+        if std::env::var("TARGET").unwrap() == "aarch64-unknown-linux-gnu" {
+            let toolchain;
+            toolchain = mbed_config
+                .aarch64_unknown_linux_gnu
+                .as_ref()
+                .ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidInput,
+                        "The aarch64_unknown_linux_gnu subtable of mbed_config should exist",
+                    )
+                })?;
+            (
+                toolchain
+                    .mbed_compiler
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_ARM64_MBED_COMPILER.to_string()),
+                toolchain
+                    .mbed_archiver
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_ARM64_MBED_ARCHIVER.to_string()),
+            )
+        } else {
+            let toolchain;
+            toolchain = mbed_config.native.as_ref().ok_or_else(|| {
                 Error::new(
                     ErrorKind::InvalidInput,
-                    "The aarch64_unknown_linux_gnu subtable of mbed_config should exist",
+                    "The native subtable of mbed_config should exist",
                 )
             })?;
-        mbed_compiler = toolchain
-            .mbed_compiler
-            .clone()
-            .unwrap_or(DEFAULT_ARM64_MBED_COMPILER.to_string());
-        mbed_archiver = toolchain
-            .mbed_archiver
-            .clone()
-            .unwrap_or(DEFAULT_ARM64_MBED_ARCHIVER.to_string());
-    } else {
-        toolchain = mbed_config.native.as_ref().ok_or_else(|| {
-            Error::new(
-                ErrorKind::InvalidInput,
-                "The native subtable of mbed_config should exist",
+            (
+                toolchain
+                    .mbed_compiler
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_NATIVE_MBED_COMPILER.to_string()),
+                toolchain
+                    .mbed_archiver
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_NATIVE_MBED_ARCHIVER.to_string()),
             )
-        })?;
-        mbed_compiler = toolchain
-            .mbed_compiler
-            .clone()
-            .unwrap_or(DEFAULT_NATIVE_MBED_COMPILER.to_string());
-        mbed_archiver = toolchain
-            .mbed_archiver
-            .clone()
-            .unwrap_or(DEFAULT_NATIVE_MBED_ARCHIVER.to_string());
-    }
+        };
 
-    run_script.arg(format!("CC={}", mbed_compiler));
-    run_script.arg(format!("AR={}", mbed_archiver));
+    let script_fail = |_| {
+        Err(Error::new(
+            ErrorKind::Other,
+            "setup_mbed_crypto.sh script failed",
+        ))
+    };
 
-    if !run_script
+    if !::std::process::Command::new(SETUP_MBED_SCRIPT_PATH)
+        .arg(mbed_version)
+        .arg(
+            mbed_config
+                .mbed_path
+                .clone()
+                .unwrap_or_else(|| env::var("OUT_DIR").unwrap()),
+        )
+        .arg(format!("CC={}", mbed_compiler))
+        .arg(format!("AR={}", mbed_archiver))
         .status()
-        .or_else(|_| {
-            Err(Error::new(
-                ErrorKind::Other,
-                "setup_mbed_crypto.sh script failed",
-            ))
-        })?
+        .or_else(script_fail)?
         .success()
     {
         Err(Error::new(
@@ -147,7 +181,7 @@ fn generate_mbed_bindings(mbed_config: &MbedConfig, mbed_version: &str) -> Resul
     let mbed_include_dir = mbed_config
         .mbed_path
         .clone()
-        .unwrap_or(String::from(env::var("OUT_DIR").unwrap()))
+        .unwrap_or_else(|| env::var("OUT_DIR").unwrap())
         + "/mbed-crypto-"
         + mbed_version
         + "/include";
@@ -236,7 +270,7 @@ fn main() -> Result<()> {
             "cargo:rustc-link-search=native={}/mbed-crypto-{}/library/",
             mbed_config
                 .mbed_path
-                .unwrap_or(String::from(env::var("OUT_DIR").unwrap())),
+                .unwrap_or_else(|| env::var("OUT_DIR").unwrap()),
             mbed_version,
         );
         println!("cargo:rustc-link-lib=static=mbedcrypto");
