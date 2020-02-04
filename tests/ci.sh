@@ -101,7 +101,7 @@ then
 fi
 if rustup component list | grep -q clippy
 then
-	cargo clippy --all-targets $FEATURES -- -D clippy::all
+	cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
 fi
 
 ############################

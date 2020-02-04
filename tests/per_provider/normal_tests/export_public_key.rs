@@ -23,7 +23,7 @@ fn export_public_key() -> Result<()> {
 
     client.create_rsa_sign_key(key_name.clone())?;
 
-    client.export_public_key(key_name)?;
+    let _ = client.export_public_key(key_name)?;
 
     Ok(())
 }
