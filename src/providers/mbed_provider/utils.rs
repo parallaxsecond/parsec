@@ -87,12 +87,12 @@ pub fn convert_key_bits(key_size: u32) -> psa_key_bits_t {
 /// # Errors
 ///
 /// Only `KeyType::RsaKeypair` and `KeyType::RsaPublicKey` are supported. Returns
-/// ResponseStatus::UnsupportedParameters otherwise.
+/// ResponseStatus::PsaErrorNotSupported otherwise.
 pub fn convert_key_type(key_type: KeyType) -> Result<psa_key_type_t> {
     match key_type {
         KeyType::RsaKeypair => Ok(PSA_KEY_TYPE_RSA_KEYPAIR),
         KeyType::RsaPublicKey => Ok(PSA_KEY_TYPE_RSA_PUBLIC_KEY),
-        _ => Err(ResponseStatus::UnsupportedParameters),
+        _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
 
@@ -136,20 +136,20 @@ pub fn convert_key_usage(operation: &key_attributes::KeyAttributes) -> psa_key_u
 ///
 /// Only `AlgorithmInner::Sign` is supported as algorithm with only the
 /// `SignAlgorithm::RsaPkcs1v15Sign` signing algorithm. Will return
-/// ResponseStatus::UnsupportedParameters otherwise.
+/// ResponseStatus::PsaErrorNotSupported otherwise.
 pub fn convert_algorithm(alg: &Algorithm) -> Result<psa_algorithm_t> {
     let mut algo_val: psa_algorithm_t;
     match alg.inner() {
         AlgorithmInner::Sign(sign, hash) => {
             algo_val = match sign {
                 SignAlgorithm::RsaPkcs1v15Sign => PSA_ALG_RSA_PKCS1V15_SIGN_BASE,
-                _ => return Err(ResponseStatus::UnsupportedParameters),
+                _ => return Err(ResponseStatus::PsaErrorNotSupported),
             };
             if let Some(hash_alg) = hash {
                 algo_val |= convert_hash_algorithm(*hash_alg) & PSA_ALG_HASH_MASK;
             }
         }
-        _ => return Err(ResponseStatus::UnsupportedParameters),
+        _ => return Err(ResponseStatus::PsaErrorNotSupported),
     }
     Ok(algo_val)
 }
@@ -179,14 +179,25 @@ const PSA_STATUS_TO_RESPONSE_STATUS_OFFSET: psa_status_t = 1000;
 
 /// Converts between Mbed Crypto and native status values.
 /// Returns None if the conversion can not happen.
-pub fn convert_status(psa_status: psa_status_t) -> Option<ResponseStatus> {
+pub fn convert_status(psa_status: psa_status_t) -> ResponseStatus {
     // psa_status_t errors are i32, negative values between -132 and -151. To map them to u16
     // ResponseStatus values between 1000 and 1999 (as per the Wire Protocol), they are taken their
     // absolute values and added 1000.
-    let psa_status = psa_status.checked_abs()?;
-    let psa_status = psa_status.checked_add(PSA_STATUS_TO_RESPONSE_STATUS_OFFSET)?;
-    let psa_status = u16::try_from(psa_status).ok()?;
-    Some(psa_status.try_into().ok()?)
+    let psa_status = match psa_status.checked_abs() {
+        Some(status) => status,
+        None => return ResponseStatus::InvalidEncoding,
+    };
+    let psa_status = match psa_status.checked_add(PSA_STATUS_TO_RESPONSE_STATUS_OFFSET) {
+        Some(status) => status,
+        None => return ResponseStatus::InvalidEncoding,
+    };
+    let psa_status = match u16::try_from(psa_status) {
+        Ok(status) => status,
+        Err(_) => return ResponseStatus::InvalidEncoding,
+    };
+    psa_status
+        .try_into()
+        .unwrap_or(ResponseStatus::InvalidEncoding)
 }
 
 macro_rules! bits_to_bytes {
@@ -201,7 +212,7 @@ pub fn psa_asymmetric_sign_output_size(key_attrs: &psa_key_attributes_t) -> Resu
     match key_attrs.core.type_ {
         PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits))),
         PSA_KEY_TYPE_ECC_KEYPAIR_BASE => Ok(usize::from(bits_to_bytes!(key_attrs.core.bits) * 2)),
-        _ => Err(ResponseStatus::UnsupportedParameters),
+        _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
 
@@ -218,7 +229,7 @@ pub fn psa_export_public_key_size(key_attrs: &psa_key_attributes_t) -> Result<us
         PSA_KEY_TYPE_RSA_PUBLIC_KEY | PSA_KEY_TYPE_RSA_KEYPAIR => Ok(usize::from(
             export_asn1_int_max_size!(key_attrs.core.bits) + 11,
         )),
-        _ => Err(ResponseStatus::UnsupportedParameters),
+        _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
 
@@ -277,10 +288,7 @@ impl KeyHandle {
         let open_key_status = psa_crypto_binding::psa_open_key(key_id, &mut key_handle);
         if open_key_status != PSA_SUCCESS {
             error!("Open key status: {}", open_key_status);
-            Err(convert_status(open_key_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::InvalidEncoding
-            })?)
+            Err(convert_status(open_key_status))
         } else {
             Ok(KeyHandle(key_handle))
         }
@@ -299,10 +307,7 @@ impl KeyHandle {
         let status = psa_crypto_binding::psa_generate_key(attributes, &mut key_handle);
         if status != PSA_SUCCESS {
             error!("Generate key status: {}", status);
-            Err(convert_status(status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::InvalidEncoding
-            })?)
+            Err(convert_status(status))
         } else {
             Ok(KeyHandle(key_handle))
         }
@@ -326,10 +331,7 @@ impl KeyHandle {
         );
         if status != PSA_SUCCESS {
             error!("Import key status: {}", status);
-            Err(convert_status(status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::InvalidEncoding
-            })?)
+            Err(convert_status(status))
         } else {
             Ok(KeyHandle(key_handle))
         }
@@ -347,10 +349,7 @@ impl KeyHandle {
 
         if get_attrs_status != PSA_SUCCESS {
             error!("Get key attributes status: {}", get_attrs_status);
-            Err(convert_status(get_attrs_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::InvalidEncoding
-            })?)
+            Err(convert_status(get_attrs_status))
         } else {
             Ok(KeyAttributes(key_attrs))
         }
@@ -372,10 +371,7 @@ impl KeyHandle {
 
         if status != PSA_SUCCESS {
             error!("Close key status: {}", status);
-            Err(convert_status(status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::InvalidEncoding
-            })?)
+            Err(convert_status(status))
         } else {
             Ok(())
         }

@@ -54,7 +54,7 @@ fn create_and_import_key() -> Result<()> {
             KEY_DATA.to_vec(),
         )
         .expect_err("Key should have already existed");
-    assert_eq!(status, ResponseStatus::KeyAlreadyExists);
+    assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
     Ok(())
 }
@@ -78,7 +78,7 @@ fn import_key_twice() -> Result<()> {
             KEY_DATA.to_vec(),
         )
         .expect_err("The key with the same name has already been created.");
-    assert_eq!(status, ResponseStatus::KeyAlreadyExists);
+    assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
     Ok(())
 }

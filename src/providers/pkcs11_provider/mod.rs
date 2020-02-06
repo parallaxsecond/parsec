@@ -14,6 +14,7 @@
 // limitations under the License.
 use super::Provide;
 use crate::authenticators::ApplicationName;
+use crate::key_id_managers;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info, warn};
@@ -29,9 +30,8 @@ use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
 use pkcs11::types::{
-    CKF_OS_LOCKING_OK, CKF_RW_SESSION, CKF_SERIAL_SESSION, CKR_OK, CKR_SIGNATURE_INVALID, CKU_USER,
-    CK_ATTRIBUTE, CK_C_INITIALIZE_ARGS, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE,
-    CK_SLOT_ID,
+    CKF_OS_LOCKING_OK, CKF_RW_SESSION, CKF_SERIAL_SESSION, CKR_OK, CKU_USER, CK_ATTRIBUTE,
+    CK_C_INITIALIZE_ARGS, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE, CK_SLOT_ID,
 };
 use pkcs11::Ctx;
 use serde::{Deserialize, Serialize};
@@ -42,6 +42,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use uuid::Uuid;
 
 type LocalIdStore = HashSet<[u8; 4]>;
+
+mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::CreateKey,
@@ -146,7 +148,7 @@ impl Session<'_> {
                     "Error opening session for slot {}: {}.",
                     provider.slot_number, e
                 );
-                Err(ResponseStatus::PsaErrorCommunicationFailure)
+                Err(utils::to_response_status(e))
             }
         }
     }
@@ -191,7 +193,7 @@ impl Session<'_> {
                 }
                 Err(e) => {
                     error!("Login operation failed with {}", e);
-                    Err(ResponseStatus::PsaErrorHardwareFailure)
+                    Err(utils::to_response_status(e))
                 }
             }
         } else {
@@ -228,7 +230,7 @@ impl Session<'_> {
                         "Failed to log out from session {} due to error {}. Continuing...",
                         self.session_handle, e
                     );
-                    Err(ResponseStatus::PsaErrorHardwareFailure)
+                    Err(utils::to_response_status(e))
                 }
             }
         } else {
@@ -272,11 +274,8 @@ fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result
                 Err(ResponseStatus::KeyIDManagerError)
             }
         }
-        Ok(None) => Err(ResponseStatus::KeyDoesNotExist),
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
@@ -298,10 +297,7 @@ fn create_key_id(
 
             Ok(key_id)
         }
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
@@ -316,20 +312,14 @@ fn remove_key_id(
             let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
 fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<bool> {
     match store_handle.exists(key_triple) {
         Ok(val) => Ok(val),
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
@@ -446,13 +436,13 @@ impl Pkcs11Provider {
 
         if let Err(e) = self.backend.find_objects_init(session, &template) {
             error!("Object enumeration init failed with {}", e);
-            Err(ResponseStatus::PsaErrorHardwareFailure)
+            Err(utils::to_response_status(e))
         } else {
             match self.backend.find_objects(session, 1) {
                 Ok(objects) => {
                     if let Err(e) = self.backend.find_objects_final(session) {
                         error!("Object enumeration final failed with {}", e);
-                        Err(ResponseStatus::PsaErrorHardwareFailure)
+                        Err(utils::to_response_status(e))
                     } else if objects.is_empty() {
                         Err(ResponseStatus::PsaErrorDoesNotExist)
                     } else {
@@ -461,7 +451,7 @@ impl Pkcs11Provider {
                 }
                 Err(e) => {
                     error!("Finding objects failed with {}", e);
-                    Err(ResponseStatus::PsaErrorHardwareFailure)
+                    Err(utils::to_response_status(e))
                 }
             }
         }
@@ -497,7 +487,7 @@ impl Provide for Pkcs11Provider {
         {
             error!(
                 "The PKCS11 provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
@@ -508,7 +498,7 @@ impl Provide for Pkcs11Provider {
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::KeyAlreadyExists);
+            return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
             key_triple.clone(),
@@ -592,7 +582,7 @@ impl Provide for Pkcs11Provider {
         {
             error!(
                 "The PKCS 11 provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
@@ -600,7 +590,7 @@ impl Provide for Pkcs11Provider {
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::KeyAlreadyExists);
+            return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
             key_triple.clone(),
@@ -686,7 +676,7 @@ impl Provide for Pkcs11Provider {
                     &mut *store_handle,
                     &mut local_ids_handle,
                 )?;
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             }
         }
     }
@@ -725,14 +715,14 @@ impl Provide for Pkcs11Provider {
                 Ok((rv, attrs)) => {
                     if rv != CKR_OK {
                         error!("Error when extracting attribute: {}.", rv);
-                        Err(ResponseStatus::PsaErrorCommunicationFailure)
+                        Err(utils::rv_to_response_status(rv))
                     } else {
                         Ok((attrs[0].ulValueLen, attrs[1].ulValueLen))
                     }
                 }
                 Err(e) => {
                     error!("Failed to read attributes from public key. Error: {}", e);
-                    Err(ResponseStatus::PsaErrorCommunicationFailure)
+                    Err(utils::to_response_status(e))
                 }
             }?;
 
@@ -757,7 +747,7 @@ impl Provide for Pkcs11Provider {
                 let (rv, attrs) = res;
                 if rv != CKR_OK {
                     error!("Error when extracting attribute: {}.", rv);
-                    Err(ResponseStatus::PsaErrorCommunicationFailure)
+                    Err(utils::rv_to_response_status(rv))
                 } else {
                     let modulus = attrs[0].get_bytes();
                     let public_exponent = attrs[1].get_bytes();
@@ -780,7 +770,7 @@ impl Provide for Pkcs11Provider {
             }
             Err(e) => {
                 error!("Failed to read attributes from public key. Error: {}", e);
-                Err(ResponseStatus::PsaErrorCommunicationFailure)
+                Err(utils::to_response_status(e))
             }
         }
     }
@@ -806,7 +796,7 @@ impl Provide for Pkcs11Provider {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {
                         error!("Failed to destroy private part of the key. Error: {}", e);
-                        return Err(ResponseStatus::PsaErrorGenericError);
+                        return Err(utils::to_response_status(e));
                     }
                 };
             }
@@ -823,7 +813,7 @@ impl Provide for Pkcs11Provider {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {
                         error!("Failed to destroy private part of the key. Error: {}", e);
-                        return Err(ResponseStatus::PsaErrorGenericError);
+                        return Err(utils::to_response_status(e));
                     }
                 };
             }
@@ -862,7 +852,7 @@ impl Provide for Pkcs11Provider {
 
         if hash.len() != 32 {
             error!("The PKCS11 provider currently only supports 256 bits long digests.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
@@ -891,13 +881,13 @@ impl Provide for Pkcs11Provider {
                     Ok(signature) => Ok(ResultAsymSign { signature }),
                     Err(e) => {
                         error!("Failed to execute signing operation. Error: {}", e);
-                        Err(ResponseStatus::PsaErrorGenericError)
+                        Err(utils::to_response_status(e))
                     }
                 }
             }
             Err(e) => {
                 error!("Failed to initialize signing operation. Error: {}", e);
-                Err(ResponseStatus::PsaErrorGenericError)
+                Err(utils::to_response_status(e))
             }
         }
     }
@@ -921,7 +911,7 @@ impl Provide for Pkcs11Provider {
 
         if hash.len() != 32 {
             error!("The PKCS11 provider currently only supports 256 bits long digests.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
@@ -954,21 +944,12 @@ impl Provide for Pkcs11Provider {
                     .verify(session.session_handle(), &digest_info, &signature)
                 {
                     Ok(_) => Ok(ResultAsymVerify {}),
-                    Err(e) => match e {
-                        pkcs11::errors::Error::Pkcs11(CKR_SIGNATURE_INVALID) => {
-                            info!("Signature verification failed.");
-                            Err(ResponseStatus::PsaErrorInvalidSignature)
-                        }
-                        err => {
-                            error!("Failed to execute verify operation. Error: {}", err);
-                            Err(ResponseStatus::PsaErrorGenericError)
-                        }
-                    },
+                    Err(e) => Err(utils::to_response_status(e)),
                 }
             }
             Err(e) => {
                 error!("Failed to initialize verifying operation. Error: {}", e);
-                Err(ResponseStatus::PsaErrorGenericError)
+                Err(utils::to_response_status(e))
             }
         }
     }

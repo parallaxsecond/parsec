@@ -14,6 +14,7 @@
 // limitations under the License.
 use super::Provide;
 use crate::authenticators::ApplicationName;
+use crate::key_id_managers;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info};
@@ -32,10 +33,11 @@ use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::{
-    constants::TPM2_ALG_SHA256, response_code::Error, response_code::Tss2ResponseCodeKind,
-    utils::AsymSchemeUnion, utils::Signature, utils::TpmsContext, Tcti,
+    constants::TPM2_ALG_SHA256, utils::AsymSchemeUnion, utils::Signature, utils::TpmsContext, Tcti,
 };
 use uuid::Uuid;
+
+mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::CreateKey,
@@ -91,25 +93,15 @@ fn insert_password_context(
     key_triple: KeyTriple,
     password_context: PasswordContext,
 ) -> Result<()> {
-    let error_storing = |e| {
-        error!("Error storing a mapping: {}.", e);
-        Err(ResponseStatus::KeyIDManagerError)
-    };
-    let error_serializing = |e| {
-        error!("Error serializing the PasswordContext: {}.", e);
-        Err(ResponseStatus::KeyIDManagerError)
-    };
+    let error_storing = |e| Err(key_id_managers::to_response_status(e));
 
     if store_handle
-        .insert(
-            key_triple,
-            bincode::serialize(&password_context).or_else(error_serializing)?,
-        )
+        .insert(key_triple, bincode::serialize(&password_context)?)
         .or_else(error_storing)?
         .is_some()
     {
         error!("Inserting a mapping in the Key ID Manager that would overwrite an existing one.");
-        Err(ResponseStatus::KeyAlreadyExists)
+        Err(ResponseStatus::PsaErrorAlreadyExists)
     } else {
         Ok(())
     }
@@ -120,10 +112,9 @@ fn get_password_context(
     store_handle: &dyn ManageKeyIDs,
     key_triple: KeyTriple,
 ) -> Result<PasswordContext> {
-    let password_context = store_handle.get(&key_triple).or_else(|e| {
-        error!("Error getting a mapping: {}.", e);
-        Err(ResponseStatus::KeyIDManagerError)
-    })?;
+    let password_context = store_handle
+        .get(&key_triple)
+        .or_else(|e| Err(key_id_managers::to_response_status(e)))?;
     let password_context = match password_context {
         Some(context) => context,
         None => {
@@ -131,13 +122,10 @@ fn get_password_context(
                 "Key triple \"{}\" does not exist in the Key ID Manager.",
                 key_triple
             );
-            return Err(ResponseStatus::KeyDoesNotExist);
+            return Err(ResponseStatus::PsaErrorDoesNotExist);
         }
     };
-    Ok(bincode::deserialize(password_context).or_else(|e| {
-        error!("Error deserializing the PasswordContext: {}.", e);
-        Err(ResponseStatus::KeyIDManagerError)
-    })?)
+    Ok(bincode::deserialize(password_context)?)
 }
 
 impl TpmProvider {
@@ -180,7 +168,7 @@ impl Provide for TpmProvider {
         {
             error!(
                 "The TPM provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
@@ -199,7 +187,7 @@ impl Provide for TpmProvider {
             .create_rsa_signing_key(key_size, AUTH_VAL_LEN)
             .or_else(|e| {
                 error!("Error creating a RSA signing key: {}.", e);
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             })?;
 
         insert_password_context(
@@ -221,7 +209,7 @@ impl Provide for TpmProvider {
         {
             error!(
                 "The TPM provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
@@ -236,7 +224,7 @@ impl Provide for TpmProvider {
 
         let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&key_data).or_else(|err| {
             error!("Could not deserialise key elements: {}.", err);
-            Err(ResponseStatus::PsaErrorCommunicationFailure)
+            Err(ResponseStatus::PsaErrorInvalidArgument)
         })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
@@ -246,7 +234,7 @@ impl Provide for TpmProvider {
 
         if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT {
             error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
         let key_data = public_key.modulus.as_unsigned_bytes_be();
 
@@ -256,14 +244,14 @@ impl Provide for TpmProvider {
                 "The TPM provider only supports 1024 and 2048 bits RSA public keys ({} bits given).",
                 len * 8
             );
-            return Err(ResponseStatus::UnsupportedOperation);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let pub_key_context = esapi_context
             .load_external_rsa_public_key(&key_data)
             .or_else(|e| {
                 error!("Error creating a RSA signing key: {}.", e);
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             })?;
 
         insert_password_context(
@@ -298,7 +286,7 @@ impl Provide for TpmProvider {
             .read_public_key(password_context.context)
             .or_else(|e| {
                 error!("Error reading a public key: {}.", e);
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             })?;
 
         let key = RsaPublicKey {
@@ -320,10 +308,7 @@ impl Provide for TpmProvider {
         let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
 
-        let error_closure = |e| {
-            error!("Error storing a mapping: {}.", e);
-            Err(ResponseStatus::KeyIDManagerError)
-        };
+        let error_closure = |e| Err(key_id_managers::to_response_status(e));
         if store_handle
             .remove(&key_triple)
             .or_else(error_closure)?
@@ -333,7 +318,7 @@ impl Provide for TpmProvider {
                 "Key triple \"{}\" does not exist in the Key ID Manager.",
                 key_triple
             );
-            Err(ResponseStatus::KeyDoesNotExist)
+            Err(ResponseStatus::PsaErrorDoesNotExist)
         } else {
             Ok(ResultDestroyKey {})
         }
@@ -366,7 +351,7 @@ impl Provide for TpmProvider {
             )
             .or_else(|e| {
                 error!("Error signing: {}.", e);
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             })?;
 
         Ok(ResultAsymSign {
@@ -401,20 +386,7 @@ impl Provide for TpmProvider {
 
         let _ = esapi_context
             .verify_signature(password_context.context, &hash, signature)
-            .or_else(|e| {
-                if let Error::Tss2Error(rc) = e {
-                    if rc.kind() == Some(Tss2ResponseCodeKind::Signature) {
-                        error!("The verification failed.");
-                        Err(ResponseStatus::PsaErrorInvalidSignature)
-                    } else {
-                        error!("Error verifying: {}.", rc);
-                        Err(ResponseStatus::PsaErrorHardwareFailure)
-                    }
-                } else {
-                    error!("Error verifying: {}.", e);
-                    Err(ResponseStatus::PsaErrorHardwareFailure)
-                }
-            })?;
+            .or_else(|e| Err(utils::to_response_status(e)))?;
 
         Ok(ResultAsymVerify {})
     }

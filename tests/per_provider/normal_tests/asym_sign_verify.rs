@@ -28,7 +28,7 @@ fn asym_sign_no_key() {
     let status = client
         .sign(key_name, HASH.to_vec())
         .expect_err("Key should not exist.");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn asym_verify_no_key() {
     let status = client
         .verify(key_name, HASH.to_vec(), signature)
         .expect_err("Verification should have failed");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
 #[test]
