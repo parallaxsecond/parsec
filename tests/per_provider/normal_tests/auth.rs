@@ -43,7 +43,7 @@ fn delete_wrong_key() -> Result<()> {
     let status = client
         .destroy_key(key_name)
         .expect_err("Destroying key should have failed");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 
     Ok(())
 }

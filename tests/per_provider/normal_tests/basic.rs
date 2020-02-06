@@ -141,5 +141,5 @@ fn wrong_provider_core() {
     let response_status = client
         .destroy_key(String::new())
         .expect_err("Core Provider should not support DestroyKey operation!");
-    assert_eq!(response_status, ResponseStatus::UnsupportedOperation);
+    assert_eq!(response_status, ResponseStatus::PsaErrorNotSupported);
 }

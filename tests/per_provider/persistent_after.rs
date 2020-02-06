@@ -51,6 +51,6 @@ fn should_have_been_deleted() {
         client
             .destroy_key(key_name)
             .expect_err("This key should have been destroyed."),
-        ResponseStatus::KeyDoesNotExist
+        ResponseStatus::PsaErrorDoesNotExist
     );
 }

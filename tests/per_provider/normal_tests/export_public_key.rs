@@ -35,7 +35,7 @@ fn export_without_create() {
     let status = client
         .export_public_key(key_name)
         .expect_err("Key should not exist.");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
 #[test]

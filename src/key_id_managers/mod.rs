@@ -19,7 +19,8 @@
 //! store this mapping using different means but it has to be persistent.
 
 use crate::authenticators::ApplicationName;
-use parsec_interface::requests::ProviderID;
+use log::error;
+use parsec_interface::requests::{ProviderID, ResponseStatus};
 use serde::Deserialize;
 use std::fmt;
 
@@ -70,6 +71,16 @@ impl KeyTriple {
     pub fn belongs_to_provider(&self, provider_id: ProviderID) -> bool {
         self.provider_id == provider_id
     }
+}
+
+/// Converts the error string returned by the ManageKeyIDs methods to
+/// ResponseStatus::KeyIDManagerError.
+pub fn to_response_status(error_string: String) -> ResponseStatus {
+    error!(
+        "Converting error string \"{}\" to ResponseStatus:KeyIDManagerError.",
+        error_string
+    );
+    ResponseStatus::KeyIDManagerError
 }
 
 pub trait ManageKeyIDs {

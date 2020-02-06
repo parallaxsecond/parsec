@@ -34,7 +34,7 @@ fn create_twice() -> Result<()> {
     let status = client
         .create_rsa_sign_key(key_name)
         .expect_err("A key with the same name can not be created twice.");
-    assert_eq!(status, ResponseStatus::KeyAlreadyExists);
+    assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
     Ok(())
 }
@@ -47,7 +47,7 @@ fn destroy_without_create() {
     let status = client
         .destroy_key(key_name)
         .expect_err("The key should not already exist.");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn create_destroy_and_operation() -> Result<()> {
     let status = client
         .sign(key_name, hash)
         .expect_err("The key used by this operation should have been deleted.");
-    assert_eq!(status, ResponseStatus::KeyDoesNotExist);
+    assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 
     Ok(())
 }

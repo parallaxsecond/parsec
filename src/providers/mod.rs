@@ -72,7 +72,7 @@ pub trait Provide {
 
     /// List the providers running in the service.
     fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// List the opcodes supported by the current provider.
@@ -85,17 +85,17 @@ pub trait Provide {
     /// This operation will only fail if not implemented. It will never fail when being called on
     /// the `CoreProvider`.
     fn ping(&self, _op: OpPing) -> Result<ResultPing> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a CreateKey operation.
     fn create_key(&self, _app_name: ApplicationName, _op: OpCreateKey) -> Result<ResultCreateKey> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a ImportKey operation.
     fn import_key(&self, _app_name: ApplicationName, _op: OpImportKey) -> Result<ResultImportKey> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a ExportPublicKey operation.
@@ -104,7 +104,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpExportPublicKey,
     ) -> Result<ResultExportPublicKey> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a DestroyKey operation.
@@ -113,13 +113,13 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpDestroyKey,
     ) -> Result<ResultDestroyKey> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a AsymSign operation. This operation only signs the short digest given but does not
     /// hash it.
     fn asym_sign(&self, _app_name: ApplicationName, _op: OpAsymSign) -> Result<ResultAsymSign> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a AsymVerify operation.
@@ -128,6 +128,6 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: OpAsymVerify,
     ) -> Result<ResultAsymVerify> {
-        Err(ResponseStatus::UnsupportedOperation)
+        Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

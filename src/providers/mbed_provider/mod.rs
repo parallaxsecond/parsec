@@ -14,6 +14,7 @@
 // limitations under the License.
 use super::Provide;
 use crate::authenticators::ApplicationName;
+use crate::key_id_managers;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use constants::PSA_SUCCESS;
 use derivative::Derivative;
@@ -100,11 +101,8 @@ fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result
                 Err(ResponseStatus::KeyIDManagerError)
             }
         }
-        Ok(None) => Err(ResponseStatus::KeyDoesNotExist),
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
@@ -130,10 +128,7 @@ fn create_key_id(
 
             Ok(key_id)
         }
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
@@ -148,21 +143,14 @@ fn remove_key_id(
             let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
+        Err(string) => Err(key_id_managers::to_response_status(string)),
     }
 }
 
 fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<bool> {
-    match store_handle.exists(key_triple) {
-        Ok(val) => Ok(val),
-        Err(string) => {
-            error!("Key ID Manager error: {}", string);
-            Err(ResponseStatus::KeyIDManagerError)
-        }
-    }
+    store_handle
+        .exists(key_triple)
+        .or_else(|e| Err(key_id_managers::to_response_status(e)))
 }
 
 impl MbedProvider {
@@ -273,7 +261,7 @@ impl Provide for MbedProvider {
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::KeyAlreadyExists);
+            return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
             key_triple.clone(),
@@ -321,7 +309,7 @@ impl Provide for MbedProvider {
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::KeyAlreadyExists);
+            return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
             key_triple.clone(),
@@ -407,10 +395,7 @@ impl Provide for MbedProvider {
         if export_status != PSA_SUCCESS {
             error!("Export status: {}", export_status);
             // Safety: same conditions than above.
-            return Err(utils::convert_status(export_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::PsaErrorGenericError
-            })?);
+            return Err(utils::convert_status(export_status));
         }
 
         buffer.resize(actual_size, 0);
@@ -453,10 +438,7 @@ impl Provide for MbedProvider {
             Ok(ResultDestroyKey {})
         } else {
             error!("Destroy key status: {}", destroy_key_status);
-            Err(utils::convert_status(destroy_key_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::PsaErrorGenericError
-            })?)
+            Err(utils::convert_status(destroy_key_status))
         }
     }
 
@@ -515,10 +497,7 @@ impl Provide for MbedProvider {
             Ok(res)
         } else {
             error!("Sign status: {}", sign_status);
-            Err(utils::convert_status(sign_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::PsaErrorGenericError
-            })?)
+            Err(utils::convert_status(sign_status))
         }
     }
 
@@ -562,10 +541,7 @@ impl Provide for MbedProvider {
         if verify_status == PSA_SUCCESS {
             Ok(ResultAsymVerify {})
         } else {
-            Err(utils::convert_status(verify_status).ok_or_else(|| {
-                error!("Failed to convert error status.");
-                ResponseStatus::PsaErrorGenericError
-            })?)
+            Err(utils::convert_status(verify_status))
         }
     }
 }
