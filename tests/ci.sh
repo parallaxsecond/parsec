@@ -58,9 +58,11 @@ then
 	FEATURES="--no-default-features --features=$1-provider"
 	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
 
+	rm -f NVChip
 	tpm_server &
 	sleep 5
 	tpm2_startup -c -T mssim
+	tpm2_changeauth -c owner tpm_pass
 elif [[ $1 = "pkcs11" ]]
 then
 	# PKCS11 provider
@@ -75,9 +77,11 @@ then
 	FEATURES="--all-features"
 	CONFIG_PATH="tests/all_providers/config.toml"
 
+	rm -f NVChip
 	tpm_server &
 	sleep 5
 	tpm2_startup -c -T mssim
+	tpm2_changeauth -c owner tpm_pass
 
 	tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
 else

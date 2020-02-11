@@ -18,6 +18,7 @@ key_id_manager = "on-disk-manager"
 provider_type = "TpmProvider"
 key_id_manager = "on-disk-manager"
 tcti = "mssim"
+owner_hierarchy_auth = "tpm_pass"
 
 [[provider]]
 provider_type = "Pkcs11Provider"

@@ -404,6 +404,7 @@ pub struct TpmProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
     tcti: Option<Tcti>,
+    owner_hierarchy_auth: Option<String>,
 }
 
 impl TpmProviderBuilder {
@@ -411,6 +412,7 @@ impl TpmProviderBuilder {
         TpmProviderBuilder {
             key_id_store: None,
             tcti: None,
+            owner_hierarchy_auth: None,
         }
     }
 
@@ -437,6 +439,12 @@ impl TpmProviderBuilder {
         self
     }
 
+    pub fn with_owner_hierarchy_auth(mut self, owner_hierarchy_auth: String) -> TpmProviderBuilder {
+        self.owner_hierarchy_auth = Some(owner_hierarchy_auth);
+
+        self
+    }
+
     /// Create an instance of TpmProvider
     ///
     /// # Safety
@@ -453,7 +461,11 @@ impl TpmProviderBuilder {
                     .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
                 ROOT_KEY_SIZE,
                 ROOT_KEY_AUTH_SIZE,
-                &[],
+                self.owner_hierarchy_auth
+                    .ok_or_else(|| {
+                        std::io::Error::new(ErrorKind::InvalidData, "missing owner hierarchy auth")
+                    })?
+                    .as_bytes(),
             )
             .or_else(|e| {
                 error!("Error creating TSS Transient Object Context ({}).", e);
