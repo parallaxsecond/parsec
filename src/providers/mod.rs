@@ -51,6 +51,7 @@ pub struct ProviderConfig {
     pub slot_number: Option<usize>,
     pub user_pin: Option<String>,
     pub tcti: Option<String>,
+    pub owner_hierarchy_auth: Option<String>,
 }
 
 use crate::authenticators::ApplicationName;

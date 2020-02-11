@@ -73,3 +73,6 @@ key_id_manager = "on-disk-manager"
 # - "mssim": uses the simulation TPM with the socket
 # - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon
 #tcti = "mssim"
+# (Required) Authentication value for performing operations on the TPM Owner Hierarchy. The string can
+# be empty, however we strongly suggest that you use a secure password.
+#owner_hierarchy_auth = "password"

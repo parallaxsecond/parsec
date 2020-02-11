@@ -252,9 +252,13 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
                 TpmProviderBuilder::new()
                     .with_key_id_store(key_id_manager)
                     .with_tcti(config.tcti.as_ref().ok_or_else(|| {
-                        error!("The TPM provider needs a TCTI in his configuration.");
+                        error!("The TPM provider needs a TCTI in its configuration.");
                         Error::new(ErrorKind::InvalidData, "missing TCTI")
                     })?)
+                    .with_owner_hierarchy_auth(config.owner_hierarchy_auth.as_ref().ok_or_else(|| {
+                        error!("The TPM provider needs an Owner Hierarchy authentication value in its configuration.");
+                        Error::new(ErrorKind::InvalidData, "missing owner hierarchy auth")
+                    })?.to_owned())
                     .build()?,
             ))
         }
