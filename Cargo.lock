@@ -495,36 +495,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parsec"
-version = "0.1.0"
-dependencies = [
- "arbitrary 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "bindgen 0.50.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "cargo_toml 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "derivative 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "parsec-client-test 0.1.15 (git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.15)",
- "parsec-interface 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "picky-asn1 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "picky-asn1-der 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "pkcs11 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "sd-notify 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "signal-hook 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "std-semaphore 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "threadpool 1.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "tss-esapi 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "uuid 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "parsec-client-test"
 version = "0.1.15"
 source = "git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.15#f2c5286ed046a1fcbb71723e8369869f594f8c3e"
@@ -551,6 +521,36 @@ dependencies = [
  "prost 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-build 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "uuid 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "parsec-service"
+version = "0.1.0"
+dependencies = [
+ "arbitrary 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bindgen 0.50.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cargo_toml 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "derivative 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parsec-client-test 0.1.15 (git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.15)",
+ "parsec-interface 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "picky-asn1 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "picky-asn1-der 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pkcs11 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sd-notify 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal-hook 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "std-semaphore 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "threadpool 1.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tss-esapi 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
