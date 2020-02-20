@@ -44,7 +44,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 use log::info;
-use parsec::utils::{ServiceBuilder, ServiceConfig};
+use parsec_service::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
 use std::io::{Error, ErrorKind, Result};
 use std::sync::{

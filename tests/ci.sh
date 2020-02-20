@@ -50,12 +50,12 @@ fi
 if [[ $1 = "mbed-crypto" ]]
 then
 	# Mbed Cyypto provider
-	FEATURES="--no-default-features --features=$1-provider"
+	FEATURES="--features=$1-provider"
 	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
 elif [[ $1 = "tpm" ]]
 then
 	# TPM provider
-	FEATURES="--no-default-features --features=$1-provider"
+	FEATURES="--features=$1-provider"
 	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
 
 	rm -f NVChip
@@ -66,7 +66,7 @@ then
 elif [[ $1 = "pkcs11" ]]
 then
 	# PKCS11 provider
-	FEATURES="--no-default-features --features=$1-provider"
+	FEATURES="--features=$1-provider"
 	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
 
 	# Find and append the slot number at the end of the configuration file.
@@ -74,7 +74,7 @@ then
 elif [[ $1 = "all" ]]
 then
 	# All providers
-	FEATURES="--all-features"
+	FEATURES="--features=all-providers"
 	CONFIG_PATH="tests/all_providers/config.toml"
 
 	rm -f NVChip
