@@ -1,6 +1,6 @@
 [package]
 name = "parsec-service"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Paul Howard <paul.howard@arm.com>",
            "Ionut Mihalcea <ionut.mihalcea@arm.com>",
            "Hugues de Valon <hugues.devalon@arm.com>"]
