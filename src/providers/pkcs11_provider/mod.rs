@@ -465,17 +465,18 @@ impl Provide for Pkcs11Provider {
         })
     }
 
-    fn describe(&self) -> ProviderInfo {
-        ProviderInfo {
+    fn describe(&self) -> Result<ProviderInfo> {
+        Ok(ProviderInfo {
             // Assigned UUID for this provider: 30e39502-eba6-4d60-a4af-c518b7f5e38f
-            uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap(),
+            uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f")
+                .or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("PKCS #11 provider, interfacing with a PKCS #11 library."),
             vendor: String::from("OASIS Standard."),
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
             id: ProviderID::Pkcs11Provider,
-        }
+        })
     }
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {

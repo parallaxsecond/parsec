@@ -29,7 +29,10 @@ fn invalid_version() {
     let resp = client
         .send_raw_request(req_hdr, Vec::new())
         .expect("Failed to read Response");
-    assert_eq!(resp.header.status, ResponseStatus::VersionTooBig);
+    assert_eq!(
+        resp.header.status,
+        ResponseStatus::WireProtocolVersionNotSupported
+    );
     assert_eq!(resp.header.opcode, Opcode::Ping);
 }
 
@@ -40,7 +43,7 @@ fn invalid_provider() {
 
     req_hdr.provider = 0xff;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 0xff;
+    req_hdr.version_maj = 0x01;
 
     let resp = client
         .send_raw_request(req_hdr, Vec::new())

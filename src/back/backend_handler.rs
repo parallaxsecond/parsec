@@ -40,8 +40,6 @@ pub struct BackEndHandler {
     provider_id: ProviderID,
     content_type: BodyType,
     accept_type: BodyType,
-    version_min: u8,
-    version_maj: u8,
 }
 
 impl BackEndHandler {
@@ -62,7 +60,6 @@ impl BackEndHandler {
     /// - if the provider ID does not match, returns `ResponseStatus::WrongProviderID`
     /// - if the content type does not match, returns `ResponseStatus::ContentTypeNotSupported`
     /// - if the accept type does not match, returns `ResponseStatus::AcceptTypeNotSupported`
-    /// - if the version is not supported, returns `ResponseStatus::VersionTooBig`
     pub fn is_capable(&self, request: &Request) -> Result<()> {
         let header = &request.header;
 
@@ -76,11 +73,6 @@ impl BackEndHandler {
             Err(ResponseStatus::ContentTypeNotSupported)
         } else if header.accept_type != self.accept_type {
             Err(ResponseStatus::AcceptTypeNotSupported)
-        } else if (header.version_maj > self.version_maj)
-            // TODO: This is incompatible with semantic versioning - does it hold?
-            || (header.version_maj == self.version_maj && header.version_min > self.version_min)
-        {
-            Err(ResponseStatus::VersionTooBig)
         } else {
             Ok(())
         }
@@ -175,8 +167,6 @@ pub struct BackEndHandlerBuilder {
     provider_id: Option<ProviderID>,
     content_type: Option<BodyType>,
     accept_type: Option<BodyType>,
-    version_min: Option<u8>,
-    version_maj: Option<u8>,
 }
 
 impl BackEndHandlerBuilder {
@@ -187,8 +177,6 @@ impl BackEndHandlerBuilder {
             provider_id: None,
             content_type: None,
             accept_type: None,
-            version_min: None,
-            version_maj: None,
         }
     }
 
@@ -217,12 +205,6 @@ impl BackEndHandlerBuilder {
         self
     }
 
-    pub fn with_version(mut self, version_min: u8, version_maj: u8) -> Self {
-        self.version_maj = Some(version_maj);
-        self.version_min = Some(version_min);
-        self
-    }
-
     pub fn build(self) -> std::io::Result<BackEndHandler> {
         Ok(BackEndHandler {
             provider: self
@@ -240,12 +222,6 @@ impl BackEndHandlerBuilder {
             accept_type: self
                 .accept_type
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "accept_type is missing"))?,
-            version_min: self
-                .version_min
-                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version_min is missing"))?,
-            version_maj: self
-                .version_maj
-                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version_maj is missing"))?,
         })
     }
 }

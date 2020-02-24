@@ -148,17 +148,17 @@ impl Provide for TpmProvider {
         })
     }
 
-    fn describe(&self) -> ProviderInfo {
-        ProviderInfo {
+    fn describe(&self) -> Result<ProviderInfo> {
+        Ok(ProviderInfo {
             // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
-            uuid: Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").expect("UUID parsing failed"),
+            uuid: Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification."),
             vendor: String::from("Trusted Computing Group (TCG)"),
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
             id: ProviderID::TpmProvider,
-        }
+        })
     }
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
