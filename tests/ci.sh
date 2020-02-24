@@ -90,14 +90,10 @@ else
 	exit 1
 fi
 
-##############
-# Build test #
-##############
+echo "Build test"
 RUST_BACKTRACE=1 cargo build $FEATURES
 
-#################
-# Static checks #
-#################
+echo "Static checks"
 # On native target clippy or fmt might not be available.
 if rustup component list | grep -q fmt
 then
@@ -108,15 +104,12 @@ then
 	cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
 fi
 
-############################
-# Unit tests and doc tests #
-############################
+echo "Unit tests"
 RUST_BACKTRACE=1 cargo test --lib $FEATURES
+echo "Doc tests"
 RUST_BACKTRACE=1 cargo test --doc $FEATURES
 
-######################################
-# Start Parsec for integration tests #
-######################################
+echo "Start Parsec for integration tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
 SERVER_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.
@@ -124,19 +117,15 @@ sleep 5
 
 if [[ $1 = "all" ]]
 then
-	# All providers tests
+	echo "Execute all-providers tests"
 	RUST_BACKTRACE=1 cargo test $FEATURES all_providers
 else
 	# Per provider tests
-	################
-	# Normal tests #
-	################
+	echo "Execute normal tests"
 	RUST_BACKTRACE=1 cargo test $FEATURES normal_tests
 
-	#####################
-	# Persistence tests #
-	#####################
-	RUST_BACKTRACE=1 cargo test $FEATURES persistent-before
+	echo "Execute persistent test, before the reload"
+	RUST_BACKTRACE=1 cargo test $FEATURES persistent_before
 
 	# Create a fake mapping file for the root application, the provider and a
 	# key name of "Test Key". It contains a valid PSA Key ID.
@@ -144,38 +133,40 @@ else
 	# This test does not make sense for the TPM provider.
 	if [[ $1 = "mbed-crypto" ]]
 	then
-		# For Mbed Provider
+		echo "Create a fake mapping file for Mbed Provider"
 		mkdir -p mappings/cm9vdA==/1
 		printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
 	elif [[ $1 = "pkcs11" ]]
 	then
-		# For PKCS 11 Provider
+		echo "Create a fake mapping file for PKCS 11 Provider"
 		mkdir -p mappings/cm9vdA==/2
 		printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
 	fi
 
-	# Trigger a configuration reload to load the new mappings.
+	echo "Trigger a configuration reload to load the new mappings"
 	kill -s SIGHUP $SERVER_PID
 	# Sleep time needed to make sure Parsec is ready before launching the tests.
 	sleep 5
 
-	RUST_BACKTRACE=1 cargo test $FEATURES persistent-after
+	echo "Execute persistent test, after the reload"
+	RUST_BACKTRACE=1 cargo test $FEATURES persistent_after
 
+	echo "Shutdown Parsec"
 	kill $SERVER_PID
 	# Sleep time needed to make sure Parsec is killed.
 	sleep 2
 
-	################
-	# Stress tests #
-	################
+	echo "Start Parsec for stress tests"
 	# Change the log level for the stress tests because logging is limited on the
 	# CI servers.
 	RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
 	SERVER_PID=$!
 	sleep 5
 
+	echo "Execute stress tests"
 	RUST_BACKTRACE=1 cargo test $FEATURES stress_test
 fi
 
+echo "Shutdown Parsec"
 kill $SERVER_PID
 cargo clean
