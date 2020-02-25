@@ -157,6 +157,10 @@ fn list_files(path: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
         .collect())
 }
 
+/// Filesystem-based `KeyIdManager`
+///
+/// The `OnDiskKeyIdManager` relies on access control mechanisms provided by the OS for
+/// the filesystem to ensure security of the mappings.
 impl OnDiskKeyIDManager {
     /// Creates an instance of the on-disk manager from the mapping files. This function will
     /// create the mappings directory if it does not already exist.

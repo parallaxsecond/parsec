@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Assemble the service from a user-defined config
+//!
+//! The service builder is required to bootstrap all the components based on a
+//! provided configuration.
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
@@ -77,10 +81,23 @@ pub struct ServiceConfig {
     pub provider: Option<Vec<ProviderConfig>>,
 }
 
+/// Service component builder and assembler
+///
+/// Entity responsible for converting a Parsec service configuration into a fully formed service.
+/// Each component is independently created after which its ownership can be passed to the previous
+/// component in the ownership chain. The service's ownership is then passed in the form of
+/// ownership of a `FrontEndHandler` instance.
 #[derive(Copy, Clone, Debug)]
 pub struct ServiceBuilder;
 
 impl ServiceBuilder {
+    /// Evaluate the provided configuration and assemble a service based on it. If the configuration contains
+    /// any errors or inconsistencies, an `Err` is returned.
+    ///
+    /// # Errors
+    /// * if any of the fields specified in the configuration are inconsistent (e.g. key ID manager with name 'X'
+    /// requested for a certain provider does not exist) or if required fields are missing, an error of kind
+    /// `InvalidData` is returned with a string describing the cause more accurately.
     pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
         let key_id_managers =
             build_key_id_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
@@ -115,6 +132,7 @@ impl ServiceBuilder {
             .build()?)
     }
 
+    /// Construct the service IPC front component and return ownership to it.
     pub fn start_listener(config: ListenerConfig) -> Result<Box<dyn Listen>> {
         let listener = match config.listener_type {
             ListenerType::DomainSocket => DomainSocketListenerBuilder::new()
@@ -125,6 +143,7 @@ impl ServiceBuilder {
         Ok(Box::new(listener))
     }
 
+    /// Construct the thread pool that will be used to process all service requests.
     pub fn build_threadpool(num_threads: Option<usize>) -> ThreadPool {
         let mut threadpool_builder = ThreadPoolBuilder::new();
         if let Some(num_threads) = num_threads {

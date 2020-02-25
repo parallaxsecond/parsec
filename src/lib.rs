@@ -12,6 +12,12 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Parsec service documentation
+//!
+//! This is the source code documentation for Parsec (Platform AbstRaction for
+//! SECurity) service. For a more in-depth guide of the system architecture,
+//! supported operations and other Parsec-related topics, see our
+//! [Parsec Book](https://parallaxsecond.github.io/parsec-book/index.html).
 #![deny(
     nonstandard_style,
     const_err,

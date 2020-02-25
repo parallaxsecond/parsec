@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! TPM 2.0 provider
+//!
+//! Provider allowing clients to use hardware or software TPM 2.0 implementations
+//! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers;
@@ -52,6 +56,12 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
 const ROOT_KEY_SIZE: usize = 2048;
 const ROOT_KEY_AUTH_SIZE: usize = 32;
 
+/// Provider for Trusted Platform Modules
+///
+/// Operations for this provider are serviced using the TPM 2.0 software stack,
+/// on top of the Enhanced System API. This implementation can be used with any
+/// implementation compliant with the specification, be it hardware or software
+/// (e.g. firmware TPMs).
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct TpmProvider {
@@ -87,7 +97,7 @@ struct PasswordContext {
     auth_value: Vec<u8>,
 }
 
-/// Inserts a new mapping in the Key ID manager that stores the PasswordContext.
+// Inserts a new mapping in the Key ID manager that stores the PasswordContext.
 fn insert_password_context(
     store_handle: &mut dyn ManageKeyIDs,
     key_triple: KeyTriple,
@@ -107,7 +117,7 @@ fn insert_password_context(
     }
 }
 
-/// Gets a PasswordContext mapping to the KeyTriple given.
+// Gets a PasswordContext mapping to the KeyTriple given.
 fn get_password_context(
     store_handle: &dyn ManageKeyIDs,
     key_triple: KeyTriple,
@@ -129,7 +139,7 @@ fn get_password_context(
 }
 
 impl TpmProvider {
-    /// Creates and initialise a new instance of TpmProvider.
+    // Creates and initialise a new instance of TpmProvider.
     fn new(
         key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
         esapi_context: tss_esapi::TransientObjectContext,
@@ -398,6 +408,7 @@ impl Drop for TpmProvider {
     }
 }
 
+/// Builder for TpmProvider
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct TpmProviderBuilder {

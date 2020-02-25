@@ -12,5 +12,6 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Routing and parsing requests for processing by providers
 pub mod backend_handler;
 pub mod dispatcher;

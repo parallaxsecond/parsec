@@ -12,11 +12,13 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! The direct authenticator
+//! Direct authenticator
 //!
-//! The `DirectAuthenticator` will return the authentication value parsed as a UTF-8 string.
-//! This authentication method has no security value and does not check for the integrity of the
-//! clients' requests.
+//! The `DirectAuthenticator` implements the [direct authentication](https://parallaxsecond.github.io/parsec-book/parsec_service/system_architecture.html#authentication-tokens)
+//! functionality set out in the system architecture. As such, it attempts to parse the request
+//! authentication field into an UTF-8 string and returns the result as an application name.
+//! This authenticator does not offer any security value and should only be used in environments
+//! where all the clients and the service are mutually trustworthy.
 
 use super::ApplicationName;
 use super::Authenticate;

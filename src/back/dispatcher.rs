@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Dispatch requests to the correct backend
+//!
+//! The dispatcher's role is to direct requests to the provider they specify, if
+//! said provider is available on the system, thus acting as a multiplexer.
 use super::backend_handler::BackEndHandler;
 use crate::authenticators::ApplicationName;
 use parsec_interface::requests::request::Request;
@@ -20,6 +24,8 @@ use parsec_interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Result};
 
+/// Dispatcher to backend
+///
 /// Component tasked with identifying the backend handler that can
 /// service a request.
 ///
@@ -54,6 +60,7 @@ impl Dispatcher {
     }
 }
 
+/// `Dispatcher` builder
 #[derive(Debug, Default)]
 pub struct DispatcherBuilder {
     backends: Option<HashMap<ProviderID, BackEndHandler>>,

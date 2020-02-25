@@ -12,6 +12,12 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Core inter-op with underlying hardware
+//!
+//! [Providers](https://parallaxsecond.github.io/parsec-book/parsec_service/providers.html)
+//! are the real implementors of the operations that Parsec claims to support. They map to
+//! functionality in the underlying hardware which allows the PSA Crypto operations to be
+//! backed by a hardware root of trust.
 use parsec_interface::requests::ProviderID;
 use serde::Deserialize;
 
@@ -63,6 +69,8 @@ use parsec_interface::operations::{
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
+/// Provider interface for servicing client operations
+///
 /// Definition of the interface that a provider must implement to
 /// be linked into the service through a backend handler.
 pub trait Provide {
