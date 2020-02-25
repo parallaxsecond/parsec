@@ -51,8 +51,8 @@ use crate::providers::tpm_provider::TpmProviderBuilder;
 ))]
 use {crate::providers::ProviderType, log::info};
 
-const VERSION_MINOR: u8 = 0;
-const VERSION_MAJOR: u8 = 1;
+const WIRE_PROTOCOL_VERSION_MINOR: u8 = 0;
+const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
 
 /// Default value for the limit on the request body size (in bytes) - equal to 1MB
 const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
@@ -139,11 +139,17 @@ fn build_backend_handlers(
 ) -> Result<HashMap<ProviderID, BackEndHandler>> {
     let mut map = HashMap::new();
 
-    let mut core_provider_builder =
-        CoreProviderBuilder::new().with_version(VERSION_MINOR, VERSION_MAJOR);
+    let mut core_provider_builder = CoreProviderBuilder::new()
+        .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
 
     for (provider_id, provider) in providers.drain() {
-        core_provider_builder = core_provider_builder.with_provider_info(provider.describe());
+        core_provider_builder =
+            core_provider_builder.with_provider_info(provider.describe().or_else(|_| {
+                Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "error describing Core provider",
+                ))
+            })?);
 
         let backend_handler = BackEndHandlerBuilder::new()
             .with_provider(provider)
@@ -151,7 +157,6 @@ fn build_backend_handlers(
             .with_provider_id(provider_id)
             .with_content_type(BodyType::Protobuf)
             .with_accept_type(BodyType::Protobuf)
-            .with_version(VERSION_MINOR, VERSION_MAJOR)
             .build()?;
         let _ = map.insert(provider_id, backend_handler);
     }
@@ -162,7 +167,6 @@ fn build_backend_handlers(
         .with_provider_id(ProviderID::CoreProvider)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
-        .with_version(VERSION_MINOR, VERSION_MAJOR)
         .build()?;
 
     let _ = map.insert(ProviderID::CoreProvider, core_provider_backend);

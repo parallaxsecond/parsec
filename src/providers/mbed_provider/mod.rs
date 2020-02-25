@@ -239,17 +239,17 @@ impl Provide for MbedProvider {
         })
     }
 
-    fn describe(&self) -> ProviderInfo {
-        ProviderInfo {
+    fn describe(&self) -> Result<ProviderInfo> {
+        Ok(ProviderInfo {
             // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
-            uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(),
+            uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
             vendor: String::from("Arm"),
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
             id: ProviderID::MbedProvider,
-        }
+        })
     }
 
     fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {

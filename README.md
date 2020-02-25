@@ -108,6 +108,7 @@ This project uses the following third party crates:
 * libfuzzer-sys (MIT, Apache-2.0 and NCSA)
 * flexi_logger (MIT and Apache-2.0)
 * lazy_static (MIT and Apache-2.0)
+* version (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)

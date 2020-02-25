@@ -69,7 +69,7 @@ pub trait Provide {
     /// Return a description of the current provider.
     ///
     /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
-    fn describe(&self) -> ProviderInfo;
+    fn describe(&self) -> Result<ProviderInfo>;
 
     /// List the providers running in the service.
     fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
@@ -79,7 +79,7 @@ pub trait Provide {
     /// List the opcodes supported by the current provider.
     fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes>;
 
-    /// Execute a Ping operation to get the version minor and version major information.
+    /// Execute a Ping operation to get the wire protocol version major and minor information.
     ///
     /// # Errors
     ///
