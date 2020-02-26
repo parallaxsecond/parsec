@@ -14,7 +14,7 @@
 // limitations under the License.
 use parsec_client_test::RequestTestClient;
 use parsec_client_test::TestClient;
-use parsec_interface::requests::request::{Request, RequestBody};
+use parsec_interface::requests::request::{Request, RequestAuth, RequestBody};
 use parsec_interface::requests::Opcode;
 use parsec_interface::requests::ProviderID;
 use parsec_interface::requests::{ResponseStatus, Result};
@@ -36,6 +36,7 @@ fn mangled_ping() {
     req.header.version_maj = 1;
     req.header.provider = ProviderID::CoreProvider;
     req.header.opcode = Opcode::Ping;
+    req.auth = RequestAuth::from_bytes(Vec::from("root"));
 
     req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 

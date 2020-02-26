@@ -12,7 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use crate::authenticators::simple_authenticator::SimpleAuthenticator;
+use crate::authenticators::direct_authenticator::DirectAuthenticator;
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
     dispatcher::DispatcherBuilder,
@@ -101,11 +101,11 @@ impl ServiceBuilder {
             .with_backends(backend_handlers)
             .build()?;
 
-        let simple_authenticator = Box::from(SimpleAuthenticator {});
+        let direct_authenticator = Box::from(DirectAuthenticator {});
 
         Ok(FrontEndHandlerBuilder::new()
             .with_dispatcher(dispatcher)
-            .with_authenticator(AuthType::Simple, simple_authenticator)
+            .with_authenticator(AuthType::Direct, direct_authenticator)
             .with_body_len_limit(
                 config
                     .core_settings

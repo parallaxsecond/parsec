@@ -19,7 +19,7 @@
 //! sending the request. The `ApplicationName` string is used to namespace the keys of all
 //! applications with their name.
 
-pub mod simple_authenticator;
+pub mod direct_authenticator;
 
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;

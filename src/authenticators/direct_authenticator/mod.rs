@@ -12,29 +12,34 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! A dummy authenticator
+//! The direct authenticator
 //!
-//! The `SimpleAuthenticator` will return the string `"root"` if the `RequestAuth` given is empty
-//! or returns its value read as a `String`. It has no security value and is only there for testing
-//! and to facilitate future integration of a real authenticator.
+//! The `DirectAuthenticator` will return the authentication value parsed as a UTF-8 string.
+//! This authentication method has no security value and does not check for the integrity of the
+//! clients' requests.
 
 use super::ApplicationName;
 use super::Authenticate;
+use log::error;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::str;
 
 #[derive(Copy, Clone, Debug)]
-pub struct SimpleAuthenticator;
+pub struct DirectAuthenticator;
 
-impl Authenticate for SimpleAuthenticator {
+impl Authenticate for DirectAuthenticator {
     fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName> {
         if auth.is_empty() {
-            Ok(ApplicationName(String::from("root")))
+            error!("The direct authenticator does not expect empty authentication values.");
+            Err(ResponseStatus::AuthenticationError)
         } else {
             match str::from_utf8(auth.bytes()) {
                 Ok(str) => Ok(ApplicationName(String::from(str))),
-                Err(_) => Err(ResponseStatus::AuthenticationError),
+                Err(_) => {
+                    error!("Error parsing the authentication value as a UTF-8 string.");
+                    Err(ResponseStatus::AuthenticationError)
+                }
             }
         }
     }
@@ -43,12 +48,13 @@ impl Authenticate for SimpleAuthenticator {
 #[cfg(test)]
 mod test {
     use super::super::Authenticate;
-    use super::SimpleAuthenticator;
+    use super::DirectAuthenticator;
     use parsec_interface::requests::request::RequestAuth;
+    use parsec_interface::requests::ResponseStatus;
 
     #[test]
     fn successful_authentication() {
-        let authenticator = SimpleAuthenticator {};
+        let authenticator = DirectAuthenticator {};
 
         let app_name = "app_name".to_string();
         let req_auth = RequestAuth::from_bytes(app_name.clone().into_bytes());
@@ -61,21 +67,22 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Failed to authenticate")]
     fn failed_authentication() {
-        let authenticator = SimpleAuthenticator {};
-        let _ = authenticator
+        let authenticator = DirectAuthenticator {};
+        let status = authenticator
             .authenticate(&RequestAuth::from_bytes(vec![0xff; 5]))
-            .expect("Failed to authenticate");
+            .expect_err("Authentication should have failed");
+
+        assert_eq!(status, ResponseStatus::AuthenticationError);
     }
 
     #[test]
-    fn auth_root() {
-        let authenticator = SimpleAuthenticator {};
-        let auth_name = authenticator
+    fn empty_auth() {
+        let authenticator = DirectAuthenticator {};
+        let status = authenticator
             .authenticate(&RequestAuth::from_bytes(Vec::new()))
-            .expect("Failed to authenticate");
+            .expect_err("Empty auth should have failed");
 
-        assert_eq!(auth_name.get_name(), "root");
+        assert_eq!(status, ResponseStatus::AuthenticationError);
     }
 }
