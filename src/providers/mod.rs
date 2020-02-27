@@ -27,6 +27,10 @@ pub mod mbed_provider;
 pub mod tpm_provider;
 
 #[derive(Deserialize, Debug)]
+// For providers configs in parsec config.toml we use a format similar
+// to the one described in the Internally Tagged Enum representation
+// where "provider_type" is the tag field. For details see:
+// https://serde.rs/enum-representations.html
 #[serde(tag = "provider_type")]
 pub enum ProviderConfig {
     MbedProvider {
@@ -45,7 +49,8 @@ pub enum ProviderConfig {
     },
 }
 
-use self::ProviderConfig::*;
+use self::ProviderConfig::{MbedProvider, Pkcs11Provider, TpmProvider};
+
 impl ProviderConfig {
     pub fn key_id_manager(&self) -> &String {
         match *self {
