@@ -26,32 +26,52 @@ pub mod mbed_provider;
 #[cfg(feature = "tpm-provider")]
 pub mod tpm_provider;
 
-#[derive(Copy, Clone, Deserialize, Debug)]
-pub enum ProviderType {
-    MbedProvider,
-    Pkcs11Provider,
-    TpmProvider,
+#[derive(Deserialize, Debug)]
+// For providers configs in parsec config.toml we use a format similar
+// to the one described in the Internally Tagged Enum representation
+// where "provider_type" is the tag field. For details see:
+// https://serde.rs/enum-representations.html
+#[serde(tag = "provider_type")]
+pub enum ProviderConfig {
+    MbedProvider {
+        key_id_manager: String,
+    },
+    Pkcs11Provider {
+        key_id_manager: String,
+        library_path: String,
+        slot_number: usize,
+        user_pin: Option<String>,
+    },
+    TpmProvider {
+        key_id_manager: String,
+        tcti: String,
+        owner_hierarchy_auth: String,
+    },
 }
 
-impl ProviderType {
-    pub fn to_provider_id(self) -> ProviderID {
-        match self {
-            ProviderType::MbedProvider => ProviderID::MbedProvider,
-            ProviderType::Pkcs11Provider => ProviderID::Pkcs11Provider,
-            ProviderType::TpmProvider => ProviderID::TpmProvider,
+use self::ProviderConfig::{MbedProvider, Pkcs11Provider, TpmProvider};
+
+impl ProviderConfig {
+    pub fn key_id_manager(&self) -> &String {
+        match *self {
+            MbedProvider {
+                ref key_id_manager, ..
+            } => key_id_manager,
+            Pkcs11Provider {
+                ref key_id_manager, ..
+            } => key_id_manager,
+            TpmProvider {
+                ref key_id_manager, ..
+            } => key_id_manager,
         }
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ProviderConfig {
-    pub provider_type: ProviderType,
-    pub key_id_manager: String,
-    pub library_path: Option<String>,
-    pub slot_number: Option<usize>,
-    pub user_pin: Option<String>,
-    pub tcti: Option<String>,
-    pub owner_hierarchy_auth: Option<String>,
+    pub fn provider_id(&self) -> ProviderID {
+        match *self {
+            MbedProvider { .. } => ProviderID::MbedProvider,
+            Pkcs11Provider { .. } => ProviderID::Pkcs11Provider,
+            TpmProvider { .. } => ProviderID::TpmProvider,
+        }
+    }
 }
 
 use crate::authenticators::ApplicationName;

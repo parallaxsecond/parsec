@@ -49,7 +49,7 @@ use crate::providers::tpm_provider::TpmProviderBuilder;
     feature = "pkcs11-provider",
     feature = "tpm-provider"
 ))]
-use {crate::providers::ProviderType, log::info};
+use log::info;
 
 const WIRE_PROTOCOL_VERSION_MINOR: u8 = 0;
 const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
@@ -180,18 +180,18 @@ fn build_providers(
 ) -> HashMap<ProviderID, Provider> {
     let mut map = HashMap::new();
     for config in configs {
-        let provider_id = config.provider_type.to_provider_id();
+        let provider_id = config.provider_id();
         if map.contains_key(&provider_id) {
             warn!("Parsec currently only supports one instance of each provider type. Ignoring {} and continuing...", provider_id);
             continue;
         }
 
-        let key_id_manager = match key_id_managers.get(&config.key_id_manager) {
+        let key_id_manager = match key_id_managers.get(config.key_id_manager()) {
             Some(key_id_manager) => key_id_manager,
             None => {
                 error!(
                     "Key ID manager with specified name was not found ({})",
-                    config.key_id_manager
+                    config.key_id_manager()
                 );
                 continue;
             }
@@ -221,9 +221,9 @@ fn build_providers(
     allow(unused_variables)
 )]
 unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Result<Provider> {
-    match config.provider_type {
+    match config {
         #[cfg(feature = "mbed-crypto-provider")]
-        ProviderType::MbedProvider => {
+        ProviderConfig::MbedProvider { .. } => {
             info!("Creating a Mbed Crypto Provider.");
             Ok(Box::from(
                 MbedProviderBuilder::new()
@@ -232,37 +232,34 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             ))
         }
         #[cfg(feature = "pkcs11-provider")]
-        ProviderType::Pkcs11Provider => {
+        ProviderConfig::Pkcs11Provider {
+            library_path,
+            slot_number,
+            user_pin,
+            ..
+        } => {
             info!("Creating a PKCS 11 Provider.");
             Ok(Box::from(
                 Pkcs11ProviderBuilder::new()
-                .with_key_id_store(key_id_manager)
-                .with_pkcs11_library_path(config.library_path.clone().ok_or_else(|| {
-                        error!("The PKCS 11 provider needs a library path in the configuration file.");
-                        Error::new(ErrorKind::InvalidData, "missing PKCS 11 library path")
-                })?)
-                .with_slot_number(config.slot_number.ok_or_else(|| {
-                        error!("The slot number of the device is needed to communicate with PKCS 11 library.");
-                        Error::new(ErrorKind::InvalidData, "missing slot number")
-                })?)
-                .with_user_pin(config.user_pin.clone())
-                .build()?,
-                ))
+                    .with_key_id_store(key_id_manager)
+                    .with_pkcs11_library_path(library_path.clone())
+                    .with_slot_number(*slot_number)
+                    .with_user_pin(user_pin.clone())
+                    .build()?,
+            ))
         }
         #[cfg(feature = "tpm-provider")]
-        ProviderType::TpmProvider => {
+        ProviderConfig::TpmProvider {
+            tcti,
+            owner_hierarchy_auth,
+            ..
+        } => {
             info!("Creating a TPM Provider.");
             Ok(Box::from(
                 TpmProviderBuilder::new()
                     .with_key_id_store(key_id_manager)
-                    .with_tcti(config.tcti.as_ref().ok_or_else(|| {
-                        error!("The TPM provider needs a TCTI in its configuration.");
-                        Error::new(ErrorKind::InvalidData, "missing TCTI")
-                    })?)
-                    .with_owner_hierarchy_auth(config.owner_hierarchy_auth.as_ref().ok_or_else(|| {
-                        error!("The TPM provider needs an Owner Hierarchy authentication value in its configuration.");
-                        Error::new(ErrorKind::InvalidData, "missing owner hierarchy auth")
-                    })?.to_owned())
+                    .with_tcti(tcti)
+                    .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
                     .build()?,
             ))
         }
@@ -274,7 +271,7 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
         _ => {
             error!(
                 "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
-                config.provider_type
+                config
             );
             Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
         }
