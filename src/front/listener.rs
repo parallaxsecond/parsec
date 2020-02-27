@@ -12,6 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Interface for service IPC front
+//!
+//! The [`Listen`](https://parallaxsecond.github.io/parsec-book/parsec_service/listeners.html)
+//! trait acts as an interface for the operations that must be supported by any implementation
+//! of the IPC mechanism used as a Parsec front.
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -32,6 +37,10 @@ pub struct ListenerConfig {
     pub timeout: u64,
 }
 
+/// IPC front manager interface
+///
+/// Interface defining the functionality that any IPC front manager has to expose to Parsec for normal
+/// operation.
 pub trait Listen {
     /// Set the timeout on read and write calls on any stream returned by this listener.
     fn set_timeout(&mut self, duration: Duration);

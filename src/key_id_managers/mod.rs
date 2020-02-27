@@ -12,11 +12,12 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! A persistent mapping between key triples and key IDs
+//! Persistent mapping between key triples and key IDs
 //!
-//! This module declares a `ManageKeyIDs` trait to help providers to store in a persistent manner
-//! the mapping between the name and the IDs of the keys they manage. Different implementors might
-//! store this mapping using different means but it has to be persistent.
+//! This module declares a [`ManageKeyIDs`](https://parallaxsecond.github.io/parsec-book/parsec_service/key_id_managers.html)
+//! trait to help providers to store in a persistent manner the mapping between the name and the
+//! IDs of the keys they manage. Different implementors might store this mapping using different
+//! means but it has to be persistent.
 
 use crate::authenticators::ApplicationName;
 use log::error;
@@ -83,6 +84,9 @@ pub fn to_response_status(error_string: String) -> ResponseStatus {
     ResponseStatus::KeyIDManagerError
 }
 
+/// Management interface for key name to ID mapping
+///
+/// Interface to be implemented for persistent storage of key name -> key ID mappings.
 pub trait ManageKeyIDs {
     /// Returns a reference to the key ID corresponding to this key triple or `None` if it does not
     /// exist.

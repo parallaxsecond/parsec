@@ -12,6 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Core information source for the service
+//!
+//! The core provider acts as a source of information for the Parsec service,
+//! aiding clients in discovering the capabilities offered by their underlying
+//! platform.
 use super::Provide;
 use log::error;
 use parsec_interface::operations::ProviderInfo;
@@ -26,6 +31,11 @@ use version::{version, Version};
 
 const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
 
+/// Service information provider
+///
+/// The core provider is a non-cryptographic provider tasked with offering
+/// structured information about the status of the service and the providers
+/// available.
 #[derive(Debug)]
 pub struct CoreProvider {
     wire_protocol_version_min: u8,
@@ -74,6 +84,7 @@ impl Provide for CoreProvider {
     }
 }
 
+/// Builder for CoreProvider
 #[derive(Debug, Default)]
 pub struct CoreProviderBuilder {
     version_maj: Option<u8>,

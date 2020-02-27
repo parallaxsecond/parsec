@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! PKCS 11 provider
+//!
+//! This provider allows clients to access any PKCS 11 compliant device
+//! through the Parsec interface.
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers;
@@ -58,6 +62,11 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
+/// Provider for Public Key Cryptography Standard #11
+///
+/// Operations for this provider are serviced through a PKCS11 interface,
+/// allowing any libraries exposing said interface to be loaded and used
+/// at runtime.
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Pkcs11Provider {
@@ -964,6 +973,7 @@ impl Drop for Pkcs11Provider {
     }
 }
 
+/// Builder for Pkcs11Provider
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct Pkcs11ProviderBuilder {

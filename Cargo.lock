@@ -528,7 +528,6 @@ dependencies = [
 name = "parsec-service"
 version = "0.1.1"
 dependencies = [
- "arbitrary 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bincode 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bindgen 0.50.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Entry point for IPC data into the service
+//!
+//! The front end handler accepts streams of data that it can use to read requests,
+//! pass them to the rest of the service and write the responses back.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
 use derivative::Derivative;
@@ -23,6 +27,8 @@ use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
 
+/// Read and verify request from IPC stream
+///
 /// Service component that serializes requests and deserializes responses
 /// from/to the stream provided by the listener.
 ///
@@ -89,6 +95,7 @@ impl FrontEndHandler {
     }
 }
 
+/// Builder for `FrontEndHandler`
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct FrontEndHandlerBuilder {

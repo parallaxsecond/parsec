@@ -12,6 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Convert requests to calls to the underlying provider
+//!
+//! The backend handler embodies the last processing step from external request
+//! to internal function call - parsing of the request body and conversion to a
+//! native operation which is then passed to the provider.
 use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use derivative::Derivative;
@@ -23,12 +28,13 @@ use parsec_interface::requests::{
 use parsec_interface::requests::{BodyType, ProviderID};
 use std::io::{Error, ErrorKind};
 
+/// Back end handler component
+///
 /// Component responsible for unmarshalling requests, passing the operation
 /// to the provider and marshalling the result.
 ///
 /// It also provides assessment capabilities, letting the dispatcher know if
 /// it can process a request.
-
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct BackEndHandler {
@@ -157,6 +163,7 @@ impl BackEndHandler {
     }
 }
 
+/// Builder for `BackEndHandler`
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct BackEndHandlerBuilder {

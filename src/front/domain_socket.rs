@@ -12,6 +12,10 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Service front using Unix domain sockets
+//!
+//! Expose Parsec functionality using Unix domain sockets as an IPC layer.
+//! The local socket is created at a predefined location.
 use super::listener;
 use listener::Listen;
 use listener::ReadWrite;
@@ -25,11 +29,11 @@ use std::time::Duration;
 
 static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
 
+/// Unix Domain Socket IPC manager
+///
 /// Listener implementation for Unix sockets as the underlying IPC mechanism.
 ///
 /// Holds references to a `UnixListener`.
-///
-/// Only works on Unix systems.
 #[derive(Debug)]
 pub struct DomainSocketListener {
     listener: UnixListener,
@@ -120,6 +124,7 @@ impl Listen for DomainSocketListener {
     }
 }
 
+/// Builder for `DomainSocketListener`
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DomainSocketListenerBuilder {
     timeout: Option<Duration>,
