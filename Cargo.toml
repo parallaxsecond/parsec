@@ -1,7 +1,8 @@
 [package]
 name = "parsec-service"
-version = "0.1.1"
-authors = ["Paul Howard <paul.howard@arm.com>",
+version = "0.1.2"
+authors = ["Anton Antonov <anton.antonov@arm.com>",
+           "Paul Howard <paul.howard@arm.com>",
            "Ionut Mihalcea <ionut.mihalcea@arm.com>",
            "Hugues de Valon <hugues.devalon@arm.com>"]
 description = "A language-agnostic API to secure services in a platform-agnostic way"
