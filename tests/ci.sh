@@ -19,8 +19,23 @@
 
 set -e
 
+# The clean up procedure is called when the script finished or is interrupted
+cleanup () {
+    echo "Shutdown Parsec and clean up"
+    # Stop Parsec if running
+    if [ -n "$PARSEC_PID" ]; then kill $PARSEC_PID || true ; fi
+    # Stop tpm_server if running
+    if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
+    # Remove the slot_number line added by find_slot_number.sh
+    sed -i '/^slot_number =.*/d' $CONFIG_PATH
+    # Remove fake mapping files
+    if [ -d "mappings" ]; then rm -rf -- "mappings"; fi
+
+    cargo clean
+}
+
 usage () {
-	printf "
+    printf "
 Continuous Integration test script
 
 This script will execute various tests targeting a platform with a
@@ -39,55 +54,47 @@ where PROVIDER_NAME can be one of:
 }
 
 # Check if the PROVIDER_NAME was given.
-if [ $# -eq 0 ]
+if [ $# -ne 1 ]
 then
-	echo "error: a provider name needs to be given as input argument to that script."
-	usage
-	exit 1
+    echo "error: a provider name needs to be given as input argument to that script."
+    usage
+    exit 1
 fi
 
-# Switch amoung parameters
-if [[ $1 = "mbed-crypto" ]]
-then
-	# Mbed Cyypto provider
-	FEATURES="--features=$1-provider"
-	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
-elif [[ $1 = "tpm" ]]
-then
-	# TPM provider
-	FEATURES="--features=$1-provider"
-	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
+trap cleanup EXIT
 
-	rm -f NVChip
-	tpm_server &
-	sleep 5
-	tpm2_startup -c -T mssim
-	tpm2_changeauth -c owner tpm_pass
-elif [[ $1 = "pkcs11" ]]
+# Set parsec build/run parameters
+case "$1" in
+    mbed-crypto | pkcs11 | tpm )
+        FEATURES="--features=$1-provider"
+        CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
+    ;;
+    all )
+        FEATURES="--features=all-providers"
+        CONFIG_PATH="tests/all_providers/config.toml"
+    ;;
+    * )
+        echo "error: PROVIDER_NAME given (\"$1\") is invalid."
+        usage
+        exit 1
+    ;;
+esac
+
+if [ "$1" = "tpm" ] || [ "$1" = "all" ]
 then
-	# PKCS11 provider
-	FEATURES="--features=$1-provider"
-	CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
+    # Start and configure TPM server
+    rm -f NVChip
+    tpm_server &
+    TPM_SRV_PID=$!
+    sleep 5
+    tpm2_startup -c -T mssim 2>/dev/null
+    tpm2_changeauth -c owner tpm_pass 2>/dev/null
+fi
 
-	# Find and append the slot number at the end of the configuration file.
-	tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
-elif [[ $1 = "all" ]]
+if [ "$1" = "pkcs11" ] || [ "$1" = "all" ]
 then
-	# All providers
-	FEATURES="--features=all-providers"
-	CONFIG_PATH="tests/all_providers/config.toml"
-
-	rm -f NVChip
-	tpm_server &
-	sleep 5
-	tpm2_startup -c -T mssim
-	tpm2_changeauth -c owner tpm_pass
-
-	tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
-else
-	echo "error: PROVIDER_NAME given (\"$1\") is invalid."
-	usage
-	exit 1
+    # Find and append the slot number at the end of the configuration file.
+    tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
 fi
 
 echo "Build test"
@@ -97,11 +104,11 @@ echo "Static checks"
 # On native target clippy or fmt might not be available.
 if rustup component list | grep -q fmt
 then
-	cargo fmt --all -- --check
+    cargo fmt --all -- --check
 fi
 if rustup component list | grep -q clippy
 then
-	cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
+    cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
 fi
 
 echo "Unit tests"
@@ -111,62 +118,61 @@ RUST_BACKTRACE=1 cargo test --doc $FEATURES
 
 echo "Start Parsec for integration tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-SERVER_PID=$!
+PARSEC_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.
 sleep 5
 
-if [[ $1 = "all" ]]
+# Check that Parsec successfully started and is running
+pgrep -f target/debug/parsec >/dev/null
+
+if [ "$1" = "all" ]
 then
-	echo "Execute all-providers tests"
-	RUST_BACKTRACE=1 cargo test $FEATURES all_providers
+    echo "Execute all-providers tests"
+    RUST_BACKTRACE=1 cargo test $FEATURES all_providers
 else
-	# Per provider tests
-	echo "Execute normal tests"
-	RUST_BACKTRACE=1 cargo test $FEATURES normal_tests
+    # Per provider tests
+    echo "Execute normal tests"
+    RUST_BACKTRACE=1 cargo test $FEATURES normal_tests
 
-	echo "Execute persistent test, before the reload"
-	RUST_BACKTRACE=1 cargo test $FEATURES persistent_before
+    echo "Execute persistent test, before the reload"
+    RUST_BACKTRACE=1 cargo test $FEATURES persistent_before
 
-	# Create a fake mapping file for the root application, the provider and a
-	# key name of "Test Key". It contains a valid PSA Key ID.
-	# It is tested in test "should_have_been_deleted".
-	# This test does not make sense for the TPM provider.
-	if [[ $1 = "mbed-crypto" ]]
-	then
-		echo "Create a fake mapping file for Mbed Provider"
-		mkdir -p mappings/cm9vdA==/1
-		printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-	elif [[ $1 = "pkcs11" ]]
-	then
-		echo "Create a fake mapping file for PKCS 11 Provider"
-		mkdir -p mappings/cm9vdA==/2
-		printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
-	fi
+    # Create a fake mapping file for the root application, the provider and a
+    # key name of "Test Key". It contains a valid PSA Key ID.
+    # It is tested in test "should_have_been_deleted".
+    # This test does not make sense for the TPM provider.
+    if [ "$1" = "mbed-crypto" ]
+    then
+        echo "Create a fake mapping file for Mbed Provider"
+        mkdir -p mappings/cm9vdA==/1
+        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+    elif [ "$1" = "pkcs11" ]
+    then
+        echo "Create a fake mapping file for PKCS 11 Provider"
+        mkdir -p mappings/cm9vdA==/2
+        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
+    fi
 
-	echo "Trigger a configuration reload to load the new mappings"
-	kill -s SIGHUP $SERVER_PID
-	# Sleep time needed to make sure Parsec is ready before launching the tests.
-	sleep 5
+    echo "Trigger a configuration reload to load the new mappings"
+    kill -s SIGHUP $PARSEC_PID
+    # Sleep time needed to make sure Parsec is ready before launching the tests.
+    sleep 5
 
-	echo "Execute persistent test, after the reload"
-	RUST_BACKTRACE=1 cargo test $FEATURES persistent_after
+    echo "Execute persistent test, after the reload"
+    RUST_BACKTRACE=1 cargo test $FEATURES persistent_after
 
-	echo "Shutdown Parsec"
-	kill $SERVER_PID
-	# Sleep time needed to make sure Parsec is killed.
-	sleep 2
+    echo "Shutdown Parsec"
+    kill $PARSEC_PID
+    # Sleep time needed to make sure Parsec is killed.
+    sleep 2
 
-	echo "Start Parsec for stress tests"
-	# Change the log level for the stress tests because logging is limited on the
-	# CI servers.
-	RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-	SERVER_PID=$!
-	sleep 5
+    echo "Start Parsec for stress tests"
+    # Change the log level for the stress tests because logging is limited on the
+    # CI servers.
+    RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
+    PARSEC_PID=$!
+    sleep 5
 
-	echo "Execute stress tests"
-	RUST_BACKTRACE=1 cargo test $FEATURES stress_test
+    echo "Execute stress tests"
+    RUST_BACKTRACE=1 cargo test $FEATURES stress_test
 fi
-
-echo "Shutdown Parsec"
-kill $SERVER_PID
-cargo clean
