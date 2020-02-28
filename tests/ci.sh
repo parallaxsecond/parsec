@@ -28,10 +28,11 @@ cleanup () {
     if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
     # Remove the slot_number line added by find_slot_number.sh
     sed -i '/^slot_number =.*/d' $CONFIG_PATH
-    # Remove fake mapping files
+    # Remove fake mapping and temp files
     if [ -d "mappings" ]; then rm -rf -- "mappings"; fi
+    if [ -f "NVChip" ]; then rm "NVChip" ; fi
 
-    cargo clean
+    if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
 }
 
 usage () {
@@ -44,7 +45,7 @@ It is meant to be executed inside one of the container
 which Dockerfiles are in tests/per_provider/provider_cfg/*/
 or tests/all_providers/
 
-Usage: ./tests/ci.sh PROVIDER_NAME
+Usage: ./tests/ci.sh [--no-cargo-clean] PROVIDER_NAME
 where PROVIDER_NAME can be one of:
     - mbed-crypto
     - pkcs11
@@ -53,37 +54,49 @@ where PROVIDER_NAME can be one of:
 "
 }
 
-# Check if the PROVIDER_NAME was given.
-if [ $# -ne 1 ]
-then
-    echo "error: a provider name needs to be given as input argument to that script."
+error_msg () {
+    echo "Error: $1"
     usage
     exit 1
+}
+
+# Parse arguments
+NO_CARGO_CLEAN=
+PROVIDER_NAME=
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --no-cargo-clean )
+            NO_CARGO_CLEAN="True"
+        ;;
+        mbed-crypto | pkcs11 | tpm | all )
+            if [ -n "$PROVIDER_NAME" ]; then
+                error_msg "Only one provider name must be given"
+            fi
+            PROVIDER_NAME=$1
+            if [ "$PROVIDER_NAME" = "all" ]; then
+                FEATURES="--features=all-providers"
+                CONFIG_PATH="tests/all_providers/config.toml"
+            else
+                FEATURES="--features=$1-provider"
+                CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
+            fi
+        ;;
+        *)
+            error_msg "Unknown argument: $1"
+        ;;
+    esac
+    shift
+done
+
+# Check if the PROVIDER_NAME was given.
+if [ -z "$PROVIDER_NAME" ]; then
+    error_msg "a provider name needs to be given as input argument to that script."
 fi
 
 trap cleanup EXIT
 
-# Set parsec build/run parameters
-case "$1" in
-    mbed-crypto | pkcs11 | tpm )
-        FEATURES="--features=$1-provider"
-        CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
-    ;;
-    all )
-        FEATURES="--features=all-providers"
-        CONFIG_PATH="tests/all_providers/config.toml"
-    ;;
-    * )
-        echo "error: PROVIDER_NAME given (\"$1\") is invalid."
-        usage
-        exit 1
-    ;;
-esac
-
-if [ "$1" = "tpm" ] || [ "$1" = "all" ]
-then
+if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
     # Start and configure TPM server
-    rm -f NVChip
     tpm_server &
     TPM_SRV_PID=$!
     sleep 5
@@ -91,8 +104,7 @@ then
     tpm2_changeauth -c owner tpm_pass 2>/dev/null
 fi
 
-if [ "$1" = "pkcs11" ] || [ "$1" = "all" ]
-then
+if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ]; then
     # Find and append the slot number at the end of the configuration file.
     tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
 fi
@@ -102,12 +114,10 @@ RUST_BACKTRACE=1 cargo build $FEATURES
 
 echo "Static checks"
 # On native target clippy or fmt might not be available.
-if rustup component list | grep -q fmt
-then
+if rustup component list | grep -q fmt; then
     cargo fmt --all -- --check
 fi
-if rustup component list | grep -q clippy
-then
+if rustup component list | grep -q clippy; then
     cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
 fi
 
@@ -125,8 +135,7 @@ sleep 5
 # Check that Parsec successfully started and is running
 pgrep -f target/debug/parsec >/dev/null
 
-if [ "$1" = "all" ]
-then
+if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers tests"
     RUST_BACKTRACE=1 cargo test $FEATURES all_providers
 else
@@ -141,13 +150,11 @@ else
     # key name of "Test Key". It contains a valid PSA Key ID.
     # It is tested in test "should_have_been_deleted".
     # This test does not make sense for the TPM provider.
-    if [ "$1" = "mbed-crypto" ]
-    then
+    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
         echo "Create a fake mapping file for Mbed Provider"
         mkdir -p mappings/cm9vdA==/1
         printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-    elif [ "$1" = "pkcs11" ]
-    then
+    elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
         echo "Create a fake mapping file for PKCS 11 Provider"
         mkdir -p mappings/cm9vdA==/2
         printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
