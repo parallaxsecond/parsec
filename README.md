@@ -1,5 +1,5 @@
 <!--
-  -- Copyright (c) 2019, Arm Limited, All Rights Reserved
+  -- Copyright (c) 2019-2020, Arm Limited, All Rights Reserved
   -- SPDX-License-Identifier: Apache-2.0
   --
   -- Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,6 +26,8 @@
 **Parsec** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
 to provide a common API to secure services in a platform-agnostic way.
 
+To see a tracker of the PSA Crypto API subset that is currently supported by Parsec, check the [API coverage document](./api_coverage.md)!
+
 Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-book/)!
 
 ## Disclaimer
@@ -41,15 +43,17 @@ Contributions from the developer community are welcome. Please refer to the cont
 ## Example
 
 Launch the Parsec service with Mbed Crypto as the only provider (using the default configuration):
-```bash
+
+``` bash
 $ git clone https://github.com/parallaxsecond/parsec.git
 $ cd parsec
 $ RUST_LOG=info cargo run
 ```
 
-Parsec Client Libraries can now communicate with the service. For example using the Rust Test client,
+Parsec Client Libraries can now communicate with the service. For example using the Rust Test client, 
 RSA signatures can be done as follows:
-```rust
+
+``` rust
 use parsec_client_test::TestClient;
 
 let mut client = TestClient::new();
@@ -84,6 +88,7 @@ need any ideas 🙂!
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
 
 This project uses the following third party crates:
+
 * serde (MIT and Apache-2.0)
 * bindgen (BSD-3-Clause)
 * cargo\_toml (Apache-2.0)
@@ -111,4 +116,6 @@ This project uses the following third party crates:
 * version (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
+
 * [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
+

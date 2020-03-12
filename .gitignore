@@ -6,3 +6,4 @@ tags
 *.patch
 mappings/
 NVChip
+.vscode
