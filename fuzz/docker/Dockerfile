@@ -16,7 +16,7 @@ RUN cd mbed-crypto-mbedcrypto-2.0.0 \
 
 WORKDIR /tmp
 # Download and install TSS 2.0
-RUN git clone https://github.com/tpm2-software/tpm2-tss.git --branch 2.3.1
+RUN git clone https://github.com/tpm2-software/tpm2-tss.git --branch 2.3.3
 RUN cd tpm2-tss \
 	&& ./bootstrap \
 	&& ./configure \

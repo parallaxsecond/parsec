@@ -37,7 +37,13 @@ use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::{
-    constants::TPM2_ALG_SHA256, utils::AsymSchemeUnion, utils::Signature, utils::TpmsContext, Tcti,
+    abstraction::transient::TransientKeyContextBuilder,
+    constants::TPM2_ALG_SHA256,
+    utils::primitives::{Cipher, CipherKeyLength, CipherMode},
+    utils::AsymSchemeUnion,
+    utils::Signature,
+    utils::TpmsContext,
+    Tcti,
 };
 use uuid::Uuid;
 
@@ -68,7 +74,7 @@ pub struct TpmProvider {
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
-    esapi_context: Mutex<tss_esapi::TransientObjectContext>,
+    esapi_context: Mutex<tss_esapi::TransientKeyContext>,
     // The Key ID Manager stores the key context and its associated authValue (a PasswordContext
     // structure).
     #[derivative(Debug = "ignore")]
@@ -142,7 +148,7 @@ impl TpmProvider {
     // Creates and initialise a new instance of TpmProvider.
     fn new(
         key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
-        esapi_context: tss_esapi::TransientObjectContext,
+        esapi_context: tss_esapi::TransientKeyContext,
     ) -> Option<TpmProvider> {
         Some(TpmProvider {
             esapi_context: Mutex::new(esapi_context),
@@ -408,6 +414,17 @@ impl Drop for TpmProvider {
     }
 }
 
+const CIPHERS: [Cipher; 2] = [
+    Cipher::AES {
+        key_bits: CipherKeyLength::Bits256,
+        mode: CipherMode::CFB,
+    },
+    Cipher::AES {
+        key_bits: CipherKeyLength::Bits128,
+        mode: CipherMode::CFB,
+    },
+];
+
 /// Builder for TpmProvider
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
@@ -456,35 +473,74 @@ impl TpmProviderBuilder {
         self
     }
 
+    unsafe fn find_session_cipher(&self) -> std::io::Result<Cipher> {
+        let mut ctx = tss_esapi::Context::new(
+            self.tcti
+                .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
+        )
+        .or_else(|e| {
+            error!("Error when creating TSS Context ({})", e);
+            Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "failed initializing TSS context",
+            ))
+        })?;
+
+        for cipher in CIPHERS.iter() {
+            if ctx
+                .test_parms(tss_esapi::utils::PublicParmsUnion::SymDetail(*cipher))
+                .is_ok()
+            {
+                return Ok(*cipher);
+            }
+        }
+
+        Err(std::io::Error::new(
+            ErrorKind::Other,
+            "desired ciphers not supported by TPM",
+        ))
+    }
+
     /// Create an instance of TpmProvider
     ///
     /// # Safety
     ///
-    /// Undefined behaviour might appear if two instances of TransientObjectContext are created
+    /// Undefined behaviour might appear if two instances of TransientKeyContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
     pub unsafe fn build(self) -> std::io::Result<TpmProvider> {
+        let session_cipher = self.find_session_cipher()?;
         TpmProvider::new(
             self.key_id_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key ID store")
             })?,
-            tss_esapi::TransientObjectContext::new(
-                self.tcti
-                    .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
-                ROOT_KEY_SIZE,
-                ROOT_KEY_AUTH_SIZE,
-                self.owner_hierarchy_auth
-                    .ok_or_else(|| {
-                        std::io::Error::new(ErrorKind::InvalidData, "missing owner hierarchy auth")
-                    })?
-                    .as_bytes(),
-            )
-            .or_else(|e| {
-                error!("Error creating TSS Transient Object Context ({}).", e);
-                Err(std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "failed initializing TSS context",
-                ))
-            })?,
+            TransientKeyContextBuilder::new()
+                .with_tcti(
+                    self.tcti.ok_or_else(|| {
+                        std::io::Error::new(ErrorKind::InvalidData, "missing TCTI")
+                    })?,
+                )
+                .with_root_key_size(ROOT_KEY_SIZE)
+                .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
+                .with_hierarchy_auth(
+                    self.owner_hierarchy_auth
+                        .ok_or_else(|| {
+                            std::io::Error::new(
+                                ErrorKind::InvalidData,
+                                "missing owner hierarchy auth",
+                            )
+                        })?
+                        .as_bytes()
+                        .to_vec(),
+                )
+                .with_session_encr_cipher(session_cipher)
+                .build()
+                .or_else(|e| {
+                    error!("Error creating TSS Transient Object Context ({}).", e);
+                    Err(std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "failed initializing TSS context",
+                    ))
+                })?,
         )
         .ok_or_else(|| {
             std::io::Error::new(ErrorKind::InvalidData, "failed initializing TPM provider")
