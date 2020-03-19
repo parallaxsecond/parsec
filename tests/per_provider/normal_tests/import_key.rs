@@ -13,7 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use parsec_client_test::TestClient;
-use parsec_interface::operations::key_attributes::*;
+use parsec_interface::operations::psa_algorithm::*;
+use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 
 const KEY_DATA: [u8; 140] = [
@@ -34,7 +35,9 @@ fn import_key() -> Result<()> {
     client.import_key(
         key_name,
         KeyType::RsaPublicKey,
-        Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256)),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: Hash::Sha256,
+        }),
         KEY_DATA.to_vec(),
     )
 }
@@ -50,7 +53,9 @@ fn create_and_import_key() -> Result<()> {
         .import_key(
             key_name,
             KeyType::RsaPublicKey,
-            Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256)),
+            Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            }),
             KEY_DATA.to_vec(),
         )
         .expect_err("Key should have already existed");
@@ -67,14 +72,18 @@ fn import_key_twice() -> Result<()> {
     client.import_key(
         key_name.clone(),
         KeyType::RsaPublicKey,
-        Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256)),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: Hash::Sha256,
+        }),
         KEY_DATA.to_vec(),
     )?;
     let status = client
         .import_key(
             key_name,
             KeyType::RsaPublicKey,
-            Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256)),
+            Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            }),
             KEY_DATA.to_vec(),
         )
         .expect_err("The key with the same name has already been created.");

@@ -11,7 +11,7 @@ name = "on-disk-manager"
 manager_type = "OnDisk"
 
 [[provider]]
-provider_type = "TpmProvider"
+provider_type = "Tpm"
 key_id_manager = "on-disk-manager"
 tcti = "mssim"
 owner_hierarchy_auth = "tpm_pass"

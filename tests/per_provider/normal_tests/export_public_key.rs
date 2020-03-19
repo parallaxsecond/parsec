@@ -13,7 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use parsec_client_test::TestClient;
-use parsec_interface::operations::key_attributes::*;
+use parsec_interface::operations::psa_algorithm::*;
+use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 
 #[test]
@@ -55,7 +56,9 @@ fn import_and_export_public_key() -> Result<()> {
     client.import_key(
         key_name.clone(),
         KeyType::RsaPublicKey,
-        Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256)),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: Hash::Sha256,
+        }),
         key_data.clone(),
     )?;
 

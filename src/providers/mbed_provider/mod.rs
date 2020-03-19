@@ -19,14 +19,11 @@ use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use constants::PSA_SUCCESS;
 use derivative::Derivative;
 use log::{error, info, warn};
-use parsec_interface::operations::ProviderInfo;
-use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
-use parsec_interface::operations::{OpAsymVerify, ResultAsymVerify};
-use parsec_interface::operations::{OpCreateKey, ResultCreateKey};
-use parsec_interface::operations::{OpDestroyKey, ResultDestroyKey};
-use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
-use parsec_interface::operations::{OpImportKey, ResultImportKey};
-use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
+use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::{
+    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_sign_hash, psa_verify_hash,
+};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto_binding::psa_key_id_t;
 use std::collections::HashSet;
@@ -56,12 +53,12 @@ mod utils;
 type LocalIdStore = HashSet<psa_key_id_t>;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
-    Opcode::CreateKey,
-    Opcode::DestroyKey,
-    Opcode::AsymSign,
-    Opcode::AsymVerify,
-    Opcode::ImportKey,
-    Opcode::ExportPublicKey,
+    Opcode::PsaGenerateKey,
+    Opcode::PsaDestroyKey,
+    Opcode::PsaSignHash,
+    Opcode::PsaVerifyHash,
+    Opcode::PsaImportKey,
+    Opcode::PsaExportPublicKey,
     Opcode::ListOpcodes,
 ];
 
@@ -75,7 +72,7 @@ pub struct MbedProvider {
     #[derivative(Debug = "ignore")]
     key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
     local_ids: RwLock<LocalIdStore>,
-    // Calls to `psa_open_key`, `psa_create_key` and `psa_close_key` are not thread safe - the slot
+    // Calls to `psa_open_key`, `psa_generate_key` and `psa_destroy_key` are not thread safe - the slot
     // allocation mechanism in Mbed Crypto can return the same key slot for overlapping calls.
     // `key_handle_mutex` is use as a way of securing access to said operations among the threads.
     // This issue tracks progress on fixing the original problem in Mbed Crypto:
@@ -186,7 +183,7 @@ impl MbedProvider {
             // Go through all MbedProvider key triple to key ID mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
-            match store_handle.get_all(ProviderID::MbedProvider) {
+            match store_handle.get_all(ProviderID::MbedCrypto) {
                 Ok(key_triples) => {
                     for key_triple in key_triples.iter().cloned() {
                         let key_id = match get_key_id(key_triple, &*store_handle) {
@@ -233,8 +230,8 @@ impl MbedProvider {
 }
 
 impl Provide for MbedProvider {
-    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
-        Ok(ResultListOpcodes {
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        Ok(list_opcodes::Result {
             opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
         })
     }
@@ -248,16 +245,20 @@ impl Provide for MbedProvider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::MbedProvider,
+            id: ProviderID::MbedCrypto,
         })
     }
 
-    fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
+    fn psa_generate_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_generate_key::Operation,
+    ) -> Result<psa_generate_key::Result> {
         info!("Mbed Provider - Create Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_attributes = op.key_attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_attributes = op.attributes;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
@@ -296,16 +297,20 @@ impl Provide for MbedProvider {
             key_handle.close()?;
         }
 
-        Ok(ResultCreateKey {})
+        Ok(psa_generate_key::Result {})
     }
 
-    fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
+    fn psa_import_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
         info!("Mbed Provider - Import Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_attributes = op.key_attributes;
-        let key_data = op.key_data;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_attributes = op.attributes;
+        let key_data = op.data;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
@@ -344,18 +349,18 @@ impl Provide for MbedProvider {
             key_handle.close()?;
         }
 
-        Ok(ResultImportKey {})
+        Ok(psa_import_key::Result {})
     }
 
-    fn export_public_key(
+    fn psa_export_public_key(
         &self,
         app_name: ApplicationName,
-        op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey> {
+        op: psa_export_public_key::Operation,
+    ) -> Result<psa_export_public_key::Result> {
         info!("Mbed Provider - Export Public Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -399,14 +404,18 @@ impl Provide for MbedProvider {
         }
 
         buffer.resize(actual_size, 0);
-        Ok(ResultExportPublicKey { key_data: buffer })
+        Ok(psa_export_public_key::Result { data: buffer })
     }
 
-    fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
+    fn psa_destroy_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_destroy_key::Operation,
+    ) -> Result<psa_destroy_key::Result> {
         info!("Mbed Provider - Destroy Key");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
@@ -435,19 +444,23 @@ impl Provide for MbedProvider {
                 &mut *store_handle,
                 &mut local_ids_handle,
             )?;
-            Ok(ResultDestroyKey {})
+            Ok(psa_destroy_key::Result {})
         } else {
             error!("Destroy key status: {}", destroy_key_status);
             Err(utils::convert_status(destroy_key_status))
         }
     }
 
-    fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
+    fn psa_sign_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_sign_hash::Operation,
+    ) -> Result<psa_sign_hash::Result> {
         info!("Mbed Provider - Asym Sign");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -488,7 +501,7 @@ impl Provide for MbedProvider {
         };
 
         if sign_status == PSA_SUCCESS {
-            let mut res = ResultAsymSign {
+            let mut res = psa_sign_hash::Result {
                 signature: Vec::new(),
             };
             res.signature.resize(signature_size, 0);
@@ -501,13 +514,17 @@ impl Provide for MbedProvider {
         }
     }
 
-    fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
+    fn psa_verify_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
         info!("Mbed Provider - Asym Verify");
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
         let signature = op.signature;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -539,7 +556,7 @@ impl Provide for MbedProvider {
         }
 
         if verify_status == PSA_SUCCESS {
-            Ok(ResultAsymVerify {})
+            Ok(psa_verify_hash::Result {})
         } else {
             Err(utils::convert_status(verify_status))
         }

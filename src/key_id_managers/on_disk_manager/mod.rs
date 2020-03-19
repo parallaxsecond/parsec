@@ -450,11 +450,7 @@ mod test {
         let big_app_name_ascii = ApplicationName::new("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
-        let key_triple = KeyTriple::new(
-            big_app_name_ascii,
-            ProviderID::CoreProvider,
-            big_key_name_ascii,
-        );
+        let key_triple = KeyTriple::new(big_app_name_ascii, ProviderID::Core, big_key_name_ascii);
         let key_id = vec![0x11, 0x22, 0x33];
 
         let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
@@ -472,7 +468,7 @@ mod test {
 
         let key_triple = KeyTriple::new(
             big_app_name_emoticons,
-            ProviderID::MbedProvider,
+            ProviderID::MbedCrypto,
             big_key_name_emoticons,
         );
         let key_id = vec![0x11, 0x22, 0x33];
@@ -488,17 +484,17 @@ mod test {
 
         let app_name1 = ApplicationName::new("😀 Application One 😀".to_string());
         let key_name1 = "😀 Key One 😀".to_string();
-        let key_triple1 = KeyTriple::new(app_name1, ProviderID::CoreProvider, key_name1);
+        let key_triple1 = KeyTriple::new(app_name1, ProviderID::Core, key_name1);
         let key_id1 = vec![0x11, 0x22, 0x33];
 
         let app_name2 = ApplicationName::new("😇 Application Two 😇".to_string());
         let key_name2 = "😇 Key Two 😇".to_string();
-        let key_triple2 = KeyTriple::new(app_name2, ProviderID::MbedProvider, key_name2);
+        let key_triple2 = KeyTriple::new(app_name2, ProviderID::MbedCrypto, key_name2);
         let key_id2 = vec![0x12, 0x22, 0x32];
 
         let app_name3 = ApplicationName::new("😈 Application Three 😈".to_string());
         let key_name3 = "😈 Key Three 😈".to_string();
-        let key_triple3 = KeyTriple::new(app_name3, ProviderID::CoreProvider, key_name3);
+        let key_triple3 = KeyTriple::new(app_name3, ProviderID::Core, key_name3);
         let key_id3 = vec![0x13, 0x23, 0x33];
         {
             let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
@@ -528,7 +524,7 @@ mod test {
     fn new_key_triple(key_name: String) -> KeyTriple {
         KeyTriple::new(
             ApplicationName::new("Testing Application 😎".to_string()),
-            ProviderID::MbedProvider,
+            ProviderID::MbedCrypto,
             key_name,
         )
     }

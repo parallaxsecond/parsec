@@ -39,53 +39,51 @@ pub mod tpm_provider;
 // https://serde.rs/enum-representations.html
 #[serde(tag = "provider_type")]
 pub enum ProviderConfig {
-    MbedProvider {
+    MbedCrypto {
         key_id_manager: String,
     },
-    Pkcs11Provider {
+    Pkcs11 {
         key_id_manager: String,
         library_path: String,
         slot_number: usize,
         user_pin: Option<String>,
     },
-    TpmProvider {
+    Tpm {
         key_id_manager: String,
         tcti: String,
         owner_hierarchy_auth: String,
     },
 }
 
-use self::ProviderConfig::{MbedProvider, Pkcs11Provider, TpmProvider};
+use self::ProviderConfig::{MbedCrypto, Pkcs11, Tpm};
 
 impl ProviderConfig {
     pub fn key_id_manager(&self) -> &String {
         match *self {
-            MbedProvider {
+            MbedCrypto {
                 ref key_id_manager, ..
             } => key_id_manager,
-            Pkcs11Provider {
+            Pkcs11 {
                 ref key_id_manager, ..
             } => key_id_manager,
-            TpmProvider {
+            Tpm {
                 ref key_id_manager, ..
             } => key_id_manager,
         }
     }
     pub fn provider_id(&self) -> ProviderID {
         match *self {
-            MbedProvider { .. } => ProviderID::MbedProvider,
-            Pkcs11Provider { .. } => ProviderID::Pkcs11Provider,
-            TpmProvider { .. } => ProviderID::TpmProvider,
+            MbedCrypto { .. } => ProviderID::MbedCrypto,
+            Pkcs11 { .. } => ProviderID::Pkcs11,
+            Tpm { .. } => ProviderID::Tpm,
         }
     }
 }
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    OpAsymSign, OpAsymVerify, OpCreateKey, OpDestroyKey, OpExportPublicKey, OpImportKey,
-    OpListOpcodes, OpListProviders, OpPing, ProviderInfo, ResultAsymSign, ResultAsymVerify,
-    ResultCreateKey, ResultDestroyKey, ResultExportPublicKey, ResultImportKey, ResultListOpcodes,
-    ResultListProviders, ResultPing,
+    list_opcodes, list_providers, ping, psa_destroy_key, psa_export_public_key, psa_generate_key,
+    psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -97,15 +95,15 @@ pub trait Provide {
     /// Return a description of the current provider.
     ///
     /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
-    fn describe(&self) -> Result<ProviderInfo>;
+    fn describe(&self) -> Result<list_providers::ProviderInfo>;
 
     /// List the providers running in the service.
-    fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
+    fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// List the opcodes supported by the current provider.
-    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes>;
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result>;
 
     /// Execute a Ping operation to get the wire protocol version major and minor information.
     ///
@@ -113,50 +111,62 @@ pub trait Provide {
     ///
     /// This operation will only fail if not implemented. It will never fail when being called on
     /// the `CoreProvider`.
-    fn ping(&self, _op: OpPing) -> Result<ResultPing> {
+    fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a CreateKey operation.
-    fn create_key(&self, _app_name: ApplicationName, _op: OpCreateKey) -> Result<ResultCreateKey> {
+    fn psa_generate_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_generate_key::Operation,
+    ) -> Result<psa_generate_key::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a ImportKey operation.
-    fn import_key(&self, _app_name: ApplicationName, _op: OpImportKey) -> Result<ResultImportKey> {
+    fn psa_import_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a ExportPublicKey operation.
-    fn export_public_key(
+    fn psa_export_public_key(
         &self,
         _app_name: ApplicationName,
-        _op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey> {
+        _op: psa_export_public_key::Operation,
+    ) -> Result<psa_export_public_key::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// Execute a DestroyKey operation.
-    fn destroy_key(
+    fn psa_destroy_key(
         &self,
         _app_name: ApplicationName,
-        _op: OpDestroyKey,
-    ) -> Result<ResultDestroyKey> {
+        _op: psa_destroy_key::Operation,
+    ) -> Result<psa_destroy_key::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Execute a AsymSign operation. This operation only signs the short digest given but does not
+    /// Execute a SignHash operation. This operation only signs the short digest given but does not
     /// hash it.
-    fn asym_sign(&self, _app_name: ApplicationName, _op: OpAsymSign) -> Result<ResultAsymSign> {
+    fn psa_sign_hash(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_sign_hash::Operation,
+    ) -> Result<psa_sign_hash::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Execute a AsymVerify operation.
-    fn asym_verify(
+    /// Execute a VerifyHash operation.
+    fn psa_verify_hash(
         &self,
         _app_name: ApplicationName,
-        _op: OpAsymVerify,
-    ) -> Result<ResultAsymVerify> {
+        _op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

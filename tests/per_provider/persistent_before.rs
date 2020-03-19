@@ -30,7 +30,7 @@ fn create_and_verify() -> Result<()> {
 
     let key_name = String::from("🤡 Clown's Master Key 🤡");
     client.create_rsa_sign_key(key_name.clone())?;
-    let signature = client.sign(key_name.clone(), HASH.to_vec())?;
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())?;
 
-    client.verify(key_name, HASH.to_vec(), signature)
+    client.verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
 }

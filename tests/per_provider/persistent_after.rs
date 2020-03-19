@@ -29,9 +29,9 @@ fn reuse_to_sign() -> Result<()> {
 
     let key_name = String::from("🤡 Clown's Master Key 🤡");
 
-    let signature = client.sign(key_name.clone(), HASH.to_vec())?;
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())?;
 
-    client.verify(key_name.clone(), HASH.to_vec(), signature)?;
+    client.verify_with_rsa_sha256(key_name.clone(), HASH.to_vec(), signature)?;
     client.destroy_key(key_name)
 }
 
@@ -39,7 +39,7 @@ fn reuse_to_sign() -> Result<()> {
 fn should_have_been_deleted() {
     let mut client = TestClient::new();
 
-    if client.get_cached_provider(Opcode::DestroyKey) == ProviderID::TpmProvider {
+    if client.get_cached_provider(Opcode::PsaDestroyKey) == ProviderID::Tpm {
         // This test does not make sense for the TPM Provider.
         return;
     }

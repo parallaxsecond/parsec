@@ -61,7 +61,7 @@ fn create_destroy_and_operation() -> Result<()> {
     client.destroy_key(key_name.clone())?;
 
     let status = client
-        .sign(key_name, hash)
+        .sign_with_rsa_sha256(key_name, hash)
         .expect_err("The key used by this operation should have been deleted.");
     assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 

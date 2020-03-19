@@ -22,7 +22,7 @@ fn invalid_version() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
     req_hdr.version_maj = 0xff;
 
@@ -57,7 +57,7 @@ fn invalid_content_type() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
     req_hdr.version_maj = 1;
     req_hdr.content_type = 0xff;
@@ -74,7 +74,7 @@ fn invalid_accept_type() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
     req_hdr.version_maj = 1;
 
@@ -92,7 +92,7 @@ fn invalid_body_len() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
     req_hdr.version_maj = 1;
 
@@ -109,7 +109,7 @@ fn invalid_auth_len() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
     req_hdr.version_maj = 1;
 
@@ -126,7 +126,7 @@ fn invalid_opcode() {
     let mut client = RequestTestClient::new();
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::CoreProvider as u8;
+    req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = 0xff_ff;
     req_hdr.version_maj = 1;
 
@@ -139,7 +139,7 @@ fn invalid_opcode() {
 #[test]
 fn wrong_provider_core() {
     let mut client = TestClient::new();
-    client.set_provider(Some(ProviderID::CoreProvider));
+    client.set_provider(Some(ProviderID::Core));
 
     let response_status = client
         .destroy_key(String::new())

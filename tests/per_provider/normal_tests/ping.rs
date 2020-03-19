@@ -22,9 +22,9 @@ use parsec_interface::requests::{ResponseStatus, Result};
 #[test]
 fn test_ping() -> Result<()> {
     let mut client = TestClient::new();
-    let version = client.ping(ProviderID::CoreProvider)?;
-    assert_eq!(version.0, 0);
-    assert_eq!(version.1, 1);
+    let version = client.ping(ProviderID::Core)?;
+    assert_eq!(version.0, 1);
+    assert_eq!(version.1, 0);
 
     Ok(())
 }
@@ -34,7 +34,7 @@ fn mangled_ping() {
     let mut client = RequestTestClient::new();
     let mut req = Request::new();
     req.header.version_maj = 1;
-    req.header.provider = ProviderID::CoreProvider;
+    req.header.provider = ProviderID::Core;
     req.header.opcode = Opcode::Ping;
     req.auth = RequestAuth::from_bytes(Vec::from("root"));
 
