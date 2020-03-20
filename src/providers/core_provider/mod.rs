@@ -19,10 +19,8 @@
 //! platform.
 use super::Provide;
 use log::error;
-use parsec_interface::operations::ProviderInfo;
-use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
-use parsec_interface::operations::{OpListProviders, ResultListProviders};
-use parsec_interface::operations::{OpPing, ResultPing};
+use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::{list_opcodes, list_providers, ping};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
@@ -44,14 +42,14 @@ pub struct CoreProvider {
 }
 
 impl Provide for CoreProvider {
-    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
-        Ok(ResultListOpcodes {
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        Ok(list_opcodes::Result {
             opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
         })
     }
 
-    fn list_providers(&self, _op: OpListProviders) -> Result<ResultListProviders> {
-        Ok(ResultListProviders {
+    fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
+        Ok(list_providers::Result {
             providers: self.providers.clone(),
         })
     }
@@ -70,14 +68,14 @@ impl Provide for CoreProvider {
             version_maj: crate_version.major,
             version_min: crate_version.minor,
             version_rev: crate_version.patch,
-            id: ProviderID::CoreProvider,
+            id: ProviderID::Core,
         })
     }
 
-    fn ping(&self, _op: OpPing) -> Result<ResultPing> {
-        let result = ResultPing {
-            supp_version_maj: self.wire_protocol_version_maj,
-            supp_version_min: self.wire_protocol_version_min,
+    fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {
+        let result = ping::Result {
+            wire_protocol_version_maj: self.wire_protocol_version_maj,
+            wire_protocol_version_min: self.wire_protocol_version_min,
         };
 
         Ok(result)
@@ -161,9 +159,15 @@ mod tests {
             wire_protocol_version_maj: 10,
             providers: Vec::new(),
         };
-        let op = OpPing {};
+        let op = ping::Operation {};
         let result = provider.ping(op).unwrap();
-        assert_eq!(result.supp_version_maj, provider.wire_protocol_version_maj);
-        assert_eq!(result.supp_version_min, provider.wire_protocol_version_min);
+        assert_eq!(
+            result.wire_protocol_version_maj,
+            provider.wire_protocol_version_maj
+        );
+        assert_eq!(
+            result.wire_protocol_version_min,
+            provider.wire_protocol_version_min
+        );
     }
 }

@@ -116,48 +116,49 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self.provider.ping(op_ping));
                 self.result_to_response(NativeResult::Ping(result), header)
             }
-            NativeOperation::CreateKey(op_create_key) => {
-                let app_name =
-                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
-                let result =
-                    unwrap_or_else_return!(self.provider.create_key(app_name, op_create_key));
-                self.result_to_response(NativeResult::CreateKey(result), header)
-            }
-            NativeOperation::ImportKey(op_import_key) => {
-                let app_name =
-                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
-                let result =
-                    unwrap_or_else_return!(self.provider.import_key(app_name, op_import_key));
-                self.result_to_response(NativeResult::ImportKey(result), header)
-            }
-            NativeOperation::ExportPublicKey(op_export_public_key) => {
+            NativeOperation::PsaGenerateKey(op_generate_key) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .export_public_key(app_name, op_export_public_key));
-                self.result_to_response(NativeResult::ExportPublicKey(result), header)
+                    .psa_generate_key(app_name, op_generate_key));
+                self.result_to_response(NativeResult::PsaGenerateKey(result), header)
             }
-            NativeOperation::DestroyKey(op_destroy_key) => {
+            NativeOperation::PsaImportKey(op_import_key) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
-                    unwrap_or_else_return!(self.provider.destroy_key(app_name, op_destroy_key));
-                self.result_to_response(NativeResult::DestroyKey(result), header)
+                    unwrap_or_else_return!(self.provider.psa_import_key(app_name, op_import_key));
+                self.result_to_response(NativeResult::PsaImportKey(result), header)
             }
-            NativeOperation::AsymSign(op_asym_sign) => {
+            NativeOperation::PsaExportPublicKey(op_export_public_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_export_public_key(app_name, op_export_public_key));
+                self.result_to_response(NativeResult::PsaExportPublicKey(result), header)
+            }
+            NativeOperation::PsaDestroyKey(op_destroy_key) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
-                    unwrap_or_else_return!(self.provider.asym_sign(app_name, op_asym_sign));
-                self.result_to_response(NativeResult::AsymSign(result), header)
+                    unwrap_or_else_return!(self.provider.psa_destroy_key(app_name, op_destroy_key));
+                self.result_to_response(NativeResult::PsaDestroyKey(result), header)
             }
-            NativeOperation::AsymVerify(op_asym_verify) => {
+            NativeOperation::PsaSignHash(op_sign_hash) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
-                    unwrap_or_else_return!(self.provider.asym_verify(app_name, op_asym_verify));
-                self.result_to_response(NativeResult::AsymVerify(result), header)
+                    unwrap_or_else_return!(self.provider.psa_sign_hash(app_name, op_sign_hash));
+                self.result_to_response(NativeResult::PsaSignHash(result), header)
+            }
+            NativeOperation::PsaVerifyHash(op_verify_hash) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.psa_verify_hash(app_name, op_verify_hash));
+                self.result_to_response(NativeResult::PsaVerifyHash(result), header)
             }
         }
     }

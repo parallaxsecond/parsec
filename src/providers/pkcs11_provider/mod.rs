@@ -22,15 +22,13 @@ use crate::key_id_managers;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info, warn};
-use parsec_interface::operations::key_attributes::*;
-use parsec_interface::operations::ProviderInfo;
-use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
-use parsec_interface::operations::{OpAsymVerify, ResultAsymVerify};
-use parsec_interface::operations::{OpCreateKey, ResultCreateKey};
-use parsec_interface::operations::{OpDestroyKey, ResultDestroyKey};
-use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
-use parsec_interface::operations::{OpImportKey, ResultImportKey};
-use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
+use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::psa_algorithm::*;
+use parsec_interface::operations::psa_key_attributes::*;
+use parsec_interface::operations::{
+    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_sign_hash, psa_verify_hash,
+};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
 use pkcs11::types::{
@@ -50,12 +48,12 @@ type LocalIdStore = HashSet<[u8; 4]>;
 mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
-    Opcode::CreateKey,
-    Opcode::DestroyKey,
-    Opcode::AsymSign,
-    Opcode::AsymVerify,
-    Opcode::ImportKey,
-    Opcode::ExportPublicKey,
+    Opcode::PsaGenerateKey,
+    Opcode::PsaDestroyKey,
+    Opcode::PsaSignHash,
+    Opcode::PsaVerifyHash,
+    Opcode::PsaImportKey,
+    Opcode::PsaExportPublicKey,
     Opcode::ListOpcodes,
 ];
 
@@ -367,7 +365,7 @@ impl Pkcs11Provider {
             // Go through all PKCS 11 key triple to key ID mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
-            match store_handle.get_all(ProviderID::Pkcs11Provider) {
+            match store_handle.get_all(ProviderID::Pkcs11) {
                 Ok(key_triples) => {
                     let session =
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
@@ -468,8 +466,8 @@ impl Pkcs11Provider {
 }
 
 impl Provide for Pkcs11Provider {
-    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
-        Ok(ResultListOpcodes {
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        Ok(list_opcodes::Result {
             opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
         })
     }
@@ -484,16 +482,22 @@ impl Provide for Pkcs11Provider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::Pkcs11Provider,
+            id: ProviderID::Pkcs11,
         })
     }
 
-    fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
+    fn psa_generate_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_generate_key::Operation,
+    ) -> Result<psa_generate_key::Result> {
         info!("Pkcs11 Provider - Create Key");
 
-        if op.key_attributes.key_type != KeyType::RsaKeypair
-            || op.key_attributes.algorithm
-                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
+        if op.attributes.key_type != KeyType::RsaKeyPair
+            || op.attributes.key_policy.key_algorithm
+                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256,
+                })
         {
             error!(
                 "The PKCS11 provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
@@ -502,9 +506,9 @@ impl Provide for Pkcs11Provider {
 
         let key_name = op.key_name;
         // This should never panic on 32 bits or more machines.
-        let key_size = std::convert::TryFrom::try_from(op.key_attributes.key_size).unwrap();
+        let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits).unwrap();
 
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
@@ -569,7 +573,7 @@ impl Provide for Pkcs11Provider {
             &pub_template,
             &priv_template,
         ) {
-            Ok(_key) => Ok(ResultCreateKey {}),
+            Ok(_key) => Ok(psa_generate_key::Result {}),
             Err(e) => {
                 error!("Generate Key Pair operation failed with {}", e);
                 remove_key_id(
@@ -583,12 +587,18 @@ impl Provide for Pkcs11Provider {
         }
     }
 
-    fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
+    fn psa_import_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
         info!("Pkcs11 Provider - Import Key");
 
-        if op.key_attributes.key_type != KeyType::RsaPublicKey
-            || op.key_attributes.algorithm
-                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
+        if op.attributes.key_type != KeyType::RsaPublicKey
+            || op.attributes.key_policy.key_algorithm
+                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256,
+                })
         {
             error!(
                 "The PKCS 11 provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
@@ -596,7 +606,7 @@ impl Provide for Pkcs11Provider {
         }
 
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         if key_id_exists(&key_triple, &*store_handle)? {
@@ -610,7 +620,7 @@ impl Provide for Pkcs11Provider {
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.key_data).or_else(|e| {
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.data).or_else(|e| {
             error!("Failed to parse RsaPublicKey data ({}).", e);
             Err(ResponseStatus::PsaErrorInvalidArgument)
         })?;
@@ -677,7 +687,7 @@ impl Provide for Pkcs11Provider {
             .backend
             .create_object(session.session_handle(), &template)
         {
-            Ok(_key) => Ok(ResultImportKey {}),
+            Ok(_key) => Ok(psa_import_key::Result {}),
             Err(e) => {
                 error!("Import operation failed with {}", e);
                 remove_key_id(
@@ -691,15 +701,15 @@ impl Provide for Pkcs11Provider {
         }
     }
 
-    fn export_public_key(
+    fn psa_export_public_key(
         &self,
         app_name: ApplicationName,
-        op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey> {
+        op: psa_export_public_key::Operation,
+    ) -> Result<psa_export_public_key::Result> {
         info!("Pkcs11 Provider - Export Public Key");
 
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -771,11 +781,11 @@ impl Provide for Pkcs11Provider {
                         modulus,
                         public_exponent,
                     };
-                    let key_data = picky_asn1_der::to_vec(&key).or_else(|err| {
+                    let data = picky_asn1_der::to_vec(&key).or_else(|err| {
                         error!("Could not serialise key elements: {}.", err);
                         Err(ResponseStatus::PsaErrorCommunicationFailure)
                     })?;
-                    Ok(ResultExportPublicKey { key_data })
+                    Ok(psa_export_public_key::Result { data })
                 }
             }
             Err(e) => {
@@ -785,11 +795,15 @@ impl Provide for Pkcs11Provider {
         }
     }
 
-    fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
+    fn psa_destroy_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_destroy_key::Operation,
+    ) -> Result<psa_destroy_key::Result> {
         info!("Pkcs11 Provider - Destroy Key");
 
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
@@ -842,15 +856,19 @@ impl Provide for Pkcs11Provider {
             &mut local_ids_handle,
         )?;
 
-        Ok(ResultDestroyKey {})
+        Ok(psa_destroy_key::Result {})
     }
 
-    fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
+    fn psa_sign_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_sign_hash::Operation,
+    ) -> Result<psa_sign_hash::Result> {
         info!("Pkcs11 Provider - Asym Sign");
 
         let key_name = op.key_name;
         let mut hash = op.hash;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -888,7 +906,7 @@ impl Provide for Pkcs11Provider {
                 digest_info.append(&mut hash);
 
                 match self.backend.sign(session.session_handle(), &digest_info) {
-                    Ok(signature) => Ok(ResultAsymSign { signature }),
+                    Ok(signature) => Ok(psa_sign_hash::Result { signature }),
                     Err(e) => {
                         error!("Failed to execute signing operation. Error: {}", e);
                         Err(utils::to_response_status(e))
@@ -902,13 +920,17 @@ impl Provide for Pkcs11Provider {
         }
     }
 
-    fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
+    fn psa_verify_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
         info!("Pkcs11 Provider - Asym Verify");
 
         let key_name = op.key_name;
         let mut hash = op.hash;
         let signature = op.signature;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11Provider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -953,7 +975,7 @@ impl Provide for Pkcs11Provider {
                     .backend
                     .verify(session.session_handle(), &digest_info, &signature)
                 {
-                    Ok(_) => Ok(ResultAsymVerify {}),
+                    Ok(_) => Ok(psa_verify_hash::Result {}),
                     Err(e) => Err(utils::to_response_status(e)),
                 }
             }

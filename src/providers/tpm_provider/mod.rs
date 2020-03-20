@@ -22,15 +22,13 @@ use crate::key_id_managers;
 use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info};
-use parsec_interface::operations::key_attributes::*;
-use parsec_interface::operations::ProviderInfo;
-use parsec_interface::operations::{OpAsymSign, ResultAsymSign};
-use parsec_interface::operations::{OpAsymVerify, ResultAsymVerify};
-use parsec_interface::operations::{OpCreateKey, ResultCreateKey};
-use parsec_interface::operations::{OpDestroyKey, ResultDestroyKey};
-use parsec_interface::operations::{OpExportPublicKey, ResultExportPublicKey};
-use parsec_interface::operations::{OpImportKey, ResultImportKey};
-use parsec_interface::operations::{OpListOpcodes, ResultListOpcodes};
+use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::psa_algorithm::*;
+use parsec_interface::operations::psa_key_attributes::*;
+use parsec_interface::operations::{
+    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_sign_hash, psa_verify_hash,
+};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
@@ -44,12 +42,12 @@ use uuid::Uuid;
 mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 7] = [
-    Opcode::CreateKey,
-    Opcode::DestroyKey,
-    Opcode::AsymSign,
-    Opcode::AsymVerify,
-    Opcode::ImportKey,
-    Opcode::ExportPublicKey,
+    Opcode::PsaGenerateKey,
+    Opcode::PsaDestroyKey,
+    Opcode::PsaSignHash,
+    Opcode::PsaVerifyHash,
+    Opcode::PsaImportKey,
+    Opcode::PsaExportPublicKey,
     Opcode::ListOpcodes,
 ];
 
@@ -152,8 +150,8 @@ impl TpmProvider {
 }
 
 impl Provide for TpmProvider {
-    fn list_opcodes(&self, _op: OpListOpcodes) -> Result<ResultListOpcodes> {
-        Ok(ResultListOpcodes {
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        Ok(list_opcodes::Result {
             opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
         })
     }
@@ -167,14 +165,20 @@ impl Provide for TpmProvider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::TpmProvider,
+            id: ProviderID::Tpm,
         })
     }
 
-    fn create_key(&self, app_name: ApplicationName, op: OpCreateKey) -> Result<ResultCreateKey> {
-        if op.key_attributes.key_type != KeyType::RsaKeypair
-            || op.key_attributes.algorithm
-                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
+    fn psa_generate_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_generate_key::Operation,
+    ) -> Result<psa_generate_key::Result> {
+        if op.attributes.key_type != KeyType::RsaKeyPair
+            || op.attributes.key_policy.key_algorithm
+                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256,
+                })
         {
             error!(
                 "The TPM provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
@@ -182,9 +186,9 @@ impl Provide for TpmProvider {
         }
 
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
         // This should never panic on 32 bits or more machines.
-        let key_size = std::convert::TryFrom::try_from(op.key_attributes.key_size)
+        let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits)
             .expect("Conversion to usize failed.");
 
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
@@ -209,13 +213,19 @@ impl Provide for TpmProvider {
             },
         )?;
 
-        Ok(ResultCreateKey {})
+        Ok(psa_generate_key::Result {})
     }
 
-    fn import_key(&self, app_name: ApplicationName, op: OpImportKey) -> Result<ResultImportKey> {
-        if op.key_attributes.key_type != KeyType::RsaPublicKey
-            || op.key_attributes.algorithm
-                != Algorithm::sign(SignAlgorithm::RsaPkcs1v15Sign, Some(HashAlgorithm::Sha256))
+    fn psa_import_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
+        if op.attributes.key_type != KeyType::RsaPublicKey
+            || op.attributes.key_policy.key_algorithm
+                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256,
+                })
         {
             error!(
                 "The TPM provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
@@ -223,8 +233,8 @@ impl Provide for TpmProvider {
         }
 
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
-        let key_data = op.key_data;
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_data = op.data;
 
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -273,16 +283,16 @@ impl Provide for TpmProvider {
             },
         )?;
 
-        Ok(ResultImportKey {})
+        Ok(psa_import_key::Result {})
     }
 
-    fn export_public_key(
+    fn psa_export_public_key(
         &self,
         app_name: ApplicationName,
-        op: OpExportPublicKey,
-    ) -> Result<ResultExportPublicKey> {
+        op: psa_export_public_key::Operation,
+    ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -310,12 +320,16 @@ impl Provide for TpmProvider {
             Err(ResponseStatus::PsaErrorCommunicationFailure)
         })?;
 
-        Ok(ResultExportPublicKey { key_data })
+        Ok(psa_export_public_key::Result { data: key_data })
     }
 
-    fn destroy_key(&self, app_name: ApplicationName, op: OpDestroyKey) -> Result<ResultDestroyKey> {
+    fn psa_destroy_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_destroy_key::Operation,
+    ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
 
         let error_closure = |e| Err(key_id_managers::to_response_status(e));
@@ -330,14 +344,18 @@ impl Provide for TpmProvider {
             );
             Err(ResponseStatus::PsaErrorDoesNotExist)
         } else {
-            Ok(ResultDestroyKey {})
+            Ok(psa_destroy_key::Result {})
         }
     }
 
-    fn asym_sign(&self, app_name: ApplicationName, op: OpAsymSign) -> Result<ResultAsymSign> {
+    fn psa_sign_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_sign_hash::Operation,
+    ) -> Result<psa_sign_hash::Result> {
         let key_name = op.key_name;
         let hash = op.hash;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -364,16 +382,20 @@ impl Provide for TpmProvider {
                 Err(utils::to_response_status(e))
             })?;
 
-        Ok(ResultAsymSign {
+        Ok(psa_sign_hash::Result {
             signature: signature.signature,
         })
     }
 
-    fn asym_verify(&self, app_name: ApplicationName, op: OpAsymVerify) -> Result<ResultAsymVerify> {
+    fn psa_verify_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
         let key_name = op.key_name;
         let hash = op.hash;
         let signature = op.signature;
-        let key_triple = KeyTriple::new(app_name, ProviderID::TpmProvider, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -398,7 +420,7 @@ impl Provide for TpmProvider {
             .verify_signature(password_context.context, &hash, signature)
             .or_else(|e| Err(utils::to_response_status(e)))?;
 
-        Ok(ResultAsymVerify {})
+        Ok(psa_verify_hash::Result {})
     }
 }
 

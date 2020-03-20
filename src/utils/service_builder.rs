@@ -183,12 +183,12 @@ fn build_backend_handlers(
     let core_provider_backend = BackEndHandlerBuilder::new()
         .with_provider(Box::from(core_provider_builder.build()?))
         .with_converter(Box::from(ProtobufConverter {}))
-        .with_provider_id(ProviderID::CoreProvider)
+        .with_provider_id(ProviderID::Core)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
         .build()?;
 
-    let _ = map.insert(ProviderID::CoreProvider, core_provider_backend);
+    let _ = map.insert(ProviderID::Core, core_provider_backend);
 
     Ok(map)
 }
@@ -242,7 +242,7 @@ fn build_providers(
 unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Result<Provider> {
     match config {
         #[cfg(feature = "mbed-crypto-provider")]
-        ProviderConfig::MbedProvider { .. } => {
+        ProviderConfig::MbedCrypto { .. } => {
             info!("Creating a Mbed Crypto Provider.");
             Ok(Box::from(
                 MbedProviderBuilder::new()
@@ -251,7 +251,7 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             ))
         }
         #[cfg(feature = "pkcs11-provider")]
-        ProviderConfig::Pkcs11Provider {
+        ProviderConfig::Pkcs11 {
             library_path,
             slot_number,
             user_pin,
@@ -268,7 +268,7 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             ))
         }
         #[cfg(feature = "tpm-provider")]
-        ProviderConfig::TpmProvider {
+        ProviderConfig::Tpm {
             tcti,
             owner_hierarchy_auth,
             ..

@@ -11,7 +11,7 @@ name = "on-disk-manager"
 manager_type = "OnDisk"
 
 [[provider]]
-provider_type = "Pkcs11Provider"
+provider_type = "Pkcs11"
 key_id_manager = "on-disk-manager"
 library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
 user_pin = "123456"

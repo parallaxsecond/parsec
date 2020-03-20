@@ -23,17 +23,17 @@ fn list_providers() {
     let providers = client.list_providers().expect("list providers failed");
     assert_eq!(providers.len(), 4);
     let ids: HashSet<ProviderID> = providers.iter().map(|p| p.id).collect();
-    assert!(ids.contains(&ProviderID::CoreProvider));
-    assert!(ids.contains(&ProviderID::MbedProvider));
-    assert!(ids.contains(&ProviderID::Pkcs11Provider));
-    assert!(ids.contains(&ProviderID::TpmProvider));
+    assert!(ids.contains(&ProviderID::Core));
+    assert!(ids.contains(&ProviderID::MbedCrypto));
+    assert!(ids.contains(&ProviderID::Pkcs11));
+    assert!(ids.contains(&ProviderID::Tpm));
 }
 
 #[test]
 fn list_opcodes() {
     let mut client = TestClient::new();
     let opcodes = client
-        .list_opcodes(ProviderID::MbedProvider)
+        .list_opcodes(ProviderID::MbedCrypto)
         .expect("list providers failed");
     assert_eq!(opcodes.len(), 7);
 }
@@ -44,7 +44,7 @@ fn mangled_list_providers() {
     let mut client = RequestTestClient::new();
     let mut req = Request::new();
     req.header.version_maj = 1;
-    req.header.provider = ProviderID::CoreProvider;
+    req.header.provider = ProviderID::Core;
     req.header.opcode = Opcode::ListProviders;
 
     req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
