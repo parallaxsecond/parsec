@@ -565,8 +565,8 @@ dependencies = [
 
 [[package]]
 name = "parsec-client-test"
-version = "0.1.18"
-source = "git+https://github.com/parallaxsecond/parsec-client-test?tag=0.1.18#fb15945d9bfde90a0978e6fef19901459626bdfc"
+version = "0.2.0"
+source = "git+https://github.com/parallaxsecond/parsec-client-test?tag=0.2.0#f8ca691f3a1538de1e0f74237d489710a3d7718f"
 dependencies = [
  "derivative",
  "log",

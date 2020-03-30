@@ -22,7 +22,7 @@ fn export_public_key() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("export_public_key");
 
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     let _ = client.export_public_key(key_name)?;
 

@@ -47,7 +47,7 @@ fn create_and_import_key() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("create_and_import_key");
 
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     let status = client
         .import_key(

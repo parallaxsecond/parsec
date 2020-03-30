@@ -23,10 +23,10 @@ fn two_auths_same_key_name() -> Result<()> {
     let auth2 = String::from("second_client").into_bytes();
 
     client.set_auth(auth1);
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     client.set_auth(auth2);
-    client.create_rsa_sign_key(key_name)
+    client.generate_rsa_sign_key(key_name)
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn delete_wrong_key() -> Result<()> {
     let auth2 = String::from("second_client").into_bytes();
 
     client.set_auth(auth1);
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     client.set_auth(auth2);
     let status = client

@@ -57,5 +57,5 @@ fn mangled_list_providers() {
 fn sign_verify_with_provider_discovery() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("sign_verify_with_provider_discovery");
-    client.create_rsa_sign_key(key_name)
+    client.generate_rsa_sign_key(key_name)
 }
