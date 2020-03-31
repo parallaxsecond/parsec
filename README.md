@@ -54,7 +54,7 @@ use parsec_client_test::TestClient;
 
 let mut client = TestClient::new();
 let key_name = String::from("🔑 What shall I sign? 🔑");
-client.create_rsa_sign_key(key_name.clone()).unwrap();
+client.generate_rsa_sign_key(key_name.clone()).unwrap();
 let signature = client.sign(key_name,
                             String::from("Platform AbstRaction for SECurity").into_bytes())
                       .unwrap();

@@ -18,4 +18,5 @@ mod basic;
 mod create_destroy_key;
 mod export_public_key;
 mod import_key;
+mod key_attributes;
 mod ping;

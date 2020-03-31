@@ -21,7 +21,7 @@ fn create_and_destroy() -> Result<()> {
     client.do_not_destroy_keys();
     let key_name = String::from("create_and_destroy");
 
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
     client.destroy_key(key_name)
 }
 
@@ -30,9 +30,9 @@ fn create_twice() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("create_twice");
 
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
     let status = client
-        .create_rsa_sign_key(key_name)
+        .generate_rsa_sign_key(key_name)
         .expect_err("A key with the same name can not be created twice.");
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
@@ -56,7 +56,7 @@ fn create_destroy_and_operation() -> Result<()> {
     let hash = vec![0xDE, 0xAD, 0xBE, 0xEF];
     let key_name = String::from("create_destroy_and_operation");
 
-    client.create_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     client.destroy_key(key_name.clone())?;
 
@@ -74,8 +74,8 @@ fn create_destroy_twice() -> Result<()> {
     let key_name = String::from("create_destroy_twice_1");
     let key_name_2 = String::from("create_destroy_twice_2");
 
-    client.create_rsa_sign_key(key_name.clone())?;
-    client.create_rsa_sign_key(key_name_2.clone())?;
+    client.generate_rsa_sign_key(key_name.clone())?;
+    client.generate_rsa_sign_key(key_name_2.clone())?;
 
     client.destroy_key(key_name)?;
     client.destroy_key(key_name_2)
