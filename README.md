@@ -16,19 +16,49 @@
 --->
 
 <p align="center">
-  <img src="https://github.com/parallaxsecond/parsec/blob/master/parsec.png?raw=true" alt="Parsec logo"/>
+  <img src="./doc/images/parsec/ARM1007_PARSEC Logo_ST2_RGB_Stacked_Colour.png" alt="Parsec logo"/>
   <br><br>
   <a href="https://github.com/parallaxsecond/parsec/actions?query=workflow%3A%22Continuous+Integration%22"><img src="https://github.com/parallaxsecond/parsec/workflows/Continuous%20Integration/badge.svg" alt="CI tests"/></a>
   <a href="https://travis-ci.com/parallaxsecond/parsec"><img src="https://travis-ci.com/parallaxsecond/parsec.svg?branch=master" alt="Travis CI tests"/></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"/></a>
 </p>
 
-**Parsec** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
-to provide a common API to secure services in a platform-agnostic way.
+# Welcome To PARSEC
 
-Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-book/)!
+**PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
+to provide a common API to hardware security and cryptographic services in a platform-agnostic way. This abstraction layer keeps workloads decoupled from physical platform details, enabling cloud-native delivery flows within the data center and at the edge.
 
-## Disclaimer
+<p align="center">
+  <img src="./doc/images/parsec/ParsecConceptDiagram.png" alt="Parsec Concept Diagram"/>
+</p>
+
+Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-book/).
+
+Read the whitepaper [Security for the Infrastructure Edge](https://www.arm.com/-/media/global/people/Security-For-The-Infrastructure-Edge-White-paper-NDA).
+
+**Note**: Arm is contributing to Parsec as part of [Project Cassini](https://www.arm.com/-/media/global/solutions/artificial-intelligence/Project_Cassini.pdf).
+
+# Why PARSEC?
+
+Use Parsec when you need:
+
+- A **portable interface to your platform's Root of Trust** in order to manage keys and perform cryptographic operations without knowledge of the hardware.
+- A simple and portable way to access the **best available security** of your platform in your **preferred programming language**.
+
+# What PARSEC Provides
+
+The value proposition of Parsec is that it provides the following:
+
+- **Abstraction** – a common API that is truly agnostic and based on modern cryptographic principles, grounded in the [Platform Security Architecture](https://www.arm.com/why-arm/architecture/platform-security-architecture)
+- **Mediation** – security as a microservice, brokering access to the hardware and providing isolated key stores in a multi-tenant environment
+- **Ergonomics** – a client library ecosystem that brings the API to the fingertips of developers in any programming language: “easy to consume, hard to get wrong”
+- **Openness** – an open-source project inviting contributions to enhance the ecosystem both within the service and among its client libraries
+
+# Partner Organizations
+
+See who is [using and contributing to PARSEC](./PARTNERS.md).
+
+# Disclaimer
 
 Parsec is a new open source project and is under development. This code repository is being made
 available so that the developer community can learn and give feedback about the new interfaces and the concepts of platform-agnostic security.
@@ -38,7 +68,7 @@ suitable for use in production. Documentation pages may be incomplete and are su
 without notice. Interfaces may change in such a way as to break compatibility with client code.
 Contributions from the developer community are welcome. Please refer to the contribution guidelines.
 
-## Example
+# Example
 
 Launch the Parsec service with Mbed Crypto as the only provider (using the default configuration):
 ```bash
@@ -62,7 +92,7 @@ let signature = client.sign(key_name,
 
 Check the [user](https://parallaxsecond.github.io/parsec-book/user_guides/) and [developer](https://parallaxsecond.github.io/parsec-book/dev_guides/) guides for more info on building, installing, testing and using Parsec!
 
-## Community channel and meetings
+# Community Channel and Meetings
 
 Come and talk to us in [our Slack channel](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
 [Here](http://dockr.ly/slack) is how to join the workspace.
@@ -72,14 +102,14 @@ with Parsec maintainers and community members.
 The meeting is open to the public and everyone is encouraged to attend. We will use the time to
 discuss features, integrations, issues, and roadmap. We look forward to seeing you all.
 
-## Contributing
+# Contributing
 
 We would be happy for you to contribute to Parsec! Check the [**Contributing**](CONTRIBUTING.md)
 file to know more about the contribution process.
 Check the [open issues](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
-## License
+# License
 
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
 
