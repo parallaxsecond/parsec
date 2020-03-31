@@ -19,7 +19,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers;
-use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
+use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -269,13 +269,16 @@ impl Drop for Session<'_> {
 }
 
 /// Gets a key identifier from the Key ID Manager.
-fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<[u8; 4]> {
+fn get_key_id(
+    key_triple: &KeyTriple,
+    store_handle: &dyn ManageKeyIDs,
+) -> Result<([u8; 4], KeyAttributes)> {
     match store_handle.get(key_triple) {
-        Ok(Some(key_id)) => {
-            if key_id.len() == 4 {
+        Ok(Some(key_info)) => {
+            if key_info.id.len() == 4 {
                 let mut dst = [0; 4];
-                dst.copy_from_slice(key_id);
-                Ok(dst)
+                dst.copy_from_slice(&key_info.id);
+                Ok((dst, key_info.attributes))
             } else {
                 error!("Stored Key ID is not valid.");
                 Err(ResponseStatus::KeyIDManagerError)
@@ -288,6 +291,7 @@ fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result
 
 fn create_key_id(
     key_triple: KeyTriple,
+    key_attributes: KeyAttributes,
     store_handle: &mut dyn ManageKeyIDs,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<[u8; 4]> {
@@ -295,7 +299,11 @@ fn create_key_id(
     while local_ids_handle.contains(&key_id) {
         key_id = rand::random::<[u8; 4]>();
     }
-    match store_handle.insert(key_triple.clone(), key_id.to_vec()) {
+    let key_info = KeyInfo {
+        id: key_id.to_vec(),
+        attributes: key_attributes,
+    };
+    match store_handle.insert(key_triple.clone(), key_info) {
         Ok(insert_option) => {
             if insert_option.is_some() {
                 warn!("Overwriting Key triple mapping ({})", key_triple);
@@ -371,7 +379,7 @@ impl Pkcs11Provider {
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
 
                     for key_triple in key_triples.iter().cloned() {
-                        let key_id = match get_key_id(key_triple, &*store_handle) {
+                        let (key_id, _) = match get_key_id(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
                                 error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
@@ -493,18 +501,13 @@ impl Provide for Pkcs11Provider {
     ) -> Result<psa_generate_key::Result> {
         info!("Pkcs11 Provider - Create Key");
 
-        if op.attributes.key_type != KeyType::RsaKeyPair
-            || op.attributes.key_policy.key_algorithm
-                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256,
-                })
-        {
-            error!(
-                "The PKCS11 provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+        if op.attributes.key_type != KeyType::RsaKeyPair {
+            error!("The PKCS11 provider currently only supports creating RSA key pairs.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
+        let key_attributes = op.attributes;
         // This should never panic on 32 bits or more machines.
         let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits).unwrap();
 
@@ -516,6 +519,7 @@ impl Provide for Pkcs11Provider {
         }
         let key_id = create_key_id(
             key_triple.clone(),
+            key_attributes,
             &mut *store_handle,
             &mut local_ids_handle,
         )?;
@@ -594,18 +598,13 @@ impl Provide for Pkcs11Provider {
     ) -> Result<psa_import_key::Result> {
         info!("Pkcs11 Provider - Import Key");
 
-        if op.attributes.key_type != KeyType::RsaPublicKey
-            || op.attributes.key_policy.key_algorithm
-                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256,
-                })
-        {
-            error!(
-                "The PKCS 11 provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+        if op.attributes.key_type != KeyType::RsaPublicKey {
+            error!("The PKCS 11 provider currently only supports importing RSA public key.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
+        let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
@@ -614,6 +613,7 @@ impl Provide for Pkcs11Provider {
         }
         let key_id = create_key_id(
             key_triple.clone(),
+            key_attributes,
             &mut *store_handle,
             &mut local_ids_handle,
         )?;
@@ -711,7 +711,9 @@ impl Provide for Pkcs11Provider {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+
+        key_attributes.can_export()?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
         info!(
@@ -806,7 +808,7 @@ impl Provide for Pkcs11Provider {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let (key_id, _) = get_key_id(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!(
@@ -867,10 +869,26 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Sign");
 
         let key_name = op.key_name;
+        let alg = op.alg;
         let mut hash = op.hash;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+
+        key_attributes.can_sign_hash()?;
+        key_attributes.permits_alg(alg.into())?;
+        key_attributes.compatible_with_alg(alg.into())?;
+
+        match alg {
+            AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            } => (),
+            _ => {
+                error!(
+                    "The PKCS 11 provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaSignHash operation.");
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        }
 
         let mech = CK_MECHANISM {
             mechanism: pkcs11::types::CKM_RSA_PKCS,
@@ -928,11 +946,27 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Verify");
 
         let key_name = op.key_name;
+        let alg = op.alg;
         let mut hash = op.hash;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+
+        key_attributes.can_verify_hash()?;
+        key_attributes.permits_alg(alg.into())?;
+        key_attributes.compatible_with_alg(alg.into())?;
+
+        match alg {
+            AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            } => (),
+            _ => {
+                error!(
+                    "The PKCS 11 provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaVerifyHash operation.");
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        }
 
         let mech = CK_MECHANISM {
             // Verify without hashing.

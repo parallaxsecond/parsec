@@ -254,10 +254,6 @@ impl KeyAttributes {
     pub unsafe fn reset(&mut self) {
         psa_crypto_binding::psa_reset_key_attributes(&mut self.0);
     }
-
-    pub fn raw(&self) -> psa_key_attributes_t {
-        self.0
-    }
 }
 
 impl AsRef<psa_key_attributes_t> for KeyAttributes {
