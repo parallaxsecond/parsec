@@ -108,8 +108,7 @@ discuss features, integrations, issues, and roadmap. We look forward to seeing y
 # Contributing
 
 We would be happy for you to contribute to Parsec! Check the [**Contributing**](CONTRIBUTING.md)
-file to know more about the contribution process. For a list of current contributors, check [**here**](CONTRIBUTORS.md).
-Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
+file to know more about the contribution process. For a list of current contributors, check [**here**](CONTRIBUTORS.md). Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
 # License
