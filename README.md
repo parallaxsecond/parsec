@@ -25,16 +25,16 @@
 
 # Welcome To PARSEC
 
-**PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
+**PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, an open-source initiative
 to provide a common API to hardware security and cryptographic services in a platform-agnostic way. This abstraction layer keeps workloads decoupled from physical platform details, enabling cloud-native delivery flows within the data center and at the edge.
 
 <p align="center">
   <img src="./doc/images/parsec/ParsecConceptDiagram.png" alt="Parsec Concept Diagram"/>
 </p>
 
-Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-book/).
+Read the Parsec documentation [**online**](https://parallaxsecond.github.io/parsec-book/).
 
-Read the whitepaper [Security for the Infrastructure Edge](https://www.arm.com/-/media/global/people/Security-For-The-Infrastructure-Edge-White-paper-NDA).
+Read the whitepaper [**Security for the Infrastructure Edge**](https://www.arm.com/-/media/global/people/Security-For-The-Infrastructure-Edge-White-paper-NDA).
 
 
 # Why PARSEC?
@@ -63,7 +63,7 @@ See who is [**using and contributing to PARSEC**](./PARTNERS.md).
 
 # Disclaimer
 
-Parsec is an open source project and is under development. This code repository is being made
+Parsec is a new open source project and is under active development. This code repository is being made
 available so that the developer community can learn and give feedback about the new interfaces and the concepts of platform-agnostic security.
 The implementation that is provided is suitable for exploratory testing and experimentation only.
 This test implementation does not offer any tangible security benefits and therefore is not
@@ -97,8 +97,8 @@ Check the [**user**](https://parallaxsecond.github.io/parsec-book/parsec_users.h
 
 # Community Channel and Meetings
 
-Come and talk to us in [our Slack channel](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
-[Here](http://dockr.ly/slack) is how to join the workspace.
+Come and talk to us in our[**Slack channel**](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
+[**Here**](http://dockr.ly/slack) is how to join the workspace.
 
 Also join the [**biweekly meeting**](https://calendar.google.com/calendar?cid=ZG9ja2VyLmNvbV9xcHAzbzl2aXBhbmE0NGllcmV1MjlvcHZkNEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
 with Parsec maintainers and community members.
@@ -108,8 +108,8 @@ discuss features, integrations, issues, and roadmap. We look forward to seeing y
 # Contributing
 
 We would be happy for you to contribute to Parsec! Check the [**Contributing**](CONTRIBUTING.md)
-file to know more about the contribution process. For a list of current contributors, check [here](CONTRIBUTORS.md).
-Check the [open issues](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
+file to know more about the contribution process. For a list of current contributors, check [**here**](CONTRIBUTORS.md).
+Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
 # License
@@ -144,4 +144,4 @@ This project uses the following third party crates:
 * version (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
-* [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
+* [**Mbed Crypto**](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
