@@ -25,18 +25,17 @@
 
 # Welcome To PARSEC
 
-**PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, a new open-source initiative
+**PARSEC** is the **P**latform **A**bst**R**action for **SEC**urity, an open-source initiative
 to provide a common API to hardware security and cryptographic services in a platform-agnostic way. This abstraction layer keeps workloads decoupled from physical platform details, enabling cloud-native delivery flows within the data center and at the edge.
 
 <p align="center">
   <img src="./doc/images/parsec/ParsecConceptDiagram.png" alt="Parsec Concept Diagram"/>
 </p>
 
-Read the Parsec documentation [online](https://parallaxsecond.github.io/parsec-book/).
+Read the Parsec documentation [**online**](https://parallaxsecond.github.io/parsec-book/).
 
-Read the whitepaper [Security for the Infrastructure Edge](https://www.arm.com/-/media/global/people/Security-For-The-Infrastructure-Edge-White-paper-NDA).
+Read the whitepaper [**Security for the Infrastructure Edge**](https://www.arm.com/-/media/global/people/Security-For-The-Infrastructure-Edge-White-paper-NDA).
 
-**Note**: Arm is contributing to Parsec as part of [Project Cassini](https://www.arm.com/-/media/global/solutions/artificial-intelligence/Project_Cassini.pdf).
 
 # Why PARSEC?
 
@@ -49,18 +48,22 @@ Use Parsec when you need:
 
 The value proposition of Parsec is that it provides the following:
 
-- **Abstraction** – a common API that is truly agnostic and based on modern cryptographic principles, grounded in the [Platform Security Architecture](https://www.arm.com/why-arm/architecture/platform-security-architecture)
+- **Abstraction** – a common API that is truly agnostic and based on modern cryptographic principles
 - **Mediation** – security as a microservice, brokering access to the hardware and providing isolated key stores in a multi-tenant environment
 - **Ergonomics** – a client library ecosystem that brings the API to the fingertips of developers in any programming language: “easy to consume, hard to get wrong”
 - **Openness** – an open-source project inviting contributions to enhance the ecosystem both within the service and among its client libraries
 
+# Maintainers
+
+PARSEC is a collaborative project. The current list of the individuals and organizations who maintain this project can be found [**here**](./MAINTAINERS.toml).
+
 # Partner Organizations
 
-See who is [using and contributing to PARSEC](./PARTNERS.md).
+See who is [**using and contributing to PARSEC**](./PARTNERS.md).
 
 # Disclaimer
 
-Parsec is a new open source project and is under development. This code repository is being made
+Parsec is a new open source project and is under active development. This code repository is being made
 available so that the developer community can learn and give feedback about the new interfaces and the concepts of platform-agnostic security.
 The implementation that is provided is suitable for exploratory testing and experimentation only.
 This test implementation does not offer any tangible security benefits and therefore is not
@@ -70,7 +73,7 @@ Contributions from the developer community are welcome. Please refer to the cont
 
 # Example
 
-Launch the Parsec service with Mbed Crypto as the only provider (using the default configuration):
+Launch the Parsec service with a single software-based provider (using the default configuration):
 ```bash
 $ git clone https://github.com/parallaxsecond/parsec.git
 $ cd parsec
@@ -90,12 +93,12 @@ let signature = client.sign(key_name,
                       .unwrap();
 ```
 
-Check the [user](https://parallaxsecond.github.io/parsec-book/user_guides/) and [developer](https://parallaxsecond.github.io/parsec-book/dev_guides/) guides for more info on building, installing, testing and using Parsec!
+Check the [**user**](https://parallaxsecond.github.io/parsec-book/parsec_users.html), [**client developer**](https://parallaxsecond.github.io/parsec-book/parsec_client/index.html) and [**service developer**](https://parallaxsecond.github.io/parsec-book/parsec_service/index.html) guides for more information on building, installing, testing and using Parsec!
 
 # Community Channel and Meetings
 
-Come and talk to us in [our Slack channel](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
-[Here](http://dockr.ly/slack) is how to join the workspace.
+Come and talk to us in our[**Slack channel**](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
+[**Here**](http://dockr.ly/slack) is how to join the workspace.
 
 Also join the [**biweekly meeting**](https://calendar.google.com/calendar?cid=ZG9ja2VyLmNvbV9xcHAzbzl2aXBhbmE0NGllcmV1MjlvcHZkNEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
 with Parsec maintainers and community members.
@@ -105,8 +108,7 @@ discuss features, integrations, issues, and roadmap. We look forward to seeing y
 # Contributing
 
 We would be happy for you to contribute to Parsec! Check the [**Contributing**](CONTRIBUTING.md)
-file to know more about the contribution process. For a list of current contributors, check [here](CONTRIBUTORS.md).
-Check the [open issues](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
+file to know more about the contribution process. For a list of current contributors, check [**here**](CONTRIBUTORS.md). Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
 # License
@@ -141,4 +143,4 @@ This project uses the following third party crates:
 * version (MIT and Apache-2.0)
 
 This project uses the following third party libraries:
-* [Mbed Crypto](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
+* [**Mbed Crypto**](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)
