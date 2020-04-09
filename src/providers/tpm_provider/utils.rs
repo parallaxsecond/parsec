@@ -15,92 +15,28 @@
 
 use log::error;
 use parsec_interface::requests::ResponseStatus;
-use tss_esapi::response_code::{Error, Tss2ResponseCodeKind, WrapperErrorKind};
+use tss_esapi::response_code::{Error, Tss2ResponseCodeKind};
 
+/// Convert the TSS library specific error values to ResponseStatus values that are returned on
+/// the wire protocol
+///
+/// Most of them are PsaErrorCommunicationFailure as, in the general case, the calls to the TSS
+/// library should suceed with the values crafted by the provider.
+/// If an error happens in the TSS library, it means that it was badly used by the provider or that
+/// it failed in an unexpected way and hence the PsaErrorCommunicationFailure error.
+/// The errors translated to response status are related with signature verification failure, lack
+/// of memory, hardware failure, corruption detection, lack of entropy and unsupported operations.
 pub fn to_response_status(error: Error) -> ResponseStatus {
     match error {
-        Error::WrapperError(e) => match e {
-            WrapperErrorKind::WrongParamSize
-            | WrapperErrorKind::ParamsMissing
-            | WrapperErrorKind::InconsistentParams => ResponseStatus::PsaErrorInvalidArgument,
-            WrapperErrorKind::UnsupportedParam => ResponseStatus::PsaErrorNotSupported,
-        },
+        Error::WrapperError(e) => {
+            error!("Conversion of \"{}\" to PsaErrorCommunicationFailure", e);
+            ResponseStatus::PsaErrorCommunicationFailure
+        }
         Error::Tss2Error(e) => {
             if let Some(kind) = e.kind() {
                 match kind {
-                    // FormatZero errors
                     Tss2ResponseCodeKind::Success => ResponseStatus::Success,
-                    Tss2ResponseCodeKind::TpmVendorSpecific => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Initialize => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Failure => ResponseStatus::PsaErrorHardwareFailure,
-                    Tss2ResponseCodeKind::Sequence => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Private => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Hmac => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Disabled => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Exclusive => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::AuthType => ResponseStatus::PsaErrorInvalidHandle,
-                    Tss2ResponseCodeKind::AuthMissing => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Policy => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Pcr => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::PcrChanged => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Upgrade => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::TooManyContexts => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::AuthUnavailable => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Reboot => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Unbalanced => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::CommandSize => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::CommandCode => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::AuthSize => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::AuthContext => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::NvRange => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::NvSize => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::NvLocked => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::NvAuthorization => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::NvUninitialized => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::NvSpace => ResponseStatus::PsaErrorInsufficientStorage,
-                    Tss2ResponseCodeKind::NvDefined => ResponseStatus::PsaErrorAlreadyExists,
-                    Tss2ResponseCodeKind::BadContext => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::CpHash => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Parent => ResponseStatus::PsaErrorInvalidHandle,
-                    Tss2ResponseCodeKind::NeedsTest => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::NoResult => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Sensitive => ResponseStatus::PsaErrorGenericError,
-                    // FormatOne errors
-                    Tss2ResponseCodeKind::Asymmetric => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Attributes => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Hash => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Value => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Hierarchy => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::KeySize => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Mgf => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Mode => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Type => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Handle => ResponseStatus::PsaErrorInvalidHandle,
-                    Tss2ResponseCodeKind::Kdf => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Range => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::AuthFail => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Nonce => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Pp => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Scheme => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Size => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Symmetric => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::Tag => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Selector => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Insufficient => ResponseStatus::PsaErrorBufferTooSmall,
                     Tss2ResponseCodeKind::Signature => ResponseStatus::PsaErrorInvalidSignature,
-                    Tss2ResponseCodeKind::Key => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::PolicyFail => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Integrity => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Ticket => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::ReservedBits => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::BadAuth => ResponseStatus::PsaErrorNotPermitted,
-                    Tss2ResponseCodeKind::Expired => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::PolicyCc => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Binding => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Curve => ResponseStatus::PsaErrorNotSupported,
-                    Tss2ResponseCodeKind::EccPoint => ResponseStatus::PsaErrorInvalidArgument,
-                    // Warnings
-                    Tss2ResponseCodeKind::ContextGap => ResponseStatus::PsaErrorInvalidArgument,
                     Tss2ResponseCodeKind::ObjectMemory => {
                         ResponseStatus::PsaErrorInsufficientMemory
                     }
@@ -108,34 +44,26 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
                         ResponseStatus::PsaErrorInsufficientMemory
                     }
                     Tss2ResponseCodeKind::Memory => ResponseStatus::PsaErrorInsufficientMemory,
-                    Tss2ResponseCodeKind::SessionHandles => {
-                        ResponseStatus::PsaErrorInsufficientMemory
-                    }
-                    Tss2ResponseCodeKind::ObjectHandles => {
-                        ResponseStatus::PsaErrorInsufficientMemory
-                    }
-                    Tss2ResponseCodeKind::Locality => ResponseStatus::PsaErrorInvalidArgument,
-                    Tss2ResponseCodeKind::Yielded => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Canceled => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::Testing => ResponseStatus::PsaErrorGenericError,
-                    Tss2ResponseCodeKind::ReferenceH0 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH1 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH2 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH3 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH4 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH5 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceH6 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS0 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS1 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS2 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS3 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS4 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS5 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::ReferenceS6 => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::NvRate => ResponseStatus::PsaErrorBadState,
-                    Tss2ResponseCodeKind::Lockout => ResponseStatus::PsaErrorHardwareFailure,
                     Tss2ResponseCodeKind::Retry => ResponseStatus::PsaErrorHardwareFailure,
-                    Tss2ResponseCodeKind::NvUnavailable => ResponseStatus::PsaErrorHardwareFailure,
+                    s @ Tss2ResponseCodeKind::Asymmetric
+                    | s @ Tss2ResponseCodeKind::Hash
+                    | s @ Tss2ResponseCodeKind::KeySize
+                    | s @ Tss2ResponseCodeKind::Mgf
+                    | s @ Tss2ResponseCodeKind::Mode
+                    | s @ Tss2ResponseCodeKind::Kdf
+                    | s @ Tss2ResponseCodeKind::Scheme
+                    | s @ Tss2ResponseCodeKind::Symmetric
+                    | s @ Tss2ResponseCodeKind::Curve => {
+                        error!("Not supported value ({:?})", s);
+                        ResponseStatus::PsaErrorNotSupported
+                    }
+                    e => {
+                        error!(
+                            "Error \"{:?}\" converted to PsaErrorCommunicationFailure.",
+                            e
+                        );
+                        ResponseStatus::PsaErrorCommunicationFailure
+                    }
                 }
             } else {
                 error!(
