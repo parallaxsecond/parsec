@@ -19,7 +19,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers;
-use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
+use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
 use derivative::Derivative;
 use log::{error, info};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -100,11 +100,17 @@ fn insert_password_context(
     store_handle: &mut dyn ManageKeyIDs,
     key_triple: KeyTriple,
     password_context: PasswordContext,
+    key_attributes: KeyAttributes,
 ) -> Result<()> {
     let error_storing = |e| Err(key_id_managers::to_response_status(e));
 
+    let key_info = KeyInfo {
+        id: bincode::serialize(&password_context)?,
+        attributes: key_attributes,
+    };
+
     if store_handle
-        .insert(key_triple, bincode::serialize(&password_context)?)
+        .insert(key_triple, key_info)
         .or_else(error_storing)?
         .is_some()
     {
@@ -119,21 +125,18 @@ fn insert_password_context(
 fn get_password_context(
     store_handle: &dyn ManageKeyIDs,
     key_triple: KeyTriple,
-) -> Result<PasswordContext> {
-    let password_context = store_handle
+) -> Result<(PasswordContext, KeyAttributes)> {
+    let key_info = store_handle
         .get(&key_triple)
-        .or_else(|e| Err(key_id_managers::to_response_status(e)))?;
-    let password_context = match password_context {
-        Some(context) => context,
-        None => {
+        .or_else(|e| Err(key_id_managers::to_response_status(e)))?
+        .ok_or_else(|| {
             error!(
                 "Key triple \"{}\" does not exist in the Key ID Manager.",
                 key_triple
             );
-            return Err(ResponseStatus::PsaErrorDoesNotExist);
-        }
-    };
-    Ok(bincode::deserialize(password_context)?)
+            ResponseStatus::PsaErrorDoesNotExist
+        })?;
+    Ok((bincode::deserialize(&key_info.id)?, key_info.attributes))
 }
 
 impl TpmProvider {
@@ -174,18 +177,13 @@ impl Provide for TpmProvider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
-        if op.attributes.key_type != KeyType::RsaKeyPair
-            || op.attributes.key_policy.key_algorithm
-                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256,
-                })
-        {
-            error!(
-                "The TPM provider currently only supports creating RSA key pairs for signing and verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+        if op.attributes.key_type != KeyType::RsaKeyPair {
+            error!("The TPM provider currently only supports creating RSA key pairs.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
+        let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
         // This should never panic on 32 bits or more machines.
         let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits)
@@ -211,6 +209,7 @@ impl Provide for TpmProvider {
                 context: key_context,
                 auth_value,
             },
+            attributes,
         )?;
 
         Ok(psa_generate_key::Result {})
@@ -221,18 +220,13 @@ impl Provide for TpmProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        if op.attributes.key_type != KeyType::RsaPublicKey
-            || op.attributes.key_policy.key_algorithm
-                != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256,
-                })
-        {
-            error!(
-                "The TPM provider currently only supports importing RSA public key for verifying. The signature algorithm needs to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+        if op.attributes.key_type != KeyType::RsaPublicKey {
+            error!("The TPM provider currently only supports importing RSA public key.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
+        let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
         let key_data = op.data;
 
@@ -281,6 +275,7 @@ impl Provide for TpmProvider {
                 context: pub_key_context,
                 auth_value: Vec::new(),
             },
+            attributes,
         )?;
 
         Ok(psa_import_key::Result {})
@@ -300,7 +295,9 @@ impl Provide for TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context = get_password_context(&*store_handle, key_triple)?;
+        let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
+
+        key_attributes.can_export()?;
 
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
@@ -355,6 +352,7 @@ impl Provide for TpmProvider {
     ) -> Result<psa_sign_hash::Result> {
         let key_name = op.key_name;
         let hash = op.hash;
+        let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
@@ -369,7 +367,22 @@ impl Provide for TpmProvider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        let password_context = get_password_context(&*store_handle, key_triple)?;
+        let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
+
+        key_attributes.can_sign_hash()?;
+        key_attributes.permits_alg(alg.into())?;
+        key_attributes.compatible_with_alg(alg.into())?;
+
+        match alg {
+            AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            } => (),
+            _ => {
+                error!(
+                    "The TPM provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaSignHash operation.");
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        }
 
         let signature = esapi_context
             .sign(
@@ -394,6 +407,7 @@ impl Provide for TpmProvider {
     ) -> Result<psa_verify_hash::Result> {
         let key_name = op.key_name;
         let hash = op.hash;
+        let alg = op.alg;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
@@ -414,7 +428,22 @@ impl Provide for TpmProvider {
             signature,
         };
 
-        let password_context = get_password_context(&*store_handle, key_triple)?;
+        let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
+
+        key_attributes.can_verify_hash()?;
+        key_attributes.permits_alg(alg.into())?;
+        key_attributes.compatible_with_alg(alg.into())?;
+
+        match alg {
+            AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            } => (),
+            _ => {
+                error!(
+                    "The TPM provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaVerifyHash operation.");
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        }
 
         let _ = esapi_context
             .verify_signature(password_context.context, &hash, signature)

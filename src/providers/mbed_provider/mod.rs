@@ -15,11 +15,12 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_id_managers;
-use crate::key_id_managers::{KeyTriple, ManageKeyIDs};
+use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
 use constants::PSA_SUCCESS;
 use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::psa_key_attributes::KeyAttributes;
 use parsec_interface::operations::{
     list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
     psa_sign_hash, psa_verify_hash,
@@ -27,7 +28,6 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto_binding::psa_key_id_t;
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
@@ -90,9 +90,11 @@ pub struct MbedProvider {
 /// type.
 fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<psa_key_id_t> {
     match store_handle.get(key_triple) {
-        Ok(Some(key_id)) => {
-            if let Ok(key_id_bytes) = key_id.try_into() {
-                Ok(u32::from_ne_bytes(key_id_bytes))
+        Ok(Some(key_info)) => {
+            if key_info.id.len() == 4 {
+                let mut dst = [0; 4];
+                dst.copy_from_slice(&key_info.id);
+                Ok(u32::from_ne_bytes(dst))
             } else {
                 error!("Stored Key ID is not valid.");
                 Err(ResponseStatus::KeyIDManagerError)
@@ -106,6 +108,7 @@ fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result
 /// Creates a new PSA Key ID and stores it in the Key ID Manager.
 fn create_key_id(
     key_triple: KeyTriple,
+    key_attributes: KeyAttributes,
     store_handle: &mut dyn ManageKeyIDs,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<psa_key_id_t> {
@@ -116,7 +119,11 @@ fn create_key_id(
     {
         key_id = rand::random::<psa_key_id_t>();
     }
-    match store_handle.insert(key_triple.clone(), key_id.to_ne_bytes().to_vec()) {
+    let key_info = KeyInfo {
+        id: key_id.to_ne_bytes().to_vec(),
+        attributes: key_attributes,
+    };
+    match store_handle.insert(key_triple.clone(), key_info) {
         Ok(insert_option) => {
             if insert_option.is_some() {
                 warn!("Overwriting Key triple mapping ({})", key_triple);
@@ -266,6 +273,7 @@ impl Provide for MbedProvider {
         }
         let key_id = create_key_id(
             key_triple.clone(),
+            key_attributes,
             &mut *store_handle,
             &mut local_ids_handle,
         )?;
@@ -318,6 +326,7 @@ impl Provide for MbedProvider {
         }
         let key_id = create_key_id(
             key_triple.clone(),
+            key_attributes,
             &mut *store_handle,
             &mut local_ids_handle,
         )?;
@@ -460,6 +469,7 @@ impl Provide for MbedProvider {
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
+        let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
@@ -489,7 +499,7 @@ impl Provide for MbedProvider {
         unsafe {
             sign_status = psa_crypto_binding::psa_asymmetric_sign(
                 key_handle.raw(),
-                key_attrs.raw().core.policy.alg,
+                utils::convert_algorithm(&alg.into())?,
                 hash.as_ptr(),
                 hash.len(),
                 signature.as_mut_ptr(),
@@ -523,6 +533,7 @@ impl Provide for MbedProvider {
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
+        let alg = op.alg;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
@@ -545,7 +556,7 @@ impl Provide for MbedProvider {
             key_attrs = key_handle.attributes()?;
             verify_status = psa_crypto_binding::psa_asymmetric_verify(
                 key_handle.raw(),
-                key_attrs.raw().core.policy.alg,
+                utils::convert_algorithm(&alg.into())?,
                 hash.as_ptr(),
                 hash.len(),
                 signature.as_ptr(),

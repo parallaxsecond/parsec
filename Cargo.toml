@@ -18,7 +18,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.10.0"
+parsec-interface = "0.12.0"
 rand = "0.7.2"
 base64 = "0.10.1"
 uuid = "0.7.4"
@@ -40,7 +40,7 @@ derivative = "1.0.3"
 version = "3.0.0"
 
 [dev-dependencies]
-parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.2.0" }
+parsec-client-test = { git = "https://github.com/parallaxsecond/parsec-client-test", tag = "0.2.2" }
 num_cpus = "1.10.1"
 
 [build-dependencies]

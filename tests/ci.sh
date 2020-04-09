@@ -153,11 +153,15 @@ else
     if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
         echo "Create a fake mapping file for Mbed Provider"
         mkdir -p mappings/cm9vdA==/1
-        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
     elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
         echo "Create a fake mapping file for PKCS 11 Provider"
         mkdir -p mappings/cm9vdA==/2
-        printf '\xe0\x19\xb2\x5c' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
     fi
 
     echo "Trigger a configuration reload to load the new mappings"

@@ -12,7 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! A key ID manager storing key triple to key ID mapping on files on disk
+//! A key ID manager storing key triple to key info mapping on files on disk
 //!
 //! The path where the mappings should be stored is configurable. Because of possible data races,
 //! there should not be two instances of this manager pointing to the same mapping folder at a time.
@@ -24,7 +24,7 @@
 //! example, for operating systems having a limit of 255 characters for filenames (Unix systems),
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
-use super::{KeyTriple, ManageKeyIDs};
+use super::{KeyInfo, KeyTriple, ManageKeyIDs};
 use crate::authenticators::ApplicationName;
 use log::{error, info};
 use parsec_interface::requests::ProviderID;
@@ -41,8 +41,8 @@ pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
 #[derive(Debug)]
 pub struct OnDiskKeyIDManager {
     /// Internal mapping, used for non-modifying operations.
-    key_store: HashMap<KeyTriple, Vec<u8>>,
-    /// Folder where all the key triple to key ID mappings are saved. This folder will be created
+    key_store: HashMap<KeyTriple, KeyInfo>,
+    /// Folder where all the key triple to key info mappings are saved. This folder will be created
     /// if it does already exist.
     mappings_dir_path: PathBuf,
 }
@@ -165,7 +165,7 @@ impl OnDiskKeyIDManager {
     /// Creates an instance of the on-disk manager from the mapping files. This function will
     /// create the mappings directory if it does not already exist.
     /// The mappings folder is composed of three levels: two levels of directory and one level
-    /// of files. The key triple to key ID mappings are represented on disk as the following:
+    /// of files. The key triple to key info mappings are represented on disk as the following:
     ///
     /// mappings_dir_path/
     /// |---app1/
@@ -182,7 +182,8 @@ impl OnDiskKeyIDManager {
     /// |---appN/
     ///
     /// where the path of a key name from the mappings directory is the key triple (application,
-    /// provider, key) and the data inside the key name file is the key ID.
+    /// provider, key) and the data inside the key name file is the key info serialised in binary
+    /// format.
     /// Each mapping is contained in its own file to prevent the modification of one mapping
     /// impacting the other ones.
     ///
@@ -199,9 +200,13 @@ impl OnDiskKeyIDManager {
             for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(&provider_dir_path)?.iter() {
                     info!("Found mapping file: {:?}.", key_name_file_path);
-                    let mut key_id = Vec::new();
-                    let mut key_id_file = File::open(&key_name_file_path)?;
-                    let _ = key_id_file.read_to_end(&mut key_id)?;
+                    let mut key_info = Vec::new();
+                    let mut key_info_file = File::open(&key_name_file_path)?;
+                    let _ = key_info_file.read_to_end(&mut key_info)?;
+                    let key_info = bincode::deserialize(&key_info[..]).or_else(|e| {
+                        error!("Error deserializing key info ({}).", e);
+                        Err(Error::new(ErrorKind::Other, "error deserializing key info"))
+                    })?;
                     match base64_data_triple_to_key_triple(
                         os_str_to_u8_ref(app_name_dir_path.file_name().expect(
                             "The application name directory path should contain a final component.",
@@ -214,7 +219,7 @@ impl OnDiskKeyIDManager {
                         ))?,
                     ) {
                         Ok(key_triple) => {
-                            let _ = key_store.insert(key_triple, key_id);
+                            let _ = key_store.insert(key_triple, key_info);
                         }
                         Err(string) => {
                             error!("Failed to convert the mapping path found to an UTF-8 string (error: {}).", string);
@@ -230,10 +235,10 @@ impl OnDiskKeyIDManager {
         })
     }
 
-    /// Saves the key triple to key ID mapping in its own file.
+    /// Saves the key triple to key info mapping in its own file.
     /// The filename will be `mappings/[APP_NAME]/[PROVIDER_NAME]/[KEY_NAME]` under the same path as the
-    /// on-disk manager. It will contain the Key ID data.
-    fn save_mapping(&self, key_triple: &KeyTriple, key_id: &[u8]) -> std::io::Result<()> {
+    /// on-disk manager. It will contain the Key info data.
+    fn save_mapping(&self, key_triple: &KeyTriple, key_info: &KeyInfo) -> std::io::Result<()> {
         // Create the directories with base64 names.
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
         let provider_dir_path = self.mappings_dir_path.join(app_name).join(prov);
@@ -246,7 +251,10 @@ impl OnDiskKeyIDManager {
         }
 
         let mut mapping_file = fs::File::create(&key_name_file_path)?;
-        mapping_file.write_all(key_id)
+        mapping_file.write_all(&bincode::serialize(key_info).or_else(|e| {
+            error!("Error serializing key info ({}).", e);
+            Err(Error::new(ErrorKind::Other, "error serializing key info"))
+        })?)
     }
 
     /// Removes the mapping file.
@@ -267,11 +275,11 @@ impl OnDiskKeyIDManager {
 }
 
 impl ManageKeyIDs for OnDiskKeyIDManager {
-    fn get(&self, key_triple: &KeyTriple) -> Result<Option<&[u8]>, String> {
+    fn get(&self, key_triple: &KeyTriple) -> Result<Option<&KeyInfo>, String> {
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
         // done by hand.
-        if let Some(key_id) = self.key_store.get(key_triple) {
-            Ok(Some(key_id))
+        if let Some(key_info) = self.key_store.get(key_triple) {
+            Ok(Some(key_info))
         } else {
             Ok(None)
         }
@@ -288,20 +296,20 @@ impl ManageKeyIDs for OnDiskKeyIDManager {
     fn insert(
         &mut self,
         key_triple: KeyTriple,
-        key_id: Vec<u8>,
-    ) -> Result<Option<Vec<u8>>, String> {
-        if let Err(err) = self.save_mapping(&key_triple, &key_id) {
+        key_info: KeyInfo,
+    ) -> Result<Option<KeyInfo>, String> {
+        if let Err(err) = self.save_mapping(&key_triple, &key_info) {
             Err(err.to_string())
         } else {
-            Ok(self.key_store.insert(key_triple, key_id))
+            Ok(self.key_store.insert(key_triple, key_info))
         }
     }
 
-    fn remove(&mut self, key_triple: &KeyTriple) -> Result<Option<Vec<u8>>, String> {
+    fn remove(&mut self, key_triple: &KeyTriple) -> Result<Option<KeyInfo>, String> {
         if let Err(err) = self.delete_mapping(key_triple) {
             Err(err.to_string())
-        } else if let Some(key_id) = self.key_store.remove(key_triple) {
-            Ok(Some(key_id))
+        } else if let Some(key_info) = self.key_store.remove(key_triple) {
+            Ok(Some(key_info))
         } else {
             Ok(None)
         }
@@ -340,12 +348,49 @@ impl OnDiskKeyIDManagerBuilder {
 
 #[cfg(test)]
 mod test {
-    use super::super::{KeyTriple, ManageKeyIDs};
+    use super::super::{KeyInfo, KeyTriple, ManageKeyIDs};
     use super::OnDiskKeyIDManager;
     use crate::authenticators::ApplicationName;
+    use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
+    use parsec_interface::operations::psa_key_attributes::{
+        KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+    };
     use parsec_interface::requests::ProviderID;
     use std::fs;
     use std::path::PathBuf;
+
+    fn test_key_attributes() -> KeyAttributes {
+        KeyAttributes {
+            key_type: KeyType::Derive,
+            key_bits: 1024,
+            key_policy: KeyPolicy {
+                key_usage_flags: UsageFlags {
+                    sign_hash: true,
+                    verify_hash: false,
+                    sign_message: false,
+                    verify_message: false,
+                    export: false,
+                    encrypt: false,
+                    decrypt: false,
+                    cache: false,
+                    copy: false,
+                    derive: false,
+                },
+                key_algorithm: Algorithm::AsymmetricSignature(
+                    AsymmetricSignature::RsaPkcs1v15Sign {
+                        hash_alg: Hash::Sha256,
+                    },
+                ),
+            },
+        }
+    }
+
+    fn test_key_info() -> KeyInfo {
+        KeyInfo {
+            id: vec![0x11, 0x22, 0x33],
+            attributes: test_key_attributes(),
+        }
+    }
 
     #[test]
     fn insert_get_key_id() {
@@ -353,23 +398,22 @@ mod test {
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_get_key_id".to_string());
-        let key_id = vec![0x11, 0x22, 0x33];
+        let key_info = test_key_info();
 
         assert!(manager.get(&key_triple).unwrap().is_none());
 
         assert!(manager
-            .insert(key_triple.clone(), key_id.clone())
+            .insert(key_triple.clone(), key_info.clone())
             .unwrap()
             .is_none());
 
-        let stored_key_id = Vec::from(
-            manager
-                .get(&key_triple)
-                .unwrap()
-                .expect("Failed to get key id"),
-        );
+        let stored_key_info = manager
+            .get(&key_triple)
+            .unwrap()
+            .expect("Failed to get key info")
+            .clone();
 
-        assert_eq!(stored_key_id, key_id);
+        assert_eq!(stored_key_info, key_info);
         assert!(manager.remove(&key_triple).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
     }
@@ -380,9 +424,9 @@ mod test {
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_remove_key".to_string());
-        let key_id = vec![0x11, 0x22, 0x33];
+        let key_info = test_key_info();
 
-        let _ = manager.insert(key_triple.clone(), key_id).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_info).unwrap();
 
         assert!(manager.remove(&key_triple).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
@@ -404,11 +448,11 @@ mod test {
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("exists".to_string());
-        let key_id = vec![0x11, 0x22, 0x33];
+        let key_info = test_key_info();
 
         assert!(!manager.exists(&key_triple).unwrap());
 
-        let _ = manager.insert(key_triple.clone(), key_id).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_info).unwrap();
         assert!(manager.exists(&key_triple).unwrap());
 
         let _ = manager.remove(&key_triple).unwrap();
@@ -422,22 +466,24 @@ mod test {
         let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_overwrites".to_string());
-        let key_id_1 = vec![0x11, 0x22, 0x33];
-        let key_id_2 = vec![0xaa, 0xbb, 0xcc];
+        let key_info_1 = test_key_info();
+        let key_info_2 = KeyInfo {
+            id: vec![0xaa, 0xbb, 0xcc],
+            attributes: test_key_attributes(),
+        };
 
-        let _ = manager.insert(key_triple.clone(), key_id_1).unwrap();
+        let _ = manager.insert(key_triple.clone(), key_info_1).unwrap();
         let _ = manager
-            .insert(key_triple.clone(), key_id_2.clone())
+            .insert(key_triple.clone(), key_info_2.clone())
             .unwrap();
 
-        let stored_key_id = Vec::from(
-            manager
-                .get(&key_triple)
-                .unwrap()
-                .expect("Failed to get key id"),
-        );
+        let stored_key_info = manager
+            .get(&key_triple)
+            .unwrap()
+            .expect("Failed to get key info")
+            .clone();
 
-        assert_eq!(stored_key_id, key_id_2);
+        assert_eq!(stored_key_info, key_info_2);
         assert!(manager.remove(&key_triple).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
     }
@@ -451,10 +497,12 @@ mod test {
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
         let key_triple = KeyTriple::new(big_app_name_ascii, ProviderID::Core, big_key_name_ascii);
-        let key_id = vec![0x11, 0x22, 0x33];
+        let key_info = test_key_info();
 
-        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
-        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_id);
+        let _ = manager
+            .insert(key_triple.clone(), key_info.clone())
+            .unwrap();
+        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_info);
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -471,10 +519,12 @@ mod test {
             ProviderID::MbedCrypto,
             big_key_name_emoticons,
         );
-        let key_id = vec![0x11, 0x22, 0x33];
+        let key_info = test_key_info();
 
-        let _ = manager.insert(key_triple.clone(), key_id.clone()).unwrap();
-        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_id);
+        let _ = manager
+            .insert(key_triple.clone(), key_info.clone())
+            .unwrap();
+        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_info);
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -485,37 +535,43 @@ mod test {
         let app_name1 = ApplicationName::new("😀 Application One 😀".to_string());
         let key_name1 = "😀 Key One 😀".to_string();
         let key_triple1 = KeyTriple::new(app_name1, ProviderID::Core, key_name1);
-        let key_id1 = vec![0x11, 0x22, 0x33];
+        let key_info1 = test_key_info();
 
         let app_name2 = ApplicationName::new("😇 Application Two 😇".to_string());
         let key_name2 = "😇 Key Two 😇".to_string();
         let key_triple2 = KeyTriple::new(app_name2, ProviderID::MbedCrypto, key_name2);
-        let key_id2 = vec![0x12, 0x22, 0x32];
+        let key_info2 = KeyInfo {
+            id: vec![0x12, 0x22, 0x32],
+            attributes: test_key_attributes(),
+        };
 
         let app_name3 = ApplicationName::new("😈 Application Three 😈".to_string());
         let key_name3 = "😈 Key Three 😈".to_string();
         let key_triple3 = KeyTriple::new(app_name3, ProviderID::Core, key_name3);
-        let key_id3 = vec![0x13, 0x23, 0x33];
+        let key_info3 = KeyInfo {
+            id: vec![0x13, 0x23, 0x33],
+            attributes: test_key_attributes(),
+        };
         {
             let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
             let _ = manager
-                .insert(key_triple1.clone(), key_id1.clone())
+                .insert(key_triple1.clone(), key_info1.clone())
                 .unwrap();
             let _ = manager
-                .insert(key_triple2.clone(), key_id2.clone())
+                .insert(key_triple2.clone(), key_info2.clone())
                 .unwrap();
             let _ = manager
-                .insert(key_triple3.clone(), key_id3.clone())
+                .insert(key_triple3.clone(), key_info3.clone())
                 .unwrap();
         }
         // The local hashmap is dropped when leaving the inner scope.
         {
             let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
 
-            assert_eq!(manager.remove(&key_triple1).unwrap().unwrap(), key_id1);
-            assert_eq!(manager.remove(&key_triple2).unwrap().unwrap(), key_id2);
-            assert_eq!(manager.remove(&key_triple3).unwrap().unwrap(), key_id3);
+            assert_eq!(manager.remove(&key_triple1).unwrap().unwrap(), key_info1);
+            assert_eq!(manager.remove(&key_triple2).unwrap().unwrap(), key_info2);
+            assert_eq!(manager.remove(&key_triple3).unwrap().unwrap(), key_info3);
         }
 
         fs::remove_dir_all(path).unwrap();

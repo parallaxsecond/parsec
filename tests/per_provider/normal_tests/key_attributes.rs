@@ -5,8 +5,9 @@ use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature
 use parsec_interface::operations::psa_key_attributes::{
     KeyAttributes, KeyPolicy, KeyType, UsageFlags,
 };
-use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus};
 
+// Ignored as only RSA key types are supported for now.
 #[ignore]
 #[test]
 fn wrong_type() {
@@ -49,7 +50,6 @@ fn wrong_type() {
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
 }
 
-#[ignore]
 #[test]
 fn wrong_usage_flags() {
     let mut client = TestClient::new();
@@ -91,7 +91,6 @@ fn wrong_usage_flags() {
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
 }
 
-#[ignore]
 #[test]
 fn wrong_permitted_algorithm() {
     let mut client = TestClient::new();
@@ -120,9 +119,16 @@ fn wrong_permitted_algorithm() {
         },
     };
 
+    // The Mbed Crypto provider currently does not support other algorithms than the RSA PKCS 1v15
+    // signing algorithm with hash when checking policies only.
+    if client.get_cached_provider(Opcode::PsaSignHash) == ProviderID::MbedCrypto {
+        return;
+    }
+
     client
         .generate_key(key_name.clone(), key_attributes)
         .unwrap();
+
     let status = client
         .sign_with_rsa_sha256(key_name, vec![0xDE, 0xAD, 0xBE, 0xEF])
         .unwrap_err();
