@@ -13,29 +13,71 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use parsec_client_test::TestClient;
-use parsec_interface::requests::ProviderID;
 use parsec_interface::requests::Result;
+use parsec_interface::requests::{Opcode, ProviderID};
 use std::collections::HashSet;
+use uuid::Uuid;
 
 #[test]
 fn list_providers() {
     let mut client = TestClient::new();
     let providers = client.list_providers().expect("list providers failed");
     assert_eq!(providers.len(), 4);
-    let ids: HashSet<ProviderID> = providers.iter().map(|p| p.id).collect();
-    assert!(ids.contains(&ProviderID::Core));
-    assert!(ids.contains(&ProviderID::MbedCrypto));
-    assert!(ids.contains(&ProviderID::Pkcs11));
-    assert!(ids.contains(&ProviderID::Tpm));
+    let uuids: HashSet<Uuid> = providers.iter().map(|p| p.uuid).collect();
+    // Core provider
+    assert!(uuids.contains(&Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()));
+    // Mbed Crypto provider
+    assert!(uuids.contains(&Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap()));
+    // PKCS 11 provider
+    assert!(uuids.contains(&Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()));
+    // TPM provider
+    assert!(uuids.contains(&Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()));
 }
 
 #[test]
+// ListOpcodes is not currently supported only by the Core Provider, see
+// parallaxsecond/parsec-operations#9
+#[ignore]
 fn list_opcodes() {
     let mut client = TestClient::new();
-    let opcodes = client
-        .list_opcodes(ProviderID::MbedCrypto)
-        .expect("list providers failed");
-    assert_eq!(opcodes.len(), 7);
+    let mut crypto_providers_opcodes = HashSet::new();
+    let mut core_provider_opcodes = HashSet::new();
+
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaGenerateKey);
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaDestroyKey);
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaSignHash);
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaVerifyHash);
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaImportKey);
+    let _ = crypto_providers_opcodes.insert(Opcode::PsaExportPublicKey);
+
+    let _ = core_provider_opcodes.insert(Opcode::Ping);
+    let _ = core_provider_opcodes.insert(Opcode::ListProviders);
+    let _ = core_provider_opcodes.insert(Opcode::ListOpcodes);
+
+    assert_eq!(
+        client
+            .list_opcodes(ProviderID::Core)
+            .expect("list providers failed"),
+        core_provider_opcodes
+    );
+    assert_eq!(
+        client
+            .list_opcodes(ProviderID::Tpm)
+            .expect("list providers failed"),
+        crypto_providers_opcodes
+    );
+    assert_eq!(
+        client
+            .list_opcodes(ProviderID::Pkcs11)
+            .expect("list providers failed"),
+        crypto_providers_opcodes
+    );
+    assert_eq!(
+        client
+            .list_opcodes(ProviderID::MbedCrypto)
+            .expect("list providers failed"),
+        crypto_providers_opcodes
+    );
 }
 
 #[cfg(feature = "testing")]

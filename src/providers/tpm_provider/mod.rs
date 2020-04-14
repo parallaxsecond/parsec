@@ -251,8 +251,14 @@ impl Provide for TpmProvider {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
         let key_data = public_key.modulus.as_unsigned_bytes_be();
-
         let len = key_data.len();
+
+        let key_bits = attributes.key_bits;
+        if key_bits != 0 && len * 8 != key_bits as usize {
+            error!("If the key_bits field is non-zero (value is {}) it must be equal to the size of the key in data.", attributes.key_bits);
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         if len != 128 && len != 256 {
             error!(
                 "The TPM provider only supports 1024 and 2048 bits RSA public keys ({} bits given).",
@@ -295,9 +301,7 @@ impl Provide for TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
-
-        key_attributes.can_export()?;
+        let (password_context, _key_attributes) = get_password_context(&*store_handle, key_triple)?;
 
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
@@ -361,10 +365,19 @@ impl Provide for TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let len = hash.len();
-        if len > 64 {
-            error!("The buffer given to sign is too big. Its length is {} and maximum authorised in the TPM provider is 64.", len);
+        if alg
+            != (AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            })
+        {
+            error!(
+                "The TPM provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::PsaErrorNotSupported);
+        }
+
+        if hash.len() != 32 {
+            error!("The SHA-256 hash must be 32 bytes long.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
         let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
@@ -417,10 +430,19 @@ impl Provide for TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let len = hash.len();
-        if len > 64 {
-            error!("The buffer given to sign is too big. Its length is {} and maximum authorised is 64 in the TPM provider.", len);
+        if alg
+            != (AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            })
+        {
+            error!(
+                "The TPM provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
             return Err(ResponseStatus::PsaErrorNotSupported);
+        }
+
+        if hash.len() != 32 {
+            error!("The SHA-256 hash must be 32 bytes long.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
         let signature = Signature {

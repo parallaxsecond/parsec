@@ -114,11 +114,11 @@ pub fn convert_key_usage(operation: &psa_key_attributes::UsageFlags) -> psa_key_
         usage |= PSA_KEY_USAGE_EXPORT;
     }
 
-    if operation.sign_message || operation.sign_hash {
+    if operation.sign_message && operation.sign_hash {
         usage |= PSA_KEY_USAGE_SIGN;
     }
 
-    if operation.verify_message || operation.verify_hash {
+    if operation.verify_message && operation.verify_hash {
         usage |= PSA_KEY_USAGE_VERIFY;
     }
 
