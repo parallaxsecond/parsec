@@ -363,8 +363,8 @@ impl Provide for TpmProvider {
 
         let len = hash.len();
         if len > 64 {
-            error!("The buffer given to sign is too big. Its length is {} and maximum authorised is 64.", len);
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
+            error!("The buffer given to sign is too big. Its length is {} and maximum authorised in the TPM provider is 64.", len);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
@@ -419,8 +419,8 @@ impl Provide for TpmProvider {
 
         let len = hash.len();
         if len > 64 {
-            error!("The buffer given to sign is too big. Its length is {} and maximum authorised is 64.", len);
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
+            error!("The buffer given to sign is too big. Its length is {} and maximum authorised is 64 in the TPM provider.", len);
+            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let signature = Signature {

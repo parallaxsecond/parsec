@@ -586,7 +586,7 @@ impl Provide for Pkcs11Provider {
                     &mut *store_handle,
                     &mut local_ids_handle,
                 )?;
-                Err(ResponseStatus::PsaErrorHardwareFailure)
+                Err(utils::to_response_status(e))
             }
         }
     }
