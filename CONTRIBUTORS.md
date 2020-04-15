@@ -11,3 +11,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Paul Howard (@paulhowardarm)
 * Ionut Mihalcea (@ionut-arm)
 * Hugues de Valon (@hug-dev)
+* Jesper Brynolf (@Superhepper)
