@@ -45,7 +45,7 @@ It is meant to be executed inside one of the container
 which Dockerfiles are in tests/per_provider/provider_cfg/*/
 or tests/all_providers/
 
-Usage: ./tests/ci.sh [--no-cargo-clean] PROVIDER_NAME
+Usage: ./tests/ci.sh [--no-cargo-clean] [--no-stress-test] PROVIDER_NAME
 where PROVIDER_NAME can be one of:
     - mbed-crypto
     - pkcs11
@@ -62,11 +62,15 @@ error_msg () {
 
 # Parse arguments
 NO_CARGO_CLEAN=
+NO_STRESS_TEST=
 PROVIDER_NAME=
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --no-cargo-clean )
             NO_CARGO_CLEAN="True"
+        ;;
+        --no-stress-test )
+            NO_STRESS_TEST="True"
         ;;
         mbed-crypto | pkcs11 | tpm | all )
             if [ -n "$PROVIDER_NAME" ]; then
@@ -172,18 +176,20 @@ else
     echo "Execute persistent test, after the reload"
     RUST_BACKTRACE=1 cargo test $FEATURES persistent_after
 
-    echo "Shutdown Parsec"
-    kill $PARSEC_PID
-    # Sleep time needed to make sure Parsec is killed.
-    sleep 2
+    if [ -z "$NO_STRESS_TEST" ]; then
+        echo "Shutdown Parsec"
+        kill $PARSEC_PID
+        # Sleep time needed to make sure Parsec is killed.
+        sleep 2
 
-    echo "Start Parsec for stress tests"
-    # Change the log level for the stress tests because logging is limited on the
-    # CI servers.
-    RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-    PARSEC_PID=$!
-    sleep 5
+        echo "Start Parsec for stress tests"
+        # Change the log level for the stress tests because logging is limited on the
+        # CI servers.
+        RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
+        PARSEC_PID=$!
+        sleep 5
 
-    echo "Execute stress tests"
-    RUST_BACKTRACE=1 cargo test $FEATURES stress_test
+        echo "Execute stress tests"
+        RUST_BACKTRACE=1 cargo test $FEATURES stress_test
+	fi
 fi
