@@ -1,23 +1,28 @@
 # Executing our tests on Arm64 with Travis CI
 # The TPM provider Dockerfile does not build on Arm so the all-providers and tpm-provider tests
 # are not executed on Aarch64.
-arch: arm64
+arch: amd64
+dist: bionic
 services:
-    - docker
+  - docker
 jobs:
-    include:
+  include:
     - name: "Integration tests using Mbed Crypto provider"
       env:
-      - DOCKER_IMAGE_NAME=mbed-crypto-provider
-      - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/mbed-crypto
-      # Stress test fails on Travis CI, see #116
-      - SCRIPT="tests/ci.sh --no-stress-test mbed-crypto"
+        - DOCKER_IMAGE_NAME=mbed-crypto-provider
+        - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/mbed-crypto
+        # Stress test fails on Travis CI, see #116
+        - SCRIPT="tests/ci.sh mbed-crypto"
+        - TEST_ROOT="mbed_crypto_parsec"
     - name: "Integration tests using PKCS 11 provider"
       env:
-      - DOCKER_IMAGE_NAME=pkcs11-provider
-      - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/pkcs11
-      # Stress test fails on Travis CI, see #116
-      - SCRIPT="tests/ci.sh --no-stress-test pkcs11"
+        - DOCKER_IMAGE_NAME=pkcs11-provider
+        - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/pkcs11
+        # Stress test fails on Travis CI, see #116
+        - SCRIPT="tests/ci.sh pkcs11"
+        - TEST_ROOT="pkcs11_parsec"
 script:
-- docker build -t $DOCKER_IMAGE_NAME $DOCKER_IMAGE_PATH
-- docker run -v $(pwd):/tmp/parsec -w /tmp/parsec $DOCKER_IMAGE_NAME /tmp/parsec/$SCRIPT
+  - cp -r ./ /tmp/$TEST_ROOT
+  - cd /tmp/$TEST_ROOT
+  - docker build -t $DOCKER_IMAGE_NAME $DOCKER_IMAGE_PATH
+  - docker run -v $(pwd):/tmp/parsec -w /tmp/parsec $DOCKER_IMAGE_NAME /tmp/parsec/$SCRIPT

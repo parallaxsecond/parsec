@@ -11,6 +11,7 @@ timeout = 3000 # in milliseconds
 [[key_manager]]
 name = "on-disk-manager"
 manager_type = "OnDisk"
+store_path = "./mbed_mappings"
 
 [[provider]]
 provider_type = "MbedCrypto"

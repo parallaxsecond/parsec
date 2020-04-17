@@ -20,22 +20,24 @@
 set -e
 
 # The clean up procedure is called when the script finished or is interrupted
-cleanup () {
+cleanup() {
     echo "Shutdown Parsec and clean up"
     # Stop Parsec if running
-    if [ -n "$PARSEC_PID" ]; then kill $PARSEC_PID || true ; fi
+    if [ -n "$PARSEC_PID" ]; then kill $PARSEC_PID || true; fi
     # Stop tpm_server if running
     if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
     # Remove the slot_number line added by find_slot_number.sh
     sed -i '/^slot_number =.*/d' $CONFIG_PATH
     # Remove fake mapping and temp files
     if [ -d "mappings" ]; then rm -rf -- "mappings"; fi
-    if [ -f "NVChip" ]; then rm "NVChip" ; fi
+    if [ -d "pkcs11_mappings" ]; then rm -rf -- "pkcs11_mappings"; fi
+    if [ -d "mbed_mappings" ]; then rm -rf -- "mbed_mappings"; fi
+    if [ -f "NVChip" ]; then rm "NVChip"; fi
 
     if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
 }
 
-usage () {
+usage() {
     printf "
 Continuous Integration test script
 
@@ -54,7 +56,7 @@ where PROVIDER_NAME can be one of:
 "
 }
 
-error_msg () {
+error_msg() {
     echo "Error: $1"
     usage
     exit 1
@@ -66,27 +68,27 @@ NO_STRESS_TEST=
 PROVIDER_NAME=
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --no-cargo-clean )
-            NO_CARGO_CLEAN="True"
+    --no-cargo-clean)
+        NO_CARGO_CLEAN="True"
         ;;
-        --no-stress-test )
-            NO_STRESS_TEST="True"
+    --no-stress-test)
+        NO_STRESS_TEST="True"
         ;;
-        mbed-crypto | pkcs11 | tpm | all )
-            if [ -n "$PROVIDER_NAME" ]; then
-                error_msg "Only one provider name must be given"
-            fi
-            PROVIDER_NAME=$1
-            if [ "$PROVIDER_NAME" = "all" ]; then
-                FEATURES="--features=all-providers"
-                CONFIG_PATH="tests/all_providers/config.toml"
-            else
-                FEATURES="--features=$1-provider"
-                CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
-            fi
+    mbed-crypto | pkcs11 | tpm | all)
+        if [ -n "$PROVIDER_NAME" ]; then
+            error_msg "Only one provider name must be given"
+        fi
+        PROVIDER_NAME=$1
+        if [ "$PROVIDER_NAME" = "all" ]; then
+            FEATURES="--features=all-providers"
+            CONFIG_PATH="tests/all_providers/config.toml"
+        else
+            FEATURES="--features=$1-provider"
+            CONFIG_PATH="tests/per_provider/provider_cfg/$1/config.toml"
+        fi
         ;;
-        *)
-            error_msg "Unknown argument: $1"
+    *)
+        error_msg "Unknown argument: $1"
         ;;
     esac
     shift
@@ -156,16 +158,16 @@ else
     # This test does not make sense for the TPM provider.
     if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
         echo "Create a fake mapping file for Mbed Provider"
-        mkdir -p mappings/cm9vdA==/1
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        mkdir -p mbed_mappings/cm9vdA==/1
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' >mbed_mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >>mbed_mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >>mbed_mappings/cm9vdA==/1/VGVzdCBLZXk\=
     elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
         echo "Create a fake mapping file for PKCS 11 Provider"
-        mkdir -p mappings/cm9vdA==/2
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        mkdir -p pkcs11_mappings/cm9vdA==/2
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd6\xcb\xf8\x23\x09\x00\x00\x00' >pkcs11_mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x04\x00\x00\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x05\x00' >>pkcs11_mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x00\x00\x00\x00\x00\x06\x00\x00\x00' >>pkcs11_mappings/cm9vdA==/2/VGVzdCBLZXk\=
     fi
 
     echo "Trigger a configuration reload to load the new mappings"
@@ -191,5 +193,5 @@ else
 
         echo "Execute stress tests"
         RUST_BACKTRACE=1 cargo test $FEATURES stress_test
-	fi
+    fi
 fi
