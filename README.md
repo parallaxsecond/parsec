@@ -73,25 +73,7 @@ Contributions from the developer community are welcome. Please refer to the cont
 
 # Example
 
-Launch the Parsec service with a single software-based provider (using the default configuration):
-```bash
-$ git clone https://github.com/parallaxsecond/parsec.git
-$ cd parsec
-$ RUST_LOG=info cargo run
-```
-
-Parsec Client Libraries can now communicate with the service. For example using the Rust Test client,
-RSA signatures can be done as follows:
-```rust
-use parsec_client_test::TestClient;
-
-let mut client = TestClient::new();
-let key_name = String::from("🔑 What shall I sign? 🔑");
-client.generate_rsa_sign_key(key_name.clone()).unwrap();
-let signature = client.sign(key_name,
-                            String::from("Platform AbstRaction for SECurity").into_bytes())
-                      .unwrap();
-```
+For examples of how to access PARSEC as a client application, check [this Rust client documentation](https://docs.rs/parsec-client/*/parsec_client/core/basic_client/struct.BasicClient.html).
 
 Check the [**user**](https://parallaxsecond.github.io/parsec-book/parsec_users.html), [**client developer**](https://parallaxsecond.github.io/parsec-book/parsec_client/index.html) and [**service developer**](https://parallaxsecond.github.io/parsec-book/parsec_service/index.html) guides for more information on building, installing, testing and using Parsec!
 

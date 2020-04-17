@@ -1,11 +1,11 @@
 // Copyright (c) 2020, Arm Limited, All Rights Reserved
 // SPDX-License-Identifier: Apache-2.0
-use parsec_client_test::TestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Cipher, Hash};
 use parsec_interface::operations::psa_key_attributes::{
     KeyAttributes, KeyPolicy, KeyType, UsageFlags,
 };
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus};
+use parsec_interface::requests::{ProviderID, ResponseStatus};
 
 // Ignored as only RSA key types are supported for now.
 #[ignore]
@@ -121,7 +121,7 @@ fn wrong_permitted_algorithm() {
 
     // The Mbed Crypto provider currently does not support other algorithms than the RSA PKCS 1v15
     // signing algorithm with hash when checking policies only.
-    if client.get_cached_provider(Opcode::PsaSignHash) == ProviderID::MbedCrypto {
+    if client.provider().unwrap() == ProviderID::MbedCrypto {
         return;
     }
 

@@ -12,10 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::TestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
-use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::Result;
 use sha2::{Digest, Sha256};
 
 const HASH: [u8; 32] = [

@@ -12,17 +12,18 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::RequestTestClient;
-use parsec_client_test::TestClient;
+use crate::test_clients::RequestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::requests::request::{Request, RequestAuth, RequestBody};
 use parsec_interface::requests::Opcode;
 use parsec_interface::requests::ProviderID;
-use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::Result;
 
 #[test]
 fn test_ping() -> Result<()> {
     let mut client = TestClient::new();
-    let version = client.ping(ProviderID::Core)?;
+    let version = client.ping()?;
     assert_eq!(version.0, 1);
     assert_eq!(version.1, 0);
 
@@ -31,15 +32,16 @@ fn test_ping() -> Result<()> {
 
 #[test]
 fn mangled_ping() {
-    let mut client = RequestTestClient::new();
+    let client = RequestClient::default();
     let mut req = Request::new();
-    req.header.version_maj = 1;
     req.header.provider = ProviderID::Core;
     req.header.opcode = Opcode::Ping;
     req.auth = RequestAuth::from_bytes(Vec::from("root"));
 
     req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 
-    let resp = client.send_request(req).expect("Failed to read Response");
+    let resp = client
+        .process_request(req)
+        .expect("Failed to read Response");
     assert_eq!(resp.header.status, ResponseStatus::DeserializingBodyFailed);
 }

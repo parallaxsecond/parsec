@@ -12,12 +12,13 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::TestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
 use parsec_interface::operations::psa_key_attributes::{
     KeyAttributes, KeyPolicy, KeyType, UsageFlags,
 };
-use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
 

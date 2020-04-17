@@ -44,3 +44,4 @@
 
 mod all_providers;
 mod per_provider;
+mod test_clients;

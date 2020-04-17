@@ -12,15 +12,16 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::TestClient;
-use parsec_interface::requests::{ResponseStatus, Result};
+use crate::test_clients::TestClient;
+use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::Result;
 
 #[test]
 fn two_auths_same_key_name() -> Result<()> {
     let key_name = String::from("two_auths_same_key_name");
     let mut client = TestClient::new();
-    let auth1 = String::from("first_client").into_bytes();
-    let auth2 = String::from("second_client").into_bytes();
+    let auth1 = String::from("first_client");
+    let auth2 = String::from("second_client");
 
     client.set_auth(auth1);
     client.generate_rsa_sign_key(key_name.clone())?;
@@ -33,8 +34,8 @@ fn two_auths_same_key_name() -> Result<()> {
 fn delete_wrong_key() -> Result<()> {
     let key_name = String::from("delete_wrong_key");
     let mut client = TestClient::new();
-    let auth1 = String::from("first_client").into_bytes();
-    let auth2 = String::from("second_client").into_bytes();
+    let auth1 = String::from("first_client");
+    let auth2 = String::from("second_client");
 
     client.set_auth(auth1);
     client.generate_rsa_sign_key(key_name.clone())?;

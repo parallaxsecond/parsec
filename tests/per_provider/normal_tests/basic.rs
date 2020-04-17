@@ -12,38 +12,17 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::RequestTestClient;
-use parsec_client_test::TestClient;
+use crate::test_clients::RawRequestClient;
 use parsec_interface::requests::request::RawHeader;
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus};
 
 #[test]
-fn invalid_version() {
-    let mut client = RequestTestClient::new();
-    let mut req_hdr = RawHeader::new();
-
-    req_hdr.provider = ProviderID::Core as u8;
-    req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 0xff;
-
-    let resp = client
-        .send_raw_request(req_hdr, Vec::new())
-        .expect("Failed to read Response");
-    assert_eq!(
-        resp.header.status,
-        ResponseStatus::WireProtocolVersionNotSupported
-    );
-    assert_eq!(resp.header.opcode, Opcode::Ping);
-}
-
-#[test]
 fn invalid_provider() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = 0xff;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 0x01;
 
     let resp = client
         .send_raw_request(req_hdr, Vec::new())
@@ -54,12 +33,11 @@ fn invalid_provider() {
 
 #[test]
 fn invalid_content_type() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 1;
     req_hdr.content_type = 0xff;
 
     let resp = client
@@ -71,12 +49,11 @@ fn invalid_content_type() {
 
 #[test]
 fn invalid_accept_type() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 1;
 
     req_hdr.accept_type = 0xff;
 
@@ -89,12 +66,11 @@ fn invalid_accept_type() {
 
 #[test]
 fn invalid_body_len() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 1;
 
     req_hdr.body_len = 0xff_ff;
 
@@ -106,12 +82,11 @@ fn invalid_body_len() {
 
 #[test]
 fn invalid_auth_len() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = Opcode::Ping as u16;
-    req_hdr.version_maj = 1;
 
     req_hdr.auth_len = 0xff_ff;
 
@@ -123,26 +98,14 @@ fn invalid_auth_len() {
 
 #[test]
 fn invalid_opcode() {
-    let mut client = RequestTestClient::new();
+    let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
     req_hdr.opcode = 0xff_ff;
-    req_hdr.version_maj = 1;
 
     let resp = client
         .send_raw_request(req_hdr, Vec::new())
         .expect("Failed to read Response");
     assert_eq!(resp.header.status, ResponseStatus::OpcodeDoesNotExist);
-}
-
-#[test]
-fn wrong_provider_core() {
-    let mut client = TestClient::new();
-    client.set_provider(Some(ProviderID::Core));
-
-    let response_status = client
-        .destroy_key(String::new())
-        .expect_err("Core Provider should not support DestroyKey operation!");
-    assert_eq!(response_status, ResponseStatus::PsaErrorNotSupported);
 }

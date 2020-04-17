@@ -12,10 +12,11 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::TestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
-use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
 
@@ -56,8 +57,6 @@ fn example_modulus_1024() -> Vec<u8> {
 fn import_key() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("import_key");
-
-    println!("{:?}", KEY_DATA.to_vec());
 
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
