@@ -10,12 +10,14 @@ jobs:
       env:
       - DOCKER_IMAGE_NAME=mbed-crypto-provider
       - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/mbed-crypto
-      - SCRIPT="tests/ci.sh mbed-crypto"
+      # Stress test fails on Travis CI, see #116
+      - SCRIPT="tests/ci.sh --no-stress-test mbed-crypto"
     - name: "Integration tests using PKCS 11 provider"
       env:
       - DOCKER_IMAGE_NAME=pkcs11-provider
       - DOCKER_IMAGE_PATH=tests/per_provider/provider_cfg/pkcs11
-      - SCRIPT="tests/ci.sh pkcs11"
+      # Stress test fails on Travis CI, see #116
+      - SCRIPT="tests/ci.sh --no-stress-test pkcs11"
 script:
 - docker build -t $DOCKER_IMAGE_NAME $DOCKER_IMAGE_PATH
 - docker run -v $(pwd):/tmp/parsec -w /tmp/parsec $DOCKER_IMAGE_NAME /tmp/parsec/$SCRIPT
