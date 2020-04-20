@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-//! A key ID manager storing key triple to key info mapping on files on disk
+//! A key info manager storing key triple to key info mapping on files on disk
 //!
 //! The path where the mappings should be stored is configurable. Because of possible data races,
 //! there should not be two instances of this manager pointing to the same mapping folder at a time.
@@ -12,7 +12,7 @@
 //! example, for operating systems having a limit of 255 characters for filenames (Unix systems),
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
-use super::{KeyInfo, KeyTriple, ManageKeyIDs};
+use super::{KeyInfo, KeyTriple, ManageKeyInfo};
 use crate::authenticators::ApplicationName;
 use log::{error, info};
 use parsec_interface::requests::ProviderID;
@@ -27,7 +27,7 @@ use std::path::PathBuf;
 pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
 
 #[derive(Debug)]
-pub struct OnDiskKeyIDManager {
+pub struct OnDiskKeyInfoManager {
     /// Internal mapping, used for non-modifying operations.
     key_store: HashMap<KeyTriple, KeyInfo>,
     /// Folder where all the key triple to key info mappings are saved. This folder will be created
@@ -145,11 +145,11 @@ fn list_files(path: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
         .collect())
 }
 
-/// Filesystem-based `KeyIdManager`
+/// Filesystem-based `KeyInfoManager`
 ///
-/// The `OnDiskKeyIdManager` relies on access control mechanisms provided by the OS for
+/// The `OnDiskKeyInfoManager` relies on access control mechanisms provided by the OS for
 /// the filesystem to ensure security of the mappings.
-impl OnDiskKeyIDManager {
+impl OnDiskKeyInfoManager {
     /// Creates an instance of the on-disk manager from the mapping files. This function will
     /// create the mappings directory if it does not already exist.
     /// The mappings folder is composed of three levels: two levels of directory and one level
@@ -178,7 +178,7 @@ impl OnDiskKeyIDManager {
     /// # Errors
     ///
     /// Returns an std::io error if the function failed reading the mapping files.
-    fn new(mappings_dir_path: PathBuf) -> std::io::Result<OnDiskKeyIDManager> {
+    fn new(mappings_dir_path: PathBuf) -> std::io::Result<OnDiskKeyInfoManager> {
         let mut key_store = HashMap::new();
 
         // Will ignore if the mappings directory already exists.
@@ -217,7 +217,7 @@ impl OnDiskKeyIDManager {
             }
         }
 
-        Ok(OnDiskKeyIDManager {
+        Ok(OnDiskKeyInfoManager {
             key_store,
             mappings_dir_path,
         })
@@ -262,7 +262,7 @@ impl OnDiskKeyIDManager {
     }
 }
 
-impl ManageKeyIDs for OnDiskKeyIDManager {
+impl ManageKeyInfo for OnDiskKeyInfoManager {
     fn get(&self, key_triple: &KeyTriple) -> Result<Option<&KeyInfo>, String> {
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
         // done by hand.
@@ -309,25 +309,25 @@ impl ManageKeyIDs for OnDiskKeyIDManager {
 }
 
 #[derive(Debug, Default)]
-pub struct OnDiskKeyIDManagerBuilder {
+pub struct OnDiskKeyInfoManagerBuilder {
     mappings_dir_path: Option<PathBuf>,
 }
 
-impl OnDiskKeyIDManagerBuilder {
-    pub fn new() -> OnDiskKeyIDManagerBuilder {
-        OnDiskKeyIDManagerBuilder {
+impl OnDiskKeyInfoManagerBuilder {
+    pub fn new() -> OnDiskKeyInfoManagerBuilder {
+        OnDiskKeyInfoManagerBuilder {
             mappings_dir_path: None,
         }
     }
 
-    pub fn with_mappings_dir_path(mut self, path: PathBuf) -> OnDiskKeyIDManagerBuilder {
+    pub fn with_mappings_dir_path(mut self, path: PathBuf) -> OnDiskKeyInfoManagerBuilder {
         self.mappings_dir_path = Some(path);
 
         self
     }
 
-    pub fn build(self) -> std::io::Result<OnDiskKeyIDManager> {
-        OnDiskKeyIDManager::new(self.mappings_dir_path.ok_or_else(|| {
+    pub fn build(self) -> std::io::Result<OnDiskKeyInfoManager> {
+        OnDiskKeyInfoManager::new(self.mappings_dir_path.ok_or_else(|| {
             error!("Mappings directory path is missing");
             Error::new(ErrorKind::InvalidData, "mappings directory path is missing")
         })?)
@@ -336,8 +336,8 @@ impl OnDiskKeyIDManagerBuilder {
 
 #[cfg(test)]
 mod test {
-    use super::super::{KeyInfo, KeyTriple, ManageKeyIDs};
-    use super::OnDiskKeyIDManager;
+    use super::super::{KeyInfo, KeyTriple, ManageKeyInfo};
+    use super::OnDiskKeyInfoManager;
     use crate::authenticators::ApplicationName;
     use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
     use parsec_interface::operations::psa_key_attributes::{
@@ -381,11 +381,11 @@ mod test {
     }
 
     #[test]
-    fn insert_get_key_id() {
-        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_get_key_id_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+    fn insert_get_key_info() {
+        let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_get_key_info_mappings");
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
-        let key_triple = new_key_triple("insert_get_key_id".to_string());
+        let key_triple = new_key_triple("insert_get_key_info".to_string());
         let key_info = test_key_info();
 
         assert!(manager.get(&key_triple).unwrap().is_none());
@@ -409,7 +409,7 @@ mod test {
     #[test]
     fn insert_remove_key() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_remove_key_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_remove_key".to_string());
         let key_info = test_key_info();
@@ -423,7 +423,7 @@ mod test {
     #[test]
     fn remove_unexisting_key() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/remove_unexisting_key_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("remove_unexisting_key".to_string());
         assert_eq!(manager.remove(&key_triple).unwrap(), None);
@@ -433,7 +433,7 @@ mod test {
     #[test]
     fn exists() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/exists_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("exists".to_string());
         let key_info = test_key_info();
@@ -451,7 +451,7 @@ mod test {
     #[test]
     fn insert_overwrites() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_overwrites_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let key_triple = new_key_triple("insert_overwrites".to_string());
         let key_info_1 = test_key_info();
@@ -479,7 +479,7 @@ mod test {
     #[test]
     fn big_names_ascii() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_ascii_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let big_app_name_ascii = ApplicationName::new("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
@@ -497,7 +497,7 @@ mod test {
     #[test]
     fn big_names_emoticons() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_emoticons_mappings");
-        let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
         let big_app_name_emoticons = ApplicationName::new("😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string());
         let big_key_name_emoticons = "😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string();
@@ -541,7 +541,7 @@ mod test {
             attributes: test_key_attributes(),
         };
         {
-            let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+            let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
             let _ = manager
                 .insert(key_triple1.clone(), key_info1.clone())
@@ -555,7 +555,7 @@ mod test {
         }
         // The local hashmap is dropped when leaving the inner scope.
         {
-            let mut manager = OnDiskKeyIDManager::new(path.clone()).unwrap();
+            let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
             assert_eq!(manager.remove(&key_triple1).unwrap().unwrap(), key_info1);
             assert_eq!(manager.remove(&key_triple2).unwrap().unwrap(), key_info2);

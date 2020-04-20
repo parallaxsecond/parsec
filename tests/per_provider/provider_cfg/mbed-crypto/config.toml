@@ -14,4 +14,4 @@ manager_type = "OnDisk"
 
 [[provider]]
 provider_type = "MbedCrypto"
-key_id_manager = "on-disk-manager"
+key_info_manager = "on-disk-manager"

@@ -6,8 +6,8 @@
 //! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_id_managers;
-use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
+use crate::key_info_managers;
+use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, info};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -55,10 +55,10 @@ pub struct TpmProvider {
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
     esapi_context: Mutex<tss_esapi::TransientObjectContext>,
-    // The Key ID Manager stores the key context and its associated authValue (a PasswordContext
+    // The Key Info Manager stores the key context and its associated authValue (a PasswordContext
     // structure).
     #[derivative(Debug = "ignore")]
-    key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
 }
 
 // Public exponent value for all RSA keys.
@@ -76,21 +76,21 @@ struct RsaPublicKey {
     public_exponent: IntegerAsn1,
 }
 
-// The PasswordContext is what is stored by the Key ID Manager.
+// The PasswordContext is what is stored by the Key Info Manager.
 #[derive(Serialize, Deserialize)]
 struct PasswordContext {
     context: TpmsContext,
     auth_value: Vec<u8>,
 }
 
-// Inserts a new mapping in the Key ID manager that stores the PasswordContext.
+// Inserts a new mapping in the Key Info manager that stores the PasswordContext.
 fn insert_password_context(
-    store_handle: &mut dyn ManageKeyIDs,
+    store_handle: &mut dyn ManageKeyInfo,
     key_triple: KeyTriple,
     password_context: PasswordContext,
     key_attributes: KeyAttributes,
 ) -> Result<()> {
-    let error_storing = |e| Err(key_id_managers::to_response_status(e));
+    let error_storing = |e| Err(key_info_managers::to_response_status(e));
 
     let key_info = KeyInfo {
         id: bincode::serialize(&password_context)?,
@@ -102,7 +102,7 @@ fn insert_password_context(
         .or_else(error_storing)?
         .is_some()
     {
-        error!("Inserting a mapping in the Key ID Manager that would overwrite an existing one.");
+        error!("Inserting a mapping in the Key Info Manager that would overwrite an existing one.");
         Err(ResponseStatus::PsaErrorAlreadyExists)
     } else {
         Ok(())
@@ -111,15 +111,15 @@ fn insert_password_context(
 
 // Gets a PasswordContext mapping to the KeyTriple given.
 fn get_password_context(
-    store_handle: &dyn ManageKeyIDs,
+    store_handle: &dyn ManageKeyInfo,
     key_triple: KeyTriple,
 ) -> Result<(PasswordContext, KeyAttributes)> {
     let key_info = store_handle
         .get(&key_triple)
-        .or_else(|e| Err(key_id_managers::to_response_status(e)))?
+        .or_else(|e| Err(key_info_managers::to_response_status(e)))?
         .ok_or_else(|| {
             error!(
-                "Key triple \"{}\" does not exist in the Key ID Manager.",
+                "Key triple \"{}\" does not exist in the Key Info Manager.",
                 key_triple
             );
             ResponseStatus::PsaErrorDoesNotExist
@@ -130,12 +130,12 @@ fn get_password_context(
 impl TpmProvider {
     // Creates and initialise a new instance of TpmProvider.
     fn new(
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
         esapi_context: tss_esapi::TransientObjectContext,
     ) -> Option<TpmProvider> {
         Some(TpmProvider {
             esapi_context: Mutex::new(esapi_context),
-            key_id_store,
+            key_info_store,
         })
     }
 }
@@ -177,7 +177,10 @@ impl Provide for TpmProvider {
         let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits)
             .expect("Conversion to usize failed.");
 
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -218,7 +221,10 @@ impl Provide for TpmProvider {
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
         let key_data = op.data;
 
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -283,7 +289,7 @@ impl Provide for TpmProvider {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -319,16 +325,19 @@ impl Provide for TpmProvider {
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
 
-        let error_closure = |e| Err(key_id_managers::to_response_status(e));
+        let error_closure = |e| Err(key_info_managers::to_response_status(e));
         if store_handle
             .remove(&key_triple)
             .or_else(error_closure)?
             .is_none()
         {
             error!(
-                "Key triple \"{}\" does not exist in the Key ID Manager.",
+                "Key triple \"{}\" does not exist in the Key Info Manager.",
                 key_triple
             );
             Err(ResponseStatus::PsaErrorDoesNotExist)
@@ -347,7 +356,7 @@ impl Provide for TpmProvider {
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -412,7 +421,7 @@ impl Provide for TpmProvider {
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
 
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -474,7 +483,7 @@ impl Drop for TpmProvider {
 #[derivative(Debug)]
 pub struct TpmProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
+    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
     tcti: Option<Tcti>,
     owner_hierarchy_auth: Option<String>,
 }
@@ -482,17 +491,17 @@ pub struct TpmProviderBuilder {
 impl TpmProviderBuilder {
     pub fn new() -> TpmProviderBuilder {
         TpmProviderBuilder {
-            key_id_store: None,
+            key_info_store: None,
             tcti: None,
             owner_hierarchy_auth: None,
         }
     }
 
-    pub fn with_key_id_store(
+    pub fn with_key_info_store(
         mut self,
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     ) -> TpmProviderBuilder {
-        self.key_id_store = Some(key_id_store);
+        self.key_info_store = Some(key_info_store);
 
         self
     }
@@ -525,8 +534,8 @@ impl TpmProviderBuilder {
     /// using a same TCTI that does not handle multiple applications concurrently.
     pub unsafe fn build(self) -> std::io::Result<TpmProvider> {
         TpmProvider::new(
-            self.key_id_store.ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, "missing key ID store")
+            self.key_info_store.ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
             tss_esapi::TransientObjectContext::new(
                 self.tcti

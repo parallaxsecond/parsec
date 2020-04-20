@@ -12,17 +12,17 @@ manager_type = "OnDisk"
 
 [[provider]]
 provider_type = "MbedCrypto"
-key_id_manager = "on-disk-manager"
+key_info_manager = "on-disk-manager"
 
 [[provider]]
 provider_type = "Tpm"
-key_id_manager = "on-disk-manager"
+key_info_manager = "on-disk-manager"
 tcti = "mssim"
 owner_hierarchy_auth = "tpm_pass"
 
 [[provider]]
 provider_type = "Pkcs11"
-key_id_manager = "on-disk-manager"
+key_info_manager = "on-disk-manager"
 library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
 user_pin = "123456"
 # The slot_number mandatory field is going to be added by the find_slot_number.sh script
