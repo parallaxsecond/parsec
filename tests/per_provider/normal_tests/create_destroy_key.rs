@@ -143,10 +143,11 @@ fn failed_created_key_should_be_removed() -> Result<()> {
     };
 
     // Unsupported parameter, should fail
-    if client.generate_key(key_name.clone(), attributes).is_err() {
-        // The key should not exist anymore in the KIM
-        client.generate_rsa_sign_key(key_name)?;
-    }
+    let _ = client
+        .generate_key(key_name.clone(), attributes)
+        .unwrap_err();
+    // The key should not exist anymore in the KIM
+    client.generate_rsa_sign_key(key_name)?;
 
     Ok(())
 }

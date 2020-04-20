@@ -198,8 +198,6 @@ fn check_format_import3() -> Result<()> {
 
 #[test]
 fn failed_imported_key_should_be_removed() -> Result<()> {
-    // If the key_bits field of the key attributes is zero, the operation should still work.
-    // The size of the key is always taken from the data parameter.
     let mut client = TestClient::new();
     let key_name = String::from("failed_imported_key_should_be_removed");
 
@@ -231,13 +229,11 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         },
     };
 
-    if client
+    let _ = client
         .import_key(key_name.clone(), attributes, Vec::new())
-        .is_err()
-    {
-        // Should succeed because key would have been destroyed.
-        client.import_rsa_public_key(key_name, picky_asn1_der::to_vec(&public_key).unwrap())?;
-    }
+        .unwrap_err();
+    // Should succeed because key would have been destroyed.
+    client.import_rsa_public_key(key_name, picky_asn1_der::to_vec(&public_key).unwrap())?;
 
     Ok(())
 }

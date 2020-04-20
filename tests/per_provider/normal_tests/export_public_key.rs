@@ -86,21 +86,6 @@ fn check_public_rsa_export_format() -> Result<()> {
 }
 
 #[test]
-fn check_public_rsa_export_format2() -> Result<()> {
-    // Same test but with a RsaPublicKey
-    let mut client = TestClient::new();
-    let key_name = String::from("check_public_rsa_export_format2");
-
-    client.generate_rsa_sign_key(key_name.clone())?;
-
-    let public_key = client.export_public_key(key_name)?;
-
-    // That should not fail if the bytes are in the expected format.
-    let _public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
-    Ok(())
-}
-
-#[test]
 fn check_export_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
     let mut client = TestClient::new();
