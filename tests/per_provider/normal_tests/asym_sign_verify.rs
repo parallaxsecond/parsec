@@ -16,6 +16,7 @@ use parsec_client_test::TestClient;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
+use sha2::{Digest, Sha256};
 
 const HASH: [u8; 32] = [
     0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84, 0xA2,
@@ -115,15 +116,204 @@ fn only_verify_from_internet() -> Result<()> {
     ];
 
     client
-        .import_key(
-            key_name.clone(),
-            KeyType::RsaPublicKey,
-            Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
-            public_key,
-        )
+        .import_rsa_public_key(key_name.clone(), public_key)
         .unwrap();
 
     client.verify_with_rsa_sha256(key_name, digest, signature)
+}
+
+#[test]
+fn simple_sign_hash() -> Result<()> {
+    let key_name = String::from("simple_sign_hash");
+    let mut client = TestClient::new();
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let hash = hasher.result().to_vec();
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let _ = client.sign_with_rsa_sha256(key_name, hash)?;
+
+    Ok(())
+}
+
+#[test]
+fn sign_hash_not_permitted() -> Result<()> {
+    let key_name = String::from("sign_hash_not_permitted");
+    let mut client = TestClient::new();
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let hash = hasher.result().to_vec();
+
+    let attributes = KeyAttributes {
+        key_type: KeyType::RsaKeyPair,
+        key_bits: 1024,
+        key_policy: KeyPolicy {
+            key_usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: true,
+                sign_message: true,
+                verify_message: true,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            }),
+        },
+    };
+
+    client.generate_key(key_name.clone(), attributes)?;
+
+    let status = client.sign_with_rsa_sha256(key_name, hash).unwrap_err();
+
+    assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
+
+    Ok(())
+}
+
+#[test]
+fn sign_hash_bad_format() -> Result<()> {
+    let key_name = String::from("sign_hash_bad_format");
+    let mut client = TestClient::new();
+    let hash1 = vec![0xEE; 31];
+    let hash2 = vec![0xBB; 33];
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let status1 = client
+        .sign_with_rsa_sha256(key_name.clone(), hash1)
+        .unwrap_err();
+    let status2 = client.sign_with_rsa_sha256(key_name, hash2).unwrap_err();
+
+    assert_eq!(status1, ResponseStatus::PsaErrorInvalidArgument);
+    assert_eq!(status2, ResponseStatus::PsaErrorInvalidArgument);
+    Ok(())
+}
+
+#[test]
+fn simple_verify_hash() -> Result<()> {
+    let key_name = String::from("simple_verify_hash");
+    let mut client = TestClient::new();
+
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let hash = hasher.result().to_vec();
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
+    client.verify_with_rsa_sha256(key_name, hash, signature)
+}
+
+#[test]
+fn verify_hash_not_permitted() -> Result<()> {
+    let key_name = String::from("verify_hash_not_permitted");
+    let mut client = TestClient::new();
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let hash = hasher.result().to_vec();
+
+    let attributes = KeyAttributes {
+        key_type: KeyType::RsaKeyPair,
+        key_bits: 1024,
+        key_policy: KeyPolicy {
+            key_usage_flags: UsageFlags {
+                sign_hash: true,
+                verify_hash: false,
+                sign_message: true,
+                verify_message: true,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            }),
+        },
+    };
+
+    client.generate_key(key_name.clone(), attributes)?;
+
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
+    let status = client
+        .verify_with_rsa_sha256(key_name, hash, signature)
+        .unwrap_err();
+
+    assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
+    Ok(())
+}
+
+#[test]
+fn verify_hash_bad_format() -> Result<()> {
+    let key_name = String::from("verify_hash_bad_format");
+    let mut client = TestClient::new();
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let good_hash = hasher.result().to_vec();
+    let hash1 = vec![0xEE; 255];
+    let hash2 = vec![0xBB; 257];
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), good_hash)?;
+    let status1 = client
+        .verify_with_rsa_sha256(key_name.clone(), hash1, signature.clone())
+        .unwrap_err();
+    let status2 = client
+        .verify_with_rsa_sha256(key_name, hash2, signature)
+        .unwrap_err();
+
+    assert_eq!(status1, ResponseStatus::PsaErrorInvalidArgument);
+    assert_eq!(status2, ResponseStatus::PsaErrorInvalidArgument);
+    Ok(())
+}
+
+#[test]
+fn fail_verify_hash() -> Result<()> {
+    let key_name = String::from("fail_verify_hash");
+    let mut client = TestClient::new();
+
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let hash = hasher.result().to_vec();
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let mut signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
+    // Modify signature
+    signature[4] += 1;
+    let status = client
+        .verify_with_rsa_sha256(key_name, hash, signature)
+        .unwrap_err();
+    assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
+    Ok(())
+}
+
+#[test]
+fn fail_verify_hash2() -> Result<()> {
+    let key_name = String::from("fail_verify_hash2");
+    let mut client = TestClient::new();
+
+    let mut hasher = Sha256::new();
+    hasher.input(b"Bob wrote this message.");
+    let mut hash = hasher.result().to_vec();
+
+    client.generate_rsa_sign_key(key_name.clone())?;
+
+    let signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
+    // Modify hash
+    hash[4] += 1;
+    let status = client
+        .verify_with_rsa_sha256(key_name, hash, signature)
+        .unwrap_err();
+    assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
+    Ok(())
 }

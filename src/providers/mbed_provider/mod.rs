@@ -278,7 +278,16 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id)?;
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id).or_else(|e| {
+            remove_key_id(
+                &key_triple,
+                key_id,
+                &mut *store_handle,
+                &mut local_ids_handle,
+            )?;
+            error!("Failed converting key attributes.");
+            Err(e)
+        })?;
 
         let _guard = self
             .key_handle_mutex
@@ -331,7 +340,16 @@ impl Provide for MbedProvider {
             &mut local_ids_handle,
         )?;
 
-        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id)?;
+        let key_attrs = utils::convert_key_attributes(&key_attributes, key_id).or_else(|e| {
+            remove_key_id(
+                &key_triple,
+                key_id,
+                &mut *store_handle,
+                &mut local_ids_handle,
+            )?;
+            error!("Failed converting key attributes.");
+            Err(e)
+        })?;
 
         let _guard = self
             .key_handle_mutex

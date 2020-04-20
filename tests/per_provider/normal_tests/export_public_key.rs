@@ -16,6 +16,19 @@ use parsec_client_test::TestClient;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
+use picky_asn1::wrapper::IntegerAsn1;
+use serde::{Deserialize, Serialize};
+
+// The RSA Public Key data are DER encoded with the following representation:
+// RSAPublicKey ::= SEQUENCE {
+//     modulus            INTEGER,  -- n
+//     publicExponent     INTEGER   -- e
+// }
+#[derive(Serialize, Deserialize, Debug)]
+struct RsaPublicKey {
+    modulus: IntegerAsn1,
+    public_exponent: IntegerAsn1,
+}
 
 #[test]
 fn export_public_key() -> Result<()> {
@@ -53,16 +66,56 @@ fn import_and_export_public_key() -> Result<()> {
         111, 254, 183, 54, 229, 109, 28, 39, 22, 141, 173, 85, 26, 58, 9, 128, 27, 57, 131, 2, 3,
         1, 0, 1,
     ];
-    client.import_key(
-        key_name.clone(),
-        KeyType::RsaPublicKey,
-        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha256,
-        }),
-        key_data.clone(),
-    )?;
+    client.import_rsa_public_key(key_name.clone(), key_data.clone())?;
 
     assert_eq!(key_data, client.export_public_key(key_name)?);
+
+    Ok(())
+}
+
+#[test]
+fn check_public_rsa_export_format() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("check_public_rsa_export_format");
+    client.generate_rsa_sign_key(key_name.clone())?;
+    let public_key = client.export_public_key(key_name)?;
+
+    // That should not fail if the bytes are in the expected format.
+    let _public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
+    Ok(())
+}
+
+#[test]
+fn check_export_public_possible() -> Result<()> {
+    // Exporting a public key is always permitted
+    let mut client = TestClient::new();
+    let key_name = String::from("check_export_public_possible");
+
+    let key_attributes = KeyAttributes {
+        key_type: KeyType::RsaKeyPair,
+        key_bits: 1024,
+        key_policy: KeyPolicy {
+            key_usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            }),
+        },
+    };
+
+    client.generate_key(key_name.clone(), key_attributes)?;
+
+    let _public_key = client.export_public_key(key_name)?;
 
     Ok(())
 }

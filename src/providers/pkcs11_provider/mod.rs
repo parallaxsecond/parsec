@@ -632,6 +632,11 @@ impl Provide for Pkcs11Provider {
 
         let modulus_object = &public_key.modulus.as_unsigned_bytes_be();
         let exponent_object = &public_key.public_exponent.as_unsigned_bytes_be();
+        let key_bits = key_attributes.key_bits;
+        if key_bits != 0 && modulus_object.len() * 8 != key_bits as usize {
+            error!("If the key_bits field is non-zero (value is {}) it must be equal to the size of the key in data.", key_attributes.key_bits);
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
 
         template.push(
             CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
@@ -711,9 +716,7 @@ impl Provide for Pkcs11Provider {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
-
-        key_attributes.can_export()?;
+        let (key_id, _key_attributes) = get_key_id(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
         info!(
@@ -869,8 +872,8 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Sign");
 
         let key_name = op.key_name;
-        let alg = op.alg;
         let mut hash = op.hash;
+        let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
@@ -890,16 +893,26 @@ impl Provide for Pkcs11Provider {
             }
         }
 
+        if alg
+            != (AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            })
+        {
+            error!(
+                "The PKCS 11 provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
+
+        if hash.len() != 32 {
+            error!("The SHA-256 hash must be 32 bytes long.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         let mech = CK_MECHANISM {
             mechanism: pkcs11::types::CKM_RSA_PKCS,
             pParameter: std::ptr::null_mut(),
             ulParameterLen: 0,
         };
-
-        if hash.len() != 32 {
-            error!("The PKCS11 provider currently only supports 256 bits long digests.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!("Asymmetric sign in session {}", session.session_handle());
@@ -946,9 +959,9 @@ impl Provide for Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Verify");
 
         let key_name = op.key_name;
-        let alg = op.alg;
         let mut hash = op.hash;
         let signature = op.signature;
+        let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
         let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
@@ -968,17 +981,27 @@ impl Provide for Pkcs11Provider {
             }
         }
 
+        if alg
+            != (AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256,
+            })
+        {
+            error!(
+                "The PKCS 11 provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
+
+        if hash.len() != 32 {
+            error!("The SHA-256 hash must be 32 bytes long.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         let mech = CK_MECHANISM {
             // Verify without hashing.
             mechanism: pkcs11::types::CKM_RSA_PKCS,
             pParameter: std::ptr::null_mut(),
             ulParameterLen: 0,
         };
-
-        if hash.len() != 32 {
-            error!("The PKCS11 provider currently only supports 256 bits long digests.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!("Asymmetric verify in session {}", session.session_handle());

@@ -44,7 +44,7 @@ fn wrong_type() {
         .generate_key(key_name.clone(), key_attributes)
         .unwrap();
     let status = client
-        .sign_with_rsa_sha256(key_name, vec![0xDE, 0xAD, 0xBE, 0xEF])
+        .sign_with_rsa_sha256(key_name, vec![0xDE; 32])
         .unwrap_err();
 
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
@@ -85,7 +85,7 @@ fn wrong_usage_flags() {
         .generate_key(key_name.clone(), key_attributes)
         .unwrap();
     let status = client
-        .sign_with_rsa_sha256(key_name, vec![0xDE, 0xAD, 0xBE, 0xEF])
+        .sign_with_rsa_sha256(key_name, vec![0xDE; 32])
         .unwrap_err();
 
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
@@ -130,7 +130,7 @@ fn wrong_permitted_algorithm() {
         .unwrap();
 
     let status = client
-        .sign_with_rsa_sha256(key_name, vec![0xDE, 0xAD, 0xBE, 0xEF])
+        .sign_with_rsa_sha256(key_name, vec![0xDE; 32])
         .unwrap_err();
 
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
