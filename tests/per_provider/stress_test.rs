@@ -12,7 +12,7 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::{StressTestClient, StressTestConfig};
+use crate::test_clients::stress::{StressClient, StressTestConfig};
 use std::time::Duration;
 
 #[test]
@@ -27,5 +27,5 @@ fn stress_test() {
         check_interval: Some(Duration::from_millis(500)),
     };
 
-    StressTestClient::execute(config);
+    StressClient::execute(config);
 }

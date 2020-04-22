@@ -15,8 +15,9 @@
 
 // These functions test for the service persistency to shutdown. They will be executed after the
 // service is shutdown, after the persistent_before tests are executed.
-use parsec_client_test::TestClient;
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use crate::test_clients::TestClient;
+use parsec_interface::requests::Result;
+use parsec_interface::requests::{ProviderID, ResponseStatus};
 
 const HASH: [u8; 32] = [
     0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84, 0xA2,
@@ -39,7 +40,7 @@ fn reuse_to_sign() -> Result<()> {
 fn should_have_been_deleted() {
     let mut client = TestClient::new();
 
-    if client.get_cached_provider(Opcode::PsaDestroyKey) == ProviderID::Tpm {
+    if client.provider().unwrap() == ProviderID::Tpm {
         // This test does not make sense for the TPM Provider.
         return;
     }

@@ -12,9 +12,8 @@
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use parsec_client_test::TestClient;
-use parsec_interface::requests::Result;
-use parsec_interface::requests::{Opcode, ProviderID};
+use crate::test_clients::TestClient;
+use parsec_interface::requests::{Opcode, ProviderID, Result};
 use std::collections::HashSet;
 use uuid::Uuid;
 

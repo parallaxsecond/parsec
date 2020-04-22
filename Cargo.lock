@@ -275,6 +275,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derivative"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb582b60359da160a9477ee80f15c8d784c477e69c217ef2cdd4169c24ea380f"
+dependencies = [
+ "proc-macro2 1.0.10",
+ "quote 1.0.3",
+ "syn 1.0.17",
+]
+
+[[package]]
 name = "derive_arbitrary"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -621,22 +632,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
-name = "parsec-client-test"
-version = "0.3.0"
-source = "git+https://github.com/parallaxsecond/parsec-client-test?tag=0.3.0#e69044af0d9a4b6f3ce998447a6651ffdaa41644"
+name = "parsec-client"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3832239b87248521954be6117ea958212bfc93f9cbe9abac66696928699e08cc"
 dependencies = [
- "derivative",
+ "derivative 2.1.1",
  "log",
  "num",
  "parsec-interface",
  "rand",
+ "uuid",
 ]
 
 [[package]]
 name = "parsec-interface"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d14be8b6d151c8054e2a1fe3b03c83748d138ebb0145637a57afbb576b211d7"
+checksum = "5e87877b00d360536d09d4e8a12a637b6458fec56f5d4fe6c375b43fc4e25245"
 dependencies = [
  "arbitrary",
  "bincode",
@@ -659,11 +672,11 @@ dependencies = [
  "bincode",
  "bindgen 0.50.1",
  "cargo_toml",
- "derivative",
+ "derivative 1.0.4",
  "env_logger 0.7.1",
  "log",
  "num_cpus",
- "parsec-client-test",
+ "parsec-client",
  "parsec-interface",
  "picky-asn1",
  "picky-asn1-der",

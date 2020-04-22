@@ -15,7 +15,7 @@
 
 // These functions test for the service persistency to shutdown. They will be executed before the
 // service is shutdown and before the persistent_after tests are executed.
-use parsec_client_test::TestClient;
+use crate::test_clients::TestClient;
 use parsec_interface::requests::Result;
 
 const HASH: [u8; 32] = [
