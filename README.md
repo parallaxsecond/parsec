@@ -1,18 +1,6 @@
 <!--
-  -- Copyright (c) 2019, Arm Limited, All Rights Reserved
+  -- Copyright 2019 Contributors to the Parsec project.
   -- SPDX-License-Identifier: Apache-2.0
-  --
-  -- Licensed under the Apache License, Version 2.0 (the "License"); you may
-  -- not use this file except in compliance with the License.
-  -- You may obtain a copy of the License at
-  --
-  -- http://www.apache.org/licenses/LICENSE-2.0
-  --
-  -- Unless required by applicable law or agreed to in writing, software
-  -- distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-  -- WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  -- See the License for the specific language governing permissions and
-  -- limitations under the License.
 --->
 
 <p align="center">
@@ -89,8 +77,10 @@ discuss features, integrations, issues, and roadmap. We look forward to seeing y
 
 # Contributing
 
-We would be happy for you to contribute to Parsec! Check the [**Contributing**](CONTRIBUTING.md)
-file to know more about the contribution process. For a list of current contributors, check [**here**](CONTRIBUTORS.md). Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
+We would be happy for you to contribute to Parsec!
+Please check the [**Contribution Guidelines**](https://parallaxsecond.github.io/parsec-book/contributing.html)
+to know more about the contribution process.
+Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
 # License
