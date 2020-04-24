@@ -30,13 +30,13 @@ listener_type = "DomainSocket"
 # timeout expires, the connection is dropped.
 timeout = 200 # in milliseconds
 
-# (Required) Configuration for the components managing key IDs for providers.
+# (Required) Configuration for the components managing key info for providers.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
 [[key_manager]]
-# (Required) Name of the key ID manager. Used to tie providers to the manager supporting them.
+# (Required) Name of the key info manager. Used to tie providers to the manager supporting them.
 name = "on-disk-manager"
 
-# (Required) Type of key ID manager to be used.
+# (Required) Type of key info manager to be used.
 manager_type = "OnDisk"
 
 # Path to the location where the mapping will be persisted (in this case, the filesystem path)
@@ -48,13 +48,13 @@ manager_type = "OnDisk"
 # (Required) Type of provider.
 provider_type = "MbedCrypto"
 
-# (Required) Name of key ID manager that will support this provider.
-key_id_manager = "on-disk-manager"
+# (Required) Name of key info manager that will support this provider.
+key_info_manager = "on-disk-manager"
 
 # Example of a PKCS 11 provider configuration
 #[[provider]]
 #provider_type = "Pkcs11"
-#key_id_manager = "on-disk-manager"
+#key_info_manager = "on-disk-manager"
 # (Required for this provider) Path to the location of the dynamic library loaded by this provider.
 # For the PKCS 11 provider, this library implements the PKCS 11 API on the target platform.
 #library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
@@ -67,7 +67,7 @@ key_id_manager = "on-disk-manager"
 # Example of a TPM provider configuration
 #[[provider]]
 #provider_type = "Tpm"
-#key_id_manager = "on-disk-manager"
+#key_info_manager = "on-disk-manager"
 # (Required) TPM TCTI device to use with this provider. Options are:
 # - "device": uses the TPM device on /dev/tpm0
 # - "mssim": uses the simulation TPM with the socket

@@ -14,8 +14,10 @@ use crate::front::{
     domain_socket::DomainSocketListenerBuilder, front_end::FrontEndHandler,
     front_end::FrontEndHandlerBuilder, listener::Listen,
 };
-use crate::key_id_managers::on_disk_manager::{OnDiskKeyIDManagerBuilder, DEFAULT_MAPPINGS_PATH};
-use crate::key_id_managers::{KeyIdManagerConfig, KeyIdManagerType, ManageKeyIDs};
+use crate::key_info_managers::on_disk_manager::{
+    OnDiskKeyInfoManagerBuilder, DEFAULT_MAPPINGS_PATH,
+};
+use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerType, ManageKeyInfo};
 use crate::providers::{core_provider::CoreProviderBuilder, Provide, ProviderConfig};
 use log::{error, warn, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
@@ -49,7 +51,7 @@ const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
 /// Default value for the limit on the request body size (in bytes) - equal to 1MB
 const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
 
-type KeyIdManager = Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>;
+type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Box<dyn Provide + Send + Sync>;
 
 #[derive(Copy, Clone, Deserialize, Debug)]
@@ -65,7 +67,7 @@ pub struct CoreSettings {
 pub struct ServiceConfig {
     pub core_settings: CoreSettings,
     pub listener: ListenerConfig,
-    pub key_manager: Option<Vec<KeyIdManagerConfig>>,
+    pub key_manager: Option<Vec<KeyInfoManagerConfig>>,
     pub provider: Option<Vec<ProviderConfig>>,
 }
 
@@ -83,16 +85,16 @@ impl ServiceBuilder {
     /// any errors or inconsistencies, an `Err` is returned.
     ///
     /// # Errors
-    /// * if any of the fields specified in the configuration are inconsistent (e.g. key ID manager with name 'X'
+    /// * if any of the fields specified in the configuration are inconsistent (e.g. key info manager with name 'X'
     /// requested for a certain provider does not exist) or if required fields are missing, an error of kind
     /// `InvalidData` is returned with a string describing the cause more accurately.
     pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
-        let key_id_managers =
-            build_key_id_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
+        let key_info_managers =
+            build_key_info_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
 
         let providers = build_providers(
             config.provider.as_ref().unwrap_or(&Vec::new()),
-            key_id_managers,
+            key_info_managers,
         );
 
         if providers.is_empty() {
@@ -183,7 +185,7 @@ fn build_backend_handlers(
 
 fn build_providers(
     configs: &[ProviderConfig],
-    key_id_managers: HashMap<String, KeyIdManager>,
+    key_info_managers: HashMap<String, KeyInfoManager>,
 ) -> HashMap<ProviderID, Provider> {
     let mut map = HashMap::new();
     for config in configs {
@@ -193,18 +195,18 @@ fn build_providers(
             continue;
         }
 
-        let key_id_manager = match key_id_managers.get(config.key_id_manager()) {
-            Some(key_id_manager) => key_id_manager,
+        let key_info_manager = match key_info_managers.get(config.key_info_manager()) {
+            Some(key_info_manager) => key_info_manager,
             None => {
                 error!(
-                    "Key ID manager with specified name was not found ({})",
-                    config.key_id_manager()
+                    "Key info manager with specified name was not found ({})",
+                    config.key_info_manager()
                 );
                 continue;
             }
         };
         // The safety is checked by the fact that only one instance per provider type is enforced.
-        let provider = match unsafe { get_provider(config, key_id_manager.clone()) } {
+        let provider = match unsafe { get_provider(config, key_info_manager.clone()) } {
             Ok(provider) => provider,
             Err(e) => {
                 error!("Provider {} can not be created ({}).", provider_id, e);
@@ -217,7 +219,7 @@ fn build_providers(
     map
 }
 
-// This cfg_attr is used to allow the fact that key_id_manager is not used when there is no
+// This cfg_attr is used to allow the fact that key_info_manager is not used when there is no
 // providers.
 #[cfg_attr(
     not(all(
@@ -228,14 +230,17 @@ fn build_providers(
     allow(unused_variables),
     allow(clippy::match_single_binding)
 )]
-unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Result<Provider> {
+unsafe fn get_provider(
+    config: &ProviderConfig,
+    key_info_manager: KeyInfoManager,
+) -> Result<Provider> {
     match config {
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderConfig::MbedCrypto { .. } => {
             info!("Creating a Mbed Crypto Provider.");
             Ok(Box::from(
                 MbedProviderBuilder::new()
-                    .with_key_id_store(key_id_manager)
+                    .with_key_info_store(key_info_manager)
                     .build()?,
             ))
         }
@@ -249,7 +254,7 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             info!("Creating a PKCS 11 Provider.");
             Ok(Box::from(
                 Pkcs11ProviderBuilder::new()
-                    .with_key_id_store(key_id_manager)
+                    .with_key_info_store(key_info_manager)
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
                     .with_user_pin(user_pin.clone())
@@ -265,7 +270,7 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
             info!("Creating a TPM Provider.");
             Ok(Box::from(
                 TpmProviderBuilder::new()
-                    .with_key_id_store(key_id_manager)
+                    .with_key_info_store(key_info_manager)
                     .with_tcti(tcti)
                     .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
                     .build()?,
@@ -286,25 +291,27 @@ unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) ->
     }
 }
 
-fn build_key_id_managers(configs: &[KeyIdManagerConfig]) -> Result<HashMap<String, KeyIdManager>> {
+fn build_key_info_managers(
+    configs: &[KeyInfoManagerConfig],
+) -> Result<HashMap<String, KeyInfoManager>> {
     let mut map = HashMap::new();
     for config in configs {
-        let _ = map.insert(config.name.clone(), get_key_id_manager(config)?);
+        let _ = map.insert(config.name.clone(), get_key_info_manager(config)?);
     }
 
     Ok(map)
 }
 
-fn get_key_id_manager(config: &KeyIdManagerConfig) -> Result<KeyIdManager> {
+fn get_key_info_manager(config: &KeyInfoManagerConfig) -> Result<KeyInfoManager> {
     let manager = match config.manager_type {
-        KeyIdManagerType::OnDisk => {
+        KeyInfoManagerType::OnDisk => {
             let store_path = if let Some(store_path) = &config.store_path {
                 store_path.to_owned()
             } else {
                 DEFAULT_MAPPINGS_PATH.to_string()
             };
 
-            OnDiskKeyIDManagerBuilder::new()
+            OnDiskKeyInfoManagerBuilder::new()
                 .with_mappings_dir_path(PathBuf::from(store_path))
                 .build()?
         }

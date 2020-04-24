@@ -6,8 +6,8 @@
 //! through the Parsec interface.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_id_managers;
-use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
+use crate::key_info_managers;
+use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -57,7 +57,7 @@ const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 #[derivative(Debug)]
 pub struct Pkcs11Provider {
     #[derivative(Debug = "ignore")]
-    key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     // TODO: the local ID store is currently only used to prevent creating a key that does not
     // exist, it should also act as a cache for non-desctrucitve operations. Same for Mbed Crypto.
     local_ids: RwLock<LocalIdStore>,
@@ -256,10 +256,10 @@ impl Drop for Session<'_> {
     }
 }
 
-/// Gets a key identifier from the Key ID Manager.
-fn get_key_id(
+/// Gets a key identifier and key attributes from the Key Info Manager.
+fn get_key_info(
     key_triple: &KeyTriple,
-    store_handle: &dyn ManageKeyIDs,
+    store_handle: &dyn ManageKeyInfo,
 ) -> Result<([u8; 4], KeyAttributes)> {
     match store_handle.get(key_triple) {
         Ok(Some(key_info)) => {
@@ -269,18 +269,18 @@ fn get_key_id(
                 Ok((dst, key_info.attributes))
             } else {
                 error!("Stored Key ID is not valid.");
-                Err(ResponseStatus::KeyIDManagerError)
+                Err(ResponseStatus::KeyInfoManagerError)
             }
         }
         Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
 fn create_key_id(
     key_triple: KeyTriple,
     key_attributes: KeyAttributes,
-    store_handle: &mut dyn ManageKeyIDs,
+    store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<[u8; 4]> {
     let mut key_id = rand::random::<[u8; 4]>();
@@ -300,14 +300,14 @@ fn create_key_id(
 
             Ok(key_id)
         }
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
 fn remove_key_id(
     key_triple: &KeyTriple,
     key_id: [u8; 4],
-    store_handle: &mut dyn ManageKeyIDs,
+    store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<()> {
     match store_handle.remove(key_triple) {
@@ -315,31 +315,31 @@ fn remove_key_id(
             let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
-fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<bool> {
+fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
     match store_handle.exists(key_triple) {
         Ok(val) => Ok(val),
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
 impl Pkcs11Provider {
     /// Creates and initialise a new instance of Pkcs11Provider.
-    /// Checks if there are not more keys stored in the Key ID Manager than in the PKCS 11 library
+    /// Checks if there are not more keys stored in the Key Info Manager than in the PKCS 11 library
     /// and if there are, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
     fn new(
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
         backend: Ctx,
         slot_number: usize,
         user_pin: Option<String>,
     ) -> Option<Pkcs11Provider> {
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Pkcs11Provider {
-            key_id_store,
+            key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             logged_sessions_counter: Mutex::new(0),
             backend,
@@ -350,7 +350,7 @@ impl Pkcs11Provider {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
             // the pkcs11_provider.
             let mut store_handle = pkcs11_provider
-                .key_id_store
+                .key_info_store
                 .write()
                 .expect("Key store lock poisoned");
             let mut local_ids_handle = pkcs11_provider
@@ -358,7 +358,7 @@ impl Pkcs11Provider {
                 .write()
                 .expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
-            // Go through all PKCS 11 key triple to key ID mappings and check if they are still
+            // Go through all PKCS 11 key triple to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::Pkcs11) {
@@ -367,10 +367,10 @@ impl Pkcs11Provider {
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
 
                     for key_triple in key_triples.iter().cloned() {
-                        let (key_id, _) = match get_key_id(key_triple, &*store_handle) {
+                        let (key_id, _) = match get_key_info(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
+                                error!("Error getting the KeyInfo for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
                                 continue;
                             }
                         };
@@ -401,13 +401,13 @@ impl Pkcs11Provider {
                     }
                 }
                 Err(string) => {
-                    error!("Key ID Manager error: {}", string);
+                    error!("Key Info Manager error: {}", string);
                     return None;
                 }
             };
             for key_triple in to_remove.iter() {
                 if let Err(string) = store_handle.remove(key_triple) {
-                    error!("Key ID Manager error: {}", string);
+                    error!("Key Info Manager error: {}", string);
                     return None;
                 }
             }
@@ -500,9 +500,12 @@ impl Provide for Pkcs11Provider {
         let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits).unwrap();
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_id_exists(&key_triple, &*store_handle)? {
+        if key_info_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
@@ -594,9 +597,12 @@ impl Provide for Pkcs11Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_id_exists(&key_triple, &*store_handle)? {
+        if key_info_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
@@ -703,8 +709,8 @@ impl Provide for Pkcs11Provider {
 
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let (key_id, _key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        let (key_id, _key_attributes) = get_key_info(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
         info!(
@@ -797,9 +803,12 @@ impl Provide for Pkcs11Provider {
 
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        let (key_id, _) = get_key_id(&key_triple, &*store_handle)?;
+        let (key_id, _) = get_key_info(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         info!(
@@ -863,8 +872,8 @@ impl Provide for Pkcs11Provider {
         let mut hash = op.hash;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
 
         key_attributes.can_sign_hash()?;
         key_attributes.permits_alg(alg.into())?;
@@ -951,8 +960,8 @@ impl Provide for Pkcs11Provider {
         let signature = op.signature;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
-        let (key_id, key_attributes) = get_key_id(&key_triple, &*store_handle)?;
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
 
         key_attributes.can_verify_hash()?;
         key_attributes.permits_alg(alg.into())?;
@@ -1045,7 +1054,7 @@ impl Drop for Pkcs11Provider {
 #[derivative(Debug)]
 pub struct Pkcs11ProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
+    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,
     user_pin: Option<String>,
@@ -1054,18 +1063,18 @@ pub struct Pkcs11ProviderBuilder {
 impl Pkcs11ProviderBuilder {
     pub fn new() -> Pkcs11ProviderBuilder {
         Pkcs11ProviderBuilder {
-            key_id_store: None,
+            key_info_store: None,
             pkcs11_library_path: None,
             slot_number: None,
             user_pin: None,
         }
     }
 
-    pub fn with_key_id_store(
+    pub fn with_key_info_store(
         mut self,
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     ) -> Pkcs11ProviderBuilder {
-        self.key_id_store = Some(key_id_store);
+        self.key_info_store = Some(key_info_store);
 
         self
     }
@@ -1124,8 +1133,8 @@ impl Pkcs11ProviderBuilder {
             ))
         })?;
         Ok(Pkcs11Provider::new(
-            self.key_id_store
-                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key ID store"))?,
+            self.key_info_store
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,
             slot_number,
             self.user_pin,

@@ -622,9 +622,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "parsec-client"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3832239b87248521954be6117ea958212bfc93f9cbe9abac66696928699e08cc"
+checksum = "4b8437134e1f22cd1dd0267a3052dd8c17df582fbbf1363c91e80e415786953c"
 dependencies = [
  "derivative",
  "log",
@@ -636,9 +636,9 @@ dependencies = [
 
 [[package]]
 name = "parsec-interface"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e87877b00d360536d09d4e8a12a637b6458fec56f5d4fe6c375b43fc4e25245"
+checksum = "fd624e1236194a6ee915f7b54f03c6e94a7d4b8a63062db65397c3af25b323eb"
 dependencies = [
  "arbitrary",
  "bincode",
