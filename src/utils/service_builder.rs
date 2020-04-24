@@ -237,7 +237,8 @@ fn build_providers(
         feature = "pkcs11-provider",
         feature = "tpm-provider"
     )),
-    allow(unused_variables)
+    allow(unused_variables),
+    allow(clippy::match_single_binding)
 )]
 unsafe fn get_provider(config: &ProviderConfig, key_id_manager: KeyIdManager) -> Result<Provider> {
     match config {

@@ -1,7 +1,7 @@
-FROM ubuntu:latest
+FROM ubuntu:18.04
 
 RUN apt-get update && \
-    apt-get install -y wget automake autoconf libtool pkg-config && \
+	apt-get install -y wget automake autoconf libtool pkg-config && \
     apt-get install -y curl libssl-dev libgcc1
 
 WORKDIR /tmp
