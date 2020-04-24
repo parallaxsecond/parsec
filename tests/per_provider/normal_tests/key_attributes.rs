@@ -1,4 +1,4 @@
-// Copyright (c) 2020, Arm Limited, All Rights Reserved
+// Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use crate::test_clients::TestClient;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Cipher, Hash};
