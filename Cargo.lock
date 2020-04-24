@@ -265,17 +265,6 @@ dependencies = [
 
 [[package]]
 name = "derivative"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c6d883546668a3e2011b6a716a7330b82eabb0151b138217f632c8243e17135"
-dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
- "syn 0.15.44",
-]
-
-[[package]]
-name = "derivative"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb582b60359da160a9477ee80f15c8d784c477e69c217ef2cdd4169c24ea380f"
@@ -637,7 +626,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3832239b87248521954be6117ea958212bfc93f9cbe9abac66696928699e08cc"
 dependencies = [
- "derivative 2.1.1",
+ "derivative",
  "log",
  "num",
  "parsec-interface",
@@ -672,7 +661,7 @@ dependencies = [
  "bincode",
  "bindgen 0.50.1",
  "cargo_toml",
- "derivative 1.0.4",
+ "derivative",
  "env_logger 0.7.1",
  "log",
  "num_cpus",
