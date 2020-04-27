@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_id_managers;
-use crate::key_id_managers::{KeyInfo, KeyTriple, ManageKeyIDs};
+use crate::key_info_managers;
+use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use constants::PSA_SUCCESS;
 use derivative::Derivative;
 use log::{error, info, warn};
@@ -53,12 +53,12 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct MbedProvider {
-    // When calling write on a reference of key_id_store, a type
-    // std::sync::RwLockWriteGuard<dyn ManageKeyIDs + Send + Sync> is returned. We need to use the
-    // dereference operator (*) to access the inner type dyn ManageKeyIDs + Send + Sync and then
+    // When calling write on a reference of key_info_store, a type
+    // std::sync::RwLockWriteGuard<dyn ManageKeyInfo + Send + Sync> is returned. We need to use the
+    // dereference operator (*) to access the inner type dyn ManageKeyInfo + Send + Sync and then
     // reference it to match with the method prototypes.
     #[derivative(Debug = "ignore")]
-    key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     local_ids: RwLock<LocalIdStore>,
     // Calls to `psa_open_key`, `psa_generate_key` and `psa_destroy_key` are not thread safe - the slot
     // allocation mechanism in Mbed Crypto can return the same key slot for overlapping calls.
@@ -73,10 +73,10 @@ pub struct MbedProvider {
     key_slot_semaphore: Semaphore,
 }
 
-/// Gets a PSA Key ID from the Key ID Manager.
-/// Wrapper around the get method of the Key ID Manager to convert the key ID to the psa_key_id_t
+/// Gets a PSA Key ID from the Key Info Manager.
+/// Wrapper around the get method of the Key Info Manager to convert the key ID to the psa_key_id_t
 /// type.
-fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<psa_key_id_t> {
+fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<psa_key_id_t> {
     match store_handle.get(key_triple) {
         Ok(Some(key_info)) => {
             if key_info.id.len() == 4 {
@@ -85,19 +85,19 @@ fn get_key_id(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result
                 Ok(u32::from_ne_bytes(dst))
             } else {
                 error!("Stored Key ID is not valid.");
-                Err(ResponseStatus::KeyIDManagerError)
+                Err(ResponseStatus::KeyInfoManagerError)
             }
         }
         Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
-/// Creates a new PSA Key ID and stores it in the Key ID Manager.
+/// Creates a new PSA Key ID and stores it in the Key Info Manager.
 fn create_key_id(
     key_triple: KeyTriple,
     key_attributes: KeyAttributes,
-    store_handle: &mut dyn ManageKeyIDs,
+    store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<psa_key_id_t> {
     let mut key_id = rand::random::<psa_key_id_t>();
@@ -120,14 +120,14 @@ fn create_key_id(
 
             Ok(key_id)
         }
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
 fn remove_key_id(
     key_triple: &KeyTriple,
     key_id: psa_key_id_t,
-    store_handle: &mut dyn ManageKeyIDs,
+    store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<()> {
     match store_handle.remove(key_triple) {
@@ -135,22 +135,22 @@ fn remove_key_id(
             let _ = local_ids_handle.remove(&key_id);
             Ok(())
         }
-        Err(string) => Err(key_id_managers::to_response_status(string)),
+        Err(string) => Err(key_info_managers::to_response_status(string)),
     }
 }
 
-fn key_id_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyIDs) -> Result<bool> {
+fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
     store_handle
         .exists(key_triple)
-        .or_else(|e| Err(key_id_managers::to_response_status(e)))
+        .or_else(|e| Err(key_info_managers::to_response_status(e)))
 }
 
 impl MbedProvider {
     /// Creates and initialise a new instance of MbedProvider.
-    /// Checks if there are not more keys stored in the Key ID Manager than in the MbedProvider and
+    /// Checks if there are not more keys stored in the Key Info Manager than in the MbedProvider and
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
-    fn new(key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>) -> Option<MbedProvider> {
+    fn new(key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>) -> Option<MbedProvider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
         if unsafe { psa_crypto_binding::psa_crypto_init() } != PSA_SUCCESS {
@@ -158,7 +158,7 @@ impl MbedProvider {
             return None;
         }
         let mbed_provider = MbedProvider {
-            key_id_store,
+            key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
             key_slot_semaphore: Semaphore::new(constants::PSA_KEY_SLOT_COUNT),
@@ -167,7 +167,7 @@ impl MbedProvider {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
             // the mbed_provider.
             let mut store_handle = mbed_provider
-                .key_id_store
+                .key_info_store
                 .write()
                 .expect("Key store lock poisoned");
             let mut local_ids_handle = mbed_provider
@@ -175,7 +175,7 @@ impl MbedProvider {
                 .write()
                 .expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
-            // Go through all MbedProvider key triple to key ID mappings and check if they are still
+            // Go through all MbedProvider key triple to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::MbedCrypto) {
@@ -208,13 +208,13 @@ impl MbedProvider {
                     }
                 }
                 Err(string) => {
-                    error!("Key ID Manager error: {}", string);
+                    error!("Key Info Manager error: {}", string);
                     return None;
                 }
             };
             for key_triple in to_remove.iter() {
                 if let Err(string) = store_handle.remove(key_triple) {
-                    error!("Key ID Manager error: {}", string);
+                    error!("Key Info Manager error: {}", string);
                     return None;
                 }
             }
@@ -254,9 +254,12 @@ impl Provide for MbedProvider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_id_exists(&key_triple, &*store_handle)? {
+        if key_info_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
@@ -316,9 +319,12 @@ impl Provide for MbedProvider {
         let key_attributes = op.attributes;
         let key_data = op.data;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_id_exists(&key_triple, &*store_handle)? {
+        if key_info_exists(&key_triple, &*store_handle)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
         let key_id = create_key_id(
@@ -376,7 +382,7 @@ impl Provide for MbedProvider {
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
         let _guard = self
@@ -431,7 +437,10 @@ impl Provide for MbedProvider {
         let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let mut store_handle = self.key_id_store.write().expect("Key store lock poisoned");
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
         let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
@@ -477,7 +486,7 @@ impl Provide for MbedProvider {
         let hash = op.hash;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
         let _guard = self
@@ -542,7 +551,7 @@ impl Provide for MbedProvider {
         let alg = op.alg;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_id_store.read().expect("Key store lock poisoned");
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
 
         let _guard = self
@@ -593,27 +602,29 @@ impl Drop for MbedProvider {
 #[derivative(Debug)]
 pub struct MbedProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_id_store: Option<Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>>,
+    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
 }
 
 impl MbedProviderBuilder {
     pub fn new() -> MbedProviderBuilder {
-        MbedProviderBuilder { key_id_store: None }
+        MbedProviderBuilder {
+            key_info_store: None,
+        }
     }
 
-    pub fn with_key_id_store(
+    pub fn with_key_info_store(
         mut self,
-        key_id_store: Arc<RwLock<dyn ManageKeyIDs + Send + Sync>>,
+        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     ) -> MbedProviderBuilder {
-        self.key_id_store = Some(key_id_store);
+        self.key_info_store = Some(key_info_store);
 
         self
     }
 
     pub fn build(self) -> std::io::Result<MbedProvider> {
         MbedProvider::new(
-            self.key_id_store
-                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key ID store"))?,
+            self.key_info_store
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
         )
         .ok_or_else(|| {
             Error::new(

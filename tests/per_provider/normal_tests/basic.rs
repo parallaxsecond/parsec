@@ -10,7 +10,7 @@ fn invalid_provider() {
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = 0xff;
-    req_hdr.opcode = Opcode::Ping as u16;
+    req_hdr.opcode = Opcode::Ping as u32;
 
     let resp = client
         .send_raw_request(req_hdr, Vec::new())
@@ -25,7 +25,7 @@ fn invalid_content_type() {
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
-    req_hdr.opcode = Opcode::Ping as u16;
+    req_hdr.opcode = Opcode::Ping as u32;
     req_hdr.content_type = 0xff;
 
     let resp = client
@@ -41,7 +41,7 @@ fn invalid_accept_type() {
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
-    req_hdr.opcode = Opcode::Ping as u16;
+    req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.accept_type = 0xff;
 
@@ -58,7 +58,7 @@ fn invalid_body_len() {
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
-    req_hdr.opcode = Opcode::Ping as u16;
+    req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.body_len = 0xff_ff;
 
@@ -74,7 +74,7 @@ fn invalid_auth_len() {
     let mut req_hdr = RawHeader::new();
 
     req_hdr.provider = ProviderID::Core as u8;
-    req_hdr.opcode = Opcode::Ping as u16;
+    req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.auth_len = 0xff_ff;
 

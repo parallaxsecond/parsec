@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Persistent mapping between key triples and key information
 //!
-//! This module declares a [`ManageKeyIDs`](https://parallaxsecond.github.io/parsec-book/parsec_service/key_id_managers.html)
+//! This module declares a [`ManageKeyInfo`](https://parallaxsecond.github.io/parsec-book/parsec_service/key_info_managers.html)
 //! trait to help providers to store in a persistent manner the mapping between the name and the
 //! information of the keys they manage. Different implementors might store this mapping using different
 //! means but it has to be persistent.
@@ -17,14 +17,14 @@ use std::fmt;
 pub mod on_disk_manager;
 
 #[derive(Copy, Clone, Deserialize, Debug)]
-pub enum KeyIdManagerType {
+pub enum KeyInfoManagerType {
     OnDisk,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct KeyIdManagerConfig {
+pub struct KeyInfoManagerConfig {
     pub name: String,
-    pub manager_type: KeyIdManagerType,
+    pub manager_type: KeyInfoManagerType,
     pub store_path: Option<String>,
 }
 
@@ -72,33 +72,33 @@ impl KeyTriple {
     }
 }
 
-/// Converts the error string returned by the ManageKeyIDs methods to
-/// ResponseStatus::KeyIDManagerError.
+/// Converts the error string returned by the ManageKeyInfo methods to
+/// ResponseStatus::KeyInfoManagerError.
 pub fn to_response_status(error_string: String) -> ResponseStatus {
     error!(
-        "Converting error string \"{}\" to ResponseStatus:KeyIDManagerError.",
+        "Converting error string \"{}\" to ResponseStatus:KeyInfoManagerError.",
         error_string
     );
-    ResponseStatus::KeyIDManagerError
+    ResponseStatus::KeyInfoManagerError
 }
 
 /// Management interface for key name to key info mapping
 ///
 /// Interface to be implemented for persistent storage of key name -> key info mappings.
-pub trait ManageKeyIDs {
+pub trait ManageKeyInfo {
     /// Returns a reference to the key info corresponding to this key triple or `None` if it does not
     /// exist.
     ///
     /// # Errors
     ///
-    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn get(&self, key_triple: &KeyTriple) -> Result<Option<&KeyInfo>, String>;
 
     /// Returns a Vec of reference to the key triples corresponding to this provider.
     ///
     /// # Errors
     ///
-    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String>;
 
     /// Inserts a new mapping between the key triple and the key info. If the triple already exists,
@@ -106,7 +106,7 @@ pub trait ManageKeyIDs {
     ///
     /// # Errors
     ///
-    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn insert(
         &mut self,
         key_triple: KeyTriple,
@@ -118,13 +118,13 @@ pub trait ManageKeyIDs {
     ///
     /// # Errors
     ///
-    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn remove(&mut self, key_triple: &KeyTriple) -> Result<Option<KeyInfo>, String>;
 
     /// Check if a key triple mapping exists.
     ///
     /// # Errors
     ///
-    /// Returns an error as a String if there was a problem accessing the Key ID Manager.
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String>;
 }

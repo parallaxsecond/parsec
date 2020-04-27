@@ -137,7 +137,7 @@ else
     RUST_BACKTRACE=1 cargo test $FEATURES persistent_before
 
     # Create a fake mapping file for the root application, the provider and a
-    # key name of "Test Key". It contains a valid PSA Key ID.
+    # key name of "Test Key". It contains a valid KeyInfo structure.
     # It is tested in test "should_have_been_deleted".
     # This test does not make sense for the TPM provider.
     if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then

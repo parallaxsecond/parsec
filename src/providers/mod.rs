@@ -28,16 +28,16 @@ pub mod tpm_provider;
 #[serde(tag = "provider_type")]
 pub enum ProviderConfig {
     MbedCrypto {
-        key_id_manager: String,
+        key_info_manager: String,
     },
     Pkcs11 {
-        key_id_manager: String,
+        key_info_manager: String,
         library_path: String,
         slot_number: usize,
         user_pin: Option<String>,
     },
     Tpm {
-        key_id_manager: String,
+        key_info_manager: String,
         tcti: String,
         owner_hierarchy_auth: String,
     },
@@ -46,17 +46,20 @@ pub enum ProviderConfig {
 use self::ProviderConfig::{MbedCrypto, Pkcs11, Tpm};
 
 impl ProviderConfig {
-    pub fn key_id_manager(&self) -> &String {
+    pub fn key_info_manager(&self) -> &String {
         match *self {
             MbedCrypto {
-                ref key_id_manager, ..
-            } => key_id_manager,
+                ref key_info_manager,
+                ..
+            } => key_info_manager,
             Pkcs11 {
-                ref key_id_manager, ..
-            } => key_id_manager,
+                ref key_info_manager,
+                ..
+            } => key_info_manager,
             Tpm {
-                ref key_id_manager, ..
-            } => key_id_manager,
+                ref key_info_manager,
+                ..
+            } => key_info_manager,
         }
     }
     pub fn provider_id(&self) -> ProviderID {
