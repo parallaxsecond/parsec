@@ -11,12 +11,15 @@ pub use parsec_client::error;
 use log::error;
 use parsec_client::auth::AuthenticationData;
 use parsec_client::core::basic_client::BasicClient;
+use parsec_client::core::interface::operations::list_providers::ProviderInfo;
+use parsec_client::core::interface::operations::psa_algorithm::{
+    Algorithm, AsymmetricSignature, Hash,
+};
+use parsec_client::core::interface::operations::psa_key_attributes::{
+    KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+};
+use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use parsec_client::error::Error;
-use parsec_interface::operations::list_providers::ProviderInfo;
-use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
-use parsec_interface::operations::psa_key_attributes::*;
-use parsec_interface::operations::psa_key_attributes::{KeyAttributes, KeyPolicy, UsageFlags};
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::time::Duration;
 

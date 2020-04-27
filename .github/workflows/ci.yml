@@ -7,38 +7,38 @@ jobs:
     name: Various tests targeting a Parsec image with all providers included
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Build the container
-      run: docker build -t all-providers tests/all_providers
-    - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/ci.sh all
+      - uses: actions/checkout@v1
+      - name: Build the container
+        run: docker build -t all-providers e2e_tests/provider_cfg/all
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/ci.sh all
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Build the container
-      run: docker build -t mbed-crypto-provider tests/per_provider/provider_cfg/mbed-crypto
-    - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/ci.sh mbed-crypto
+      - uses: actions/checkout@v1
+      - name: Build the container
+        run: docker build -t mbed-crypto-provider e2e_tests/provider_cfg/mbed-crypto
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Build the container
-      run: docker build -t pkcs11-provider tests/per_provider/provider_cfg/pkcs11
-    - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/ci.sh pkcs11
+      - uses: actions/checkout@v1
+      - name: Build the container
+        run: docker build -t pkcs11-provider e2e_tests/provider_cfg/pkcs11
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/ci.sh pkcs11
 
   tpm-provider:
     name: Integration tests using TPM provider
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Build the container
-      run: docker build -t tpm-provider tests/per_provider/provider_cfg/tpm
-    - name: Run the container to execute the test script
-      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/ci.sh tpm
+      - uses: actions/checkout@v1
+      - name: Build the container
+        run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/ci.sh tpm

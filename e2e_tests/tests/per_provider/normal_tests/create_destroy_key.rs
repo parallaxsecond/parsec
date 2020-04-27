@@ -1,12 +1,14 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::TestClient;
-use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
-use parsec_interface::operations::psa_key_attributes::{
+use e2e_tests::TestClient;
+use parsec_client::core::interface::operations::psa_algorithm::{
+    Algorithm, AsymmetricSignature, Hash,
+};
+use parsec_client::core::interface::operations::psa_key_attributes::{
     KeyAttributes, KeyPolicy, KeyType, UsageFlags,
 };
-use parsec_interface::requests::ResponseStatus;
-use parsec_interface::requests::Result;
+use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
 use serde::{Deserialize, Serialize};
 

@@ -1,10 +1,10 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::TestClient;
-use parsec_interface::operations::psa_algorithm::*;
-use parsec_interface::operations::psa_key_attributes::*;
-use parsec_interface::requests::ResponseStatus;
-use parsec_interface::requests::Result;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::operations::psa_algorithm::*;
+use parsec_client::core::interface::operations::psa_key_attributes::*;
+use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::Result;
 use sha2::{Digest, Sha256};
 
 const HASH: [u8; 32] = [

@@ -1,8 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::TestClient;
-use parsec_interface::requests::ResponseStatus;
-use parsec_interface::requests::Result;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::Result;
 
 #[test]
 fn two_auths_same_key_name() -> Result<()> {

@@ -1,12 +1,12 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::RequestClient;
-use crate::test_clients::TestClient;
-use parsec_interface::requests::request::{Request, RequestAuth, RequestBody};
-use parsec_interface::requests::Opcode;
-use parsec_interface::requests::ProviderID;
-use parsec_interface::requests::ResponseStatus;
-use parsec_interface::requests::Result;
+use e2e_tests::RequestClient;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::requests::request::{Request, RequestAuth, RequestBody};
+use parsec_client::core::interface::requests::Opcode;
+use parsec_client::core::interface::requests::ProviderID;
+use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::Result;
 
 #[test]
 fn test_ping() -> Result<()> {
