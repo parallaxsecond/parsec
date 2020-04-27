@@ -3,8 +3,8 @@
 
 // These functions test for the service persistency to shutdown. They will be executed before the
 // service is shutdown and before the persistent_after tests are executed.
-use crate::test_clients::TestClient;
-use parsec_interface::requests::Result;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::requests::Result;
 
 const HASH: [u8; 32] = [
     0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84, 0xA2,

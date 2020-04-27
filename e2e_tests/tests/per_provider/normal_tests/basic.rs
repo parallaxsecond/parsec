@@ -1,8 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::RawRequestClient;
-use parsec_interface::requests::request::RawHeader;
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus};
+use e2e_tests::RawRequestClient;
+use parsec_client::core::interface::requests::request::RawHeader;
+use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
 
 #[test]
 fn invalid_provider() {

@@ -1,7 +1,7 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::TestClient;
-use parsec_interface::requests::{Opcode, ProviderID, Result};
+use e2e_tests::TestClient;
+use parsec_client::core::interface::requests::{Opcode, ProviderID, Result};
 use std::collections::HashSet;
 use uuid::Uuid;
 

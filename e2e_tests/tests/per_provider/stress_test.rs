@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::stress::{StressClient, StressTestConfig};
+use e2e_tests::stress::{StressClient, StressTestConfig};
 use std::time::Duration;
 
 #[test]

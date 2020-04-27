@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use parsec_interface::requests::request::RawHeader;
-use parsec_interface::requests::{Response, Result};
+use parsec_client::core::interface::requests::request::RawHeader;
+use parsec_client::core::interface::requests::{Response, Result};
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::thread;

@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use crate::test_clients::TestClient;
+use super::TestClient;
 use log::info;
-use parsec_interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::ResponseStatus;
 use rand::Rng;
 use rand::{
     distributions::{Alphanumeric, Distribution, Standard},
