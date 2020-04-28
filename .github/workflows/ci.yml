@@ -11,7 +11,7 @@ jobs:
       - name: Build the container
         run: docker build -t all-providers e2e_tests/provider_cfg/all
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/tests/ci.sh all
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/ci.sh all
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
@@ -21,7 +21,7 @@ jobs:
       - name: Build the container
         run: docker build -t mbed-crypto-provider e2e_tests/provider_cfg/mbed-crypto
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/tests/ci.sh mbed-crypto
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
@@ -31,7 +31,7 @@ jobs:
       - name: Build the container
         run: docker build -t pkcs11-provider e2e_tests/provider_cfg/pkcs11
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/tests/ci.sh pkcs11
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/ci.sh pkcs11
 
   tpm-provider:
     name: Integration tests using TPM provider
@@ -41,4 +41,4 @@ jobs:
       - name: Build the container
         run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/tests/ci.sh tpm
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/ci.sh tpm

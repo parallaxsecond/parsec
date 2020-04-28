@@ -31,7 +31,7 @@ It is meant to be executed inside one of the container
 which Dockerfiles are in tests/per_provider/provider_cfg/*/
 or tests/all_providers/
 
-Usage: ./tests/ci.sh [--no-cargo-clean] [--no-stress-test] PROVIDER_NAME
+Usage: ./ci.sh [--no-cargo-clean] [--no-stress-test] PROVIDER_NAME
 where PROVIDER_NAME can be one of:
     - mbed-crypto
     - pkcs11
@@ -110,12 +110,13 @@ if rustup component list | grep -q clippy; then
     cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
 fi
 
-echo "Unit tests"
-RUST_BACKTRACE=1 cargo test --lib $FEATURES
-echo "Doc tests"
-RUST_BACKTRACE=1 cargo test --doc $FEATURES
+echo "Unit, doc and integration tests"
+RUST_BACKTRACE=1 cargo test $FEATURES
 
-echo "Start Parsec for integration tests"
+# Removing any mappings left over from integration tests
+rm -rf mappings/
+
+echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
 PARSEC_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.

@@ -40,13 +40,8 @@ derivative = "2.1.1"
 version = "3.0.0"
 
 [dev-dependencies]
-num_cpus = "1.10.1"
-picky-asn1-der = "0.2.2"
-picky-asn1 = "0.2.1"
-serde = { version = "1.0", features = ["derive"] }
-sha2 = "0.8.1"
-parsec-client = "0.2.0"
-parsec-interface = { version = "0.14.0", features = ["testing"] }
+ring = "0.16.12"
+lazy_static = "1.4.0"
 
 [build-dependencies]
 bindgen = "0.50.0"
