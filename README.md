@@ -70,10 +70,14 @@ Check the [**user**](https://parallaxsecond.github.io/parsec-book/parsec_users.h
 Come and talk to us in our[**Slack channel**](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
 [**Here**](http://dockr.ly/slack) is how to join the workspace.
 
-Also join the [**biweekly meeting**](https://calendar.google.com/calendar?cid=ZG9ja2VyLmNvbV9xcHAzbzl2aXBhbmE0NGllcmV1MjlvcHZkNEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
+Also join the [**biweekly meeting**](https://armltd.zoom.us/j/97560348881?pwd=LzcycTNySTRERDlWMk1hRG1ianNDUT09)
 with Parsec maintainers and community members.
 The meeting is open to the public and everyone is encouraged to attend. We will use the time to
 discuss features, integrations, issues, and roadmap. We look forward to seeing you all.
+
+You can see a calendar of our upcoming meetings below.
+
+<iframe src="https://calendar.google.com/calendar/b/1/embed?height=320&amp;wkst=2&amp;bgcolor=%23ffffff&amp;ctz=Europe%2FLondon&amp;src=b3R0MTlxYWYzdDVpZDhvNWpxOHVsaWgxYWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&amp;color=%23AD1457&amp;mode=AGENDA&amp;showTitle=0&amp;showNav=0&amp;showDate=1&amp;showPrint=0&amp;showTabs=0&amp;showCalendars=0&amp;showTz=1" style="border-width:0" width="500" height="320" frameborder="0" scrolling="no"></iframe>
 
 # Contributing
 
