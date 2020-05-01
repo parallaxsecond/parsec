@@ -3,7 +3,10 @@
 
 use log::error;
 use parsec_interface::requests::ResponseStatus;
+use picky_asn1::wrapper::IntegerAsn1;
+use serde::{Deserialize, Serialize};
 use tss_esapi::response_code::{Error, Tss2ResponseCodeKind};
+use tss_esapi::utils::TpmsContext;
 
 /// Convert the TSS library specific error values to ResponseStatus values that are returned on
 /// the wire protocol
@@ -62,4 +65,22 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
             }
         }
     }
+}
+
+// The RSA Public Key data are DER encoded with the following representation:
+// RSAPublicKey ::= SEQUENCE {
+//     modulus            INTEGER,  -- n
+//     publicExponent     INTEGER   -- e
+// }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RsaPublicKey {
+    pub modulus: IntegerAsn1,
+    pub public_exponent: IntegerAsn1,
+}
+
+// The PasswordContext is what is stored by the Key Info Manager.
+#[derive(Serialize, Deserialize)]
+pub struct PasswordContext {
+    pub context: TpmsContext,
+    pub auth_value: Vec<u8>,
 }
