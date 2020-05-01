@@ -75,9 +75,7 @@ with Parsec maintainers and community members.
 The meeting is open to the public and everyone is encouraged to attend. We will use the time to
 discuss features, integrations, issues, and roadmap. We look forward to seeing you all.
 
-You can see a calendar of our upcoming meetings below.
-
-<iframe src="https://calendar.google.com/calendar/b/1/embed?height=320&amp;wkst=2&amp;bgcolor=%23ffffff&amp;ctz=Europe%2FLondon&amp;src=b3R0MTlxYWYzdDVpZDhvNWpxOHVsaWgxYWNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&amp;color=%23AD1457&amp;mode=AGENDA&amp;showTitle=0&amp;showNav=0&amp;showDate=1&amp;showPrint=0&amp;showTabs=0&amp;showCalendars=0&amp;showTz=1" style="border-width:0" width="500" height="320" frameborder="0" scrolling="no"></iframe>
+You can see a calendar of our upcoming meetings [here](https://calendar.google.com/calendar/embed?src=ott19qaf3t5id8o5jq8ulih1ac%40group.calendar.google.com&ctz=Europe%2FLondon).
 
 # Contributing
 
