@@ -271,6 +271,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 
 [[package]]
+name = "enumflags2"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83c8d82922337cd23a15f88b70d8e4ef5f11da38dd7cdb55e84dd5de99695da0"
+dependencies = [
+ "enumflags2_derive",
+]
+
+[[package]]
+name = "enumflags2_derive"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "946ee94e3dbf58fdd324f9ce245c7b238d46a66f00e86a020b71996349e46cce"
+dependencies = [
+ "proc-macro2 1.0.10",
+ "quote 1.0.3",
+ "syn 1.0.18",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -354,6 +374,12 @@ checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
 name = "humantime"
@@ -518,6 +544,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-derive"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c8b15b261814f992e33760b1fca9fe8b693d8a65299f20c9901688636cfb746"
+dependencies = [
+ "proc-macro2 1.0.10",
+ "quote 1.0.3",
+ "syn 1.0.18",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -589,7 +626,7 @@ dependencies = [
  "bytes 0.4.12",
  "log",
  "num",
- "num-derive",
+ "num-derive 0.2.5",
  "num-traits",
  "prost",
  "prost-build",
@@ -607,6 +644,7 @@ dependencies = [
  "cargo_toml",
  "derivative",
  "env_logger 0.7.1",
+ "hex",
  "lazy_static",
  "log",
  "parsec-interface",
@@ -1143,14 +1181,17 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "2.0.0"
+version = "4.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c3b539f6041adee649c4d7a3fd9f7b38add791cf3c22d741434918c47f017d6"
+checksum = "b1603cf9e6bd76eb9f574f51334beb8ac887952902b50a7b6c9422d652bdefff"
 dependencies = [
  "bindgen 0.52.0",
  "bitfield",
+ "enumflags2",
  "log",
  "mbox",
+ "num-derive 0.3.0",
+ "num-traits",
  "pkg-config",
  "serde",
 ]

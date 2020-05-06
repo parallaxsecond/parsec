@@ -74,5 +74,8 @@ key_info_manager = "on-disk-manager"
 # - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon
 #tcti = "mssim"
 # (Required) Authentication value for performing operations on the TPM Owner Hierarchy. The string can
-# be empty, however we strongly suggest that you use a secure password.
+# be empty, however we strongly suggest that you use a secure passcode.
+# To align with TPM tooling, PARSEC allows "owner_hierarchy_auth" to have a prefix indicating a string value,
+# e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
+# provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"

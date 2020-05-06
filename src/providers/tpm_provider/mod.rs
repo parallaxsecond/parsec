@@ -34,8 +34,10 @@ const SUPPORTED_OPCODES: [Opcode; 7] = [
     Opcode::ListOpcodes,
 ];
 
-const ROOT_KEY_SIZE: usize = 2048;
+const ROOT_KEY_SIZE: u16 = 2048;
 const ROOT_KEY_AUTH_SIZE: usize = 32;
+const AUTH_STRING_PREFIX: &str = "str:";
+const AUTH_HEX_PREFIX: &str = "hex:";
 
 /// Provider for Trusted Platform Modules
 ///
@@ -49,7 +51,7 @@ pub struct TpmProvider {
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
-    esapi_context: Mutex<tss_esapi::TransientObjectContext>,
+    esapi_context: Mutex<tss_esapi::TransientKeyContext>,
     // The Key Info Manager stores the key context and its associated authValue (a PasswordContext
     // structure).
     #[derivative(Debug = "ignore")]
@@ -60,7 +62,7 @@ impl TpmProvider {
     // Creates and initialise a new instance of TpmProvider.
     fn new(
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-        esapi_context: tss_esapi::TransientObjectContext,
+        esapi_context: tss_esapi::TransientKeyContext,
     ) -> Option<TpmProvider> {
         Some(TpmProvider {
             esapi_context: Mutex::new(esapi_context),
@@ -192,35 +194,64 @@ impl TpmProviderBuilder {
         self
     }
 
+    fn get_hierarchy_auth(&mut self) -> std::io::Result<Vec<u8>> {
+        match self.owner_hierarchy_auth.take() {
+            None => Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "missing owner hierarchy auth",
+            )),
+            Some(mut auth) if auth.starts_with(AUTH_STRING_PREFIX) => {
+                Ok(auth.split_off(AUTH_STRING_PREFIX.len()).into())
+            }
+            Some(mut auth) if auth.starts_with(AUTH_HEX_PREFIX) => Ok(hex::decode(
+                auth.split_off(AUTH_STRING_PREFIX.len()),
+            )
+            .or_else(|_| {
+                Err(std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "invalid hex owner hierarchy auth",
+                ))
+            })?),
+            Some(auth) => Ok(auth.into()),
+        }
+    }
+
     /// Create an instance of TpmProvider
     ///
     /// # Safety
     ///
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
-    pub unsafe fn build(self) -> std::io::Result<TpmProvider> {
+    pub unsafe fn build(mut self) -> std::io::Result<TpmProvider> {
+        let hierarchy_auth = self.get_hierarchy_auth()?;
         TpmProvider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
-            tss_esapi::TransientObjectContext::new(
-                self.tcti
-                    .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
-                ROOT_KEY_SIZE,
-                ROOT_KEY_AUTH_SIZE,
-                self.owner_hierarchy_auth
-                    .ok_or_else(|| {
-                        std::io::Error::new(ErrorKind::InvalidData, "missing owner hierarchy auth")
-                    })?
-                    .as_bytes(),
-            )
-            .or_else(|e| {
-                error!("Error creating TSS Transient Object Context ({}).", e);
-                Err(std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "failed initializing TSS context",
-                ))
-            })?,
+            tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
+                .with_tcti(
+                    self.tcti.ok_or_else(|| {
+                        std::io::Error::new(ErrorKind::InvalidData, "missing TCTI")
+                    })?,
+                )
+                .with_root_key_size(ROOT_KEY_SIZE)
+                .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
+                .with_hierarchy_auth(hierarchy_auth)
+                .with_hierarchy(tss_esapi::utils::Hierarchy::Owner)
+                .with_session_hash_alg(
+                    tss_esapi::utils::algorithm_specifiers::HashingAlgorithm::Sha256.into(),
+                )
+                .with_default_context_cipher(
+                    tss_esapi::utils::algorithm_specifiers::Cipher::aes_256_cfb(),
+                )
+                .build()
+                .or_else(|e| {
+                    error!("Error creating TSS Transient Object Context ({}).", e);
+                    Err(std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "failed initializing TSS context",
+                    ))
+                })?,
         )
         .ok_or_else(|| {
             std::io::Error::new(ErrorKind::InvalidData, "failed initializing TPM provider")
