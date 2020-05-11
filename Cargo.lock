@@ -750,9 +750,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "parsec-interface"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd624e1236194a6ee915f7b54f03c6e94a7d4b8a63062db65397c3af25b323eb"
+checksum = "702a234e09ad3735c845136728dd2755b8acf979919ffeecf53f72f62b7ad934"
 dependencies = [
  "arbitrary",
  "bincode",
@@ -1446,9 +1446,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "4.0.0-alpha.1"
+version = "4.0.2-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1603cf9e6bd76eb9f574f51334beb8ac887952902b50a7b6c9422d652bdefff"
+checksum = "71ade800b2821a2d093a71c91998e2c2829c317e13d3772c7c83551ceb02801c"
 dependencies = [
  "bindgen 0.52.0",
  "bitfield",

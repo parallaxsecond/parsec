@@ -13,7 +13,6 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
-use picky_asn1::wrapper::IntegerAsn1;
 
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -69,17 +68,9 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
-        if op.attributes.key_type != KeyType::RsaKeyPair {
-            error!("The TPM provider currently only supports creating RSA key pairs.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
         let key_name = op.key_name;
         let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
-        // This should never panic on 32 bits or more machines.
-        let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits)
-            .expect("Conversion to usize failed.");
 
         let mut store_handle = self
             .key_info_store
@@ -91,7 +82,7 @@ impl TpmProvider {
             .expect("ESAPI Context lock poisoned");
 
         let (key_context, auth_value) = esapi_context
-            .create_rsa_signing_key(key_size, AUTH_VAL_LEN)
+            .create_signing_key(utils::parsec_to_tpm_params(attributes)?, AUTH_VAL_LEN)
             .or_else(|e| {
                 error!("Error creating a RSA signing key: {}.", e);
                 Err(utils::to_response_status(e))
@@ -199,7 +190,7 @@ impl TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let (password_context, _key_attributes) = get_password_context(&*store_handle, key_triple)?;
+        let (password_context, key_attributes) = get_password_context(&*store_handle, key_triple)?;
 
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
@@ -208,18 +199,9 @@ impl TpmProvider {
                 Err(utils::to_response_status(e))
             })?;
 
-        let key = RsaPublicKey {
-            // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
-            // modulus if highest significant bit is one, to differentiate it from a negative number.
-            modulus: IntegerAsn1::from_unsigned_bytes_be(pub_key_data),
-            public_exponent: IntegerAsn1::from_signed_bytes_be(PUBLIC_EXPONENT.to_vec()),
-        };
-        let key_data = picky_asn1_der::to_vec(&key).or_else(|err| {
-            error!("Could not serialise key elements: {}.", err);
-            Err(ResponseStatus::PsaErrorCommunicationFailure)
-        })?;
-
-        Ok(psa_export_public_key::Result { data: key_data })
+        Ok(psa_export_public_key::Result {
+            data: utils::pub_key_to_bytes(pub_key_data, key_attributes)?,
+        })
     }
 
     pub(super) fn psa_destroy_key_internal(
@@ -234,10 +216,9 @@ impl TpmProvider {
             .write()
             .expect("Key store lock poisoned");
 
-        let error_closure = |e| Err(key_info_managers::to_response_status(e));
         if store_handle
             .remove(&key_triple)
-            .or_else(error_closure)?
+            .map_err(key_info_managers::to_response_status)?
             .is_none()
         {
             error!(

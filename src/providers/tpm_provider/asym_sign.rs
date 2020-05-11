@@ -7,7 +7,6 @@ use log::error;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
-use tss_esapi::{constants::TPM2_ALG_SHA256, utils::AsymSchemeUnion, utils::Signature};
 
 impl TpmProvider {
     pub(super) fn psa_sign_hash_internal(
@@ -15,10 +14,7 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_name = op.key_name;
-        let hash = op.hash;
-        let alg = op.alg;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
 
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -26,44 +22,28 @@ impl TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        if alg
-            != (AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            })
-        {
-            error!(
-                "The TPM provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
-        if hash.len() != 32 {
-            error!("The SHA-256 hash must be 32 bytes long.");
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-
         let (password_context, key_attributes) =
             key_management::get_password_context(&*store_handle, key_triple)?;
 
-        key_attributes.can_sign_hash()?;
-        key_attributes.permits_alg(alg.into())?;
-        key_attributes.compatible_with_alg(alg.into())?;
-
-        match alg {
-            AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            } => (),
+        match op.alg {
+            AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
+            AsymmetricSignature::Ecdsa { .. } => (),
             _ => {
                 error!(
-                    "The TPM provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaSignHash operation.");
+                    "Requested algorithm is not supported by the TPM provider: {:?}",
+                    op.alg
+                );
                 return Err(ResponseStatus::PsaErrorNotSupported);
             }
         }
+
+        op.validate(key_attributes)?;
 
         let signature = esapi_context
             .sign(
                 password_context.context,
                 &password_context.auth_value,
-                &hash,
+                &op.hash,
             )
             .or_else(|e| {
                 error!("Error signing: {}.", e);
@@ -71,7 +51,7 @@ impl TpmProvider {
             })?;
 
         Ok(psa_sign_hash::Result {
-            signature: signature.signature,
+            signature: utils::signature_data_to_bytes(signature.signature, key_attributes)?,
         })
     }
 
@@ -80,11 +60,7 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_name = op.key_name;
-        let hash = op.hash;
-        let alg = op.alg;
-        let signature = op.signature;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
 
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
@@ -92,47 +68,28 @@ impl TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        if alg
-            != (AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            })
-        {
-            error!(
-                "The TPM provider currently only supports signature algorithm to be RSA PKCS#1 v1.5 and the text hashed with SHA-256.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
-        if hash.len() != 32 {
-            error!("The SHA-256 hash must be 32 bytes long.");
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-
-        let signature = Signature {
-            scheme: AsymSchemeUnion::RSASSA(TPM2_ALG_SHA256),
-            signature,
-        };
-
         let (password_context, key_attributes) =
             key_management::get_password_context(&*store_handle, key_triple)?;
 
-        key_attributes.can_verify_hash()?;
-        key_attributes.permits_alg(alg.into())?;
-        key_attributes.compatible_with_alg(alg.into())?;
-
-        match alg {
-            AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            } => (),
+        match op.alg {
+            AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
+            AsymmetricSignature::Ecdsa { .. } => (),
             _ => {
                 error!(
-                    "The TPM provider currently only supports \"RSA PKCS#1 v1.5 signature with hashing\" algorithm with SHA-256 as hashing algorithm for the PsaVerifyHash operation.");
+                    "Requested algorithm is not supported by the TPM provider: {:?}",
+                    op.alg
+                );
                 return Err(ResponseStatus::PsaErrorNotSupported);
             }
         }
 
+        op.validate(key_attributes)?;
+
+        let signature = utils::parsec_to_tpm_signature(op.signature, key_attributes, op.alg)?;
+
         let _ = esapi_context
-            .verify_signature(password_context.context, &hash, signature)
-            .or_else(|e| Err(utils::to_response_status(e)))?;
+            .verify_signature(password_context.context, &op.hash, signature)
+            .map_err(utils::to_response_status)?;
 
         Ok(psa_verify_hash::Result {})
     }
