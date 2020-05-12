@@ -8,7 +8,16 @@ use log::{error, info};
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use picky::{algorithm_identifier::SHAVariant, AlgorithmIdentifier};
+use picky_asn1::wrapper::OctetStringAsn1;
 use pkcs11::types::CK_MECHANISM;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct DigestInfo {
+    oid: AlgorithmIdentifier,
+    digest: OctetStringAsn1,
+}
 
 impl Pkcs11Provider {
     pub(super) fn psa_sign_hash_internal(
@@ -19,7 +28,7 @@ impl Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Sign");
 
         let key_name = op.key_name;
-        let mut hash = op.hash;
+        let hash = op.hash;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
@@ -70,18 +79,13 @@ impl Pkcs11Provider {
         match self.backend.sign_init(session.session_handle(), &mech, key) {
             Ok(_) => {
                 info!("Signing operation initialized.");
-
-                // Build a valid ASN.1 DigestInfo DER-encoded structure by appending the hash to a
-                // DigestAlgorithmIdentifier value representing the SHA256 OID with no parameters.
-                // The OID used is: "2.16.840.1.101.3.4.2.1".
-                // It would be better to use the DigestInfo structure defined in this file but the
-                // AlgorithmIdentifier structure does not currently support the simple SHA256 OID.
-                // See Devolutions/picky-rs#19
-                let mut digest_info = vec![
-                    0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
-                    0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
-                ];
-                digest_info.append(&mut hash);
+                let digest_info = DigestInfo {
+                    oid: AlgorithmIdentifier::new_sha(SHAVariant::SHA2_256),
+                    digest: hash.into(),
+                };
+                let digest_info = picky_asn1_der::to_vec(&digest_info)
+                    // should not fail - if it does, there's some error in our stack
+                    .or(Err(ResponseStatus::PsaErrorGenericError))?;
 
                 match self.backend.sign(session.session_handle(), &digest_info) {
                     Ok(signature) => Ok(psa_sign_hash::Result { signature }),
@@ -106,7 +110,7 @@ impl Pkcs11Provider {
         info!("Pkcs11 Provider - Asym Verify");
 
         let key_name = op.key_name;
-        let mut hash = op.hash;
+        let hash = op.hash;
         let signature = op.signature;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
@@ -162,18 +166,13 @@ impl Pkcs11Provider {
         {
             Ok(_) => {
                 info!("Verify operation initialized.");
-
-                // Build a valid ASN.1 DigestInfo DER-encoded structure by appending the hash to a
-                // DigestAlgorithmIdentifier value representing the SHA256 OID with no parameters.
-                // The OID used is: "2.16.840.1.101.3.4.2.1".
-                // It would be better to use the DigestInfo structure defined in this file but the
-                // AlgorithmIdentifier structure does not currently support the simple SHA256 OID.
-                // See Devolutions/picky-rs#19
-                let mut digest_info = vec![
-                    0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
-                    0x02, 0x01, 0x05, 0x00, 0x04, 0x20,
-                ];
-                digest_info.append(&mut hash);
+                let digest_info = DigestInfo {
+                    oid: AlgorithmIdentifier::new_sha(SHAVariant::SHA2_256),
+                    digest: hash.into(),
+                };
+                let digest_info = picky_asn1_der::to_vec(&digest_info)
+                    // should not fail - if it does, there's some error in our stack
+                    .or(Err(ResponseStatus::PsaErrorGenericError))?;
 
                 match self
                     .backend
