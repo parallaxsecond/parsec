@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::{
-    Algorithm, AsymmetricSignature, Cipher, Hash,
+    Algorithm, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
     KeyAttributes, KeyPolicy, KeyType, UsageFlags,
@@ -100,7 +100,10 @@ fn wrong_permitted_algorithm() {
 
     let key_type = KeyType::RsaKeyPair;
     // Do not permit RSA PKCS 1v15 signing algorithm with SHA-256.
-    let permitted_algorithm = Algorithm::Cipher(Cipher::Ctr);
+    let permitted_algorithm =
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: Hash::Sha512,
+        });
     let key_attributes = KeyAttributes {
         key_type,
         key_bits: 1024,
