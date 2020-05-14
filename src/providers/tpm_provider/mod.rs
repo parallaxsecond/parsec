@@ -17,6 +17,7 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::io::ErrorKind;
 use std::sync::{Arc, Mutex, RwLock};
+use tss_esapi::utils::algorithm_specifiers::Cipher;
 use tss_esapi::Tcti;
 use uuid::Uuid;
 
@@ -216,6 +217,41 @@ impl TpmProviderBuilder {
         }
     }
 
+    /// Identify the best cipher for our needs supported by the TPM.
+    ///
+    /// The algorithms sought are the following, in the given order:
+    /// * AES-256 in CFB mode
+    /// * AES-128 in CFB mode
+    ///
+    /// The method is unsafe because it relies on creating a TSS Context which could cause
+    /// undefined behaviour if multiple such contexts are opened concurrently.
+    unsafe fn find_default_context_cipher(&self) -> std::io::Result<Cipher> {
+        let ciphers = [Cipher::aes_256_cfb(), Cipher::aes_128_cfb()];
+        let mut ctx = tss_esapi::Context::new(
+            self.tcti
+                .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
+        )
+        .or_else(|e| {
+            error!("Error when creating TSS Context ({})", e);
+            Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "failed initializing TSS context",
+            ))
+        })?;
+        for cipher in ciphers.iter() {
+            if ctx
+                .test_parms(tss_esapi::utils::PublicParmsUnion::SymDetail(*cipher))
+                .is_ok()
+            {
+                return Ok(*cipher);
+            }
+        }
+        Err(std::io::Error::new(
+            ErrorKind::Other,
+            "desired ciphers not supported by TPM",
+        ))
+    }
+
     /// Create an instance of TpmProvider
     ///
     /// # Safety
@@ -224,16 +260,16 @@ impl TpmProviderBuilder {
     /// using a same TCTI that does not handle multiple applications concurrently.
     pub unsafe fn build(mut self) -> std::io::Result<TpmProvider> {
         let hierarchy_auth = self.get_hierarchy_auth()?;
+        let default_cipher = self.find_default_context_cipher()?;
+        let tcti = self
+            .tcti
+            .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?;
         TpmProvider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
             tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
-                .with_tcti(
-                    self.tcti.ok_or_else(|| {
-                        std::io::Error::new(ErrorKind::InvalidData, "missing TCTI")
-                    })?,
-                )
+                .with_tcti(tcti)
                 .with_root_key_size(ROOT_KEY_SIZE)
                 .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
                 .with_hierarchy_auth(hierarchy_auth)
@@ -241,9 +277,7 @@ impl TpmProviderBuilder {
                 .with_session_hash_alg(
                     tss_esapi::utils::algorithm_specifiers::HashingAlgorithm::Sha256.into(),
                 )
-                .with_default_context_cipher(
-                    tss_esapi::utils::algorithm_specifiers::Cipher::aes_256_cfb(),
-                )
+                .with_default_context_cipher(default_cipher)
                 .build()
                 .or_else(|e| {
                     error!("Error creating TSS Transient Object Context ({}).", e);
