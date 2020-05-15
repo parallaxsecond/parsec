@@ -148,17 +148,17 @@ fn build_backend_handlers(
 ) -> Result<HashMap<ProviderID, BackEndHandler>> {
     let mut map = HashMap::new();
 
-    let mut core_provider_builder = CoreProviderBuilder::new()
+    let mut core_provider_builder = CoreProviderBuilder::new()?
         .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
 
     for (provider_id, provider) in providers.drain() {
-        core_provider_builder =
-            core_provider_builder.with_provider_info(provider.describe().or_else(|_| {
-                Err(Error::new(
-                    ErrorKind::InvalidData,
-                    "error describing Core provider",
-                ))
-            })?);
+        let (info, opcodes) = provider.describe().or_else(|_| {
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "error describing provider",
+            ))
+        })?;
+        core_provider_builder = core_provider_builder.with_provider_details(info, opcodes);
 
         let backend_handler = BackEndHandlerBuilder::new()
             .with_provider(provider)

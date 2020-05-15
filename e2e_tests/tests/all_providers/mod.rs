@@ -22,9 +22,6 @@ fn list_providers() {
 }
 
 #[test]
-// ListOpcodes is not currently supported only by the Core Provider, see
-// parallaxsecond/parsec-operations#9
-#[ignore]
 fn list_opcodes() {
     let mut client = TestClient::new();
     let mut crypto_providers_opcodes = HashSet::new();
