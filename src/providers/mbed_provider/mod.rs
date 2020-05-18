@@ -8,8 +8,8 @@ use derivative::Derivative;
 use log::error;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
-    psa_sign_hash, psa_verify_hash,
+    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto_binding::psa_key_id_t;
@@ -40,14 +40,13 @@ mod utils;
 
 type LocalIdStore = HashSet<psa_key_id_t>;
 
-const SUPPORTED_OPCODES: [Opcode; 7] = [
+const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
-    Opcode::ListOpcodes,
 ];
 
 #[derive(Derivative)]
@@ -153,14 +152,8 @@ impl MbedProvider {
 }
 
 impl Provide for MbedProvider {
-    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
-        Ok(list_opcodes::Result {
-            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
-        })
-    }
-
-    fn describe(&self) -> Result<ProviderInfo> {
-        Ok(ProviderInfo {
+    fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        Ok((ProviderInfo {
             // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
             uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
@@ -169,7 +162,7 @@ impl Provide for MbedProvider {
             version_min: 1,
             version_rev: 0,
             id: ProviderID::MbedCrypto,
-        })
+        }, SUPPORTED_OPCODES.iter().copied().collect()))
     }
 
     fn psa_generate_key(

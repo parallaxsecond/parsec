@@ -6,8 +6,9 @@
 //! are the real implementors of the operations that Parsec claims to support. They map to
 //! functionality in the underlying hardware which allows the PSA Crypto operations to be
 //! backed by a hardware root of trust.
-use parsec_interface::requests::ProviderID;
+use parsec_interface::requests::{Opcode, ProviderID};
 use serde::Deserialize;
+use std::collections::HashSet;
 
 pub mod core_provider;
 
@@ -86,15 +87,19 @@ pub trait Provide {
     /// Return a description of the current provider.
     ///
     /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
-    fn describe(&self) -> Result<list_providers::ProviderInfo>;
+    fn describe(&self) -> Result<(list_providers::ProviderInfo, HashSet<Opcode>)> {
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
 
     /// List the providers running in the service.
     fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// List the opcodes supported by the current provider.
-    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result>;
+    /// List the opcodes supported by the given provider.
+    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
 
     /// Execute a Ping operation to get the wire protocol version major and minor information.
     ///

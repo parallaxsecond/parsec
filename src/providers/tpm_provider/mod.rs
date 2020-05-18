@@ -11,10 +11,11 @@ use derivative::Derivative;
 use log::{error, info};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
-    psa_sign_hash, psa_verify_hash,
+    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::utils::algorithm_specifiers::Cipher;
@@ -25,14 +26,13 @@ mod asym_sign;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 7] = [
+const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
-    Opcode::ListOpcodes,
 ];
 
 const ROOT_KEY_SIZE: u16 = 2048;
@@ -73,14 +73,8 @@ impl TpmProvider {
 }
 
 impl Provide for TpmProvider {
-    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
-        Ok(list_opcodes::Result {
-            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
-        })
-    }
-
-    fn describe(&self) -> Result<ProviderInfo> {
-        Ok(ProviderInfo {
+    fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        Ok((ProviderInfo {
             // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
             uuid: Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification."),
@@ -89,7 +83,7 @@ impl Provide for TpmProvider {
             version_min: 1,
             version_rev: 0,
             id: ProviderID::Tpm,
-        })
+        }, SUPPORTED_OPCODES.iter().copied().collect()))
     }
 
     fn psa_generate_key(

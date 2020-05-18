@@ -10,6 +10,7 @@ use log::error;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_opcodes, list_providers, ping};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
 use uuid::Uuid;
@@ -26,37 +27,24 @@ const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcod
 pub struct CoreProvider {
     wire_protocol_version_min: u8,
     wire_protocol_version_maj: u8,
-    providers: Vec<ProviderInfo>,
+    provider_info: Vec<ProviderInfo>,
+    provider_opcodes: HashMap<ProviderID, HashSet<Opcode>>,
 }
 
 impl Provide for CoreProvider {
-    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+    fn list_opcodes(&self, op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
         Ok(list_opcodes::Result {
-            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
+            opcodes: self
+                .provider_opcodes
+                .get(&op.provider_id)
+                .ok_or(ResponseStatus::ProviderNotRegistered)?
+                .clone(),
         })
     }
 
     fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
         Ok(list_providers::Result {
-            providers: self.providers.clone(),
-        })
-    }
-
-    fn describe(&self) -> Result<ProviderInfo> {
-        let crate_version: Version = Version::from_str(version!()).or_else(|e| {
-            error!("Error parsing the crate version: {}.", e);
-            Err(ResponseStatus::InvalidEncoding)
-        })?;
-
-        Ok(ProviderInfo {
-            // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
-            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").or(Err(ResponseStatus::InvalidEncoding))?,
-            description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
-            vendor: String::new(),
-            version_maj: crate_version.major,
-            version_min: crate_version.minor,
-            version_rev: crate_version.patch,
-            id: ProviderID::Core,
+            providers: self.provider_info.clone(),
         })
     }
 
@@ -75,16 +63,46 @@ impl Provide for CoreProvider {
 pub struct CoreProviderBuilder {
     version_maj: Option<u8>,
     version_min: Option<u8>,
-    providers: Option<Vec<ProviderInfo>>,
+    provider_info: Vec<ProviderInfo>,
+    provider_opcodes: HashMap<ProviderID, HashSet<Opcode>>,
 }
 
 impl CoreProviderBuilder {
-    pub fn new() -> Self {
-        CoreProviderBuilder {
+    pub fn new() -> std::io::Result<Self> {
+        let crate_version: Version = Version::from_str(version!()).or_else(|e| {
+            error!("Error parsing the crate version: {}.", e);
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "crate version number has invalid format",
+            ))
+        })?;
+
+        let provider_info = vec![ProviderInfo {
+            // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
+            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").or_else(|_| Err(Error::new(
+                ErrorKind::InvalidData,
+                "provider UUID is invalid",
+            )))?,
+            description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
+            vendor: String::new(),
+            version_maj: crate_version.major,
+            version_min: crate_version.minor,
+            version_rev: crate_version.patch,
+            id: ProviderID::Core,
+        }];
+
+        let mut provider_opcodes = HashMap::new();
+        let _ = provider_opcodes.insert(
+            ProviderID::Core,
+            SUPPORTED_OPCODES.iter().copied().collect(),
+        );
+
+        Ok(CoreProviderBuilder {
             version_maj: None,
             version_min: None,
-            providers: None,
-        }
+            provider_info,
+            provider_opcodes,
+        })
     }
 
     pub fn with_wire_protocol_version(mut self, version_min: u8, version_maj: u8) -> Self {
@@ -94,43 +112,28 @@ impl CoreProviderBuilder {
         self
     }
 
-    pub fn with_provider_info(mut self, provider_info: ProviderInfo) -> Self {
-        match self.providers {
-            Some(mut providers) => {
-                providers.push(provider_info);
-                self.providers = Some(providers);
-            }
-            None => {
-                let mut providers = Vec::new();
-                providers.push(provider_info);
-                self.providers = Some(providers);
-            }
-        }
+    pub fn with_provider_details(
+        mut self,
+        provider_info: ProviderInfo,
+        opcodes: HashSet<Opcode>,
+    ) -> Self {
+        let _ = self.provider_opcodes.insert(provider_info.id, opcodes);
+        self.provider_info.push(provider_info);
 
         self
     }
 
     pub fn build(self) -> std::io::Result<CoreProvider> {
-        let mut core_provider = CoreProvider {
+        let core_provider = CoreProvider {
             wire_protocol_version_maj: self
                 .version_maj
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version maj is missing"))?,
             wire_protocol_version_min: self
                 .version_min
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version min is missing"))?,
-            providers: self
-                .providers
-                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "provider info is missing"))?,
+            provider_opcodes: self.provider_opcodes,
+            provider_info: self.provider_info,
         };
-
-        core_provider
-            .providers
-            .push(core_provider.describe().or_else(|_| {
-                Err(Error::new(
-                    ErrorKind::InvalidData,
-                    "error describing Core provider",
-                ))
-            })?);
 
         Ok(core_provider)
     }
@@ -145,7 +148,8 @@ mod tests {
         let provider = CoreProvider {
             wire_protocol_version_min: 8,
             wire_protocol_version_maj: 10,
-            providers: Vec::new(),
+            provider_info: Vec::new(),
+            provider_opcodes: HashMap::new(),
         };
         let op = ping::Operation {};
         let result = provider.ping(op).unwrap();

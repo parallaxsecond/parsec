@@ -11,8 +11,8 @@ use derivative::Derivative;
 use log::{error, info, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    list_opcodes, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
-    psa_sign_hash, psa_verify_hash,
+    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
@@ -29,14 +29,13 @@ mod asym_sign;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 7] = [
+const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
-    Opcode::ListOpcodes,
 ];
 
 /// Provider for Public Key Cryptography Standard #11
@@ -162,24 +161,23 @@ impl Pkcs11Provider {
 }
 
 impl Provide for Pkcs11Provider {
-    fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
-        Ok(list_opcodes::Result {
-            opcodes: SUPPORTED_OPCODES.iter().copied().collect(),
-        })
-    }
-
-    fn describe(&self) -> Result<ProviderInfo> {
-        Ok(ProviderInfo {
-            // Assigned UUID for this provider: 30e39502-eba6-4d60-a4af-c518b7f5e38f
-            uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f")
-                .or(Err(ResponseStatus::InvalidEncoding))?,
-            description: String::from("PKCS #11 provider, interfacing with a PKCS #11 library."),
-            vendor: String::from("OASIS Standard."),
-            version_maj: 0,
-            version_min: 1,
-            version_rev: 0,
-            id: ProviderID::Pkcs11,
-        })
+    fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        Ok((
+            ProviderInfo {
+                // Assigned UUID for this provider: 30e39502-eba6-4d60-a4af-c518b7f5e38f
+                uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f")
+                    .or(Err(ResponseStatus::InvalidEncoding))?,
+                description: String::from(
+                    "PKCS #11 provider, interfacing with a PKCS #11 library.",
+                ),
+                vendor: String::from("OASIS Standard."),
+                version_maj: 0,
+                version_min: 1,
+                version_rev: 0,
+                id: ProviderID::Pkcs11,
+            },
+            SUPPORTED_OPCODES.iter().copied().collect(),
+        ))
     }
 
     fn psa_generate_key(

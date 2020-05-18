@@ -750,9 +750,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "parsec-interface"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "702a234e09ad3735c845136728dd2755b8acf979919ffeecf53f72f62b7ad934"
+checksum = "3af91cbaea6e805729d28101be13161cb75e75b8425a9197008190202019cc84"
 dependencies = [
  "arbitrary",
  "bincode",
