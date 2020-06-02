@@ -9,7 +9,7 @@
 
 use crate::authenticators::ApplicationName;
 use log::error;
-use parsec_interface::operations::psa_key_attributes::KeyAttributes;
+use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::{ProviderID, ResponseStatus};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -53,7 +53,7 @@ pub struct KeyInfo {
     /// Reference to a key in the Provider
     pub id: Vec<u8>,
     /// Attributes of a key
-    pub attributes: KeyAttributes,
+    pub attributes: Attributes,
 }
 
 impl KeyTriple {

@@ -134,11 +134,12 @@ fn sign_hash_not_permitted() -> Result<()> {
     hasher.input(b"Bob wrote this message.");
     let hash = hasher.result().to_vec();
 
-    let attributes = KeyAttributes {
-        key_type: KeyType::RsaKeyPair,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: true,
                 sign_message: true,
@@ -150,9 +151,11 @@ fn sign_hash_not_permitted() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 
@@ -207,11 +210,12 @@ fn verify_hash_not_permitted() -> Result<()> {
     hasher.input(b"Bob wrote this message.");
     let hash = hasher.result().to_vec();
 
-    let attributes = KeyAttributes {
-        key_type: KeyType::RsaKeyPair,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: true,
                 verify_hash: false,
                 sign_message: true,
@@ -223,9 +227,11 @@ fn verify_hash_not_permitted() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 

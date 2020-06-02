@@ -24,7 +24,7 @@ const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 pub fn get_key_info(
     key_triple: &KeyTriple,
     store_handle: &dyn ManageKeyInfo,
-) -> Result<([u8; 4], KeyAttributes)> {
+) -> Result<([u8; 4], Attributes)> {
     match store_handle.get(key_triple) {
         Ok(Some(key_info)) => {
             if key_info.id.len() == 4 {
@@ -43,7 +43,7 @@ pub fn get_key_info(
 
 pub fn create_key_id(
     key_triple: KeyTriple,
-    key_attributes: KeyAttributes,
+    key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<[u8; 4]> {
@@ -141,7 +141,7 @@ impl Pkcs11Provider {
     ) -> Result<psa_generate_key::Result> {
         info!("Pkcs11 Provider - Create Key");
 
-        if op.attributes.key_type != KeyType::RsaKeyPair {
+        if op.attributes.key_type != Type::RsaKeyPair {
             error!("The PKCS11 provider currently only supports creating RSA key pairs.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
@@ -149,7 +149,7 @@ impl Pkcs11Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         // This should never panic on 32 bits or more machines.
-        let key_size = std::convert::TryFrom::try_from(op.attributes.key_bits).unwrap();
+        let key_size = std::convert::TryFrom::try_from(op.attributes.bits).unwrap();
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self
@@ -241,7 +241,7 @@ impl Pkcs11Provider {
     ) -> Result<psa_import_key::Result> {
         info!("Pkcs11 Provider - Import Key");
 
-        if op.attributes.key_type != KeyType::RsaPublicKey {
+        if op.attributes.key_type != Type::RsaPublicKey {
             error!("The PKCS 11 provider currently only supports importing RSA public key.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
@@ -278,9 +278,9 @@ impl Pkcs11Provider {
 
         let modulus_object = &public_key.modulus.as_unsigned_bytes_be();
         let exponent_object = &public_key.public_exponent.as_unsigned_bytes_be();
-        let key_bits = key_attributes.key_bits;
-        if key_bits != 0 && modulus_object.len() * 8 != key_bits as usize {
-            error!("If the key_bits field is non-zero (value is {}) it must be equal to the size of the key in data.", key_attributes.key_bits);
+        let bits = key_attributes.bits;
+        if bits != 0 && modulus_object.len() * 8 != bits {
+            error!("If the bits field is non-zero (value is {}) it must be equal to the size of the key in data.", key_attributes.bits);
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 

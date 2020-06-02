@@ -80,11 +80,12 @@ fn check_export_public_possible() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("check_export_public_possible");
 
-    let key_attributes = KeyAttributes {
-        key_type: KeyType::RsaKeyPair,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: false,
                 sign_message: false,
@@ -96,9 +97,11 @@ fn check_export_public_possible() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 

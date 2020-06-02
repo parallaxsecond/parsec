@@ -8,7 +8,7 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
 use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use log::{error, info, warn};
-use parsec_interface::operations::psa_key_attributes::KeyAttributes;
+use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -40,7 +40,7 @@ pub fn get_key_id(
 /// Creates a new PSA Key ID and stores it in the Key Info Manager.
 fn create_key_id(
     key_triple: KeyTriple,
-    key_attributes: KeyAttributes,
+    key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<psa_key_id_t> {

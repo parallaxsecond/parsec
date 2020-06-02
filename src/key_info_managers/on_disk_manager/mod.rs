@@ -339,20 +339,23 @@ mod test {
     use super::super::{KeyInfo, KeyTriple, ManageKeyInfo};
     use super::OnDiskKeyInfoManager;
     use crate::authenticators::ApplicationName;
-    use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
+    use parsec_interface::operations::psa_algorithm::{
+        Algorithm, AsymmetricSignature, Hash, SignHash,
+    };
     use parsec_interface::operations::psa_key_attributes::{
-        KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+        Attributes, Lifetime, Policy, Type, UsageFlags,
     };
     use parsec_interface::requests::ProviderID;
     use std::fs;
     use std::path::PathBuf;
 
-    fn test_key_attributes() -> KeyAttributes {
-        KeyAttributes {
-            key_type: KeyType::Derive,
-            key_bits: 1024,
-            key_policy: KeyPolicy {
-                key_usage_flags: UsageFlags {
+    fn test_key_attributes() -> Attributes {
+        Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::Derive,
+            bits: 1024,
+            policy: Policy {
+                usage_flags: UsageFlags {
                     sign_hash: true,
                     verify_hash: false,
                     sign_message: false,
@@ -364,9 +367,9 @@ mod test {
                     copy: false,
                     derive: false,
                 },
-                key_algorithm: Algorithm::AsymmetricSignature(
+                permitted_algorithms: Algorithm::AsymmetricSignature(
                     AsymmetricSignature::RsaPkcs1v15Sign {
-                        hash_alg: Hash::Sha256,
+                        hash_alg: SignHash::Specific(Hash::Sha256),
                     },
                 ),
             },

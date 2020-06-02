@@ -5,7 +5,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+    Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
@@ -111,11 +111,12 @@ fn failed_created_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("failed_created_key_should_be_removed");
 
-    let attributes = KeyAttributes {
-        key_type: KeyType::Arc4,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::Arc4,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: true,
                 sign_message: false,
@@ -127,9 +128,11 @@ fn failed_created_key_should_be_removed() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 

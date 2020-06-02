@@ -40,7 +40,7 @@ impl Pkcs11Provider {
 
         match alg {
             AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: SignHash::Specific(Hash::Sha256),
             } => (),
             _ => {
                 error!(
@@ -51,7 +51,7 @@ impl Pkcs11Provider {
 
         if alg
             != (AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: SignHash::Specific(Hash::Sha256),
             })
         {
             error!(
@@ -123,7 +123,7 @@ impl Pkcs11Provider {
 
         match alg {
             AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: SignHash::Specific(Hash::Sha256),
             } => (),
             _ => {
                 error!(
@@ -134,7 +134,7 @@ impl Pkcs11Provider {
 
         if alg
             != (AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: SignHash::Specific(Hash::Sha256),
             })
         {
             error!(
