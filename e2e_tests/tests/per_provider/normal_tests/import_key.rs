@@ -95,7 +95,7 @@ fn check_format_import1() -> Result<()> {
 
 #[test]
 fn check_format_import2() -> Result<()> {
-    // If the key_bits field of the key attributes is zero, the operation should still work.
+    // If the bits field of the key attributes is zero, the operation should still work.
     // The size of the key is always taken from the data parameter.
     let mut client = TestClient::new();
     let key_name = String::from("check_format_import2");
@@ -105,11 +105,12 @@ fn check_format_import2() -> Result<()> {
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
 
-    let attributes = KeyAttributes {
-        key_type: KeyType::RsaPublicKey,
-        key_bits: 0,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaPublicKey,
+        bits: 0,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: true,
                 sign_message: false,
@@ -121,9 +122,11 @@ fn check_format_import2() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 
@@ -138,7 +141,7 @@ fn check_format_import2() -> Result<()> {
 
 #[test]
 fn check_format_import3() -> Result<()> {
-    // If the key_bits field of the key attributes is different that the size of the key parsed
+    // If the bits field of the key attributes is different that the size of the key parsed
     // from the data parameter, the operation should fail.
     let mut client = TestClient::new();
     let key_name = String::from("check_format_import3");
@@ -148,11 +151,12 @@ fn check_format_import3() -> Result<()> {
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
 
-    let attributes = KeyAttributes {
-        key_type: KeyType::RsaPublicKey,
-        key_bits: 1023,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaPublicKey,
+        bits: 1023,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: true,
                 sign_message: false,
@@ -164,9 +168,11 @@ fn check_format_import3() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 
@@ -193,12 +199,13 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
 
-    let attributes = KeyAttributes {
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
         // Not supported
-        key_type: KeyType::Aes,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+        key_type: Type::Aes,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: false,
                 verify_hash: true,
                 sign_message: false,
@@ -210,9 +217,11 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
-            }),
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
         },
     };
 

@@ -7,9 +7,9 @@ use super::psa_crypto_binding::{
     psa_status_t,
 };
 use log::error;
-use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash};
+use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes;
-use parsec_interface::operations::psa_key_attributes::KeyType;
+use parsec_interface::operations::psa_key_attributes::Type;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -22,7 +22,7 @@ use std::convert::TryInto;
 /// If either algorithm or key type conversion fails. See docs for
 /// `convert_key_type` and `convert_algorithm` for more details.
 pub fn convert_key_attributes(
-    attrs: &psa_key_attributes::KeyAttributes,
+    attrs: &psa_key_attributes::Attributes,
     key_id: psa_key_id_t,
 ) -> Result<psa_key_attributes_t> {
     Ok(psa_key_attributes_t {
@@ -31,11 +31,11 @@ pub fn convert_key_attributes(
             lifetime: PSA_KEY_LIFETIME_PERSISTENT,
             id: key_id,
             policy: psa_key_policy_s {
-                usage: convert_key_usage(&attrs.key_policy.key_usage_flags),
-                alg: convert_algorithm(&attrs.key_policy.key_algorithm)?,
+                usage: convert_key_usage(&attrs.policy.usage_flags),
+                alg: convert_algorithm(&attrs.policy.permitted_algorithms)?,
                 alg2: 0,
             },
-            bits: convert_key_bits(attrs.key_bits),
+            bits: convert_key_bits(attrs.bits as u32),
             flags: 0,
         },
         domain_parameters: ::std::ptr::null_mut(),
@@ -73,12 +73,12 @@ pub fn convert_key_bits(key_size: u32) -> psa_key_bits_t {
 ///
 /// # Errors
 ///
-/// Only `KeyType::RsaKeypair` and `KeyType::RsaPublicKey` are supported. Returns
+/// Only `Type::RsaKeypair` and `Type::RsaPublicKey` are supported. Returns
 /// ResponseStatus::PsaErrorNotSupported otherwise.
-pub fn convert_key_type(key_type: KeyType) -> Result<psa_key_type_t> {
+pub fn convert_key_type(key_type: Type) -> Result<psa_key_type_t> {
     match key_type {
-        KeyType::RsaKeyPair => Ok(PSA_KEY_TYPE_RSA_KEYPAIR),
-        KeyType::RsaPublicKey => Ok(PSA_KEY_TYPE_RSA_PUBLIC_KEY),
+        Type::RsaKeyPair => Ok(PSA_KEY_TYPE_RSA_KEYPAIR),
+        Type::RsaPublicKey => Ok(PSA_KEY_TYPE_RSA_PUBLIC_KEY),
         _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
@@ -140,27 +140,27 @@ pub fn convert_algorithm(alg: &Algorithm) -> Result<psa_algorithm_t> {
 }
 
 /// Converts between native and Mbed Crypto hash algorithm values.
-pub fn convert_hash_algorithm(hash: Hash) -> Result<psa_algorithm_t> {
+pub fn convert_hash_algorithm(hash: SignHash) -> Result<psa_algorithm_t> {
     match hash {
         #[allow(deprecated)]
-        Hash::Md2 => Ok(PSA_ALG_MD2),
+        SignHash::Specific(Hash::Md2) => Ok(PSA_ALG_MD2),
         #[allow(deprecated)]
-        Hash::Md4 => Ok(PSA_ALG_MD4),
+        SignHash::Specific(Hash::Md4) => Ok(PSA_ALG_MD4),
         #[allow(deprecated)]
-        Hash::Md5 => Ok(PSA_ALG_MD5),
-        Hash::Ripemd160 => Ok(PSA_ALG_RIPEMD160),
+        SignHash::Specific(Hash::Md5) => Ok(PSA_ALG_MD5),
+        SignHash::Specific(Hash::Ripemd160) => Ok(PSA_ALG_RIPEMD160),
         #[allow(deprecated)]
-        Hash::Sha1 => Ok(PSA_ALG_SHA_1),
-        Hash::Sha224 => Ok(PSA_ALG_SHA_224),
-        Hash::Sha256 => Ok(PSA_ALG_SHA_256),
-        Hash::Sha384 => Ok(PSA_ALG_SHA_384),
-        Hash::Sha512 => Ok(PSA_ALG_SHA_512),
-        Hash::Sha512_224 => Ok(PSA_ALG_SHA_512_224),
-        Hash::Sha512_256 => Ok(PSA_ALG_SHA_512_256),
-        Hash::Sha3_224 => Ok(PSA_ALG_SHA3_224),
-        Hash::Sha3_256 => Ok(PSA_ALG_SHA3_256),
-        Hash::Sha3_384 => Ok(PSA_ALG_SHA3_384),
-        Hash::Sha3_512 => Ok(PSA_ALG_SHA3_512),
+        SignHash::Specific(Hash::Sha1) => Ok(PSA_ALG_SHA_1),
+        SignHash::Specific(Hash::Sha224) => Ok(PSA_ALG_SHA_224),
+        SignHash::Specific(Hash::Sha256) => Ok(PSA_ALG_SHA_256),
+        SignHash::Specific(Hash::Sha384) => Ok(PSA_ALG_SHA_384),
+        SignHash::Specific(Hash::Sha512) => Ok(PSA_ALG_SHA_512),
+        SignHash::Specific(Hash::Sha512_224) => Ok(PSA_ALG_SHA_512_224),
+        SignHash::Specific(Hash::Sha512_256) => Ok(PSA_ALG_SHA_512_256),
+        SignHash::Specific(Hash::Sha3_224) => Ok(PSA_ALG_SHA3_224),
+        SignHash::Specific(Hash::Sha3_256) => Ok(PSA_ALG_SHA3_256),
+        SignHash::Specific(Hash::Sha3_384) => Ok(PSA_ALG_SHA3_384),
+        SignHash::Specific(Hash::Sha3_512) => Ok(PSA_ALG_SHA3_512),
         _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }

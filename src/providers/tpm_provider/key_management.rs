@@ -23,7 +23,7 @@ fn insert_password_context(
     store_handle: &mut dyn ManageKeyInfo,
     key_triple: KeyTriple,
     password_context: PasswordContext,
-    key_attributes: KeyAttributes,
+    key_attributes: Attributes,
 ) -> Result<()> {
     let error_storing = |e| Err(key_info_managers::to_response_status(e));
 
@@ -48,7 +48,7 @@ fn insert_password_context(
 pub fn get_password_context(
     store_handle: &dyn ManageKeyInfo,
     key_triple: KeyTriple,
-) -> Result<(PasswordContext, KeyAttributes)> {
+) -> Result<(PasswordContext, Attributes)> {
     let key_info = store_handle
         .get(&key_triple)
         .or_else(|e| Err(key_info_managers::to_response_status(e)))?
@@ -106,7 +106,7 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        if op.attributes.key_type != KeyType::RsaPublicKey {
+        if op.attributes.key_type != Type::RsaPublicKey {
             error!("The TPM provider currently only supports importing RSA public key.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
@@ -142,9 +142,9 @@ impl TpmProvider {
         let key_data = public_key.modulus.as_unsigned_bytes_be();
         let len = key_data.len();
 
-        let key_bits = attributes.key_bits;
-        if key_bits != 0 && len * 8 != key_bits as usize {
-            error!("If the key_bits field is non-zero (value is {}) it must be equal to the size of the key in data.", attributes.key_bits);
+        let key_bits = attributes.bits;
+        if key_bits != 0 && len * 8 != key_bits {
+            error!("If the bits field is non-zero (value is {}) it must be equal to the size of the key in data.", attributes.bits);
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 

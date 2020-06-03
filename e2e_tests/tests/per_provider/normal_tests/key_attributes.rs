@@ -5,7 +5,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+    Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::{ProviderID, ResponseStatus};
 
@@ -17,16 +17,17 @@ fn wrong_type() {
     let key_name = String::from("wrong_type");
 
     // Wrong key type
-    let key_type = KeyType::Derive;
+    let key_type = Type::Derive;
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha256,
+            hash_alg: Hash::Sha256.into(),
         });
-    let key_attributes = KeyAttributes {
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
         key_type,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: true,
                 verify_hash: false,
                 sign_message: false,
@@ -38,7 +39,7 @@ fn wrong_type() {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: permitted_algorithm,
+            permitted_algorithms: permitted_algorithm,
         },
     };
 
@@ -57,16 +58,17 @@ fn wrong_usage_flags() {
     let mut client = TestClient::new();
     let key_name = String::from("wrong_usage_flags");
 
-    let key_type = KeyType::RsaKeyPair;
+    let key_type = Type::RsaKeyPair;
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha256,
+            hash_alg: Hash::Sha256.into(),
         });
-    let key_attributes = KeyAttributes {
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
         key_type,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 // Forbid signing
                 sign_hash: false,
                 verify_hash: false,
@@ -79,7 +81,7 @@ fn wrong_usage_flags() {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: permitted_algorithm,
+            permitted_algorithms: permitted_algorithm,
         },
     };
 
@@ -98,17 +100,18 @@ fn wrong_permitted_algorithm() {
     let mut client = TestClient::new();
     let key_name = String::from("wrong_permitted_algorithm");
 
-    let key_type = KeyType::RsaKeyPair;
+    let key_type = Type::RsaKeyPair;
     // Do not permit RSA PKCS 1v15 signing algorithm with SHA-256.
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha512,
+            hash_alg: Hash::Sha512.into(),
         });
-    let key_attributes = KeyAttributes {
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
         key_type,
-        key_bits: 1024,
-        key_policy: KeyPolicy {
-            key_usage_flags: UsageFlags {
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
                 sign_hash: true,
                 verify_hash: false,
                 sign_message: false,
@@ -120,7 +123,7 @@ fn wrong_permitted_algorithm() {
                 copy: false,
                 derive: false,
             },
-            key_algorithm: permitted_algorithm,
+            permitted_algorithms: permitted_algorithm,
         },
     };
 

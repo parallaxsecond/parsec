@@ -92,21 +92,21 @@ pub struct PasswordContext {
     pub auth_value: Vec<u8>,
 }
 
-pub fn parsec_to_tpm_params(attributes: KeyAttributes) -> Result<KeyParams> {
+pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     match attributes.key_type {
-        KeyType::RsaKeyPair => {
-            let size = match attributes.key_bits {
+        Type::RsaKeyPair => {
+            let size = match attributes.bits {
                 x @ 1024 | x @ 2048 | x @ 3072 | x @ 4096 => x.try_into().unwrap(), // will not fail on the matched values
                 _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
             };
             Ok(KeyParams::Rsa {
                 size,
-                scheme: convert_asym_scheme_to_tpm(attributes.key_policy.key_algorithm)?,
+                scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
                 pub_exponent: 0,
             })
         }
-        KeyType::EccKeyPair { .. } => Ok(KeyParams::Ecc {
-            scheme: convert_asym_scheme_to_tpm(attributes.key_policy.key_algorithm)?,
+        Type::EccKeyPair { .. } => Ok(KeyParams::Ecc {
+            scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
             curve: convert_curve_to_tpm(attributes)?,
         }),
         _ => Err(ResponseStatus::PsaErrorNotSupported),
@@ -115,12 +115,12 @@ pub fn parsec_to_tpm_params(attributes: KeyAttributes) -> Result<KeyParams> {
 
 fn convert_asym_scheme_to_tpm(algorithm: Algorithm) -> Result<AsymSchemeUnion> {
     match algorithm {
-        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign { hash_alg }) => {
-            Ok(AsymSchemeUnion::RSASSA(convert_hash_to_tpm(hash_alg)?))
-        }
-        Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa { hash_alg }) => {
-            Ok(AsymSchemeUnion::ECDSA(convert_hash_to_tpm(hash_alg)?))
-        }
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: SignHash::Specific(hash_alg),
+        }) => Ok(AsymSchemeUnion::RSASSA(convert_hash_to_tpm(hash_alg)?)),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+            hash_alg: SignHash::Specific(hash_alg),
+        }) => Ok(AsymSchemeUnion::ECDSA(convert_hash_to_tpm(hash_alg)?)),
         _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
@@ -139,14 +139,14 @@ fn convert_hash_to_tpm(hash: Hash) -> Result<HashingAlgorithm> {
     }
 }
 
-fn convert_curve_to_tpm(key_attributes: KeyAttributes) -> Result<EllipticCurve> {
+fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EllipticCurve> {
     match key_attributes.key_type {
-        KeyType::EccKeyPair {
+        Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         }
-        | KeyType::EccPublicKey {
+        | Type::EccPublicKey {
             curve_family: EccFamily::SecpR1,
-        } => match key_attributes.key_bits {
+        } => match key_attributes.bits {
             192 => Ok(EllipticCurve::NistP192),
             224 => Ok(EllipticCurve::NistP224),
             256 => Ok(EllipticCurve::NistP256),
@@ -158,7 +158,7 @@ fn convert_curve_to_tpm(key_attributes: KeyAttributes) -> Result<EllipticCurve> 
     }
 }
 
-pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: KeyAttributes) -> Result<Vec<u8>> {
+pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Result<Vec<u8>> {
     match pub_key {
         PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RsaPublicKey {
             modulus: IntegerAsn1::from_unsigned_bytes_be(key),
@@ -166,7 +166,7 @@ pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: KeyAttributes) -> Re
         })
         .or(Err(ResponseStatus::PsaErrorGenericError)),
         PublicKey::Ecc { x, y } => {
-            let p_byte_size = usize::try_from(key_attributes.key_bits / 8).unwrap(); // should not fail for valid keys
+            let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
             if x.len() != p_byte_size || y.len() != p_byte_size {
                 error!(
                     "Received ECC public key with invalid size: x - {} bytes; y - {} bytes",
@@ -189,17 +189,14 @@ fn elliptic_curve_point_to_octet_string(mut x: Vec<u8>, mut y: Vec<u8>) -> Vec<u
     octet_string
 }
 
-pub fn signature_data_to_bytes(
-    data: SignatureData,
-    key_attributes: KeyAttributes,
-) -> Result<Vec<u8>> {
+pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) -> Result<Vec<u8>> {
     match data {
         SignatureData::RsaSignature(signature) => Ok(signature),
         SignatureData::EcdsaSignature { mut r, mut s } => {
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
-            let p_byte_size = usize::try_from(key_attributes.key_bits / 8).unwrap(); // should not fail for valid keys
+            let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
             if r.len() != p_byte_size || s.len() != p_byte_size {
                 error!(
                     "Received ECC signature with invalid size: r - {} bytes; s - {} bytes",
@@ -219,7 +216,7 @@ pub fn signature_data_to_bytes(
 
 pub fn parsec_to_tpm_signature(
     data: Vec<u8>,
-    key_attributes: KeyAttributes,
+    key_attributes: Attributes,
     signature_alg: AsymmetricSignature,
 ) -> Result<Signature> {
     Ok(Signature {
@@ -228,14 +225,14 @@ pub fn parsec_to_tpm_signature(
     })
 }
 
-fn bytes_to_signature_data(data: Vec<u8>, key_attributes: KeyAttributes) -> Result<SignatureData> {
+fn bytes_to_signature_data(data: Vec<u8>, key_attributes: Attributes) -> Result<SignatureData> {
     match key_attributes.key_type {
-        KeyType::RsaKeyPair | KeyType::RsaPublicKey => Ok(SignatureData::RsaSignature(data)),
-        KeyType::EccKeyPair { .. } | KeyType::EccPublicKey { .. } => {
+        Type::RsaKeyPair | Type::RsaPublicKey => Ok(SignatureData::RsaSignature(data)),
+        Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => {
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
-            let p_size = usize::try_from(key_attributes.key_bits / 8).unwrap();
+            let p_size = usize::try_from(key_attributes.bits / 8).unwrap();
             if data.len() != p_size * 2 {
                 return Err(ResponseStatus::PsaErrorInvalidArgument);
             }

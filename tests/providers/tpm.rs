@@ -43,11 +43,12 @@ lazy_static! {
 fn gen_rsa_sign_key_op(key_name: String) -> psa_generate_key::Operation {
     psa_generate_key::Operation {
         key_name,
-        attributes: KeyAttributes {
-            key_type: KeyType::RsaKeyPair,
-            key_bits: 2048,
-            key_policy: KeyPolicy {
-                key_usage_flags: UsageFlags {
+        attributes: Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::RsaKeyPair,
+            bits: 2048,
+            policy: Policy {
+                usage_flags: UsageFlags {
                     export: true,
                     copy: false,
                     cache: false,
@@ -59,9 +60,9 @@ fn gen_rsa_sign_key_op(key_name: String) -> psa_generate_key::Operation {
                     verify_hash: true,
                     derive: false,
                 },
-                key_algorithm: Algorithm::AsymmetricSignature(
+                permitted_algorithms: Algorithm::AsymmetricSignature(
                     AsymmetricSignature::RsaPkcs1v15Sign {
-                        hash_alg: Hash::Sha256,
+                        hash_alg: Hash::Sha256.into(),
                     },
                 ),
             },
@@ -72,13 +73,14 @@ fn gen_rsa_sign_key_op(key_name: String) -> psa_generate_key::Operation {
 fn gen_ecc_sign_key_op(key_name: String) -> psa_generate_key::Operation {
     psa_generate_key::Operation {
         key_name,
-        attributes: KeyAttributes {
-            key_type: KeyType::EccKeyPair {
+        attributes: Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
             },
-            key_bits: 256,
-            key_policy: KeyPolicy {
-                key_usage_flags: UsageFlags {
+            bits: 256,
+            policy: Policy {
+                usage_flags: UsageFlags {
                     export: true,
                     copy: false,
                     cache: false,
@@ -90,8 +92,8 @@ fn gen_ecc_sign_key_op(key_name: String) -> psa_generate_key::Operation {
                     verify_hash: true,
                     derive: false,
                 },
-                key_algorithm: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
-                    hash_alg: Hash::Sha256,
+                permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                    hash_alg: Hash::Sha256.into(),
                 }),
             },
         },
@@ -112,7 +114,7 @@ fn verify_with_ring() {
             psa_sign_hash::Operation {
                 key_name: key_name.clone(),
                 alg: AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256,
+                    hash_alg: Hash::Sha256.into(),
                 },
                 hash: HASH.clone(),
             },
@@ -140,7 +142,7 @@ fn verify_ecc_with_ring() {
             psa_sign_hash::Operation {
                 key_name: key_name.clone(),
                 alg: AsymmetricSignature::Ecdsa {
-                    hash_alg: Hash::Sha256,
+                    hash_alg: Hash::Sha256.into(),
                 },
                 hash: HASH.clone(),
             },
@@ -168,7 +170,7 @@ fn sign_verify_ecc() {
             psa_sign_hash::Operation {
                 key_name: key_name.clone(),
                 alg: AsymmetricSignature::Ecdsa {
-                    hash_alg: Hash::Sha256,
+                    hash_alg: Hash::Sha256.into(),
                 },
                 hash: HASH.clone(),
             },
@@ -181,7 +183,7 @@ fn sign_verify_ecc() {
             psa_verify_hash::Operation {
                 key_name,
                 alg: AsymmetricSignature::Ecdsa {
-                    hash_alg: Hash::Sha256,
+                    hash_alg: Hash::Sha256.into(),
                 },
                 hash: HASH.clone(),
                 signature: sign,
@@ -195,9 +197,9 @@ fn wildcard_hash_not_supported() {
     let key_name = String::from("key_name");
     let app_name = ApplicationName::new(String::from("wildcard_hash_not_supported"));
     let mut op = gen_ecc_sign_key_op(key_name);
-    op.attributes.key_policy.key_algorithm =
+    op.attributes.policy.permitted_algorithms =
         Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
-            hash_alg: Hash::Any,
+            hash_alg: SignHash::Any,
         });
     assert_eq!(
         TPM_PROVIDER.psa_generate_key(app_name, op).unwrap_err(),

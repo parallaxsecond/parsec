@@ -16,7 +16,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    KeyAttributes, KeyPolicy, KeyType, UsageFlags,
+    Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use parsec_client::error::Error;
@@ -107,7 +107,7 @@ impl TestClient {
     }
 
     /// Creates a key with specific attributes.
-    pub fn generate_key(&mut self, key_name: String, attributes: KeyAttributes) -> Result<()> {
+    pub fn generate_key(&mut self, key_name: String, attributes: Attributes) -> Result<()> {
         self.basic_client
             .psa_generate_key(key_name.clone(), attributes)
             .map_err(convert_error)?;
@@ -127,11 +127,12 @@ impl TestClient {
     pub fn generate_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
         self.generate_key(
             key_name,
-            KeyAttributes {
-                key_type: KeyType::RsaKeyPair,
-                key_bits: 1024,
-                key_policy: KeyPolicy {
-                    key_usage_flags: UsageFlags {
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
                         sign_hash: true,
                         verify_hash: true,
                         sign_message: true,
@@ -143,9 +144,9 @@ impl TestClient {
                         copy: false,
                         derive: false,
                     },
-                    key_algorithm: Algorithm::AsymmetricSignature(
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256,
+                            hash_alg: Hash::Sha256.into(),
                         },
                     ),
                 },
@@ -157,7 +158,7 @@ impl TestClient {
     pub fn import_key(
         &mut self,
         key_name: String,
-        attributes: KeyAttributes,
+        attributes: Attributes,
         data: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
@@ -179,11 +180,12 @@ impl TestClient {
     pub fn import_rsa_public_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
         self.import_key(
             key_name,
-            KeyAttributes {
-                key_type: KeyType::RsaPublicKey,
-                key_bits: 1024,
-                key_policy: KeyPolicy {
-                    key_usage_flags: UsageFlags {
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaPublicKey,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
                         sign_hash: false,
                         verify_hash: true,
                         sign_message: false,
@@ -195,9 +197,9 @@ impl TestClient {
                         copy: false,
                         derive: false,
                     },
-                    key_algorithm: Algorithm::AsymmetricSignature(
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256,
+                            hash_alg: Hash::Sha256.into(),
                         },
                     ),
                 },
@@ -246,7 +248,7 @@ impl TestClient {
         self.sign(
             key_name,
             AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: Hash::Sha256.into(),
             },
             hash,
         )
@@ -275,7 +277,7 @@ impl TestClient {
         self.verify(
             key_name,
             AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: Hash::Sha256,
+                hash_alg: Hash::Sha256.into(),
             },
             hash,
             signature,
