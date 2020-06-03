@@ -42,7 +42,7 @@ impl MbedProvider {
 
         let buffer_size = utils::psa_asymmetric_sign_output_size(key_attrs.as_ref())?;
         let mut signature = vec![0u8; buffer_size];
-        let mut signature_size: usize = 0;
+        let mut signature_size = 0;
 
         let sign_status;
         // Safety: same conditions than above.
@@ -51,9 +51,9 @@ impl MbedProvider {
                 key_handle.raw(),
                 utils::convert_algorithm(&alg.into())?,
                 hash.as_ptr(),
-                hash.len(),
+                hash.len() as u64,
                 signature.as_mut_ptr(),
-                buffer_size,
+                buffer_size as u64,
                 &mut signature_size,
             );
             key_attrs.reset();
@@ -64,8 +64,9 @@ impl MbedProvider {
             let mut res = psa_sign_hash::Result {
                 signature: Vec::new(),
             };
-            res.signature.resize(signature_size, 0);
-            res.signature.copy_from_slice(&signature[0..signature_size]);
+            res.signature.resize(signature_size as usize, 0);
+            res.signature
+                .copy_from_slice(&signature[0..signature_size as usize]);
 
             Ok(res)
         } else {
@@ -108,9 +109,9 @@ impl MbedProvider {
                 key_handle.raw(),
                 utils::convert_algorithm(&alg.into())?,
                 hash.as_ptr(),
-                hash.len(),
+                hash.len() as u64,
                 signature.as_ptr(),
-                signature.len(),
+                signature.len() as u64,
             );
             key_attrs.reset();
             key_handle.close()?;

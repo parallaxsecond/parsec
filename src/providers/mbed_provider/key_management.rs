@@ -257,7 +257,7 @@ impl MbedProvider {
             export_status = psa_crypto_binding::psa_export_public_key(
                 key_handle.raw(),
                 buffer.as_mut_ptr(),
-                buffer_size,
+                buffer_size as u64,
                 &mut actual_size,
             );
             key_attrs.reset();
@@ -270,7 +270,7 @@ impl MbedProvider {
             return Err(utils::convert_status(export_status));
         }
 
-        buffer.resize(actual_size, 0);
+        buffer.resize(actual_size as usize, 0);
         Ok(psa_export_public_key::Result { data: buffer })
     }
 
