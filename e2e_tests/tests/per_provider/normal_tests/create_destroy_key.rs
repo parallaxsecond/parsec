@@ -1,12 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::operations::psa_algorithm::{
-    Algorithm, AsymmetricSignature, Hash,
-};
-use parsec_client::core::interface::operations::psa_key_attributes::{
-    Attributes, Lifetime, Policy, Type, UsageFlags,
-};
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
@@ -93,12 +87,14 @@ fn create_destroy_twice() -> Result<()> {
 fn generate_public_rsa_check_modulus() -> Result<()> {
     // As stated in the operation page, the public exponent of RSA key pair should be 65537
     // (0x010001).
+    println!("test");
     let mut client = TestClient::new();
-    let key_name = String::from("generate_public_rsa_check_modulus");
+    let key_name = String::from("generate_public_rsa_check_modulus1");
     client.generate_rsa_sign_key(key_name.clone())?;
     let public_key = client.export_public_key(key_name)?;
 
     let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
+    println!("{:?}", &public_key.public_exponent.as_unsigned_bytes_be()[..]);
     assert_eq!(
         public_key.public_exponent.as_unsigned_bytes_be(),
         [0x01, 0x00, 0x01]
@@ -110,35 +106,13 @@ fn generate_public_rsa_check_modulus() -> Result<()> {
 fn failed_created_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("failed_created_key_should_be_removed");
+    const GARBAGE_IMPORT_DATA: [u8; 1] = [
+        48,
+    ];
 
-    let attributes = Attributes {
-        lifetime: Lifetime::Persistent,
-        key_type: Type::Arc4,
-        bits: 1024,
-        policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
-            permitted_algorithms: Algorithm::AsymmetricSignature(
-                AsymmetricSignature::RsaPkcs1v15Sign {
-                    hash_alg: Hash::Sha256.into(),
-                },
-            ),
-        },
-    };
-
-    // Unsupported parameter, should fail
+    // The data being imported is garbage, should fail
     let _ = client
-        .generate_key(key_name.clone(), attributes)
+        .import_rsa_public_key(key_name.clone(), GARBAGE_IMPORT_DATA.to_vec())
         .unwrap_err();
     // The key should not exist anymore in the KIM
     client.generate_rsa_sign_key(key_name)?;

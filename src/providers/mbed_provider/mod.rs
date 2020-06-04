@@ -12,7 +12,6 @@ use parsec_interface::operations::{
     psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
-use psa_crypto_binding::psa_key_id_t;
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};

@@ -253,15 +253,6 @@ fn main() -> Result<()> {
         setup_mbed_crypto(&mbed_config, &mbed_version)?;
         generate_mbed_bindings(&mbed_config, &mbed_version)?;
 
-        // Request rustc to link the Mbed Crypto static library
-        println!(
-            "cargo:rustc-link-search=native={}/mbed-crypto-{}/library/",
-            mbed_config
-                .mbed_path
-                .unwrap_or_else(|| env::var("OUT_DIR").unwrap()),
-            mbed_version,
-        );
-        println!("cargo:rustc-link-lib=static=mbedcrypto");
     }
 
     Ok(())

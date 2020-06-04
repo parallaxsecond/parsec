@@ -703,8 +703,6 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 [[package]]
 name = "parsec-interface"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5197f5ea3ce7eafc4a0f9f7606f6d3d2631888b3b3acd81a053e166e51f5904b"
 dependencies = [
  "arbitrary",
  "bincode",
@@ -921,8 +919,6 @@ dependencies = [
 [[package]]
 name = "psa-crypto"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f35ed5d5656ab1c3ff4f2285a8c9ba9f8c97c0d14fb3a4a417f275646582b3e"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -932,8 +928,6 @@ dependencies = [
 [[package]]
 name = "psa-crypto-sys"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6e894180dd3d66f5c43825363a8dafbf924e0f2434e198928eb8e6bb3ee14ad"
 dependencies = [
  "bindgen",
  "cc",
