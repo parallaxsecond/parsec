@@ -312,7 +312,7 @@ impl KeyHandle {
         let status = psa_crypto_binding::psa_import_key(
             attributes,
             key_data.as_ptr(),
-            key_data.len(),
+            key_data.len() as u64,
             &mut key_handle,
         );
         if status != PSA_SUCCESS {
