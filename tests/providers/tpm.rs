@@ -32,7 +32,7 @@ lazy_static! {
                 .unwrap()
         }
     };
-    static ref MESSAGE: Vec<u8> = { b"Knights who say 'NI!'".to_owned().to_vec() };
+    static ref MESSAGE: Vec<u8> = b"Knights who say 'NI!'".to_owned().to_vec();
     static ref HASH: Vec<u8> = {
         digest::digest(&digest::SHA256, &MESSAGE)
             .as_ref()
