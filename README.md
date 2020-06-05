@@ -65,17 +65,10 @@ For examples of how to access PARSEC as a client application, check [this Rust c
 
 Check the [**user**](https://parallaxsecond.github.io/parsec-book/parsec_users.html), [**client developer**](https://parallaxsecond.github.io/parsec-book/parsec_client/index.html) and [**service developer**](https://parallaxsecond.github.io/parsec-book/parsec_service/index.html) guides for more information on building, installing, testing and using Parsec!
 
-# Community Channel and Meetings
+# Community
 
-Come and talk to us in our[**Slack channel**](https://app.slack.com/client/T0JK1PCN6/CPMQ9D4H1)!
-[**Here**](http://dockr.ly/slack) is how to join the workspace.
-
-Also join the [**biweekly meeting**](https://armltd.zoom.us/j/97560348881?pwd=LzcycTNySTRERDlWMk1hRG1ianNDUT09)
-with Parsec maintainers and community members.
-The meeting is open to the public and everyone is encouraged to attend. We will use the time to
-discuss features, integrations, issues, and roadmap. We look forward to seeing you all.
-
-You can see a calendar of our upcoming meetings [here](https://calendar.google.com/calendar/embed?src=ott19qaf3t5id8o5jq8ulih1ac%40group.calendar.google.com&ctz=Europe%2FLondon).
+Come and ask questions or talk with the Parsec Community in our Slack channel or biweekly meetings.
+See the [Community](https://github.com/parallaxsecond/community) repository for more information on how to join.
 
 # Contributing
 
