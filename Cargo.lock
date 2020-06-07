@@ -773,7 +773,6 @@ dependencies = [
  "picky-asn1-der",
  "picky-asn1-x509",
  "pkcs11",
- "psa-crypto",
  "rand",
  "ring",
  "sd-notify",
