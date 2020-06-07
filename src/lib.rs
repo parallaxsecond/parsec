@@ -37,6 +37,17 @@
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 
+#[allow(unused)]
+macro_rules! format_error {
+    ($message:expr, $error:expr) => {
+        if crate::utils::GlobalConfig::log_error_details() {
+            log::error!("{}; Error: {}", $message, $error)
+        } else {
+            log::error!("{};", $message)
+        }
+    };
+}
+
 pub mod authenticators;
 pub mod back;
 pub mod front;

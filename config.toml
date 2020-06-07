@@ -21,6 +21,11 @@
 # Defaults to 1MB.
 #body_len_limit = 1048576
 
+# Decide whether detailed information about errors occuring should be included in log messages.
+# WARNING: the details might include sensitive information about the keys used by Parsec clients,
+# such as key names or policies
+#log_error_details = false
+
 # (Required) Configuration for the service IPC listener component.
 [listener]
 # (Required) Type of IPC that the service will support.

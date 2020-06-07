@@ -4,6 +4,7 @@
 //!
 //! The service builder is required to bootstrap all the components based on a
 //! provided configuration.
+use super::global_config::GlobalConfigBuilder;
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
@@ -61,6 +62,7 @@ pub struct CoreSettings {
     pub log_level: Option<LevelFilter>,
     pub log_timestamp: Option<bool>,
     pub body_len_limit: Option<usize>,
+    pub log_error_details: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -89,6 +91,10 @@ impl ServiceBuilder {
     /// requested for a certain provider does not exist) or if required fields are missing, an error of kind
     /// `InvalidData` is returned with a string describing the cause more accurately.
     pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
+        GlobalConfigBuilder::new()
+            .with_log_error_details(config.core_settings.log_error_details.unwrap_or(false))
+            .build();
+
         let key_info_managers =
             build_key_info_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
 

@@ -90,7 +90,7 @@ impl Pkcs11Provider {
                 match self.backend.sign(session.session_handle(), &digest_info) {
                     Ok(signature) => Ok(psa_sign_hash::Result { signature }),
                     Err(e) => {
-                        error!("Failed to execute signing operation. Error: {}", e);
+                        format_error!("Failed to execute signing operation", e);
                         Err(utils::to_response_status(e))
                     }
                 }
