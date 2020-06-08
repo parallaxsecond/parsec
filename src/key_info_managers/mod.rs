@@ -8,7 +8,6 @@
 //! means but it has to be persistent.
 
 use crate::authenticators::ApplicationName;
-use log::error;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::{ProviderID, ResponseStatus};
 use serde::{Deserialize, Serialize};
@@ -75,8 +74,8 @@ impl KeyTriple {
 /// Converts the error string returned by the ManageKeyInfo methods to
 /// ResponseStatus::KeyInfoManagerError.
 pub fn to_response_status(error_string: String) -> ResponseStatus {
-    error!(
-        "Converting error string \"{}\" to ResponseStatus:KeyInfoManagerError.",
+    format_error!(
+        "Converting error to ResponseStatus:KeyInfoManagerError",
         error_string
     );
     ResponseStatus::KeyInfoManagerError

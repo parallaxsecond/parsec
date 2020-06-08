@@ -7,7 +7,7 @@
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
 use derivative::Derivative;
-use log::{error, info, trace};
+use log::{info, trace};
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::{Request, Response};
@@ -47,11 +47,11 @@ impl FrontEndHandler {
         let request = match Request::read_from_stream(&mut stream, self.body_len_limit) {
             Ok(request) => request,
             Err(status) => {
-                error!("Failed to read request; status: {}", status);
+                format_error!("Failed to read request", status);
 
                 let response = Response::from_status(status);
                 if let Err(status) = response.write_to_stream(&mut stream) {
-                    error!("Failed to write response; status: {}", status);
+                    format_error!("Failed to write response", status);
                 }
                 return;
             }
@@ -85,7 +85,7 @@ impl FrontEndHandler {
         // Write bytes to stream
         match response.write_to_stream(&mut stream) {
             Ok(_) => info!("Request handled successfully"),
-            Err(err) => error!("Failed to send response; error: {}", err),
+            Err(err) => format_error!("Failed to send response", err),
         }
     }
 }

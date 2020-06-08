@@ -204,8 +204,8 @@ fn build_providers(
         let key_info_manager = match key_info_managers.get(config.key_info_manager()) {
             Some(key_info_manager) => key_info_manager,
             None => {
-                error!(
-                    "Key info manager with specified name was not found ({})",
+                format_error!(
+                    "Key info manager with specified name was not found",
                     config.key_info_manager()
                 );
                 continue;
@@ -215,7 +215,10 @@ fn build_providers(
         let provider = match unsafe { get_provider(config, key_info_manager.clone()) } {
             Ok(provider) => provider,
             Err(e) => {
-                error!("Provider {} can not be created ({}).", provider_id, e);
+                format_error!(
+                    &format!("Provider with ID {} cannot be created", provider_id),
+                    e
+                );
                 continue;
             }
         };

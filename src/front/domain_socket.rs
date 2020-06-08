@@ -88,13 +88,13 @@ impl Listen for DomainSocketListener {
         match stream_result {
             Ok((stream, _)) => {
                 if let Err(err) = stream.set_read_timeout(Some(self.timeout)) {
-                    error!("Failed to set read timeout ({})", err);
+                    format_error!("Failed to set read timeout", err);
                     None
                 } else if let Err(err) = stream.set_write_timeout(Some(self.timeout)) {
-                    error!("Failed to set write timeout ({})", err);
+                    format_error!("Failed to set write timeout", err);
                     None
                 } else if let Err(err) = stream.set_nonblocking(false) {
-                    error!("Failed to set stream as blocking ({})", err);
+                    format_error!("Failed to set stream as blocking", err);
                     None
                 } else {
                     Some(Box::from(stream))
@@ -104,7 +104,7 @@ impl Listen for DomainSocketListener {
                 // Check if the error is because no connections are currently present.
                 if err.kind() != ErrorKind::WouldBlock {
                     // Only log the real errors.
-                    error!("Failed to connect with a UnixStream ({})", err);
+                    format_error!("Failed to connect with a UnixStream", err);
                 }
                 None
             }

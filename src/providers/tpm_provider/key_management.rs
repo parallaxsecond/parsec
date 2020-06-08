@@ -53,10 +53,14 @@ pub fn get_password_context(
         .get(&key_triple)
         .or_else(|e| Err(key_info_managers::to_response_status(e)))?
         .ok_or_else(|| {
-            error!(
-                "Key triple \"{}\" does not exist in the Key Info Manager.",
-                key_triple
-            );
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                    "Key triple \"{}\" does not exist in the Key Info Manager.",
+                    key_triple
+                );
+            } else {
+                error!("Key triple does not exist in the Key Info Manager.");
+            }
             ResponseStatus::PsaErrorDoesNotExist
         })?;
     Ok((bincode::deserialize(&key_info.id)?, key_info.attributes))
@@ -84,7 +88,7 @@ impl TpmProvider {
         let (key_context, auth_value) = esapi_context
             .create_signing_key(utils::parsec_to_tpm_params(attributes)?, AUTH_VAL_LEN)
             .or_else(|e| {
-                error!("Error creating a RSA signing key: {}.", e);
+                format_error!("Error creating a RSA signing key", e);
                 Err(utils::to_response_status(e))
             })?;
 
@@ -126,7 +130,7 @@ impl TpmProvider {
             .expect("ESAPI Context lock poisoned");
 
         let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&key_data).or_else(|err| {
-            error!("Could not deserialise key elements: {}.", err);
+            format_error!("Could not deserialise key elements", err);
             Err(ResponseStatus::PsaErrorInvalidArgument)
         })?;
 
@@ -136,7 +140,13 @@ impl TpmProvider {
         }
 
         if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT {
-            error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
+            } else {
+                error!(
+                    "The TPM Provider only supports 0x101 as public exponent for RSA public keys"
+                );
+            }
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
         let key_data = public_key.modulus.as_unsigned_bytes_be();
@@ -144,22 +154,34 @@ impl TpmProvider {
 
         let key_bits = attributes.bits;
         if key_bits != 0 && len * 8 != key_bits {
-            error!("If the bits field is non-zero (value is {}) it must be equal to the size of the key in data.", attributes.bits);
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
+                    attributes.bits,
+                    len * 8
+                );
+            } else {
+                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+            }
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
         if len != 128 && len != 256 {
-            error!(
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
                 "The TPM provider only supports 1024 and 2048 bits RSA public keys ({} bits given).",
                 len * 8
             );
+            } else {
+                error!("The TPM provider only supports 1024 and 2048 bits RSA public keys");
+            }
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let pub_key_context = esapi_context
             .load_external_rsa_public_key(&key_data)
             .or_else(|e| {
-                error!("Error creating a RSA signing key: {}.", e);
+                format_error!("Error creating a RSA signing key", e);
                 Err(utils::to_response_status(e))
             })?;
 
@@ -195,7 +217,7 @@ impl TpmProvider {
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
             .or_else(|e| {
-                error!("Error reading a public key: {}.", e);
+                format_error!("Error reading a public key", e);
                 Err(utils::to_response_status(e))
             })?;
 
@@ -221,10 +243,14 @@ impl TpmProvider {
             .map_err(key_info_managers::to_response_status)?
             .is_none()
         {
-            error!(
-                "Key triple \"{}\" does not exist in the Key Info Manager.",
-                key_triple
-            );
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                    "Key triple \"{}\" does not exist in the Key Info Manager.",
+                    key_triple
+                );
+            } else {
+                error!("Key triple does not exist in the Key Info Manager.");
+            }
             Err(ResponseStatus::PsaErrorDoesNotExist)
         } else {
             Ok(psa_destroy_key::Result {})

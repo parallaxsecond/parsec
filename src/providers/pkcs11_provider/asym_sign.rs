@@ -71,7 +71,9 @@ impl Pkcs11Provider {
         };
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        info!("Asymmetric sign in session {}", session.session_handle());
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!("Asymmetric sign in session {}", session.session_handle());
+        }
 
         let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
         info!("Located signing key.");
@@ -96,7 +98,7 @@ impl Pkcs11Provider {
                 }
             }
             Err(e) => {
-                error!("Failed to initialize signing operation. Error: {}", e);
+                format_error!("Failed to initialize signing operation", e);
                 Err(utils::to_response_status(e))
             }
         }
@@ -155,7 +157,9 @@ impl Pkcs11Provider {
         };
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        info!("Asymmetric verify in session {}", session.session_handle());
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!("Asymmetric verify in session {}", session.session_handle());
+        }
 
         let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
         info!("Located public key.");
@@ -183,7 +187,7 @@ impl Pkcs11Provider {
                 }
             }
             Err(e) => {
-                error!("Failed to initialize verifying operation. Error: {}", e);
+                format_error!("Failed to initialize verifying operation", e);
                 Err(utils::to_response_status(e))
             }
         }

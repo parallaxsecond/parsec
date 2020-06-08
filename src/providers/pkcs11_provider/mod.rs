@@ -113,7 +113,11 @@ impl Pkcs11Provider {
                         ) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                error!("Error getting the KeyInfo for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
+                                if crate::utils::GlobalConfig::log_error_details() {
+                                    error!("Error getting the KeyInfo for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
+                                } else {
+                                    error!("Error getting the KeyInfo, continuing...");
+                                }
                                 continue;
                             }
                         };
@@ -123,34 +127,42 @@ impl Pkcs11Provider {
                             KeyPairType::Any,
                         ) {
                             Ok(_) => {
-                                warn!(
-                                    "Key {} found in the PKCS 11 library, adding it.",
-                                    key_triple
-                                );
+                                if crate::utils::GlobalConfig::log_error_details() {
+                                    warn!(
+                                        "Key {} found in the PKCS 11 library, adding it.",
+                                        key_triple
+                                    );
+                                } else {
+                                    warn!("Key found in the PKCS 11 library, adding it.");
+                                }
                                 let _ = local_ids_handle.insert(key_id);
                             }
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
-                                warn!(
-                                    "Key {} not found in the PKCS 11 library, deleting it.",
-                                    key_triple
-                                );
+                                if crate::utils::GlobalConfig::log_error_details() {
+                                    warn!(
+                                        "Key {} not found in the PKCS 11 library, deleting it.",
+                                        key_triple
+                                    );
+                                } else {
+                                    warn!("Key not found in the PKCS 11 library, adding it.");
+                                }
                                 to_remove.push(key_triple.clone());
                             }
                             Err(e) => {
-                                error!("Error finding key objects: {}.", e);
+                                format_error!("Error finding key objects", e);
                                 return None;
                             }
                         }
                     }
                 }
                 Err(string) => {
-                    error!("Key Info Manager error: {}", string);
+                    format_error!("Key Info Manager error", string);
                     return None;
                 }
             };
             for key_triple in to_remove.iter() {
                 if let Err(string) = store_handle.remove(key_triple) {
-                    error!("Key Info Manager error: {}", string);
+                    format_error!("Key Info Manager error", string);
                     return None;
                 }
             }
@@ -239,7 +251,7 @@ impl Provide for Pkcs11Provider {
 impl Drop for Pkcs11Provider {
     fn drop(&mut self) {
         if let Err(e) = self.backend.finalize() {
-            error!("Error when dropping the PKCS 11 provider: {}", e);
+            format_error!("Error when dropping the PKCS 11 provider", e);
         }
     }
 }
@@ -307,7 +319,7 @@ impl Pkcs11ProviderBuilder {
             .slot_number
             .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing slot number"))?;
         let mut backend = Ctx::new(library_path).or_else(|e| {
-            error!("Error creating a PKCS 11 context ({}).", e);
+            format_error!("Error creating a PKCS 11 context", e);
             Err(Error::new(
                 ErrorKind::InvalidData,
                 "error creating PKCS 11 context",
@@ -321,7 +333,7 @@ impl Pkcs11ProviderBuilder {
         args.UnlockMutex = None;
         args.flags = CKF_OS_LOCKING_OK;
         backend.initialize(Some(args)).or_else(|e| {
-            error!("Error initializing the PKCS 11 backend ({}).", e);
+            format_error!("Error initializing the PKCS 11 backend", e);
             Err(Error::new(
                 ErrorKind::InvalidData,
                 "PKCS 11 backend initializing failed",
