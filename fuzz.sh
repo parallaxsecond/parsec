@@ -10,13 +10,13 @@ set -e
 
 if [[ "$1" == "run" ]]
 then
+    # Build Docker image
+    docker build fuzz/docker -t parsec/fuzz
+    
     # Set up fuzz folder
     docker run --rm -v $(pwd):/parsec -w /parsec/fuzz --name $CLEANUP_CONTAINER_NAME parsec/fuzz ./cleanup.sh
     # A copy of the config file is used because the file is modified during the run
     cp fuzz/config.toml fuzz/run_config.toml
-
-    # Build Docker image
-    docker build fuzz/docker -t parsec/fuzz
 
     # Stop previous container and run fuzzer
     docker kill $FUZZ_CONTAINER_NAME || true

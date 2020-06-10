@@ -13,9 +13,10 @@ tpm2_startup -c -T mssim
 
 # Find PKCS 11 slot number
 CONFIG_PATH="run_config.toml"
-../tests/per_provider/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
+# ../e2e_tests/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
 
 # Create corpus if it doesn't exist
+cargo build
 mkdir -p corpus/fuzz_service
 cp init_corpus/* corpus/fuzz_service
 
