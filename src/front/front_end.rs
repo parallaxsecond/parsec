@@ -7,7 +7,7 @@
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
 use derivative::Derivative;
-use log::{error, info};
+use log::{error, info, trace};
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::{Request, Response};
@@ -41,6 +41,7 @@ impl FrontEndHandler {
     /// If an error occurs during (un)marshalling, no operation will be performed and the
     /// method will return.
     pub fn handle_request<T: Read + Write>(&self, mut stream: T) {
+        trace!("handle_request ingress");
         // Read bytes from stream
         // De-Serialise bytes into a request
         let request = match Request::read_from_stream(&mut stream, self.body_len_limit) {
@@ -57,14 +58,20 @@ impl FrontEndHandler {
         };
         // Check if the request was sent without authentication
         let response = if AuthType::NoAuth == request.header.auth_type {
-            self.dispatcher.dispatch_request(request, None)
+            let response = self.dispatcher.dispatch_request(request, None);
+            trace!("dispatch_request egress");
+            response
         // Otherwise find an authenticator that is capable to authenticate the request
         } else if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
             // Authenticate the request
             match authenticator.authenticate(&request.auth) {
                 // Send the request to the dispatcher
                 // Get a response back
-                Ok(app_name) => self.dispatcher.dispatch_request(request, Some(app_name)),
+                Ok(app_name) => {
+                    let response = self.dispatcher.dispatch_request(request, Some(app_name));
+                    trace!("dispatch_request egress");
+                    response
+                }
                 Err(status) => Response::from_request_header(request.header, status),
             }
         } else {

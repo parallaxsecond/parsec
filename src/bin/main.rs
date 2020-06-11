@@ -31,7 +31,7 @@
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 
-use log::info;
+use log::{info, trace};
 use parsec_service::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
 use std::io::{Error, ErrorKind, Result};
@@ -129,6 +129,7 @@ fn main() -> Result<()> {
             let front_end_handler = front_end_handler.clone();
             threadpool.execute(move || {
                 front_end_handler.handle_request(stream);
+                trace!("handle_request egress");
             });
         } else {
             ::std::thread::sleep(Duration::from_millis(

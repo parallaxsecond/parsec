@@ -5,7 +5,7 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
 use constants::PSA_SUCCESS;
 use derivative::Derivative;
-use log::error;
+use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
@@ -153,6 +153,7 @@ impl MbedProvider {
 
 impl Provide for MbedProvider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
             uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").or(Err(ResponseStatus::InvalidEncoding))?,
@@ -170,6 +171,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        trace!("psa_generate_key ingress");
         self.psa_generate_key_internal(app_name, op)
     }
 
@@ -178,6 +180,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        trace!("psa_import_key ingress");
         self.psa_import_key_internal(app_name, op)
     }
 
@@ -186,6 +189,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
+        trace!("psa_export_public_key ingress");
         self.psa_export_public_key_internal(app_name, op)
     }
 
@@ -194,6 +198,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
+        trace!("psa_destroy_key ingress");
         self.psa_destroy_key_internal(app_name, op)
     }
 
@@ -202,6 +207,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
+        trace!("psa_sign_hash ingress");
         self.psa_sign_hash_internal(app_name, op)
     }
 
@@ -210,6 +216,7 @@ impl Provide for MbedProvider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
+        trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
     }
 }
