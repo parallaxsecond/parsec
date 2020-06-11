@@ -31,12 +31,17 @@ impl MbedProvider {
             .key_handle_mutex
             .lock()
             .expect("Grabbing key handle mutex failed");
+
+        // Safety:
+        //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
+        //   * self.key_handle_mutex prevents concurrent accesses
+        //   * self.key_slot_semaphore prevents overflowing key slots
+
         let id = key::Id::from_persistent_key_id(key_id);
         let key_attributes = new_key_management::get_key_attributes(id)?;
         let buffer_size = utils::psa_asymmetric_sign_output_size(&key_attributes)?;
         let mut signature = vec![0u8; buffer_size];
         let mut signature_size = 0;
-
 
         match asym_signature::sign_hash(id, alg, &hash, &mut signature)
             {
@@ -77,6 +82,10 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
+        // Safety:
+        //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
+        //   * self.key_handle_mutex prevents concurrent accesses
+        //   * self.key_slot_semaphore prevents overflowing key slots
         let id = key::Id::from_persistent_key_id(key_id);
         match asym_signature::verify_hash(id, alg, &hash, &signature) {
             Ok(()) => Ok(psa_verify_hash::Result {}),

@@ -56,7 +56,6 @@ fn asym_verify_fail() -> Result<()> {
     let status = client
         .verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
         .expect_err("Verification should fail.");
-    dbg!("Status: {}", status);
     if !(status == ResponseStatus::PsaErrorInvalidSignature
         || status == ResponseStatus::PsaErrorCorruptionDetected)
     {

@@ -3,7 +3,6 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
-use constants::PSA_SUCCESS;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -11,12 +10,12 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
     psa_verify_hash,
 };
+use psa_crypto::types::{status, key};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
-use utils::KeyHandle;
 use uuid::Uuid;
 
 #[allow(
@@ -27,17 +26,13 @@ use uuid::Uuid;
     trivial_casts
 )]
 #[allow(clippy::all)]
-mod psa_crypto_binding {
-    include!(concat!(env!("OUT_DIR"), "/psa_crypto_bindings.rs"));
-}
 
 mod asym_sign;
 #[allow(dead_code)]
-mod constants;
 mod key_management;
 mod utils;
 
-type LocalIdStore = HashSet<psa_key_id_t>;
+type LocalIdStore = HashSet<key::key_id_type>;
 
 const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
@@ -79,7 +74,7 @@ impl MbedProvider {
     fn new(key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>) -> Option<MbedProvider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
-        if unsafe { psa_crypto_binding::psa_crypto_init() } != PSA_SUCCESS {
+        if psa_crypto::init().is_err() {
             error!("Error when initialising Mbed Crypto");
             return None;
         }
@@ -87,7 +82,7 @@ impl MbedProvider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
-            key_slot_semaphore: Semaphore::new(constants::PSA_KEY_SLOT_COUNT),
+            key_slot_semaphore: Semaphore::new(key::PSA_KEY_SLOT_COUNT),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -106,6 +101,11 @@ impl MbedProvider {
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::MbedCrypto) {
                 Ok(key_triples) => {
+                    if let Err(error) = psa_crypto::init() {
+                        error!("Error {} when initialising Mbed Crypto library.", error);
+                        return None;
+                    }
+
                     for key_triple in key_triples.iter().cloned() {
                         let key_id = match key_management::get_key_id(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
@@ -119,11 +119,12 @@ impl MbedProvider {
                         // Safety: safe because:
                         // * the Mbed Crypto library has been initialized
                         // * this code is executed only by the main thread
-                        match unsafe { KeyHandle::open(key_id) } {
+                        let pc_key_id = key::Id::from_persistent_key_id(key_id);
+                        match psa_crypto::operations::key_management::get_key_attributes(pc_key_id) {
                             Ok(_) => {
                                 let _ = local_ids_handle.insert(key_id);
                             }
-                            Err(ResponseStatus::PsaErrorDoesNotExist) => {
+                            Err(status::Error::DoesNotExist) => {
                                 to_remove.push(key_triple.clone())
                             }
                             Err(e) => {
@@ -223,9 +224,7 @@ impl Provide for MbedProvider {
 impl Drop for MbedProvider {
     fn drop(&mut self) {
         // Safety: the Provider was initialized with psa_crypto_init
-        unsafe {
-            psa_crypto_binding::mbedtls_psa_crypto_free();
-        }
+        psa_crypto::drop();
     }
 }
 

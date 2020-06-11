@@ -87,14 +87,12 @@ fn create_destroy_twice() -> Result<()> {
 fn generate_public_rsa_check_modulus() -> Result<()> {
     // As stated in the operation page, the public exponent of RSA key pair should be 65537
     // (0x010001).
-    println!("test");
     let mut client = TestClient::new();
-    let key_name = String::from("generate_public_rsa_check_modulus1");
+    let key_name = String::from("generate_public_rsa_check_modulus");
     client.generate_rsa_sign_key(key_name.clone())?;
     let public_key = client.export_public_key(key_name)?;
 
     let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
-    println!("{:?}", &public_key.public_exponent.as_unsigned_bytes_be()[..]);
     assert_eq!(
         public_key.public_exponent.as_unsigned_bytes_be(),
         [0x01, 0x00, 0x01]

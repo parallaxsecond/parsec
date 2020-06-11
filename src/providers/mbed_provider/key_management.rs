@@ -1,7 +1,5 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::constants::PSA_MAX_PERSISTENT_KEY_IDENTIFIER;
-use super::psa_crypto_binding::psa_key_id_t;
 use super::utils;
 use super::{LocalIdStore, MbedProvider};
 use crate::authenticators::ApplicationName;
@@ -22,7 +20,7 @@ use psa_crypto::types::key;
 pub fn get_key_id(
     key_triple: &KeyTriple,
     store_handle: &dyn ManageKeyInfo,
-) -> Result<psa_key_id_t> {
+) -> Result<key::key_id_type> {
     match store_handle.get(key_triple) {
         Ok(Some(key_info)) => {
             if key_info.id.len() == 4 {
@@ -45,13 +43,13 @@ fn create_key_id(
     key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
-) -> Result<psa_key_id_t> {
-    let mut key_id = rand::random::<psa_key_id_t>();
+) -> Result<key::key_id_type> {
+    let mut key_id = rand::random::<key::key_id_type>();
     while local_ids_handle.contains(&key_id)
         || key_id == 0
-        || key_id > PSA_MAX_PERSISTENT_KEY_IDENTIFIER
+        || key_id > key::PSA_MAX_PERSISTENT_KEY_IDENTIFIER
     {
-        key_id = rand::random::<psa_key_id_t>();
+        key_id = rand::random::<key::key_id_type>();
     }
     let key_info = KeyInfo {
         id: key_id.to_ne_bytes().to_vec(),
@@ -72,7 +70,7 @@ fn create_key_id(
 
 fn remove_key_id(
     key_triple: &KeyTriple,
-    key_id: psa_key_id_t,
+    key_id: key::key_id_type,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<()> {
@@ -122,14 +120,12 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        psa_crypto::init()?;
         // Safety:
         //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
         //   * self.key_handle_mutex prevents concurrent accesses
         //   * self.key_slot_semaphore prevents overflowing key slots
         match new_key_management::generate(key_attributes, Some(key_id)) {
-            Ok(()) => Ok(psa_generate_key::Result {}),
-
+            Ok(_) => Ok(psa_generate_key::Result {}),
             Err(error) => {
                 remove_key_id(
                     &key_triple,
@@ -180,8 +176,7 @@ impl MbedProvider {
         //   * self.key_handle_mutex prevents concurrent accesses
         //   * self.key_slot_semaphore prevents overflowing key slots
         match new_key_management::import(key_attributes, Some(key_id), &key_data[..]) {
-            Ok(()) => Ok(psa_import_key::Result {}),
-
+            Ok(_) => Ok(psa_import_key::Result {}),
             Err(error) => {
                 remove_key_id(
                     &key_triple,
@@ -212,8 +207,6 @@ impl MbedProvider {
             .key_handle_mutex
             .lock()
             .expect("Grabbing key handle mutex failed");
-
-        psa_crypto::init()?;
 
         // Safety:
         //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
@@ -252,7 +245,6 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
         let destroy_key_status;
-        psa_crypto::init()?;
 
         // Safety:
         //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
