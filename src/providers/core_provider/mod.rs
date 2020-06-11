@@ -6,7 +6,7 @@
 //! aiding clients in discovering the capabilities offered by their underlying
 //! platform.
 use super::Provide;
-use log::error;
+use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_opcodes, list_providers, ping};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
@@ -33,6 +33,7 @@ pub struct CoreProvider {
 
 impl Provide for CoreProvider {
     fn list_opcodes(&self, op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        trace!("list_opcodes ingress");
         Ok(list_opcodes::Result {
             opcodes: self
                 .provider_opcodes
@@ -43,12 +44,14 @@ impl Provide for CoreProvider {
     }
 
     fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
+        trace!("list_providers ingress");
         Ok(list_providers::Result {
             providers: self.provider_info.clone(),
         })
     }
 
     fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {
+        trace!("ping ingress");
         let result = ping::Result {
             wire_protocol_version_maj: self.wire_protocol_version_maj,
             wire_protocol_version_min: self.wire_protocol_version_min,

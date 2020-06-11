@@ -6,6 +6,7 @@
 //! said provider is available on the system, thus acting as a multiplexer.
 use super::backend_handler::BackEndHandler;
 use crate::authenticators::ApplicationName;
+use log::trace;
 use parsec_interface::requests::request::Request;
 use parsec_interface::requests::ProviderID;
 use parsec_interface::requests::{Response, ResponseStatus};
@@ -36,11 +37,16 @@ impl Dispatcher {
         request: Request,
         app_name: Option<ApplicationName>,
     ) -> Response {
+        trace!("dispatch_request ingress");
         if let Some(backend) = self.backends.get(&request.header.provider) {
             if let Err(status) = backend.is_capable(&request) {
                 Response::from_request_header(request.header, status)
             } else {
-                backend.execute_request(request, app_name)
+                {
+                    let response = backend.execute_request(request, app_name);
+                    trace!("execute_request egress");
+                    response
+                }
             }
         } else {
             Response::from_request_header(request.header, ResponseStatus::ProviderNotRegistered)

@@ -6,6 +6,7 @@
 //! are the real implementors of the operations that Parsec claims to support. They map to
 //! functionality in the underlying hardware which allows the PSA Crypto operations to be
 //! backed by a hardware root of trust.
+use log::trace;
 use parsec_interface::requests::{Opcode, ProviderID};
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -88,16 +89,19 @@ pub trait Provide {
     ///
     /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
     fn describe(&self) -> Result<(list_providers::ProviderInfo, HashSet<Opcode>)> {
+        trace!("describe ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// List the providers running in the service.
     fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
+        trace!("list_providers ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
     /// List the opcodes supported by the given provider.
     fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
+        trace!("list_opcodes ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -108,6 +112,7 @@ pub trait Provide {
     /// This operation will only fail if not implemented. It will never fail when being called on
     /// the `CoreProvider`.
     fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {
+        trace!("ping ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -117,6 +122,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        trace!("psa_generate_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -126,6 +132,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        trace!("psa_import_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -135,6 +142,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
+        trace!("psa_export_public_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -144,6 +152,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
+        trace!("psa_destroy_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -154,6 +163,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
+        trace!("psa_sign_hash ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
@@ -163,6 +173,7 @@ pub trait Provide {
         _app_name: ApplicationName,
         _op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
+        trace!("psa_verify_hash ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }
