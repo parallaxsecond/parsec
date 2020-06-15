@@ -25,7 +25,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
     match error {
         Error::Io(e) => ResponseStatus::from(e),
         Error::Module(e) | Error::InvalidInput(e) => {
-            error!("Conversion of error \"{}\"", e);
+            format_error!("Conversion of error to PsaErrorCommunicationFailure", e);
             ResponseStatus::PsaErrorCommunicationFailure
         }
         Error::Pkcs11(ck_rv) => rv_to_response_status(ck_rv),
@@ -48,11 +48,13 @@ pub fn rv_to_response_status(rv: CK_RV) -> ResponseStatus {
         s @ CKR_CURVE_NOT_SUPPORTED
         | s @ CKR_DOMAIN_PARAMS_INVALID
         | s @ CKR_FUNCTION_NOT_SUPPORTED => {
-            error!("Not supported value ({:?})", s);
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!("Not supported value ({:?})", s);
+            }
             ResponseStatus::PsaErrorNotSupported
         }
         e => {
-            error!("Error \"{}\" converted to PsaErrorCommunicationFailure.", e);
+            format_error!("Error converted to PsaErrorCommunicationFailure", e);
             ResponseStatus::PsaErrorCommunicationFailure
         }
     }
@@ -93,7 +95,9 @@ pub enum ReadWriteSession {
 
 impl Session<'_> {
     pub fn new(provider: &Pkcs11Provider, read_write: ReadWriteSession) -> Result<Session> {
-        info!("Opening session on slot {}", provider.slot_number);
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!("Opening session on slot {}", provider.slot_number);
+        }
 
         let mut session_flags = CKF_SERIAL_SESSION;
         if read_write == ReadWriteSession::ReadWrite {
@@ -121,10 +125,14 @@ impl Session<'_> {
                 Ok(session)
             }
             Err(e) => {
-                error!(
-                    "Error opening session for slot {}: {}.",
-                    provider.slot_number, e
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Error opening session for slot {}; error: {}.",
+                        provider.slot_number, e
+                    );
+                } else {
+                    error!("Error opening session for slot {}", provider.slot_number);
+                }
                 Err(to_response_status(e))
             }
         }
@@ -143,10 +151,12 @@ impl Session<'_> {
             .expect("Error while locking mutex.");
 
         if self.is_logged_in {
-            info!(
-                "This session ({}) has already requested authentication.",
-                self.session_handle
-            );
+            if crate::utils::GlobalConfig::log_error_details() {
+                info!(
+                    "This session ({}) has already requested authentication.",
+                    self.session_handle
+                );
+            }
             Ok(())
         } else if *logged_sessions_counter > 0 {
             info!(
@@ -163,13 +173,15 @@ impl Session<'_> {
                 .login(self.session_handle, CKU_USER, Some(user_pin))
             {
                 Ok(_) => {
-                    info!("Logging in session {}.", self.session_handle);
+                    if crate::utils::GlobalConfig::log_error_details() {
+                        info!("Logging in session {}.", self.session_handle);
+                    }
                     *logged_sessions_counter += 1;
                     self.is_logged_in = true;
                     Ok(())
                 }
                 Err(e) => {
-                    error!("Login operation failed with {}", e);
+                    format_error!("Login operation failed", e);
                     Err(to_response_status(e))
                 }
             }
@@ -188,7 +200,9 @@ impl Session<'_> {
             .expect("Error while locking mutex.");
 
         if !self.is_logged_in {
-            info!("Session {} has already logged out.", self.session_handle);
+            if crate::utils::GlobalConfig::log_error_details() {
+                info!("Session {} has already logged out.", self.session_handle);
+            }
             Ok(())
         } else if *logged_sessions_counter == 0 {
             info!("The user is already logged out, ignoring.");
@@ -197,16 +211,22 @@ impl Session<'_> {
             // Only this session requires authentication.
             match self.provider.backend.logout(self.session_handle) {
                 Ok(_) => {
-                    info!("Logged out in session {}.", self.session_handle);
+                    if crate::utils::GlobalConfig::log_error_details() {
+                        info!("Logged out in session {}.", self.session_handle);
+                    }
                     *logged_sessions_counter -= 1;
                     self.is_logged_in = false;
                     Ok(())
                 }
                 Err(e) => {
-                    error!(
-                        "Failed to log out from session {} due to error {}. Continuing...",
-                        self.session_handle, e
-                    );
+                    if crate::utils::GlobalConfig::log_error_details() {
+                        error!(
+                            "Failed to log out from session {} due to error {}. Continuing...",
+                            self.session_handle, e
+                        );
+                    } else {
+                        error!("Failed to log out from session. Continuing...");
+                    }
                     Err(to_response_status(e))
                 }
             }
@@ -228,12 +248,22 @@ impl Drop for Session<'_> {
             error!("Error while logging out. Continuing...");
         }
         match self.provider.backend.close_session(self.session_handle) {
-            Ok(_) => info!("Session {} closed.", self.session_handle),
+            Ok(_) => {
+                if crate::utils::GlobalConfig::log_error_details() {
+                    info!("Session {} closed.", self.session_handle);
+                }
+            }
             // Treat this as best effort.
-            Err(e) => error!(
-                "Failed to close session {} due to error {}. Continuing...",
-                self.session_handle, e
-            ),
+            Err(e) => {
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Failed to log out from session {} due to error {}. Continuing...",
+                        self.session_handle, e
+                    );
+                } else {
+                    error!("Failed to log out from session. Continuing...");
+                }
+            }
         }
     }
 }

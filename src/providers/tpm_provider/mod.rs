@@ -182,7 +182,9 @@ impl TpmProviderBuilder {
             "device" => Some(Tcti::Device),
             "mssim" => Some(Tcti::Mssim),
             _ => {
-                error!("The string {} does not match a TCTI device.", tcti);
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!("The string {} does not match a TCTI device.", tcti);
+                }
                 None
             }
         };
@@ -233,7 +235,7 @@ impl TpmProviderBuilder {
                 .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
         )
         .or_else(|e| {
-            error!("Error when creating TSS Context ({})", e);
+            format_error!("Error when creating TSS Context", e);
             Err(std::io::Error::new(
                 ErrorKind::InvalidData,
                 "failed initializing TSS context",
@@ -281,7 +283,7 @@ impl TpmProviderBuilder {
                 .with_default_context_cipher(default_cipher)
                 .build()
                 .or_else(|e| {
-                    error!("Error creating TSS Transient Object Context ({}).", e);
+                    format_error!("Error creating TSS Transient Object Context", e);
                     Err(std::io::Error::new(
                         ErrorKind::InvalidData,
                         "failed initializing TSS context",

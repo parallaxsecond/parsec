@@ -58,7 +58,11 @@ pub fn create_key_id(
     match store_handle.insert(key_triple.clone(), key_info) {
         Ok(insert_option) => {
             if insert_option.is_some() {
-                warn!("Overwriting Key triple mapping ({})", key_triple);
+                if crate::utils::GlobalConfig::log_error_details() {
+                    warn!("Overwriting Key triple mapping ({})", key_triple);
+                } else {
+                    warn!("Overwriting Key triple mapping");
+                }
             }
             let _ = local_ids_handle.insert(key_id);
 
@@ -113,13 +117,13 @@ impl Pkcs11Provider {
         }
 
         if let Err(e) = self.backend.find_objects_init(session, &template) {
-            error!("Object enumeration init failed with {}", e);
+            format_error!("Object enumeration init failed", e);
             Err(utils::to_response_status(e))
         } else {
             match self.backend.find_objects(session, 1) {
                 Ok(objects) => {
                     if let Err(e) = self.backend.find_objects_final(session) {
-                        error!("Object enumeration final failed with {}", e);
+                        format_error!("Object enumeration final failed", e);
                         Err(utils::to_response_status(e))
                     } else if objects.is_empty() {
                         Err(ResponseStatus::PsaErrorDoesNotExist)
@@ -128,7 +132,7 @@ impl Pkcs11Provider {
                     }
                 }
                 Err(e) => {
-                    error!("Finding objects failed with {}", e);
+                    format_error!("Finding objects failed", e);
                     Err(utils::to_response_status(e))
                 }
             }
@@ -199,7 +203,7 @@ impl Pkcs11Provider {
             .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ENCRYPT).with_bool(&pkcs11::types::CK_TRUE));
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
-            error!("Error creating a new session: {}.", err);
+            format_error!("Error creating a new session", err);
             remove_key_id(
                 &key_triple,
                 key_id,
@@ -209,10 +213,12 @@ impl Pkcs11Provider {
             Err(err)
         })?;
 
-        info!(
-            "Generating RSA key pair in session {}",
-            session.session_handle()
-        );
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!(
+                "Generating RSA key pair in session {}",
+                session.session_handle()
+            );
+        }
 
         match self.backend.generate_key_pair(
             session.session_handle(),
@@ -222,7 +228,7 @@ impl Pkcs11Provider {
         ) {
             Ok(_key) => Ok(psa_generate_key::Result {}),
             Err(e) => {
-                error!("Generate Key Pair operation failed with {}", e);
+                format_error!("Generate Key Pair operation failed", e);
                 remove_key_id(
                     &key_triple,
                     key_id,
@@ -267,7 +273,7 @@ impl Pkcs11Provider {
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
         let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.data).or_else(|e| {
-            error!("Failed to parse RsaPublicKey data ({}).", e);
+            format_error!("Failed to parse RsaPublicKey data", e);
             Err(ResponseStatus::PsaErrorInvalidArgument)
         })?;
 
@@ -280,7 +286,15 @@ impl Pkcs11Provider {
         let exponent_object = &public_key.public_exponent.as_unsigned_bytes_be();
         let bits = key_attributes.bits;
         if bits != 0 && modulus_object.len() * 8 != bits {
-            error!("If the bits field is non-zero (value is {}) it must be equal to the size of the key in data.", key_attributes.bits);
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
+                    key_attributes.bits,
+                    modulus_object.len() * 8
+                );
+            } else {
+                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+            }
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -319,7 +333,7 @@ impl Pkcs11Provider {
         template.push(allowed_mechanisms_attribute);
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
-            error!("Error creating a new session: {}.", err);
+            format_error!("Error creating a new session", err);
             remove_key_id(
                 &key_triple,
                 key_id,
@@ -329,10 +343,12 @@ impl Pkcs11Provider {
             Err(err)
         })?;
 
-        info!(
-            "Importing RSA public key in session {}",
-            session.session_handle()
-        );
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!(
+                "Importing RSA public key in session {}",
+                session.session_handle()
+            );
+        }
 
         match self
             .backend
@@ -340,7 +356,7 @@ impl Pkcs11Provider {
         {
             Ok(_key) => Ok(psa_import_key::Result {}),
             Err(e) => {
-                error!("Import operation failed with {}", e);
+                format_error!("Import operation failed", e);
                 remove_key_id(
                     &key_triple,
                     key_id,
@@ -365,10 +381,12 @@ impl Pkcs11Provider {
         let (key_id, _key_attributes) = get_key_info(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
-        info!(
-            "Export RSA public key in session {}",
-            session.session_handle()
-        );
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!(
+                "Export RSA public key in session {}",
+                session.session_handle()
+            );
+        }
 
         let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
         info!("Located key for export.");
@@ -385,14 +403,14 @@ impl Pkcs11Provider {
             {
                 Ok((rv, attrs)) => {
                     if rv != CKR_OK {
-                        error!("Error when extracting attribute: {}.", rv);
+                        format_error!("Error when extracting attribute", rv);
                         Err(utils::rv_to_response_status(rv))
                     } else {
                         Ok((attrs[0].ulValueLen, attrs[1].ulValueLen))
                     }
                 }
                 Err(e) => {
-                    error!("Failed to read attributes from public key. Error: {}", e);
+                    format_error!("Failed to read attributes from public key", e);
                     Err(utils::to_response_status(e))
                 }
             }?;
@@ -417,7 +435,7 @@ impl Pkcs11Provider {
             Ok(res) => {
                 let (rv, attrs) = res;
                 if rv != CKR_OK {
-                    error!("Error when extracting attribute: {}.", rv);
+                    format_error!("Error when extracting attribute", rv);
                     Err(utils::rv_to_response_status(rv))
                 } else {
                     let modulus = attrs[0].get_bytes();
@@ -433,14 +451,14 @@ impl Pkcs11Provider {
                         public_exponent,
                     };
                     let data = picky_asn1_der::to_vec(&key).or_else(|err| {
-                        error!("Could not serialise key elements: {}.", err);
+                        format_error!("Could not serialise key elements", err);
                         Err(ResponseStatus::PsaErrorCommunicationFailure)
                     })?;
                     Ok(psa_export_public_key::Result { data })
                 }
             }
             Err(e) => {
-                error!("Failed to read attributes from public key. Error: {}", e);
+                format_error!("Failed to read attributes from public key", e);
                 Err(utils::to_response_status(e))
             }
         }
@@ -463,23 +481,25 @@ impl Pkcs11Provider {
         let (key_id, _) = get_key_info(&key_triple, &*store_handle)?;
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        info!(
-            "Deleting RSA keypair in session {}",
-            session.session_handle()
-        );
+        if crate::utils::GlobalConfig::log_error_details() {
+            info!(
+                "Deleting RSA keypair in session {}",
+                session.session_handle()
+            );
+        }
 
         match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
             Ok(key) => {
                 match self.backend.destroy_object(session.session_handle(), key) {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {
-                        error!("Failed to destroy private part of the key. Error: {}", e);
+                        format_error!("Failed to destroy private part of the key", e);
                         return Err(utils::to_response_status(e));
                     }
                 };
             }
             Err(e) => {
-                error!("Error destroying key: {}", e);
+                format_error!("Error destroying key", e);
                 return Err(e);
             }
         };
@@ -490,7 +510,7 @@ impl Pkcs11Provider {
                 match self.backend.destroy_object(session.session_handle(), key) {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {
-                        error!("Failed to destroy private part of the key. Error: {}", e);
+                        format_error!("Failed to destroy private part of the key", e);
                         return Err(utils::to_response_status(e));
                     }
                 };
@@ -498,7 +518,7 @@ impl Pkcs11Provider {
             // A second key is optional.
             Err(ResponseStatus::PsaErrorDoesNotExist) => (),
             Err(e) => {
-                error!("Error destroying key: {}", e);
+                format_error!("Error destroying key", e);
                 return Err(e);
             }
         };

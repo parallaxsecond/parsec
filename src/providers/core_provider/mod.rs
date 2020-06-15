@@ -6,7 +6,7 @@
 //! aiding clients in discovering the capabilities offered by their underlying
 //! platform.
 use super::Provide;
-use log::{error, trace};
+use log::trace;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_opcodes, list_providers, ping};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
@@ -73,7 +73,7 @@ pub struct CoreProviderBuilder {
 impl CoreProviderBuilder {
     pub fn new() -> std::io::Result<Self> {
         let crate_version: Version = Version::from_str(version!()).or_else(|e| {
-            error!("Error parsing the crate version: {}.", e);
+            format_error!("Error parsing the crate version", e);
             Err(Error::new(
                 ErrorKind::InvalidData,
                 "crate version number has invalid format",

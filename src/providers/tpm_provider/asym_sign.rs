@@ -29,10 +29,14 @@ impl TpmProvider {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
             AsymmetricSignature::Ecdsa { .. } => (),
             _ => {
-                error!(
-                    "Requested algorithm is not supported by the TPM provider: {:?}",
-                    op.alg
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Requested algorithm is not supported by the TPM provider: {:?}",
+                        op.alg
+                    );
+                } else {
+                    error!("Requested algorithm is not supported by the TPM provider");
+                }
                 return Err(ResponseStatus::PsaErrorNotSupported);
             }
         }
@@ -46,7 +50,9 @@ impl TpmProvider {
                 &op.hash,
             )
             .or_else(|e| {
-                error!("Error signing: {}.", e);
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!("Error signing: {}.", e);
+                }
                 Err(utils::to_response_status(e))
             })?;
 
@@ -75,10 +81,14 @@ impl TpmProvider {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
             AsymmetricSignature::Ecdsa { .. } => (),
             _ => {
-                error!(
-                    "Requested algorithm is not supported by the TPM provider: {:?}",
-                    op.alg
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Requested algorithm is not supported by the TPM provider: {:?}",
+                        op.alg
+                    );
+                } else {
+                    error!("Requested algorithm is not supported by the TPM provider");
+                }
                 return Err(ResponseStatus::PsaErrorNotSupported);
             }
         }

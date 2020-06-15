@@ -27,7 +27,7 @@ const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 pub fn to_response_status(error: Error) -> ResponseStatus {
     match error {
         Error::WrapperError(e) => {
-            error!("Conversion of \"{}\" to PsaErrorCommunicationFailure", e);
+            format_error!("Conversion to PsaErrorCommunicationFailure", e);
             ResponseStatus::PsaErrorCommunicationFailure
         }
         Error::Tss2Error(e) => {
@@ -52,22 +52,32 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
                     | s @ Tss2ResponseCodeKind::Scheme
                     | s @ Tss2ResponseCodeKind::Symmetric
                     | s @ Tss2ResponseCodeKind::Curve => {
-                        error!("Not supported value ({:?})", s);
+                        if crate::utils::GlobalConfig::log_error_details() {
+                            error!("Not supported value ({:?})", s);
+                        }
                         ResponseStatus::PsaErrorNotSupported
                     }
                     e => {
-                        error!(
-                            "Error \"{:?}\" converted to PsaErrorCommunicationFailure.",
-                            e
-                        );
+                        if crate::utils::GlobalConfig::log_error_details() {
+                            error!(
+                                "Error \"{:?}\" converted to PsaErrorCommunicationFailure.",
+                                e
+                            );
+                        } else {
+                            error!("Error converted to PsaErrorCommunicationFailure.");
+                        }
                         ResponseStatus::PsaErrorCommunicationFailure
                     }
                 }
             } else {
-                error!(
-                    "Can not encode value {} into on of the possible TSS return values.",
-                    e
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Can not encode value {} into on of the possible TSS return values.",
+                        e
+                    );
+                } else {
+                    error!("Can not encode value into on of the possible TSS return values.");
+                }
                 ResponseStatus::InvalidEncoding
             }
         }
@@ -168,11 +178,15 @@ pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Resul
         PublicKey::Ecc { x, y } => {
             let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
             if x.len() != p_byte_size || y.len() != p_byte_size {
-                error!(
-                    "Received ECC public key with invalid size: x - {} bytes; y - {} bytes",
-                    x.len(),
-                    y.len()
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Received ECC public key with invalid size: x - {} bytes; y - {} bytes",
+                        x.len(),
+                        y.len()
+                    );
+                } else {
+                    error!("Received ECC public key with invalid size.");
+                }
                 return Err(ResponseStatus::PsaErrorCommunicationFailure);
             }
             Ok(elliptic_curve_point_to_octet_string(x, y))
@@ -198,11 +212,15 @@ pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) 
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
             let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
             if r.len() != p_byte_size || s.len() != p_byte_size {
-                error!(
-                    "Received ECC signature with invalid size: r - {} bytes; s - {} bytes",
-                    r.len(),
-                    s.len()
-                );
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Received ECC signature with invalid size: r - {} bytes; s - {} bytes",
+                        r.len(),
+                        s.len()
+                    );
+                } else {
+                    error!("Received ECC signature with invalid size.");
+                }
                 return Err(ResponseStatus::PsaErrorGenericError);
             }
 

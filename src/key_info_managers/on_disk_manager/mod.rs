@@ -187,12 +187,14 @@ impl OnDiskKeyInfoManager {
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(&provider_dir_path)?.iter() {
-                    info!("Found mapping file: {:?}.", key_name_file_path);
+                    if crate::utils::GlobalConfig::log_error_details() {
+                        info!("Found mapping file: {:?}.", key_name_file_path);
+                    }
                     let mut key_info = Vec::new();
                     let mut key_info_file = File::open(&key_name_file_path)?;
                     let _ = key_info_file.read_to_end(&mut key_info)?;
                     let key_info = bincode::deserialize(&key_info[..]).or_else(|e| {
-                        error!("Error deserializing key info ({}).", e);
+                        format_error!("Error deserializing key info", e);
                         Err(Error::new(ErrorKind::Other, "error deserializing key info"))
                     })?;
                     match base64_data_triple_to_key_triple(
@@ -210,11 +212,18 @@ impl OnDiskKeyInfoManager {
                             let _ = key_store.insert(key_triple, key_info);
                         }
                         Err(string) => {
-                            error!("Failed to convert the mapping path found to an UTF-8 string (error: {}).", string);
+                            format_error!(
+                                "Failed to convert the mapping path found to an UTF-8 string",
+                                string
+                            );
                         }
                     }
                 }
             }
+        }
+
+        if !crate::utils::GlobalConfig::log_error_details() {
+            info!("Found {} mapping files", key_store.len());
         }
 
         Ok(OnDiskKeyInfoManager {
@@ -240,7 +249,7 @@ impl OnDiskKeyInfoManager {
 
         let mut mapping_file = fs::File::create(&key_name_file_path)?;
         mapping_file.write_all(&bincode::serialize(key_info).or_else(|e| {
-            error!("Error serializing key info ({}).", e);
+            format_error!("Error serializing key info", e);
             Err(Error::new(ErrorKind::Other, "error serializing key info"))
         })?)
     }
