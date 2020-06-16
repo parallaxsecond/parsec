@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils;
+use super::{constants, utils};
 use super::{LocalIdStore, MbedProvider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
@@ -20,7 +20,7 @@ use psa_crypto::types::key;
 pub fn get_key_id(
     key_triple: &KeyTriple,
     store_handle: &dyn ManageKeyInfo,
-) -> Result<key::key_id_type> {
+) -> Result<key::psa_key_id_t> {
     match store_handle.get(key_triple) {
         Ok(Some(key_info)) => {
             if key_info.id.len() == 4 {
@@ -43,13 +43,13 @@ fn create_key_id(
     key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
-) -> Result<key::key_id_type> {
-    let mut key_id = rand::random::<key::key_id_type>();
+) -> Result<key::psa_key_id_t> {
+    let mut key_id = rand::random::<key::psa_key_id_t>();
     while local_ids_handle.contains(&key_id)
-        || key_id == 0
-        || key_id > key::PSA_MAX_PERSISTENT_KEY_IDENTIFIER
+        || key_id < constants::PSA_KEY_ID_USER_MIN
+        || key_id > constants::PSA_KEY_ID_USER_MAX
     {
-        key_id = rand::random::<key::key_id_type>();
+        key_id = rand::random::<key::psa_key_id_t>();
     }
     let key_info = KeyInfo {
         id: key_id.to_ne_bytes().to_vec(),
@@ -70,7 +70,7 @@ fn create_key_id(
 
 fn remove_key_id(
     key_triple: &KeyTriple,
-    key_id: key::key_id_type,
+    key_id: key::psa_key_id_t,
     store_handle: &mut dyn ManageKeyInfo,
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<()> {
@@ -213,7 +213,7 @@ impl MbedProvider {
         //   * self.key_handle_mutex prevents concurrent accesses
         //   * self.key_slot_semaphore prevents overflowing key slots
         let id = key::Id::from_persistent_key_id(key_id);
-        let key_attributes = new_key_management::get_key_attributes(id)?;
+        let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = utils::psa_export_public_key_size(&key_attributes)?;
         let mut buffer = vec![0u8; buffer_size];
 
@@ -251,18 +251,20 @@ impl MbedProvider {
         //   * self.key_handle_mutex prevents concurrent accesses
         //   * self.key_slot_semaphore prevents overflowing key slots
         let id = key::Id::from_persistent_key_id(key_id);
-        unsafe { destroy_key_status = new_key_management::destroy(id); }
+        unsafe {
+            destroy_key_status = new_key_management::destroy(id);
+        }
 
         match destroy_key_status {
             Ok(()) => {
                 remove_key_id(
-                &key_triple,
-                key_id,
-                &mut *store_handle,
-                &mut local_ids_handle,
+                    &key_triple,
+                    key_id,
+                    &mut *store_handle,
+                    &mut local_ids_handle,
                 )?;
                 Ok(psa_destroy_key::Result {})
-            },
+            }
             Err(error) => {
                 let error = ResponseStatus::from(error);
                 error!("Destroy key status: {}", error);

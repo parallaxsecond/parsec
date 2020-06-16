@@ -10,8 +10,8 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
     psa_verify_hash,
 };
-use psa_crypto::types::{status, key};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
@@ -26,13 +26,13 @@ use uuid::Uuid;
     trivial_casts
 )]
 #[allow(clippy::all)]
-
 mod asym_sign;
 #[allow(dead_code)]
+mod constants;
 mod key_management;
 mod utils;
 
-type LocalIdStore = HashSet<key::key_id_type>;
+type LocalIdStore = HashSet<key::psa_key_id_t>;
 
 const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
@@ -82,7 +82,7 @@ impl MbedProvider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
-            key_slot_semaphore: Semaphore::new(key::PSA_KEY_SLOT_COUNT),
+            key_slot_semaphore: Semaphore::new(constants::PSA_KEY_SLOT_COUNT),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -120,13 +120,11 @@ impl MbedProvider {
                         // * the Mbed Crypto library has been initialized
                         // * this code is executed only by the main thread
                         let pc_key_id = key::Id::from_persistent_key_id(key_id);
-                        match psa_crypto::operations::key_management::get_key_attributes(pc_key_id) {
+                        match key::Attributes::from_key_id(pc_key_id) {
                             Ok(_) => {
                                 let _ = local_ids_handle.insert(key_id);
                             }
-                            Err(status::Error::DoesNotExist) => {
-                                to_remove.push(key_triple.clone())
-                            }
+                            Err(status::Error::DoesNotExist) => to_remove.push(key_triple.clone()),
                             Err(e) => {
                                 error!("Error {} when opening a persistent Mbed Crypto key.", e);
                                 return None;
@@ -218,13 +216,6 @@ impl Provide for MbedProvider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
-    }
-}
-
-impl Drop for MbedProvider {
-    fn drop(&mut self) {
-        // Safety: the Provider was initialized with psa_crypto_init
-        psa_crypto::drop();
     }
 }
 

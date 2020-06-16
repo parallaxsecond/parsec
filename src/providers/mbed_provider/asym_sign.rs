@@ -7,11 +7,9 @@ use crate::key_info_managers::KeyTriple;
 use log::{error, info};
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
-use psa_crypto::operations::key_management as new_key_management;
 use psa_crypto::operations::asym_signature;
 use psa_crypto::types::key;
 
-#[allow(unused)]
 impl MbedProvider {
     pub(super) fn psa_sign_hash_internal(
         &self,
@@ -38,20 +36,17 @@ impl MbedProvider {
         //   * self.key_slot_semaphore prevents overflowing key slots
 
         let id = key::Id::from_persistent_key_id(key_id);
-        let key_attributes = new_key_management::get_key_attributes(id)?;
+        let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = utils::psa_asymmetric_sign_output_size(&key_attributes)?;
         let mut signature = vec![0u8; buffer_size];
-        let mut signature_size = 0;
 
-        match asym_signature::sign_hash(id, alg, &hash, &mut signature)
-            {
+        match asym_signature::sign_hash(id, alg, &hash, &mut signature) {
             Ok(size) => {
                 let mut res = psa_sign_hash::Result {
                     signature: Vec::new(),
                 };
                 res.signature.resize(size, 0);
-                res.signature
-                    .copy_from_slice(&signature[0..size]);
+                res.signature.copy_from_slice(&signature[0..size]);
                 Ok(res)
             }
             Err(error) => {
