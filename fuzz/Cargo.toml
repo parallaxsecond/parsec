@@ -11,13 +11,16 @@ edition = "2018"
 cargo-fuzz = true
 
 [dependencies]
-parsec = { path = "..", features = ["mbed-crypto-provider", "pkcs11-provider", "tpm-provider"] }
+parsec-service = { path = "..", features = ["mbed-crypto-provider", "pkcs11-provider", "tpm-provider"] }
 libfuzzer-sys = "0.3.0"
 flexi_logger = "0.14.5"
 log = "0.4.8"
 toml = "0.4.2"
 lazy_static = "1.4.0"
 arbitrary = { version = "0.4.0", features = ["derive"] }
+
+[build-dependencies]
+parsec-client = "0.4.0"
 
 # Prevent this from interfering with workspaces
 [workspace]

@@ -2,22 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 #![no_main]
 
-use parsec::utils::{ServiceBuilder, ServiceConfig};
-use parsec::front::front_end::FrontEndHandler;
-use std::path::PathBuf;
-use libfuzzer_sys::fuzz_target;
-use lazy_static::lazy_static;
-use std::io::{Read, Write, Result, Error, ErrorKind};
-use std::cmp;
 use arbitrary::Arbitrary;
+use lazy_static::lazy_static;
+use libfuzzer_sys::fuzz_target;
+use parsec_service::front::front_end::FrontEndHandler;
+use parsec_service::utils::{ServiceBuilder, ServiceConfig};
+use std::cmp;
+use std::io::{Read, Result, Write};
 
 lazy_static! {
     static ref FRONT_END_HANDLER: FrontEndHandler = {
         log_setup();
         let config_file = String::from("./run_config.toml");
-        let mut config_file =
+        let config_file =
             ::std::fs::read_to_string(config_file).expect("Failed to read configuration file");
-        let mut config: ServiceConfig =
+        let config: ServiceConfig =
             toml::from_str(&config_file).expect("Failed to parse service configuration");
         ServiceBuilder::build_service(&config).expect("Failed to initialize service")
     };
@@ -54,21 +53,20 @@ fuzz_target!(|stream: MockStream| {
     FRONT_END_HANDLER.handle_request(stream);
 });
 
-
 fn log_setup() {
-    use flexi_logger::{LogSpecBuilder, Logger, LevelFilter, LogTarget};
     use flexi_logger::writers::FileLogWriter;
+    use flexi_logger::{LevelFilter, LogSpecBuilder, LogTarget, Logger};
 
     let flw = FileLogWriter::builder()
         .suppress_timestamp()
         .directory("./")
-        .try_build().expect("Failed to build FileLogWriter");
+        .try_build()
+        .expect("Failed to build FileLogWriter");
 
-    let log_spec = LogSpecBuilder::new()
-        .default(LevelFilter::Warn)
-        .build();
+    let log_spec = LogSpecBuilder::new().default(LevelFilter::Warn).build();
 
     Logger::with(log_spec)
         .log_target(LogTarget::Writer(Box::from(flw)))
-        .start().unwrap();
+        .start()
+        .unwrap();
 }
