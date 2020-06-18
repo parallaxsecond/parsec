@@ -50,10 +50,10 @@ fn create_key_id(
     local_ids_handle: &mut LocalIdStore,
 ) -> Result<key::psa_key_id_t> {
     let mut rng = SmallRng::from_entropy();
-    let mut key_id = rng.gen_range(key::PSA_KEY_ID_USER_MIN, key::PSA_KEY_ID_USER_MAX);
+    let mut key_id = rng.gen_range(key::PSA_KEY_ID_USER_MIN, key::PSA_KEY_ID_USER_MAX + 1);
 
     while local_ids_handle.contains(&key_id) {
-        key_id = rng.gen_range(key::PSA_KEY_ID_USER_MIN, key::PSA_KEY_ID_USER_MAX);
+        key_id = rng.gen_range(key::PSA_KEY_ID_USER_MIN, key::PSA_KEY_ID_USER_MAX + 1);
     }
     let key_info = KeyInfo {
         id: key_id.to_ne_bytes().to_vec(),
@@ -209,7 +209,6 @@ impl MbedProvider {
         let buffer_size = utils::psa_export_public_key_size(&key_attributes)?;
         let mut buffer = vec![0u8; buffer_size];
 
-        // Safety: same conditions than above.
         let export_length = psa_crypto_key_management::export_public(id, &mut buffer)?;
 
         buffer.resize(export_length, 0);

@@ -18,13 +18,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
 use uuid::Uuid;
 
-#[allow(
-    non_snake_case,
-    non_camel_case_types,
-    non_upper_case_globals,
-    dead_code,
-    trivial_casts
-)]
 mod asym_sign;
 #[allow(dead_code)]
 mod key_management;
@@ -109,9 +102,6 @@ impl MbedProvider {
                             }
                         };
 
-                        // Safety: safe because:
-                        // * the Mbed Crypto library has been initialized
-                        // * this code is executed only by the main thread
                         let pc_key_id = key::Id::from_persistent_key_id(key_id);
                         match key::Attributes::from_key_id(pc_key_id) {
                             Ok(_) => {
