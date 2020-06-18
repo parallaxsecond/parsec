@@ -4,7 +4,7 @@ use super::utils;
 use super::{key_management, MbedProvider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
-use log::{error, info};
+use log::info;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use psa_crypto::operations::asym_signature;
@@ -30,11 +30,6 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        // Safety:
-        //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
-        //   * self.key_handle_mutex prevents concurrent accesses
-        //   * self.key_slot_semaphore prevents overflowing key slots
-
         let id = key::Id::from_persistent_key_id(key_id);
         let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = utils::psa_asymmetric_sign_output_size(&key_attributes)?;
@@ -42,16 +37,12 @@ impl MbedProvider {
 
         match asym_signature::sign_hash(id, alg, &hash, &mut signature) {
             Ok(size) => {
-                let mut res = psa_sign_hash::Result {
-                    signature: Vec::new(),
-                };
-                res.signature.resize(size, 0);
-                res.signature.copy_from_slice(&signature[0..size]);
-                Ok(res)
+                signature.resize(size, 0);
+                Ok(psa_sign_hash::Result { signature })
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);
-                error!("Sign status: {}", error);
+                format_error!("Sign status: {}", error);
                 Err(error)
             }
         }
@@ -77,16 +68,12 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        // Safety:
-        //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
-        //   * self.key_handle_mutex prevents concurrent accesses
-        //   * self.key_slot_semaphore prevents overflowing key slots
         let id = key::Id::from_persistent_key_id(key_id);
         match asym_signature::verify_hash(id, alg, &hash, &signature) {
             Ok(()) => Ok(psa_verify_hash::Result {}),
             Err(error) => {
                 let error = ResponseStatus::from(error);
-                error!("Verify status: {}", error);
+                format_error!("Verify status: {}", error);
                 Err(error)
             }
         }

@@ -25,15 +25,13 @@ use uuid::Uuid;
     dead_code,
     trivial_casts
 )]
-#[allow(clippy::all)]
 mod asym_sign;
 #[allow(dead_code)]
-mod constants;
 mod key_management;
 mod utils;
 
 type LocalIdStore = HashSet<key::psa_key_id_t>;
-
+const PSA_KEY_SLOT_COUNT: isize = 32;
 const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
@@ -74,15 +72,15 @@ impl MbedProvider {
     fn new(key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>) -> Option<MbedProvider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
-        if psa_crypto::init().is_err() {
-            error!("Error when initialising Mbed Crypto");
+        if let Err(error) = psa_crypto::init() {
+            format_error!("Error when initialising Mbed Crypto", error);
             return None;
         }
         let mbed_provider = MbedProvider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
-            key_slot_semaphore: Semaphore::new(constants::PSA_KEY_SLOT_COUNT),
+            key_slot_semaphore: Semaphore::new(PSA_KEY_SLOT_COUNT),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -101,11 +99,6 @@ impl MbedProvider {
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::MbedCrypto) {
                 Ok(key_triples) => {
-                    if let Err(error) = psa_crypto::init() {
-                        error!("Error {} when initialising Mbed Crypto library.", error);
-                        return None;
-                    }
-
                     for key_triple in key_triples.iter().cloned() {
                         let key_id = match key_management::get_key_id(key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
@@ -126,7 +119,10 @@ impl MbedProvider {
                             }
                             Err(status::Error::DoesNotExist) => to_remove.push(key_triple.clone()),
                             Err(e) => {
-                                error!("Error {} when opening a persistent Mbed Crypto key.", e);
+                                format_error!(
+                                    "Error {} when opening a persistent Mbed Crypto key.",
+                                    e
+                                );
                                 return None;
                             }
                         };
