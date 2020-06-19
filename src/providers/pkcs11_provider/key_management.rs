@@ -274,11 +274,23 @@ impl Pkcs11Provider {
 
         let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.data).or_else(|e| {
             format_error!("Failed to parse RsaPublicKey data", e);
+            remove_key_id(
+                &key_triple,
+                key_id,
+                &mut *store_handle,
+                &mut local_ids_handle,
+            )?;
             Err(ResponseStatus::PsaErrorInvalidArgument)
         })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
+            remove_key_id(
+                &key_triple,
+                key_id,
+                &mut *store_handle,
+                &mut local_ids_handle,
+            )?;
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
