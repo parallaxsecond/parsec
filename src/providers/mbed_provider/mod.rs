@@ -3,7 +3,6 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
-use constants::PSA_SUCCESS;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -12,34 +11,20 @@ use parsec_interface::operations::{
     psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
-use psa_crypto_binding::psa_key_id_t;
+use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
 use std_semaphore::Semaphore;
-use utils::KeyHandle;
 use uuid::Uuid;
-
-#[allow(
-    non_snake_case,
-    non_camel_case_types,
-    non_upper_case_globals,
-    dead_code,
-    trivial_casts
-)]
-#[allow(clippy::all)]
-mod psa_crypto_binding {
-    include!(concat!(env!("OUT_DIR"), "/psa_crypto_bindings.rs"));
-}
 
 mod asym_sign;
 #[allow(dead_code)]
-mod constants;
 mod key_management;
 mod utils;
 
-type LocalIdStore = HashSet<psa_key_id_t>;
-
+type LocalIdStore = HashSet<key::psa_key_id_t>;
+const PSA_KEY_SLOT_COUNT: isize = 32;
 const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
@@ -80,15 +65,15 @@ impl MbedProvider {
     fn new(key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>) -> Option<MbedProvider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
-        if unsafe { psa_crypto_binding::psa_crypto_init() } != PSA_SUCCESS {
-            error!("Error when initialising Mbed Crypto");
+        if let Err(error) = psa_crypto::init() {
+            format_error!("Error when initialising Mbed Crypto", error);
             return None;
         }
         let mbed_provider = MbedProvider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
-            key_slot_semaphore: Semaphore::new(constants::PSA_KEY_SLOT_COUNT),
+            key_slot_semaphore: Semaphore::new(PSA_KEY_SLOT_COUNT),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -117,18 +102,17 @@ impl MbedProvider {
                             }
                         };
 
-                        // Safety: safe because:
-                        // * the Mbed Crypto library has been initialized
-                        // * this code is executed only by the main thread
-                        match unsafe { KeyHandle::open(key_id) } {
+                        let pc_key_id = key::Id::from_persistent_key_id(key_id);
+                        match key::Attributes::from_key_id(pc_key_id) {
                             Ok(_) => {
                                 let _ = local_ids_handle.insert(key_id);
                             }
-                            Err(ResponseStatus::PsaErrorDoesNotExist) => {
-                                to_remove.push(key_triple.clone())
-                            }
+                            Err(status::Error::DoesNotExist) => to_remove.push(key_triple.clone()),
                             Err(e) => {
-                                error!("Error {} when opening a persistent Mbed Crypto key.", e);
+                                format_error!(
+                                    "Error {} when opening a persistent Mbed Crypto key.",
+                                    e
+                                );
                                 return None;
                             }
                         };
@@ -218,15 +202,6 @@ impl Provide for MbedProvider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
-    }
-}
-
-impl Drop for MbedProvider {
-    fn drop(&mut self) {
-        // Safety: the Provider was initialized with psa_crypto_init
-        unsafe {
-            psa_crypto_binding::mbedtls_psa_crypto_free();
-        }
     }
 }
 
