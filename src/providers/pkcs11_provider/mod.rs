@@ -250,6 +250,7 @@ impl Provide for Pkcs11Provider {
 
 impl Drop for Pkcs11Provider {
     fn drop(&mut self) {
+        trace!("Finalize command");
         if let Err(e) = self.backend.finalize() {
             format_error!("Error when dropping the PKCS 11 provider", e);
         }
@@ -332,6 +333,7 @@ impl Pkcs11ProviderBuilder {
         args.LockMutex = None;
         args.UnlockMutex = None;
         args.flags = CKF_OS_LOCKING_OK;
+        trace!("Initialize command");
         backend.initialize(Some(args)).or_else(|e| {
             format_error!("Error initializing the PKCS 11 backend", e);
             Err(Error::new(

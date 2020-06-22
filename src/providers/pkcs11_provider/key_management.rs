@@ -7,7 +7,7 @@ use super::{
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use crate::key_info_managers::{self, ManageKeyInfo};
-use log::{error, info, warn};
+use log::{error, info, trace, warn};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
@@ -116,12 +116,15 @@ impl Pkcs11Provider {
             KeyPairType::Any => (),
         }
 
+        trace!("FindObjectsInit command");
         if let Err(e) = self.backend.find_objects_init(session, &template) {
             format_error!("Object enumeration init failed", e);
             Err(utils::to_response_status(e))
         } else {
+            trace!("FindObjects command");
             match self.backend.find_objects(session, 1) {
                 Ok(objects) => {
+                    trace!("FindObjectsFinal command");
                     if let Err(e) = self.backend.find_objects_final(session) {
                         format_error!("Object enumeration final failed", e);
                         Err(utils::to_response_status(e))
@@ -220,6 +223,7 @@ impl Pkcs11Provider {
             );
         }
 
+        trace!("GenerateKeyPair command");
         match self.backend.generate_key_pair(
             session.session_handle(),
             &mech,
@@ -362,6 +366,7 @@ impl Pkcs11Provider {
             );
         }
 
+        trace!("CreateObject command");
         match self
             .backend
             .create_object(session.session_handle(), &template)
@@ -408,6 +413,7 @@ impl Pkcs11Provider {
         size_attrs.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_PUBLIC_EXPONENT));
 
         // Get the length of the attributes to retrieve.
+        trace!("GetAttributeValue command");
         let (modulus_len, public_exponent_len) =
             match self
                 .backend
@@ -440,6 +446,7 @@ impl Pkcs11Provider {
                 .with_bytes(public_exponent.as_mut_slice()),
         );
 
+        trace!("GetAttributeValue command");
         match self
             .backend
             .get_attribute_value(session.session_handle(), key, &mut extract_attrs)
@@ -502,6 +509,7 @@ impl Pkcs11Provider {
 
         match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
             Ok(key) => {
+                trace!("DestroyObject command");
                 match self.backend.destroy_object(session.session_handle(), key) {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {
@@ -519,6 +527,7 @@ impl Pkcs11Provider {
         // Second key is optional.
         match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
             Ok(key) => {
+                trace!("DestroyObject command");
                 match self.backend.destroy_object(session.session_handle(), key) {
                     Ok(_) => info!("Private part of the key destroyed successfully."),
                     Err(e) => {

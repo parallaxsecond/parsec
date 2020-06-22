@@ -3,7 +3,7 @@
 
 use super::Pkcs11Provider;
 use log::error;
-use log::{info, warn};
+use log::{info, trace, warn};
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
@@ -104,6 +104,7 @@ impl Session<'_> {
             session_flags |= CKF_RW_SESSION;
         }
 
+        trace!("OpenSession command");
         match provider
             .backend
             .open_session(provider.slot_number, session_flags, None, None)
@@ -167,6 +168,7 @@ impl Session<'_> {
             self.is_logged_in = true;
             Ok(())
         } else if let Some(user_pin) = self.provider.user_pin.as_ref() {
+            trace!("Login command");
             match self
                 .provider
                 .backend
@@ -209,6 +211,7 @@ impl Session<'_> {
             Ok(())
         } else if *logged_sessions_counter == 1 {
             // Only this session requires authentication.
+            trace!("Logout command");
             match self.provider.backend.logout(self.session_handle) {
                 Ok(_) => {
                     if crate::utils::GlobalConfig::log_error_details() {
@@ -247,6 +250,7 @@ impl Drop for Session<'_> {
         if self.logout().is_err() {
             error!("Error while logging out. Continuing...");
         }
+        trace!("CloseSession command");
         match self.provider.backend.close_session(self.session_handle) {
             Ok(_) => {
                 if crate::utils::GlobalConfig::log_error_details() {
