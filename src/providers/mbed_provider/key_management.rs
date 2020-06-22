@@ -1,6 +1,5 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils;
 use super::{LocalIdStore, MbedProvider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
@@ -206,7 +205,7 @@ impl MbedProvider {
 
         let id = key::Id::from_persistent_key_id(key_id);
         let key_attributes = key::Attributes::from_key_id(id)?;
-        let buffer_size = utils::psa_export_public_key_size(&key_attributes)?;
+        let buffer_size = key_attributes.export_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
 
         let export_length = psa_crypto_key_management::export_public(id, &mut buffer)?;
