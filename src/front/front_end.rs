@@ -56,35 +56,65 @@ impl FrontEndHandler {
                 return;
             }
         };
+
         // Check if the request was sent without authentication
-        let response = if AuthType::NoAuth == request.header.auth_type {
-            let response = self.dispatcher.dispatch_request(request, None);
-            trace!("dispatch_request egress");
-            response
+        let (app_name, err_response) = if AuthType::NoAuth == request.header.auth_type {
+            (None, None)
         // Otherwise find an authenticator that is capable to authenticate the request
         } else if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
             // Authenticate the request
             match authenticator.authenticate(&request.auth) {
                 // Send the request to the dispatcher
                 // Get a response back
-                Ok(app_name) => {
-                    let response = self.dispatcher.dispatch_request(request, Some(app_name));
-                    trace!("dispatch_request egress");
-                    response
-                }
-                Err(status) => Response::from_request_header(request.header, status),
+                Ok(app_name) => (Some(app_name), None),
+                Err(status) => (
+                    None,
+                    Some(Response::from_request_header(request.header, status)),
+                ),
             }
         } else {
-            Response::from_request_header(
-                request.header,
-                ResponseStatus::AuthenticatorNotRegistered,
+            (
+                None,
+                Some(Response::from_request_header(
+                    request.header,
+                    ResponseStatus::AuthenticatorNotRegistered,
+                )),
             )
         };
 
-        // Serialise the responso into bytes
+        let response = if let Some(err_response) = err_response {
+            err_response
+        } else {
+            if crate::utils::GlobalConfig::log_error_details() {
+                if let Some(app_name_string) = app_name.clone() {
+                    info!(
+                        "New request received from application name \"{}\"",
+                        app_name_string
+                    )
+                } else {
+                    info!("New request received without authentication")
+                }
+            };
+            let response = self.dispatcher.dispatch_request(request, app_name.clone());
+            trace!("dispatch_request egress");
+            response
+        };
+
+        // Serialise the response into bytes
         // Write bytes to stream
         match response.write_to_stream(&mut stream) {
-            Ok(_) => info!("Request handled successfully"),
+            Ok(_) => {
+                if crate::utils::GlobalConfig::log_error_details() {
+                    if let Some(app_name_string) = app_name {
+                        info!(
+                            "Response from application name \"{}\" sent back",
+                            app_name_string
+                        );
+                    } else {
+                        info!("Response sent back from request without authentication");
+                    }
+                }
+            }
             Err(err) => format_error!("Failed to send response", err),
         }
     }

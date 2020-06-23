@@ -14,7 +14,7 @@
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use super::{KeyInfo, KeyTriple, ManageKeyInfo};
 use crate::authenticators::ApplicationName;
-use log::{error, info};
+use log::{error, info, warn};
 use parsec_interface::requests::ProviderID;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -187,9 +187,6 @@ impl OnDiskKeyInfoManager {
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(&provider_dir_path)?.iter() {
-                    if crate::utils::GlobalConfig::log_error_details() {
-                        info!("Found mapping file: {:?}.", key_name_file_path);
-                    }
                     let mut key_info = Vec::new();
                     let mut key_info_file = File::open(&key_name_file_path)?;
                     let _ = key_info_file.read_to_end(&mut key_info)?;
@@ -209,6 +206,12 @@ impl OnDiskKeyInfoManager {
                         ))?,
                     ) {
                         Ok(key_triple) => {
+                            if crate::utils::GlobalConfig::log_error_details() {
+                                warn!(
+                                    "Inserting Key Triple ({}) mapping read from disk.",
+                                    key_triple.clone()
+                                );
+                            }
                             let _ = key_store.insert(key_triple, key_info);
                         }
                         Err(string) => {
@@ -236,6 +239,12 @@ impl OnDiskKeyInfoManager {
     /// The filename will be `mappings/[APP_NAME]/[PROVIDER_NAME]/[KEY_NAME]` under the same path as the
     /// on-disk manager. It will contain the Key info data.
     fn save_mapping(&self, key_triple: &KeyTriple, key_info: &KeyInfo) -> std::io::Result<()> {
+        if crate::utils::GlobalConfig::log_error_details() {
+            warn!(
+                "Saving Key Triple ({}) mapping to disk.",
+                key_triple.clone()
+            );
+        }
         // Create the directories with base64 names.
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
         let provider_dir_path = self.mappings_dir_path.join(app_name).join(prov);

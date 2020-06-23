@@ -4,7 +4,7 @@ use super::Pkcs11Provider;
 use super::{key_management::get_key_info, utils, KeyPairType, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
-use log::{error, info};
+use log::{error, info, trace};
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
@@ -78,6 +78,7 @@ impl Pkcs11Provider {
         let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
         info!("Located signing key.");
 
+        trace!("SignInit command");
         match self.backend.sign_init(session.session_handle(), &mech, key) {
             Ok(_) => {
                 info!("Signing operation initialized.");
@@ -89,6 +90,7 @@ impl Pkcs11Provider {
                     // should not fail - if it does, there's some error in our stack
                     .or(Err(ResponseStatus::PsaErrorGenericError))?;
 
+                trace!("Sign command");
                 match self.backend.sign(session.session_handle(), &digest_info) {
                     Ok(signature) => Ok(psa_sign_hash::Result { signature }),
                     Err(e) => {
@@ -164,6 +166,7 @@ impl Pkcs11Provider {
         let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
         info!("Located public key.");
 
+        trace!("VerifyInit command");
         match self
             .backend
             .verify_init(session.session_handle(), &mech, key)
@@ -178,6 +181,7 @@ impl Pkcs11Provider {
                     // should not fail - if it does, there's some error in our stack
                     .or(Err(ResponseStatus::PsaErrorGenericError))?;
 
+                trace!("Verify command");
                 match self
                     .backend
                     .verify(session.session_handle(), &digest_info, &signature)
