@@ -21,7 +21,6 @@ use uuid::Uuid;
 mod asym_sign;
 #[allow(dead_code)]
 mod key_management;
-mod utils;
 
 type LocalIdStore = HashSet<key::psa_key_id_t>;
 const PSA_KEY_SLOT_COUNT: isize = 32;
