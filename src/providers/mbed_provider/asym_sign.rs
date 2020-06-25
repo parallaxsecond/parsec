@@ -16,7 +16,6 @@ impl MbedProvider {
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         info!("Mbed Provider - Asym Sign");
-        let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;
@@ -53,7 +52,6 @@ impl MbedProvider {
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         info!("Mbed Provider - Asym Verify");
-        let _semaphore_guard = self.key_slot_semaphore.access();
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;

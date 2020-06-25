@@ -14,16 +14,16 @@ use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
-use std::sync::{Arc, Mutex, RwLock};
-use std_semaphore::Semaphore;
+use std::sync::{
+    atomic::{AtomicU32, Ordering::Relaxed},
+    Arc, Mutex, RwLock,
+};
 use uuid::Uuid;
 
 mod asym_sign;
 #[allow(dead_code)]
 mod key_management;
 
-type LocalIdStore = HashSet<key::psa_key_id_t>;
-const PSA_KEY_SLOT_COUNT: isize = 32;
 const SUPPORTED_OPCODES: [Opcode; 6] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
@@ -42,18 +42,16 @@ pub struct MbedProvider {
     // reference it to match with the method prototypes.
     #[derivative(Debug = "ignore")]
     key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    local_ids: RwLock<LocalIdStore>,
     // Calls to `psa_open_key`, `psa_generate_key` and `psa_destroy_key` are not thread safe - the slot
     // allocation mechanism in Mbed Crypto can return the same key slot for overlapping calls.
     // `key_handle_mutex` is use as a way of securing access to said operations among the threads.
     // This issue tracks progress on fixing the original problem in Mbed Crypto:
     // https://github.com/ARMmbed/mbed-crypto/issues/266
     key_handle_mutex: Mutex<()>,
-    // As mentioned above, calls dealing with key slot allocation are not secured for concurrency.
-    // `key_slot_semaphore` is used to ensure that only `PSA_KEY_SLOT_COUNT` threads can have slots
-    // assigned at any time.
-    #[derivative(Debug = "ignore")]
-    key_slot_semaphore: Semaphore,
+
+    // Holds the highest ID of all keys (including destroyed keys). New keys will receive an ID of
+    // id_counter + 1. Once id_counter reaches the highest allowed ID, no more keys can be created.
+    id_counter: AtomicU32,
 }
 
 impl MbedProvider {
@@ -70,10 +68,10 @@ impl MbedProvider {
         }
         let mbed_provider = MbedProvider {
             key_info_store,
-            local_ids: RwLock::new(HashSet::new()),
             key_handle_mutex: Mutex::new(()),
-            key_slot_semaphore: Semaphore::new(PSA_KEY_SLOT_COUNT),
+            id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
         };
+        let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
             // the mbed_provider.
@@ -81,10 +79,6 @@ impl MbedProvider {
                 .key_info_store
                 .write()
                 .expect("Key store lock poisoned");
-            let mut local_ids_handle = mbed_provider
-                .local_ids
-                .write()
-                .expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
             // Go through all MbedProvider key triple to key info mappings and check if they are still
             // present.
@@ -104,7 +98,9 @@ impl MbedProvider {
                         let pc_key_id = key::Id::from_persistent_key_id(key_id);
                         match key::Attributes::from_key_id(pc_key_id) {
                             Ok(_) => {
-                                let _ = local_ids_handle.insert(key_id);
+                                if key_id > max_key_id {
+                                    max_key_id = key_id;
+                                }
                             }
                             Err(status::Error::DoesNotExist) => to_remove.push(key_triple.clone()),
                             Err(e) => {
@@ -129,7 +125,7 @@ impl MbedProvider {
                 }
             }
         }
-
+        mbed_provider.id_counter.store(max_key_id, Relaxed);
         Some(mbed_provider)
     }
 }
