@@ -9,13 +9,15 @@ use listener::Listen;
 use listener::ReadWrite;
 use log::error;
 use std::fs;
+use std::fs::Permissions;
 use std::io::{Error, ErrorKind, Result};
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::time::Duration;
 
-static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
+static SOCKET_PATH: &str = "/tmp/parsec/parsec.sock";
 
 /// Unix Domain Socket IPC manager
 ///
@@ -52,6 +54,11 @@ impl DomainSocketListener {
                 let listener = UnixListener::bind(SOCKET_PATH)?;
                 listener.set_nonblocking(true)?;
 
+                // Set the socket's permission to 666 to allow clients of different user to
+                // connect.
+                let permissions = Permissions::from_mode(0o666);
+                fs::set_permissions(SOCKET_PATH, permissions)?;
+
                 listener
             }
             1 => {
@@ -61,6 +68,7 @@ impl DomainSocketListener {
                 // Safe as listen_fds gives us the information that one file descriptor was
                 // received and its value starts from SD_LISTEN_FDS_START.
                 unsafe { UnixListener::from_raw_fd(nfd) }
+                // Expect the socket created by systemd to be 666 on permissions.
             }
             n => {
                 error!(

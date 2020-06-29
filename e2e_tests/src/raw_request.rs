@@ -13,7 +13,7 @@ const MAX_BODY_SIZE: usize = 1 << 31;
 #[derive(Copy, Clone, Debug)]
 pub struct RawRequestClient;
 
-static SOCKET_PATH: &str = "/tmp/security-daemon-socket";
+static SOCKET_PATH: &str = "/tmp/parsec/parsec.sock";
 const TIMEOUT: Duration = Duration::from_secs(5);
 
 #[allow(clippy::new_without_default)]
