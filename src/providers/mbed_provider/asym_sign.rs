@@ -36,7 +36,9 @@ impl MbedProvider {
         match asym_signature::sign_hash(id, alg, &hash, &mut signature) {
             Ok(size) => {
                 signature.resize(size, 0);
-                Ok(psa_sign_hash::Result { signature })
+                Ok(psa_sign_hash::Result {
+                    signature: signature.into(),
+                })
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);

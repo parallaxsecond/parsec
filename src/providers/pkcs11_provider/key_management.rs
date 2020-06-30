@@ -13,6 +13,7 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::IntegerAsn1;
 use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
 use std::mem;
@@ -276,16 +277,17 @@ impl Pkcs11Provider {
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&op.data).or_else(|e| {
-            format_error!("Failed to parse RsaPublicKey data", e);
-            remove_key_id(
-                &key_triple,
-                key_id,
-                &mut *store_handle,
-                &mut local_ids_handle,
-            )?;
-            Err(ResponseStatus::PsaErrorInvalidArgument)
-        })?;
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
+            .or_else(|e| {
+                format_error!("Failed to parse RsaPublicKey data", e);
+                remove_key_id(
+                    &key_triple,
+                    key_id,
+                    &mut *store_handle,
+                    &mut local_ids_handle,
+                )?;
+                Err(ResponseStatus::PsaErrorInvalidArgument)
+            })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
@@ -473,7 +475,7 @@ impl Pkcs11Provider {
                         format_error!("Could not serialise key elements", err);
                         Err(ResponseStatus::PsaErrorCommunicationFailure)
                     })?;
-                    Ok(psa_export_public_key::Result { data })
+                    Ok(psa_export_public_key::Result { data: data.into() })
                 }
             }
             Err(e) => {
