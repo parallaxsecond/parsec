@@ -57,7 +57,7 @@ impl TpmProvider {
             })?;
 
         Ok(psa_sign_hash::Result {
-            signature: utils::signature_data_to_bytes(signature.signature, key_attributes)?,
+            signature: utils::signature_data_to_bytes(signature.signature, key_attributes)?.into(),
         })
     }
 

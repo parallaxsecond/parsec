@@ -13,6 +13,7 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::secrecy::ExposeSecret;
 
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -129,10 +130,11 @@ impl TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&key_data).or_else(|err| {
-            format_error!("Could not deserialise key elements", err);
-            Err(ResponseStatus::PsaErrorInvalidArgument)
-        })?;
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(key_data.expose_secret())
+            .or_else(|err| {
+                format_error!("Could not deserialise key elements", err);
+                Err(ResponseStatus::PsaErrorInvalidArgument)
+            })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
@@ -222,7 +224,7 @@ impl TpmProvider {
             })?;
 
         Ok(psa_export_public_key::Result {
-            data: utils::pub_key_to_bytes(pub_key_data, key_attributes)?,
+            data: utils::pub_key_to_bytes(pub_key_data, key_attributes)?.into(),
         })
     }
 

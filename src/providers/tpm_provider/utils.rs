@@ -13,6 +13,7 @@ use tss_esapi::abstraction::transient::KeyParams;
 use tss_esapi::response_code::{Error, Tss2ResponseCodeKind};
 use tss_esapi::utils::algorithm_specifiers::{EllipticCurve, HashingAlgorithm};
 use tss_esapi::utils::{AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext};
+use zeroize::Zeroizing;
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
 /// Convert the TSS library specific error values to ResponseStatus values that are returned on
@@ -233,7 +234,7 @@ pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) 
 }
 
 pub fn parsec_to_tpm_signature(
-    data: Vec<u8>,
+    data: Zeroizing<Vec<u8>>,
     key_attributes: Attributes,
     signature_alg: AsymmetricSignature,
 ) -> Result<Signature> {
@@ -243,9 +244,12 @@ pub fn parsec_to_tpm_signature(
     })
 }
 
-fn bytes_to_signature_data(data: Vec<u8>, key_attributes: Attributes) -> Result<SignatureData> {
+fn bytes_to_signature_data(
+    data: Zeroizing<Vec<u8>>,
+    key_attributes: Attributes,
+) -> Result<SignatureData> {
     match key_attributes.key_type {
-        Type::RsaKeyPair | Type::RsaPublicKey => Ok(SignatureData::RsaSignature(data)),
+        Type::RsaKeyPair | Type::RsaPublicKey => Ok(SignatureData::RsaSignature(data.to_vec())),
         Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => {
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
@@ -255,7 +259,7 @@ fn bytes_to_signature_data(data: Vec<u8>, key_attributes: Attributes) -> Result<
                 return Err(ResponseStatus::PsaErrorInvalidArgument);
             }
 
-            let mut r = data;
+            let mut r = data.to_vec();
             let s = r.split_off(p_size);
             Ok(SignatureData::EcdsaSignature { r, s })
         }

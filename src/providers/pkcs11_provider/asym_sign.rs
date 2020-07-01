@@ -84,7 +84,7 @@ impl Pkcs11Provider {
                 info!("Signing operation initialized.");
                 let digest_info = DigestInfo {
                     oid: AlgorithmIdentifier::new_sha(SHAVariant::SHA2_256),
-                    digest: hash.into(),
+                    digest: hash.to_vec().into(),
                 };
                 let digest_info = picky_asn1_der::to_vec(&digest_info)
                     // should not fail - if it does, there's some error in our stack
@@ -92,7 +92,9 @@ impl Pkcs11Provider {
 
                 trace!("Sign command");
                 match self.backend.sign(session.session_handle(), &digest_info) {
-                    Ok(signature) => Ok(psa_sign_hash::Result { signature }),
+                    Ok(signature) => Ok(psa_sign_hash::Result {
+                        signature: signature.into(),
+                    }),
                     Err(e) => {
                         format_error!("Failed to execute signing operation", e);
                         Err(utils::to_response_status(e))
@@ -175,7 +177,7 @@ impl Pkcs11Provider {
                 info!("Verify operation initialized.");
                 let digest_info = DigestInfo {
                     oid: AlgorithmIdentifier::new_sha(SHAVariant::SHA2_256),
-                    digest: hash.into(),
+                    digest: hash.to_vec().into(),
                 };
                 let digest_info = picky_asn1_der::to_vec(&digest_info)
                     // should not fail - if it does, there's some error in our stack

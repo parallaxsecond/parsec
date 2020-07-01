@@ -116,7 +116,7 @@ fn verify_with_ring() {
                 alg: AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: HASH.clone(),
+                hash: HASH.clone().into(),
             },
         )
         .unwrap();
@@ -124,7 +124,7 @@ fn verify_with_ring() {
     let psa_export_public_key::Result { data } = TPM_PROVIDER
         .psa_export_public_key(app_name, psa_export_public_key::Operation { key_name })
         .unwrap();
-    let pk = UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA256, data);
+    let pk = UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA256, data.to_vec());
     pk.verify(&MESSAGE, &sign).unwrap();
 }
 
@@ -144,7 +144,7 @@ fn verify_ecc_with_ring() {
                 alg: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: HASH.clone(),
+                hash: HASH.clone().into(),
             },
         )
         .unwrap();
@@ -152,7 +152,7 @@ fn verify_ecc_with_ring() {
     let psa_export_public_key::Result { data } = TPM_PROVIDER
         .psa_export_public_key(app_name, psa_export_public_key::Operation { key_name })
         .unwrap();
-    let pk = UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, data);
+    let pk = UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, data.to_vec());
     pk.verify(&MESSAGE, &sign).unwrap();
 }
 
@@ -172,7 +172,7 @@ fn sign_verify_ecc() {
                 alg: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: HASH.clone(),
+                hash: HASH.clone().into(),
             },
         )
         .unwrap();
@@ -185,7 +185,7 @@ fn sign_verify_ecc() {
                 alg: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: HASH.clone(),
+                hash: HASH.clone().into(),
                 signature: sign,
             },
         )

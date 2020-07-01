@@ -13,6 +13,7 @@ use super::Authenticate;
 use log::error;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::secrecy::ExposeSecret;
 use std::str;
 
 #[derive(Copy, Clone, Debug)]
@@ -20,11 +21,11 @@ pub struct DirectAuthenticator;
 
 impl Authenticate for DirectAuthenticator {
     fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName> {
-        if auth.is_empty() {
+        if auth.buffer.expose_secret().is_empty() {
             error!("The direct authenticator does not expect empty authentication values.");
             Err(ResponseStatus::AuthenticationError)
         } else {
-            match str::from_utf8(auth.bytes()) {
+            match str::from_utf8(auth.buffer.expose_secret()) {
                 Ok(str) => Ok(ApplicationName(String::from(str))),
                 Err(_) => {
                     error!("Error parsing the authentication value as a UTF-8 string.");
@@ -47,7 +48,7 @@ mod test {
         let authenticator = DirectAuthenticator {};
 
         let app_name = "app_name".to_string();
-        let req_auth = RequestAuth::from_bytes(app_name.clone().into_bytes());
+        let req_auth = RequestAuth::new(app_name.clone().into_bytes());
 
         let auth_name = authenticator
             .authenticate(&req_auth)
@@ -60,7 +61,7 @@ mod test {
     fn failed_authentication() {
         let authenticator = DirectAuthenticator {};
         let status = authenticator
-            .authenticate(&RequestAuth::from_bytes(vec![0xff; 5]))
+            .authenticate(&RequestAuth::new(vec![0xff; 5]))
             .expect_err("Authentication should have failed");
 
         assert_eq!(status, ResponseStatus::AuthenticationError);
@@ -70,7 +71,7 @@ mod test {
     fn empty_auth() {
         let authenticator = DirectAuthenticator {};
         let status = authenticator
-            .authenticate(&RequestAuth::from_bytes(Vec::new()))
+            .authenticate(&RequestAuth::new(Vec::new()))
             .expect_err("Empty auth should have failed");
 
         assert_eq!(status, ResponseStatus::AuthenticationError);

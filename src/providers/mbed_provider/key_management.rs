@@ -11,6 +11,7 @@ use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::secrecy::ExposeSecret;
 use psa_crypto::operations::key_management as psa_crypto_key_management;
 use psa_crypto::types::key;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
@@ -159,7 +160,11 @@ impl MbedProvider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        match psa_crypto_key_management::import(key_attributes, Some(key_id), &key_data[..]) {
+        match psa_crypto_key_management::import(
+            key_attributes,
+            Some(key_id),
+            key_data.expose_secret(),
+        ) {
             Ok(_) => Ok(psa_import_key::Result {}),
             Err(error) => {
                 remove_key_id(&key_triple, &mut *store_handle)?;
@@ -194,7 +199,9 @@ impl MbedProvider {
         let export_length = psa_crypto_key_management::export_public(id, &mut buffer)?;
 
         buffer.resize(export_length, 0);
-        Ok(psa_export_public_key::Result { data: buffer })
+        Ok(psa_export_public_key::Result {
+            data: buffer.into(),
+        })
     }
 
     pub(super) fn psa_destroy_key_internal(
