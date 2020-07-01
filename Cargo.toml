@@ -18,7 +18,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.17.0"
+parsec-interface = "0.18.0"
 rand = { version = "0.7.2", features = ["small_rng"] }
 base64 = "0.10.1"
 uuid = "0.7.4"
@@ -40,7 +40,7 @@ derivative = "2.1.1"
 version = "3.0.0"
 hex = "0.4.2"
 picky = "5.0.0"
-psa-crypto = { version = "0.2.1" , default-features = false, features = ["with-mbed-crypto"], optional = true }
+psa-crypto = { version = "0.2.2" , default-features = false, features = ["with-mbed-crypto"], optional = true }
 zeroize = { version = "1.1.0", features = ["zeroize_derive"] }
 picky-asn1-x509 = { version = "0.1.0", optional = true }
 

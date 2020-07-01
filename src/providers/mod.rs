@@ -75,8 +75,9 @@ impl ProviderConfig {
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    list_opcodes, list_providers, ping, psa_destroy_key, psa_export_public_key, psa_generate_key,
-    psa_import_key, psa_sign_hash, psa_verify_hash,
+    list_opcodes, list_providers, ping, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
+    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -174,6 +175,26 @@ pub trait Provide {
         _op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute an AsymmetricEncrypt operation.
+    fn psa_asymmetric_encrypt(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        trace!("psa_asymmetric_encrypt ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute an AsymmetricDecrypt operation.
+    fn psa_asymmetric_decrypt(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
+        trace!("psa_asymmetric_decrypt ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

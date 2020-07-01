@@ -14,7 +14,7 @@ use parsec_client::auth::AuthenticationData;
 use parsec_client::core::basic_client::BasicClient;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
 use parsec_client::core::interface::operations::psa_algorithm::{
-    Algorithm, AsymmetricSignature, Hash,
+    Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
@@ -77,6 +77,12 @@ impl TestClient {
         }
 
         ProviderID::Core
+    }
+
+    pub fn is_operation_supported(&mut self, op: Opcode) -> bool {
+        self.list_opcodes(self.provider().unwrap())
+            .unwrap()
+            .contains(&op)
     }
 
     /// Manually set the provider to execute the requests.
@@ -158,6 +164,64 @@ impl TestClient {
         )
     }
 
+    pub fn generate_rsa_encryption_keys_rsapkcs1v15crypt(
+        &mut self,
+        key_name: String,
+    ) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: true,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+                },
+            },
+        )
+    }
+
+    pub fn generate_rsa_encryption_keys_rsaoaep_sha256(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: true,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaOaep {
+                        hash_alg: Hash::Sha256,
+                    }
+                    .into(),
+                },
+            },
+        )
+    }
+
     /// Imports and creates a key with specific attributes.
     pub fn import_key(
         &mut self,
@@ -179,7 +243,36 @@ impl TestClient {
         Ok(())
     }
 
-    /// Import a 1024 bits RSA public key.
+    /// Import a 1024 bit RSA key pair
+    /// The key pair can only be used for encryption and decryption with RSA PKCS 1v15
+    pub fn import_rsa_key_pair(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        self.import_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: true,
+                        export: false,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+                },
+            },
+            data,
+        )
+    }
+
+    /// Import a 1024 bit RSA public key.
     /// The key can only be used for verifying with the RSA PKCS 1v15 signing algorithm with SHA-256.
     pub fn import_rsa_public_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
         self.import_key(
@@ -286,6 +379,56 @@ impl TestClient {
             hash,
             signature,
         )
+    }
+
+    pub fn asymmetric_encrypt_message_with_rsapkcs1v15(
+        &mut self,
+        key_name: String,
+        plaintext: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.asymmetric_encrypt_message(
+            key_name,
+            AsymmetricEncryption::RsaPkcs1v15Crypt,
+            &plaintext,
+            None,
+        )
+    }
+
+    pub fn asymmetric_decrypt_message_with_rsapkcs1v15(
+        &mut self,
+        key_name: String,
+        ciphertext: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.asymmetric_decrypt_message(
+            key_name,
+            AsymmetricEncryption::RsaPkcs1v15Crypt,
+            &ciphertext,
+            None,
+        )
+    }
+
+    pub fn asymmetric_encrypt_message(
+        &mut self,
+        key_name: String,
+        encryption_alg: AsymmetricEncryption,
+        plaintext: &[u8],
+        salt: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_asymmetric_encrypt(key_name, encryption_alg, &plaintext, salt)
+            .map_err(convert_error)
+    }
+
+    pub fn asymmetric_decrypt_message(
+        &mut self,
+        key_name: String,
+        encryption_alg: AsymmetricEncryption,
+        ciphertext: &[u8],
+        salt: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_asymmetric_decrypt(key_name, encryption_alg, &ciphertext, salt)
+            .map_err(convert_error)
     }
 
     /// Lists the provider available for the Parsec service.

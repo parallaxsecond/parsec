@@ -145,8 +145,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
-        info!("Pkcs11 Provider - Create Key");
-
         if op.attributes.key_type != Type::RsaKeyPair {
             error!("The PKCS11 provider currently only supports creating RSA key pairs.");
             return Err(ResponseStatus::PsaErrorNotSupported);
@@ -248,8 +246,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        info!("Pkcs11 Provider - Import Key");
-
         if op.attributes.key_type != Type::RsaPublicKey {
             error!("The PKCS 11 provider currently only supports importing RSA public key.");
             return Err(ResponseStatus::PsaErrorNotSupported);
@@ -390,8 +386,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
-        info!("Pkcs11 Provider - Export Public Key");
-
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
@@ -488,8 +482,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
-        info!("Pkcs11 Provider - Destroy Key");
-
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self

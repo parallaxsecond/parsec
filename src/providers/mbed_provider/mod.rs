@@ -7,8 +7,8 @@ use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
-    psa_verify_hash,
+    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
+    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
@@ -20,6 +20,7 @@ use std::sync::{
 };
 use uuid::Uuid;
 
+mod asym_encryption;
 mod asym_sign;
 #[allow(dead_code)]
 mod key_management;
@@ -104,10 +105,7 @@ impl MbedProvider {
                             }
                             Err(status::Error::DoesNotExist) => to_remove.push(key_triple.clone()),
                             Err(e) => {
-                                format_error!(
-                                    "Error {} when opening a persistent Mbed Crypto key.",
-                                    e
-                                );
+                                format_error!("Failed to open persistent Mbed Crypto key", e);
                                 return None;
                             }
                         };
@@ -197,6 +195,24 @@ impl Provide for MbedProvider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_encrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        trace!("psa_asymmetric_encrypt ingress");
+        self.psa_asymmetric_encrypt_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_decrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
+        trace!("psa_asymmetric_decrypt ingress");
+        self.psa_asymmetric_decrypt_internal(app_name, op)
     }
 }
 

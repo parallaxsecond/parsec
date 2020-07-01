@@ -5,7 +5,7 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
 use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use log::error;
-use log::{info, warn};
+use log::warn;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
@@ -97,7 +97,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
-        info!("Mbed Provider - Create Key");
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
@@ -125,7 +124,7 @@ impl MbedProvider {
             Err(error) => {
                 remove_key_id(&key_triple, &mut *store_handle)?;
                 let error = ResponseStatus::from(error);
-                format_error!("Generate key status: {}", error);
+                format_error!("Generate key status: ", error);
                 Err(error)
             }
         }
@@ -136,7 +135,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        info!("Mbed Provider - Import Key");
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_data = op.data;
@@ -169,7 +167,7 @@ impl MbedProvider {
             Err(error) => {
                 remove_key_id(&key_triple, &mut *store_handle)?;
                 let error = ResponseStatus::from(error);
-                format_error!("Import key status: {}", error);
+                format_error!("Import key status: ", error);
                 Err(error)
             }
         }
@@ -180,7 +178,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
-        info!("Mbed Provider - Export Public Key");
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
@@ -209,7 +206,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
-        info!("Mbed Provider - Destroy Key");
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
         let mut store_handle = self
@@ -240,7 +236,7 @@ impl MbedProvider {
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);
-                format_error!("Destroy key status: {}", error);
+                format_error!("Destroy key status: ", error);
                 Err(error)
             }
         }

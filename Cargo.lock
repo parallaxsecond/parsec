@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c1f1d60091c1b73e2b1f4560ab419204b178e625fa945ded7b660becd2bd46"
+checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
 
 [[package]]
 name = "cexpr"
@@ -439,9 +439,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9586eedd4ce6b3c498bc3b4dd92fc9f11166aa908a914071953768066c67909"
+checksum = "3deed196b6e7f9e44a2ae8d94225d80302d81208b1bb673fd21fe634645c85a9"
 dependencies = [
  "libc",
 ]
@@ -757,9 +757,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "parsec-interface"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3db0d49816455026327f6377243442645a590423fa1cca4978cd869f34a383a9"
+checksum = "09289310e1dfe55d804e4a3be12c8fe170239e6129ffd8e8b5007078b30c6098"
 dependencies = [
  "arbitrary",
  "bincode",
@@ -994,20 +994,21 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6fa12271d1af1f3267c176d8c2d28d94cf6fbfe3368fa18ecba1f8a6d083757"
+checksum = "640ff8940a8a8f85c4bf8e6f1cd5adb9d26461b598f99c8217d343b27da24cd7"
 dependencies = [
  "log",
  "psa-crypto-sys",
  "serde",
+ "zeroize",
 ]
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d8e707688eb8c0fd95a0441180beacf3e4d2909f9172d6c43d10145edd5d730"
+checksum = "8ab13137181ea1aead63adb3f0e44cef57e70804280f2b9b7f47e0f2d0ceb437"
 dependencies = [
  "bindgen",
  "cc",
