@@ -16,5 +16,5 @@ manager_type = "OnDisk"
 [[provider]]
 provider_type = "Tpm"
 key_info_manager = "on-disk-manager"
-tcti = "mssim"
+tcti = "mssim:host=127.0.0.1,port=2321"
 owner_hierarchy_auth = "hex:74706d5f70617373" # "tpm_pass" in hex
