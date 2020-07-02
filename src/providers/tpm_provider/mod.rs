@@ -8,7 +8,7 @@ use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::ManageKeyInfo;
 use derivative::Derivative;
-use log::{error, info, trace};
+use log::{info, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
@@ -17,9 +17,10 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::ErrorKind;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::utils::algorithm_specifiers::Cipher;
-use tss_esapi::Tcti;
+use tss_esapi::utils::tcti::Tcti;
 use uuid::Uuid;
 
 mod asym_sign;
@@ -154,7 +155,7 @@ impl Drop for TpmProvider {
 pub struct TpmProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
-    tcti: Option<Tcti>,
+    tcti: Option<String>,
     owner_hierarchy_auth: Option<String>,
 }
 
@@ -177,17 +178,7 @@ impl TpmProviderBuilder {
     }
 
     pub fn with_tcti(mut self, tcti: &str) -> TpmProviderBuilder {
-        // Convert from a String to the enum.
-        self.tcti = match tcti {
-            "device" => Some(Tcti::Device),
-            "mssim" => Some(Tcti::Mssim),
-            _ => {
-                if crate::utils::GlobalConfig::log_error_details() {
-                    error!("The string {} does not match a TCTI device.", tcti);
-                }
-                None
-            }
-        };
+        self.tcti = Some(tcti.to_owned());
 
         self
     }
@@ -231,8 +222,15 @@ impl TpmProviderBuilder {
     unsafe fn find_default_context_cipher(&self) -> std::io::Result<Cipher> {
         let ciphers = [Cipher::aes_256_cfb(), Cipher::aes_128_cfb()];
         let mut ctx = tss_esapi::Context::new(
-            self.tcti
-                .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?,
+            Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+            })?)
+            .or_else(|_| {
+                Err(std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "Invalid TCTI configuration string",
+                ))
+            })?,
         )
         .or_else(|e| {
             format_error!("Error when creating TSS Context", e);
@@ -264,9 +262,15 @@ impl TpmProviderBuilder {
     pub unsafe fn build(mut self) -> std::io::Result<TpmProvider> {
         let hierarchy_auth = self.get_hierarchy_auth()?;
         let default_cipher = self.find_default_context_cipher()?;
-        let tcti = self
-            .tcti
-            .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidData, "missing TCTI"))?;
+        let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
+            std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+        })?)
+        .or_else(|_| {
+            Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "Invalid TCTI configuration string",
+            ))
+        })?;
         TpmProvider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")

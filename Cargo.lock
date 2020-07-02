@@ -447,6 +447,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
+name = "hostname-validator"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70b8bcb948d9f63a35f0527cde7ca4f4794e817451eaebd47a3c92ef6905c129"
+
+[[package]]
 name = "http"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1465,18 +1471,20 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "4.0.3-alpha.1"
+version = "4.0.5-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0b8770c1c7414f8a4390627337ddf01091b3955a175692442dffb280ecb8e6c"
+checksum = "f6c7d8fe1664e642607e5aeea9407e27b2e293424418c9a1d972ac8dea8e0320"
 dependencies = [
  "bindgen",
  "bitfield",
  "enumflags2",
+ "hostname-validator",
  "log",
  "mbox",
  "num-derive",
  "num-traits",
  "pkg-config",
+ "regex",
  "serde",
 ]
 

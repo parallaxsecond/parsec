@@ -73,10 +73,16 @@ key_info_manager = "on-disk-manager"
 #[[provider]]
 #provider_type = "Tpm"
 #key_info_manager = "on-disk-manager"
-# (Required) TPM TCTI device to use with this provider. Options are:
-# - "device": uses the TPM device on /dev/tpm0
-# - "mssim": uses the simulation TPM with the socket
-# - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon
+# (Required) TPM TCTI device to use with this provider. The string can include configuration values - if no
+# configuration value is given, the defaults are used. Options are:
+# - "device": uses a TPM device available as a file node; path can be given as a configuration string,
+# e.g "device:/path/to/tpm"; the default path is /dev/tpm0
+# - "mssim": uses the TPM simulator server with the socket; server path and/or port can be given as configuration values,
+# e.g. "mssim:host=168.0.1.1,port=1234"; "host" can be set to IPv4, IPv6 or a hostname; default values are 
+# "localhost" for "host" and 2321 for "port"
+# - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon; dbus name and type ("session" or 
+# "system") can be given as parameters: e.g. "tabrmd:bus_name=some.bus.Name,bus_type=session"; default
+# values are "com.intel.tss2.Tabrmd" for "bus_name" and "system" for "bus_type"
 #tcti = "mssim"
 # (Required) Authentication value for performing operations on the TPM Owner Hierarchy. The string can
 # be empty, however we strongly suggest that you use a secure passcode.
