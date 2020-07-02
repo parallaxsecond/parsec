@@ -19,6 +19,7 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_client::core::secrecy::{ExposeSecret, Secret};
 use parsec_client::error::Error;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -48,7 +49,9 @@ impl TestClient {
     /// a call to `list_providers`, followed by choosing the first non-Core provider.
     pub fn new() -> TestClient {
         let mut client = TestClient {
-            basic_client: BasicClient::new(AuthenticationData::AppIdentity(String::from("root"))),
+            basic_client: BasicClient::new(AuthenticationData::AppIdentity(Secret::new(
+                String::from("root"),
+            ))),
             created_keys: Some(HashSet::new()),
         };
 
@@ -88,13 +91,13 @@ impl TestClient {
     /// Set the client authentication string.
     pub fn set_auth(&mut self, auth: String) {
         self.basic_client
-            .set_auth_data(AuthenticationData::AppIdentity(auth));
+            .set_auth_data(AuthenticationData::AppIdentity(Secret::new(auth)));
     }
 
     /// Get client authentication string.
     pub fn auth(&self) -> String {
         if let AuthenticationData::AppIdentity(app_name) = self.basic_client.auth_data() {
-            app_name
+            app_name.expose_secret().to_string()
         } else {
             panic!("Client should always be using AppIdentity-based authentication");
         }
@@ -162,7 +165,7 @@ impl TestClient {
         data: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_import_key(key_name.clone(), data, attributes)
+            .psa_import_key(key_name.clone(), &data, attributes)
             .map_err(convert_error)?;
 
         let provider = self.provider().unwrap();
@@ -239,7 +242,7 @@ impl TestClient {
         hash: Vec<u8>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_sign_hash(key_name, hash, alg)
+            .psa_sign_hash(key_name, &hash, alg)
             .map_err(convert_error)
     }
 
@@ -263,7 +266,7 @@ impl TestClient {
         signature: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_verify_hash(key_name, hash, alg, signature)
+            .psa_verify_hash(key_name, &hash, alg, &signature)
             .map_err(convert_error)
     }
 

@@ -24,7 +24,7 @@ fn mangled_ping() {
     let mut req = Request::new();
     req.header.provider = ProviderID::Core;
     req.header.opcode = Opcode::Ping;
-    req.auth = RequestAuth::from_bytes(Vec::from("root"));
+    req.auth = RequestAuth::new(Vec::from("root"));
 
     req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
 

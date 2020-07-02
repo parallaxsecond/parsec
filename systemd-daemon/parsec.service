@@ -1,9 +1,10 @@
 [Unit]
-Description=PARSEC Service
-Documentation=https://github.com/parallaxsecond/parsec
+Description=Parsec Service
+Documentation=https://parallaxsecond.github.io/parsec-book/parsec_service/install_parsec_linux.html
 
 [Service]
-Type=notify
-NonBlocking=true
-Environment=RUST_LOG=info
+WorkingDirectory=/home/parsec/
 ExecStart=/home/parsec/.cargo/bin/parsec
+
+[Install]
+WantedBy=default.target

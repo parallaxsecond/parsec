@@ -104,9 +104,7 @@ fn generate_public_rsa_check_modulus() -> Result<()> {
 fn failed_created_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("failed_created_key_should_be_removed");
-    const GARBAGE_IMPORT_DATA: [u8; 1] = [
-        48,
-    ];
+    const GARBAGE_IMPORT_DATA: [u8; 1] = [48];
 
     // The data being imported is garbage, should fail
     let _ = client
