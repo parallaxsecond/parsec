@@ -150,14 +150,14 @@ impl ServiceBuilder {
 }
 
 fn build_backend_handlers(
-    mut providers: HashMap<ProviderID, Provider>,
+    mut providers: Vec<(ProviderID, Provider)>,
 ) -> Result<HashMap<ProviderID, BackEndHandler>> {
     let mut map = HashMap::new();
 
-    let mut core_provider_builder = CoreProviderBuilder::new()?
+    let mut core_provider_builder = CoreProviderBuilder::new()
         .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
 
-    for (provider_id, provider) in providers.drain() {
+    for (provider_id, provider) in providers.drain(..) {
         let (info, opcodes) = provider.describe().or_else(|_| {
             Err(Error::new(
                 ErrorKind::InvalidData,
@@ -192,11 +192,11 @@ fn build_backend_handlers(
 fn build_providers(
     configs: &[ProviderConfig],
     key_info_managers: HashMap<String, KeyInfoManager>,
-) -> HashMap<ProviderID, Provider> {
-    let mut map = HashMap::new();
+) -> Vec<(ProviderID, Provider)> {
+    let mut list = Vec::new();
     for config in configs {
         let provider_id = config.provider_id();
-        if map.contains_key(&provider_id) {
+        if list.iter().any(|(id, _)| *id == provider_id) {
             warn!("Parsec currently only supports one instance of each provider type. Ignoring {} and continuing...", provider_id);
             continue;
         }
@@ -222,10 +222,10 @@ fn build_providers(
                 continue;
             }
         };
-        let _ = map.insert(provider_id, provider);
+        let _ = list.push((provider_id, provider));
     }
 
-    map
+    list
 }
 
 // This cfg_attr is used to allow the fact that key_info_manager is not used when there is no

@@ -71,41 +71,19 @@ pub struct CoreProviderBuilder {
 }
 
 impl CoreProviderBuilder {
-    pub fn new() -> std::io::Result<Self> {
-        let crate_version: Version = Version::from_str(version!()).or_else(|e| {
-            format_error!("Error parsing the crate version", e);
-            Err(Error::new(
-                ErrorKind::InvalidData,
-                "crate version number has invalid format",
-            ))
-        })?;
-
-        let provider_info = vec![ProviderInfo {
-            // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
-            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").or_else(|_| Err(Error::new(
-                ErrorKind::InvalidData,
-                "provider UUID is invalid",
-            )))?,
-            description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
-            vendor: String::new(),
-            version_maj: crate_version.major,
-            version_min: crate_version.minor,
-            version_rev: crate_version.patch,
-            id: ProviderID::Core,
-        }];
-
+    pub fn new() -> Self {
         let mut provider_opcodes = HashMap::new();
         let _ = provider_opcodes.insert(
             ProviderID::Core,
             SUPPORTED_OPCODES.iter().copied().collect(),
         );
 
-        Ok(CoreProviderBuilder {
+        CoreProviderBuilder {
             version_maj: None,
             version_min: None,
-            provider_info,
+            provider_info: Vec::new(),
             provider_opcodes,
-        })
+        }
     }
 
     pub fn with_wire_protocol_version(mut self, version_min: u8, version_maj: u8) -> Self {
@@ -126,7 +104,28 @@ impl CoreProviderBuilder {
         self
     }
 
-    pub fn build(self) -> std::io::Result<CoreProvider> {
+    pub fn build(mut self) -> std::io::Result<CoreProvider> {
+        let crate_version: Version = Version::from_str(version!()).or_else(|e| {
+            format_error!("Error parsing the crate version", e);
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "crate version number has invalid format",
+            ))
+        })?;
+        self.provider_info.push(ProviderInfo {
+            // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
+            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").or_else(|_| Err(Error::new(
+                ErrorKind::InvalidData,
+                "provider UUID is invalid",
+            )))?,
+            description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
+            vendor: String::new(),
+            version_maj: crate_version.major,
+            version_min: crate_version.minor,
+            version_rev: crate_version.patch,
+            id: ProviderID::Core,
+        });
+
         let core_provider = CoreProvider {
             wire_protocol_version_maj: self
                 .version_maj
