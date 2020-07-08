@@ -31,4 +31,5 @@
 #![allow(clippy::multiple_crate_versions)]
 
 mod all_providers;
+mod config;
 mod per_provider;

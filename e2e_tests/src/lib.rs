@@ -1,5 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::multiple_crate_versions)]
 pub mod raw_request;
 pub mod stress;
 

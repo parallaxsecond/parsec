@@ -12,11 +12,12 @@ cleanup () {
     if [ -n "$PARSEC_PID" ]; then kill $PARSEC_PID || true ; fi
     # Stop tpm_server if running
     if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
-    # Remove the slot_number line added by find_slot_number.sh
-    sed -i '/^slot_number =.*/d' $CONFIG_PATH
+    # Remove the slot_number line added earlier
+    find e2e_tests -name "*toml" -not -name "Cargo.toml" -exec sed -i 's/^slot_number =.*/# slot_number/' {} \;
     # Remove fake mapping and temp files
-    if [ -d "mappings" ]; then rm -rf -- "mappings"; fi
-    if [ -f "NVChip" ]; then rm "NVChip" ; fi
+    rm -rf "mappings"
+    rm -f "NVChip" 
+    rm -f "e2e_tests/provider_cfg/tmp_config.toml"
 
     if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
 }
@@ -50,6 +51,7 @@ error_msg () {
 NO_CARGO_CLEAN=
 NO_STRESS_TEST=
 PROVIDER_NAME=
+CONFIG_PATH=$(pwd)/e2e_tests/provider_cfg/tmp_config.toml
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --no-cargo-clean )
@@ -63,7 +65,7 @@ while [ "$#" -gt 0 ]; do
                 error_msg "Only one provider name must be given"
             fi
             PROVIDER_NAME=$1
-            CONFIG_PATH="e2e_tests/provider_cfg/$1/config.toml"
+            cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
             if [ "$PROVIDER_NAME" = "all" ]; then
                 FEATURES="--features=all-providers"
             else
@@ -94,8 +96,13 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
 fi
 
 if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ]; then
-    # Find and append the slot number at the end of the configuration file.
-    e2e_tests/provider_cfg/pkcs11/find_slot_number.sh $CONFIG_PATH
+    pushd e2e_tests
+    # This command suppose that the slot created by the container will be the first one that appears
+    # when printing all the available slots.
+    SLOT_NUMBER=`softhsm2-util --show-slots | head -n2 | tail -n1 | cut -d " " -f 2`
+    # Find all TOML files in the directory (except Cargo.toml) and replace the commented slot number with the valid one
+    find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
+    popd
 fi
 
 echo "Build test"
@@ -128,6 +135,7 @@ pgrep -f target/debug/parsec >/dev/null
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers tests"
     RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml all_providers
+    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml config
 else
     # Per provider tests
     echo "Execute normal tests"
