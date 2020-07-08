@@ -6,11 +6,9 @@ use log::error;
 use log::{info, trace, warn};
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result;
-use picky_asn1::wrapper::IntegerAsn1;
 use pkcs11::errors::Error;
 use pkcs11::types::*;
 use pkcs11::types::{CKF_RW_SESSION, CKF_SERIAL_SESSION, CKU_USER};
-use serde::{Deserialize, Serialize};
 
 /// Convert the PKCS 11 library specific error values to ResponseStatus values that are returned on
 /// the wire protocol
@@ -58,17 +56,6 @@ pub fn rv_to_response_status(rv: CK_RV) -> ResponseStatus {
             ResponseStatus::PsaErrorCommunicationFailure
         }
     }
-}
-
-// The RSA Public Key data are DER encoded with the following representation:
-// RSAPublicKey ::= SEQUENCE {
-//     modulus            INTEGER,  -- n
-//     publicExponent     INTEGER   -- e
-// }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RsaPublicKey {
-    pub modulus: IntegerAsn1,
-    pub public_exponent: IntegerAsn1,
 }
 
 // For PKCS 11, a key pair consists of two independant public and private keys. Both will share the

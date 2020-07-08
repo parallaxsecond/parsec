@@ -1,9 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{
-    utils, KeyInfo, KeyPairType, LocalIdStore, Pkcs11Provider, ReadWriteSession, RsaPublicKey,
-    Session,
-};
+use super::{utils, KeyInfo, KeyPairType, LocalIdStore, Pkcs11Provider, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use crate::key_info_managers::{self, ManageKeyInfo};
@@ -15,6 +12,7 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::IntegerAsn1;
+use picky_asn1_x509::RSAPublicKey;
 use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
 use std::mem;
 
@@ -277,7 +275,7 @@ impl Pkcs11Provider {
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
+        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
             .or_else(|e| {
                 format_error!("Failed to parse RsaPublicKey data", e);
                 remove_key_id(
@@ -467,7 +465,7 @@ impl Pkcs11Provider {
                     let modulus = IntegerAsn1::from_unsigned_bytes_be(modulus);
                     let public_exponent = IntegerAsn1::from_unsigned_bytes_be(public_exponent);
 
-                    let key = RsaPublicKey {
+                    let key = RSAPublicKey {
                         modulus,
                         public_exponent,
                     };

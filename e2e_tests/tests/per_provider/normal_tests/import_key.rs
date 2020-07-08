@@ -6,18 +6,7 @@ use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
-use serde::{Deserialize, Serialize};
-
-// The RSA Public Key data are DER encoded with the following representation:
-// RSAPublicKey ::= SEQUENCE {
-//     modulus            INTEGER,  -- n
-//     publicExponent     INTEGER   -- e
-// }
-#[derive(Serialize, Deserialize, Debug)]
-struct RsaPublicKey {
-    modulus: IntegerAsn1,
-    public_exponent: IntegerAsn1,
-}
+use picky_asn1_x509::RSAPublicKey;
 
 const KEY_DATA: [u8; 140] = [
     48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20, 102,
@@ -83,7 +72,7 @@ fn check_format_import1() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("check_format_import");
 
-    let public_key = RsaPublicKey {
+    let public_key = RSAPublicKey {
         modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
@@ -100,7 +89,7 @@ fn check_format_import2() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("check_format_import2");
 
-    let public_key = RsaPublicKey {
+    let public_key = RSAPublicKey {
         modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
@@ -146,7 +135,7 @@ fn check_format_import3() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("check_format_import3");
 
-    let public_key = RsaPublicKey {
+    let public_key = RSAPublicKey {
         modulus: IntegerAsn1::from_unsigned_bytes_be(vec![0xDE; 1024]),
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };
@@ -194,7 +183,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("failed_imported_key_should_be_removed");
 
-    let public_key = RsaPublicKey {
+    let public_key = RSAPublicKey {
         modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
     };

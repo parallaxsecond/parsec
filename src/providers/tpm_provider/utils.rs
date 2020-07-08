@@ -6,6 +6,7 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
+use picky_asn1_x509::RSAPublicKey;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -85,17 +86,6 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
     }
 }
 
-// The RSA Public Key data are DER encoded with the following representation:
-// RSAPublicKey ::= SEQUENCE {
-//     modulus            INTEGER,  -- n
-//     publicExponent     INTEGER   -- e
-// }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RsaPublicKey {
-    pub modulus: IntegerAsn1,
-    pub public_exponent: IntegerAsn1,
-}
-
 // The PasswordContext is what is stored by the Key Info Manager.
 #[derive(Serialize, Deserialize)]
 pub struct PasswordContext {
@@ -171,7 +161,7 @@ fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EllipticCurve> {
 
 pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Result<Vec<u8>> {
     match pub_key {
-        PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RsaPublicKey {
+        PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RSAPublicKey {
             modulus: IntegerAsn1::from_unsigned_bytes_be(key),
             public_exponent: IntegerAsn1::from_signed_bytes_be(PUBLIC_EXPONENT.to_vec()),
         })

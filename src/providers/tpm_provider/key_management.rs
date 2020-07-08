@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::utils;
-use super::utils::{PasswordContext, RsaPublicKey};
+use super::utils::PasswordContext;
 use super::TpmProvider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
@@ -14,6 +14,7 @@ use parsec_interface::operations::{
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
+use picky_asn1_x509::RSAPublicKey;
 
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -130,7 +131,7 @@ impl TpmProvider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(key_data.expose_secret())
+        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data.expose_secret())
             .or_else(|err| {
                 format_error!("Could not deserialise key elements", err);
                 Err(ResponseStatus::PsaErrorInvalidArgument)

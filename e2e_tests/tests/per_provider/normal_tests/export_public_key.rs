@@ -5,19 +5,7 @@ use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
-use picky_asn1::wrapper::IntegerAsn1;
-use serde::{Deserialize, Serialize};
-
-// The RSA Public Key data are DER encoded with the following representation:
-// RSAPublicKey ::= SEQUENCE {
-//     modulus            INTEGER,  -- n
-//     publicExponent     INTEGER   -- e
-// }
-#[derive(Serialize, Deserialize, Debug)]
-struct RsaPublicKey {
-    modulus: IntegerAsn1,
-    public_exponent: IntegerAsn1,
-}
+use picky_asn1_x509::RSAPublicKey;
 
 #[test]
 fn export_public_key() -> Result<()> {
@@ -70,7 +58,7 @@ fn check_public_rsa_export_format() -> Result<()> {
     let public_key = client.export_public_key(key_name)?;
 
     // That should not fail if the bytes are in the expected format.
-    let _public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
+    let _public_key: RSAPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
     Ok(())
 }
 
