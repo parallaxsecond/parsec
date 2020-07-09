@@ -25,8 +25,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        info!("Pkcs11 Provider - Asym Sign");
-
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;
@@ -113,8 +111,6 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        info!("Pkcs11 Provider - Asym Verify");
-
         let key_name = op.key_name;
         let hash = op.hash;
         let signature = op.signature;

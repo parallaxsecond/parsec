@@ -159,6 +159,24 @@ impl BackEndHandler {
                 trace!("psa_verify_hash egress");
                 self.result_to_response(NativeResult::PsaVerifyHash(result), header)
             }
+            NativeOperation::PsaAsymmetricEncrypt(op_asymmetric_encrypt) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_asymmetric_encrypt(app_name, op_asymmetric_encrypt));
+                trace!("psa_asymmetric_encrypt_egress");
+                self.result_to_response(NativeResult::PsaAsymmetricEncrypt(result), header)
+            }
+            NativeOperation::PsaAsymmetricDecrypt(op_asymmetric_decrypt) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_asymmetric_decrypt(app_name, op_asymmetric_decrypt));
+                trace!("psa_asymmetric_encrypt_egress");
+                self.result_to_response(NativeResult::PsaAsymmetricDecrypt(result), header)
+            }
         }
     }
 }

@@ -3,7 +3,6 @@
 use super::{key_management, MbedProvider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
-use log::info;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use psa_crypto::operations::asym_signature;
@@ -15,7 +14,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        info!("Mbed Provider - Asym Sign");
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;
@@ -42,7 +40,7 @@ impl MbedProvider {
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);
-                format_error!("Sign status: {}", error);
+                format_error!("Sign status: ", error);
                 Err(error)
             }
         }
@@ -53,7 +51,6 @@ impl MbedProvider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        info!("Mbed Provider - Asym Verify");
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;
@@ -72,7 +69,7 @@ impl MbedProvider {
             Ok(()) => Ok(psa_verify_hash::Result {}),
             Err(error) => {
                 let error = ResponseStatus::from(error);
-                format_error!("Verify status: {}", error);
+                format_error!("Verify status: ", error);
                 Err(error)
             }
         }
