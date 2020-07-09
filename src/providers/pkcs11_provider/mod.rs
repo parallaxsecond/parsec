@@ -20,7 +20,7 @@ use pkcs11::Ctx;
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
-use utils::{KeyPairType, ReadWriteSession, RsaPublicKey, Session};
+use utils::{KeyPairType, ReadWriteSession, Session};
 use uuid::Uuid;
 
 type LocalIdStore = HashSet<[u8; 4]>;

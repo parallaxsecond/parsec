@@ -100,6 +100,7 @@ This project uses the following third party crates:
 * pkcs11 (Apache-2.0)
 * picky-asn1-der (MIT and Apache-2.0)
 * picky-asn1 (MIT and Apache-2.0)
+* picky-asn1-x509 (MIT and Apache-2.0)
 * bincode (MIT)
 * structopt (MIT and Apache-2.0)
 * derivative (MIT and Apache-2.0)
