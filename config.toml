@@ -49,6 +49,9 @@ manager_type = "OnDisk"
 
 # (Required) Provider configurations.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
+# The order in which providers below are declared matters: providers should be listed in terms
+# of priority, the highest priority provider being declared first in this file.
+# The first provider will be used as default provider by the Parsec clients.
 [[provider]]
 # (Required) Type of provider.
 provider_type = "MbedCrypto"
