@@ -17,7 +17,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    Attributes, Lifetime, Policy, Type, UsageFlags,
+    Attributes, Lifetime, Policy, Type, UsageFlags, EccFamily,
 };
 use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use parsec_client::core::secrecy::{ExposeSecret, Secret};
@@ -222,6 +222,34 @@ impl TestClient {
         )
     }
 
+    pub fn generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::EccKeyPair {curve_family: EccFamily::SecpK1},
+                bits: 256,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: true,
+                        verify_hash: false,
+                        sign_message: true,
+                        verify_message: false,
+                        export: true,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
+                        hash_alg: Hash::Sha256.into(),
+                    }.into(),
+                },
+            },
+        )
+    }
+
     /// Imports and creates a key with specific attributes.
     pub fn import_key(
         &mut self,
@@ -245,7 +273,7 @@ impl TestClient {
 
     /// Import a 1024 bit RSA key pair
     /// The key pair can only be used for encryption and decryption with RSA PKCS 1v15
-    pub fn import_rsa_key_pair(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+    pub fn import_rsa_key_pair_for_encryption(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
         self.import_key(
             key_name,
             Attributes {
@@ -258,7 +286,7 @@ impl TestClient {
                         verify_hash: false,
                         sign_message: false,
                         verify_message: true,
-                        export: false,
+                        export: true,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -303,6 +331,13 @@ impl TestClient {
             },
             data,
         )
+    }
+
+    /// Exports a key
+    pub fn export_key(&mut self, key_name: String) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_export_key(key_name)
+            .map_err(convert_error)
     }
 
     /// Exports a public key.

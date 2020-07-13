@@ -7,8 +7,8 @@ use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
-    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_key,
+    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
@@ -168,6 +168,15 @@ impl Provide for MbedProvider {
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
         self.psa_export_public_key_internal(app_name, op)
+    }
+
+    fn psa_export_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_export_key::Operation,
+    ) -> Result<psa_export_key::Result> {
+        trace!("psa_export_public_key ingress");
+        self.psa_export_key_internal(app_name, op)
     }
 
     fn psa_destroy_key(

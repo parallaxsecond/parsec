@@ -76,8 +76,8 @@ impl ProviderConfig {
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
     list_opcodes, list_providers, ping, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
-    psa_verify_hash,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -127,7 +127,7 @@ pub trait Provide {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Execute a ImportKey operation.
+    /// Execute an ImportKey operation.
     fn psa_import_key(
         &self,
         _app_name: ApplicationName,
@@ -137,13 +137,23 @@ pub trait Provide {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Execute a ExportPublicKey operation.
+    /// Execute an ExportPublicKey operation.
     fn psa_export_public_key(
         &self,
         _app_name: ApplicationName,
         _op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute an ExportKey operation.
+    fn psa_export_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_export_key::Operation,
+    ) -> Result<psa_export_key::Result> {
+        trace!("psa_export_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
