@@ -8,14 +8,13 @@ use log::error;
 use log::warn;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
-use parsec_interface::secrecy::ExposeSecret;
+use parsec_interface::secrecy::{ExposeSecret, Secret};
 use psa_crypto::operations::key_management as psa_crypto_key_management;
 use psa_crypto::types::key;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-
 /// Gets a PSA Key ID from the Key Info Manager.
 /// Wrapper around the get method of the Key Info Manager to convert the key ID to the psa_key_id_t
 /// type.
@@ -190,7 +189,7 @@ impl MbedProvider {
 
         let id = key::Id::from_persistent_key_id(key_id);
         let key_attributes = key::Attributes::from_key_id(id)?;
-        let buffer_size = key_attributes.export_key_output_size()?;
+        let buffer_size = key_attributes.export_public_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
 
         let export_length = psa_crypto_key_management::export_public(id, &mut buffer)?;
@@ -198,6 +197,34 @@ impl MbedProvider {
         buffer.resize(export_length, 0);
         Ok(psa_export_public_key::Result {
             data: buffer.into(),
+        })
+    }
+
+    pub(super) fn psa_export_key_internal(
+        &self,
+        app_name: ApplicationName,
+        op: psa_export_key::Operation,
+    ) -> Result<psa_export_key::Result> {
+        let key_name = op.key_name;
+        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        let key_id = get_key_id(&key_triple, &*store_handle)?;
+
+        let _guard = self
+            .key_handle_mutex
+            .lock()
+            .expect("Grabbing key handle mutex failed");
+
+        let id = key::Id::from_persistent_key_id(key_id);
+        let key_attributes = key::Attributes::from_key_id(id)?;
+        let buffer_size = key_attributes.export_key_output_size()?;
+        let mut buffer = vec![0u8; buffer_size];
+
+        let export_length = psa_crypto_key_management::export_key(id, &mut buffer)?;
+
+        buffer.resize(export_length, 0);
+        Ok(psa_export_key::Result {
+            data: Secret::new(buffer),
         })
     }
 

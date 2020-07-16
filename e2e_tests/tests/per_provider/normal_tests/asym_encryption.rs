@@ -190,7 +190,7 @@ fn asym_verify_decrypt_with_internet() {
     }
 
     client
-        .import_rsa_key_pair(key_name.clone(), base64::decode(PRIVATE_KEY).unwrap())
+        .import_rsa_key_pair_for_encryption(key_name.clone(), base64::decode(PRIVATE_KEY).unwrap())
         .unwrap();
     let encrypt_bytes = base64::decode(ENCRYPTED_MESSAGE).unwrap();
     let plaintext_bytes = client

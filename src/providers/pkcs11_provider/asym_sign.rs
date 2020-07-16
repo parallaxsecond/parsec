@@ -8,8 +8,9 @@ use log::{error, info, trace};
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
-use picky::{algorithm_identifier::SHAVariant, AlgorithmIdentifier};
+use picky::AlgorithmIdentifier;
 use picky_asn1::wrapper::OctetStringAsn1;
+use picky_asn1_x509::SHAVariant;
 use pkcs11::types::CK_MECHANISM;
 use serde::{Deserialize, Serialize};
 

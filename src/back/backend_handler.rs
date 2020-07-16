@@ -135,6 +135,14 @@ impl BackEndHandler {
                 trace!("psa_export_public_key egress");
                 self.result_to_response(NativeResult::PsaExportPublicKey(result), header)
             }
+            NativeOperation::PsaExportKey(op_export_key) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.psa_export_key(app_name, op_export_key));
+                trace!("psa_export_public_key egress");
+                self.result_to_response(NativeResult::PsaExportKey(result), header)
+            }
             NativeOperation::PsaDestroyKey(op_destroy_key) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
