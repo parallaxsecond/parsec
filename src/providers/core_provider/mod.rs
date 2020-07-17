@@ -105,19 +105,19 @@ impl CoreProviderBuilder {
     }
 
     pub fn build(mut self) -> std::io::Result<CoreProvider> {
-        let crate_version: Version = Version::from_str(version!()).or_else(|e| {
+        let crate_version: Version = Version::from_str(version!()).map_err(|e| {
             format_error!("Error parsing the crate version", e);
-            Err(Error::new(
+            Error::new(
                 ErrorKind::InvalidData,
                 "crate version number has invalid format",
-            ))
+            )
         })?;
         self.provider_info.push(ProviderInfo {
             // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
-            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").or_else(|_| Err(Error::new(
+            uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").map_err(|_| Error::new(
                 ErrorKind::InvalidData,
                 "provider UUID is invalid",
-            )))?,
+            ))?,
             description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
             vendor: String::new(),
             version_maj: crate_version.major,

@@ -158,12 +158,9 @@ fn build_backend_handlers(
         .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
 
     for (provider_id, provider) in providers.drain(..) {
-        let (info, opcodes) = provider.describe().or_else(|_| {
-            Err(Error::new(
-                ErrorKind::InvalidData,
-                "error describing provider",
-            ))
-        })?;
+        let (info, opcodes) = provider
+            .describe()
+            .map_err(|_| Error::new(ErrorKind::InvalidData, "error describing provider"))?;
         core_provider_builder = core_provider_builder.with_provider_details(info, opcodes);
 
         let backend_handler = BackEndHandlerBuilder::new()

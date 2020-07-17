@@ -8,7 +8,6 @@ use parsec_interface::requests::{ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RSAPublicKey;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::convert::TryInto;
 use tss_esapi::abstraction::transient::KeyParams;
 use tss_esapi::response_code::{Error, Tss2ResponseCodeKind};
@@ -167,7 +166,7 @@ pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Resul
         })
         .or(Err(ResponseStatus::PsaErrorGenericError)),
         PublicKey::Ecc { x, y } => {
-            let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
+            let p_byte_size = key_attributes.bits / 8; // should not fail for valid keys
             if x.len() != p_byte_size || y.len() != p_byte_size {
                 if crate::utils::GlobalConfig::log_error_details() {
                     error!(
@@ -201,7 +200,7 @@ pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) 
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
-            let p_byte_size = usize::try_from(key_attributes.bits / 8).unwrap(); // should not fail for valid keys
+            let p_byte_size = key_attributes.bits / 8; // should not fail for valid keys
             if r.len() != p_byte_size || s.len() != p_byte_size {
                 if crate::utils::GlobalConfig::log_error_details() {
                     error!(
@@ -244,7 +243,7 @@ fn bytes_to_signature_data(
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
-            let p_size = usize::try_from(key_attributes.bits / 8).unwrap();
+            let p_size = key_attributes.bits / 8;
             if data.len() != p_size * 2 {
                 return Err(ResponseStatus::PsaErrorInvalidArgument);
             }

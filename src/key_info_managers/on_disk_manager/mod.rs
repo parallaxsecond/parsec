@@ -190,9 +190,9 @@ impl OnDiskKeyInfoManager {
                     let mut key_info = Vec::new();
                     let mut key_info_file = File::open(&key_name_file_path)?;
                     let _ = key_info_file.read_to_end(&mut key_info)?;
-                    let key_info = bincode::deserialize(&key_info[..]).or_else(|e| {
+                    let key_info = bincode::deserialize(&key_info[..]).map_err(|e| {
                         format_error!("Error deserializing key info", e);
-                        Err(Error::new(ErrorKind::Other, "error deserializing key info"))
+                        Error::new(ErrorKind::Other, "error deserializing key info")
                     })?;
                     match base64_data_triple_to_key_triple(
                         os_str_to_u8_ref(app_name_dir_path.file_name().expect(
@@ -257,9 +257,9 @@ impl OnDiskKeyInfoManager {
         }
 
         let mut mapping_file = fs::File::create(&key_name_file_path)?;
-        mapping_file.write_all(&bincode::serialize(key_info).or_else(|e| {
+        mapping_file.write_all(&bincode::serialize(key_info).map_err(|e| {
             format_error!("Error serializing key info", e);
-            Err(Error::new(ErrorKind::Other, "error serializing key info"))
+            Error::new(ErrorKind::Other, "error serializing key info")
         })?)
     }
 
