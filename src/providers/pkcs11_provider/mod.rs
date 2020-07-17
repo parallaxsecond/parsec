@@ -319,12 +319,9 @@ impl Pkcs11ProviderBuilder {
         let slot_number = self
             .slot_number
             .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing slot number"))?;
-        let mut backend = Ctx::new(library_path).or_else(|e| {
+        let mut backend = Ctx::new(library_path).map_err(|e| {
             format_error!("Error creating a PKCS 11 context", e);
-            Err(Error::new(
-                ErrorKind::InvalidData,
-                "error creating PKCS 11 context",
-            ))
+            Error::new(ErrorKind::InvalidData, "error creating PKCS 11 context")
         })?;
         let mut args = CK_C_INITIALIZE_ARGS::new();
         // Allow the PKCS 11 library to use OS native locking mechanism.
@@ -334,12 +331,12 @@ impl Pkcs11ProviderBuilder {
         args.UnlockMutex = None;
         args.flags = CKF_OS_LOCKING_OK;
         trace!("Initialize command");
-        backend.initialize(Some(args)).or_else(|e| {
+        backend.initialize(Some(args)).map_err(|e| {
             format_error!("Error initializing the PKCS 11 backend", e);
-            Err(Error::new(
+            Error::new(
                 ErrorKind::InvalidData,
                 "PKCS 11 backend initializing failed",
-            ))
+            )
         })?;
         Ok(Pkcs11Provider::new(
             self.key_info_store

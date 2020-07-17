@@ -53,7 +53,7 @@ pub fn get_password_context(
 ) -> Result<(PasswordContext, Attributes)> {
     let key_info = store_handle
         .get(&key_triple)
-        .or_else(|e| Err(key_info_managers::to_response_status(e)))?
+        .map_err(key_info_managers::to_response_status)?
         .ok_or_else(|| {
             if crate::utils::GlobalConfig::log_error_details() {
                 error!(
@@ -89,9 +89,9 @@ impl TpmProvider {
 
         let (key_context, auth_value) = esapi_context
             .create_signing_key(utils::parsec_to_tpm_params(attributes)?, AUTH_VAL_LEN)
-            .or_else(|e| {
+            .map_err(|e| {
                 format_error!("Error creating a RSA signing key", e);
-                Err(utils::to_response_status(e))
+                utils::to_response_status(e)
             })?;
 
         insert_password_context(
@@ -132,9 +132,9 @@ impl TpmProvider {
             .expect("ESAPI Context lock poisoned");
 
         let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data.expose_secret())
-            .or_else(|err| {
+            .map_err(|err| {
                 format_error!("Could not deserialise key elements", err);
-                Err(ResponseStatus::PsaErrorInvalidArgument)
+                ResponseStatus::PsaErrorInvalidArgument
             })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
@@ -183,9 +183,9 @@ impl TpmProvider {
 
         let pub_key_context = esapi_context
             .load_external_rsa_public_key(&key_data)
-            .or_else(|e| {
+            .map_err(|e| {
                 format_error!("Error creating a RSA signing key", e);
-                Err(utils::to_response_status(e))
+                utils::to_response_status(e)
             })?;
 
         insert_password_context(
@@ -219,9 +219,9 @@ impl TpmProvider {
 
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
-            .or_else(|e| {
+            .map_err(|e| {
                 format_error!("Error reading a public key", e);
-                Err(utils::to_response_status(e))
+                utils::to_response_status(e)
             })?;
 
         Ok(psa_export_public_key::Result {

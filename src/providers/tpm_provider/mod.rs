@@ -201,11 +201,8 @@ impl TpmProviderBuilder {
             Some(mut auth) if auth.starts_with(AUTH_HEX_PREFIX) => Ok(hex::decode(
                 auth.split_off(AUTH_STRING_PREFIX.len()),
             )
-            .or_else(|_| {
-                Err(std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "invalid hex owner hierarchy auth",
-                ))
+            .map_err(|_| {
+                std::io::Error::new(ErrorKind::InvalidData, "invalid hex owner hierarchy auth")
             })?),
             Some(auth) => Ok(auth.into()),
         }
@@ -225,19 +222,13 @@ impl TpmProviderBuilder {
             Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
             })?)
-            .or_else(|_| {
-                Err(std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "Invalid TCTI configuration string",
-                ))
+            .map_err(|_| {
+                std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
             })?,
         )
-        .or_else(|e| {
+        .map_err(|e| {
             format_error!("Error when creating TSS Context", e);
-            Err(std::io::Error::new(
-                ErrorKind::InvalidData,
-                "failed initializing TSS context",
-            ))
+            std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
         })?;
         for cipher in ciphers.iter() {
             if ctx
@@ -265,11 +256,8 @@ impl TpmProviderBuilder {
         let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
             std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
         })?)
-        .or_else(|_| {
-            Err(std::io::Error::new(
-                ErrorKind::InvalidData,
-                "Invalid TCTI configuration string",
-            ))
+        .map_err(|_| {
+            std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
         })?;
         TpmProvider::new(
             self.key_info_store.ok_or_else(|| {
@@ -286,12 +274,9 @@ impl TpmProviderBuilder {
                 )
                 .with_default_context_cipher(default_cipher)
                 .build()
-                .or_else(|e| {
+                .map_err(|e| {
                     format_error!("Error creating TSS Transient Object Context", e);
-                    Err(std::io::Error::new(
-                        ErrorKind::InvalidData,
-                        "failed initializing TSS context",
-                    ))
+                    std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
                 })?,
         )
         .ok_or_else(|| {

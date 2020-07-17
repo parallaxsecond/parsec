@@ -72,11 +72,11 @@ fn main() -> Result<()> {
     let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
     let mut config_file = ::std::fs::read_to_string(opts.config.clone())?;
-    let mut config: ServiceConfig = toml::from_str(&config_file).or_else(|e| {
-        Err(Error::new(
+    let mut config: ServiceConfig = toml::from_str(&config_file).map_err(|e| {
+        Error::new(
             ErrorKind::InvalidInput,
             format!("Failed to parse service configuration ({})", e),
-        ))
+        )
     })?;
 
     log_setup(&config);
@@ -111,11 +111,11 @@ fn main() -> Result<()> {
             drop(threadpool);
 
             config_file = ::std::fs::read_to_string(opts.config.clone())?;
-            config = toml::from_str(&config_file).or_else(|e| {
-                Err(Error::new(
+            config = toml::from_str(&config_file).map_err(|e| {
+                Error::new(
                     ErrorKind::InvalidInput,
                     format!("Failed to parse service configuration ({})", e),
-                ))
+                )
             })?;
             front_end_handler = Arc::from(ServiceBuilder::build_service(&config)?);
             listener = ServiceBuilder::start_listener(config.listener)?;

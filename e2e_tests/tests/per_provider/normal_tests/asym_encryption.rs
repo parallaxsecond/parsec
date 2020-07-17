@@ -48,7 +48,7 @@ fn simple_asym_encrypt_rsa_pkcs() {
         .generate_rsa_encryption_keys_rsapkcs1v15crypt(key_name.clone())
         .unwrap();
     let _ciphertext = client
-        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name, PLAINTEXT_MESSAGE.to_vec())
         .unwrap();
 }
 
@@ -95,7 +95,7 @@ fn asym_encrypt_wrong_algorithm() {
         .generate_rsa_encryption_keys_rsaoaep_sha256(key_name.clone())
         .unwrap();
     let status = client
-        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name, PLAINTEXT_MESSAGE.to_vec())
         .unwrap_err();
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
 }
@@ -142,10 +142,10 @@ fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
         .generate_rsa_encryption_keys_rsapkcs1v15crypt(key_name_2.clone())
         .unwrap();
     let ciphertext = client
-        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name_1.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name_1, PLAINTEXT_MESSAGE.to_vec())
         .unwrap();
     let _res = client
-        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name_2.clone(), ciphertext)
+        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name_2, ciphertext)
         .unwrap_err();
 }
 
@@ -173,7 +173,7 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate() {
         .unwrap();
 
     let plaintext = client
-        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name.clone(), ciphertext)
+        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);

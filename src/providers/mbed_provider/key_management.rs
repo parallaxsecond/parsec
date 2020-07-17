@@ -87,7 +87,7 @@ fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -
 pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
     store_handle
         .exists(key_triple)
-        .or_else(|e| Err(key_info_managers::to_response_status(e)))
+        .map_err(key_info_managers::to_response_status)
 }
 
 impl MbedProvider {

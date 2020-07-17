@@ -49,11 +49,11 @@ impl TpmProvider {
                 &password_context.auth_value,
                 &op.hash,
             )
-            .or_else(|e| {
+            .map_err(|e| {
                 if crate::utils::GlobalConfig::log_error_details() {
                     error!("Error signing: {}.", e);
                 }
-                Err(utils::to_response_status(e))
+                utils::to_response_status(e)
             })?;
 
         Ok(psa_sign_hash::Result {

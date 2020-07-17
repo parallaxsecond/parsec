@@ -153,7 +153,7 @@ impl Pkcs11Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         // This should never panic on 32 bits or more machines.
-        let key_size = std::convert::TryFrom::try_from(op.attributes.bits).unwrap();
+        let key_size = op.attributes.bits;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self
@@ -463,9 +463,9 @@ impl Pkcs11Provider {
                         modulus,
                         public_exponent,
                     };
-                    let data = picky_asn1_der::to_vec(&key).or_else(|err| {
+                    let data = picky_asn1_der::to_vec(&key).map_err(|err| {
                         format_error!("Could not serialise key elements", err);
-                        Err(ResponseStatus::PsaErrorCommunicationFailure)
+                        ResponseStatus::PsaErrorCommunicationFailure
                     })?;
                     Ok(psa_export_public_key::Result { data: data.into() })
                 }
