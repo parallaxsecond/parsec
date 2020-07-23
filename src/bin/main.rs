@@ -125,10 +125,10 @@ fn main() -> Result<()> {
             info!("Parsec configuration reloaded.");
         }
 
-        if let Some(stream) = listener.accept() {
+        if let Some(connection) = listener.accept() {
             let front_end_handler = front_end_handler.clone();
             threadpool.execute(move || {
-                front_end_handler.handle_request(stream);
+                front_end_handler.handle_request(connection);
                 trace!("handle_request egress");
             });
         } else {

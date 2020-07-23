@@ -5,8 +5,8 @@
 //! Expose Parsec functionality using Unix domain sockets as an IPC layer.
 //! The local socket is created at a predefined location.
 use super::listener;
+use listener::Connection;
 use listener::Listen;
-use listener::ReadWrite;
 use log::error;
 use std::fs;
 use std::fs::Permissions;
@@ -91,7 +91,7 @@ impl Listen for DomainSocketListener {
         self.timeout = duration;
     }
 
-    fn accept(&self) -> Option<Box<dyn ReadWrite + Send>> {
+    fn accept(&self) -> Option<Connection> {
         let stream_result = self.listener.accept();
         match stream_result {
             Ok((stream, _)) => {
@@ -105,7 +105,12 @@ impl Listen for DomainSocketListener {
                     format_error!("Failed to set stream as blocking", err);
                     None
                 } else {
-                    Some(Box::from(stream))
+                    Some(Connection {
+                        stream: Box::new(stream),
+                        // TODO: when possible, we want to replace this with the (uid, gid, pid)
+                        // triple for peer credentials. See listener.rs.
+                        metadata: None,
+                    })
                 }
             }
             Err(err) => {
