@@ -134,6 +134,16 @@ impl TestClient {
         Ok(())
     }
 
+    /// Generates `nbytes` worth of random bytes.
+    pub fn generate_bytes(&mut self, nbytes: usize) -> Result<Vec<u8>> {
+        let random_bytes = self
+            .basic_client
+            .psa_generate_random(nbytes)
+            .map_err(convert_error)?;
+
+        Ok(random_bytes)
+    }
+
     /// Generate a 1024 bits RSA key pair.
     /// The key can only be used for signing/verifying with the RSA PKCS 1v15 signing algorithm with SHA-256 and exporting its public part.
     pub fn generate_rsa_sign_key(&mut self, key_name: String) -> Result<()> {

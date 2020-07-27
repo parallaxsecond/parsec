@@ -223,9 +223,6 @@ impl BackEndHandler {
                 trace!("psa_aead_decrypt_egress");
                 self.result_to_response(NativeResult::PsaHashCompare(result), header)
             }
-            NativeOperation::PsaGenerateRandom(_) => {
-                panic!("Unsupported in this PR");
-            }
             NativeOperation::PsaRawKeyAgreement(op_raw_key_agreement) => {
                 let app_name =
                     unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
@@ -234,6 +231,12 @@ impl BackEndHandler {
                     .psa_raw_key_agreement(app_name, op_raw_key_agreement));
                 trace!("psa_raw_key_agreement_egress");
                 self.result_to_response(NativeResult::PsaRawKeyAgreement(result), header)
+            }
+            NativeOperation::PsaGenerateRandom(op_generate_random) => {
+                let result =
+                    unwrap_or_else_return!(self.provider.psa_generate_random(op_generate_random));
+                trace!("psa_generate_random_egress");
+                self.result_to_response(NativeResult::PsaGenerateRandom(result), header)
             }
         }
     }
