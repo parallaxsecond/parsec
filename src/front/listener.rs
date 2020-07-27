@@ -5,6 +5,7 @@
 //! The [`Listen`](https://parallaxsecond.github.io/parsec-book/parsec_service/listeners.html)
 //! trait acts as an interface for the operations that must be supported by any implementation
 //! of the IPC mechanism used as a Parsec front.
+use derivative::Derivative;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -23,6 +24,23 @@ pub enum ListenerType {
 pub struct ListenerConfig {
     pub listener_type: ListenerType,
     pub timeout: u64,
+}
+
+/// Specifies metadata associated with a connection, if any.
+#[derive(Copy, Clone, Debug)]
+pub enum ConnectionMetadata {
+    // TODO: nothing here right now. Metadata types will be added as needed.
+}
+
+/// Represents a connection to a single client. Contains a stream, used for communication with the
+/// client, and some metadata associated with the connection that might be useful elsewhere (i.e.
+/// authentication, etc).
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct Connection {
+    #[derivative(Debug = "ignore")]
+    pub stream: Box<dyn ReadWrite + Send>,
+    pub metadata: Option<ConnectionMetadata>,
 }
 
 /// IPC front manager interface
@@ -45,5 +63,5 @@ pub trait Listen {
     /// # Panics
     ///
     /// If the listener has not been initialised before, with the `init` method.
-    fn accept(&self) -> Option<Box<dyn ReadWrite + Send>>;
+    fn accept(&self) -> Option<Connection>;
 }

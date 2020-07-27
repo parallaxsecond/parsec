@@ -10,6 +10,7 @@
 
 use super::ApplicationName;
 use super::Authenticate;
+use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
@@ -20,7 +21,11 @@ use std::str;
 pub struct DirectAuthenticator;
 
 impl Authenticate for DirectAuthenticator {
-    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName> {
+    fn authenticate(
+        &self,
+        auth: &RequestAuth,
+        _: Option<ConnectionMetadata>,
+    ) -> Result<ApplicationName> {
         if auth.buffer.expose_secret().is_empty() {
             error!("The direct authenticator does not expect empty authentication values.");
             Err(ResponseStatus::AuthenticationError)
@@ -49,9 +54,10 @@ mod test {
 
         let app_name = "app_name".to_string();
         let req_auth = RequestAuth::new(app_name.clone().into_bytes());
+        let conn_metadata = None;
 
         let auth_name = authenticator
-            .authenticate(&req_auth)
+            .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
         assert_eq!(auth_name.get_name(), app_name);
@@ -60,8 +66,9 @@ mod test {
     #[test]
     fn failed_authentication() {
         let authenticator = DirectAuthenticator {};
+        let conn_metadata = None;
         let status = authenticator
-            .authenticate(&RequestAuth::new(vec![0xff; 5]))
+            .authenticate(&RequestAuth::new(vec![0xff; 5]), conn_metadata)
             .expect_err("Authentication should have failed");
 
         assert_eq!(status, ResponseStatus::AuthenticationError);
@@ -70,8 +77,9 @@ mod test {
     #[test]
     fn empty_auth() {
         let authenticator = DirectAuthenticator {};
+        let conn_metadata = None;
         let status = authenticator
-            .authenticate(&RequestAuth::new(Vec::new()))
+            .authenticate(&RequestAuth::new(Vec::new()), conn_metadata)
             .expect_err("Empty auth should have failed");
 
         assert_eq!(status, ResponseStatus::AuthenticationError);

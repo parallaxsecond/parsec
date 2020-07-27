@@ -13,6 +13,7 @@
 
 pub mod direct_authenticator;
 
+use crate::front::listener::ConnectionMetadata;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;
 
@@ -24,12 +25,19 @@ pub struct ApplicationName(String);
 ///
 /// Interface that must be implemented for each authentication type available for the service.
 pub trait Authenticate {
-    /// Authenticates a `RequestAuth` payload and returns the `ApplicationName` if successfull.
+    /// Authenticates a `RequestAuth` payload and returns the `ApplicationName` if successful. A
+    /// optional `ConnectionMetadata` object is passed in too, since it is sometimes possible to
+    /// perform authentication based on the connection's metadata (i.e. as is the case for UNIX
+    /// domain sockets with peer credentials).
     ///
     /// # Errors
     ///
     /// If the authentification fails, returns a `ResponseStatus::AuthenticationError`.
-    fn authenticate(&self, auth: &RequestAuth) -> Result<ApplicationName>;
+    fn authenticate(
+        &self,
+        auth: &RequestAuth,
+        meta: Option<ConnectionMetadata>,
+    ) -> Result<ApplicationName>;
 }
 
 impl ApplicationName {

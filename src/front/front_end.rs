@@ -6,6 +6,7 @@
 //! pass them to the rest of the service and write the responses back.
 use crate::authenticators::Authenticate;
 use crate::back::dispatcher::Dispatcher;
+use crate::front::listener::Connection;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::requests::AuthType;
@@ -13,7 +14,6 @@ use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::{Request, Response};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Result};
-use std::io::{Read, Write};
 
 /// Read and verify request from IPC stream
 ///
@@ -40,17 +40,17 @@ impl FrontEndHandler {
     ///
     /// If an error occurs during (un)marshalling, no operation will be performed and the
     /// method will return.
-    pub fn handle_request<T: Read + Write>(&self, mut stream: T) {
+    pub fn handle_request(&self, mut connection: Connection) {
         trace!("handle_request ingress");
         // Read bytes from stream
         // De-Serialise bytes into a request
-        let request = match Request::read_from_stream(&mut stream, self.body_len_limit) {
+        let request = match Request::read_from_stream(&mut connection.stream, self.body_len_limit) {
             Ok(request) => request,
             Err(status) => {
                 format_error!("Failed to read request", status);
 
                 let response = Response::from_status(status);
-                if let Err(status) = response.write_to_stream(&mut stream) {
+                if let Err(status) = response.write_to_stream(&mut connection.stream) {
                     format_error!("Failed to write response", status);
                 }
                 return;
@@ -63,7 +63,7 @@ impl FrontEndHandler {
         // Otherwise find an authenticator that is capable to authenticate the request
         } else if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
             // Authenticate the request
-            match authenticator.authenticate(&request.auth) {
+            match authenticator.authenticate(&request.auth, connection.metadata) {
                 // Send the request to the dispatcher
                 // Get a response back
                 Ok(app_name) => (Some(app_name), None),
@@ -102,7 +102,7 @@ impl FrontEndHandler {
 
         // Serialise the response into bytes
         // Write bytes to stream
-        match response.write_to_stream(&mut stream) {
+        match response.write_to_stream(&mut connection.stream) {
             Ok(_) => {
                 if crate::utils::GlobalConfig::log_error_details() {
                     if let Some(app_name_string) = app_name {
