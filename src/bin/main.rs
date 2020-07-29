@@ -71,7 +71,12 @@ fn main() -> Result<()> {
     let _ = flag::register(SIGTERM, kill_signal.clone())?;
     let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
-    let mut config_file = ::std::fs::read_to_string(opts.config.clone())?;
+    let mut config_file = ::std::fs::read_to_string(opts.config.clone()).map_err(|e| {
+        Error::new(
+            e.kind(),
+            format!("Failed to read config file from path: {}", opts.config),
+        )
+    })?;
     let mut config: ServiceConfig = toml::from_str(&config_file).map_err(|e| {
         Error::new(
             ErrorKind::InvalidInput,
@@ -110,7 +115,12 @@ fn main() -> Result<()> {
             drop(listener);
             drop(threadpool);
 
-            config_file = ::std::fs::read_to_string(opts.config.clone())?;
+            config_file = ::std::fs::read_to_string(opts.config.clone()).map_err(|e| {
+                Error::new(
+                    e.kind(),
+                    format!("Failed to read config file from path: {}", opts.config),
+                )
+            })?;
             config = toml::from_str(&config_file).map_err(|e| {
                 Error::new(
                     ErrorKind::InvalidInput,
