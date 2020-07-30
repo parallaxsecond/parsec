@@ -25,13 +25,15 @@ mod asym_sign;
 #[allow(dead_code)]
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 6] = [
+const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
+    Opcode::PsaAsymmetricDecrypt,
+    Opcode::PsaAsymmetricEncrypt,
 ];
 
 #[derive(Derivative)]

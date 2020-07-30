@@ -34,6 +34,10 @@ fn list_opcodes() {
     let _ = crypto_providers_opcodes.insert(Opcode::PsaImportKey);
     let _ = crypto_providers_opcodes.insert(Opcode::PsaExportPublicKey);
 
+    let mut crypto_providers_inc_encrypt_opcodes = crypto_providers_opcodes.clone();
+    let _ = crypto_providers_inc_encrypt_opcodes.insert(Opcode::PsaAsymmetricDecrypt);
+    let _ = crypto_providers_inc_encrypt_opcodes.insert(Opcode::PsaAsymmetricEncrypt);
+
     let _ = core_provider_opcodes.insert(Opcode::Ping);
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);
     let _ = core_provider_opcodes.insert(Opcode::ListOpcodes);
@@ -60,7 +64,7 @@ fn list_opcodes() {
         client
             .list_opcodes(ProviderID::MbedCrypto)
             .expect("list providers failed"),
-        crypto_providers_opcodes
+        crypto_providers_inc_encrypt_opcodes
     );
 }
 
