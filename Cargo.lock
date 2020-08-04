@@ -766,6 +766,7 @@ dependencies = [
  "env_logger",
  "hex",
  "lazy_static",
+ "libc",
  "log",
  "parsec-interface",
  "picky",
@@ -784,6 +785,7 @@ dependencies = [
  "threadpool",
  "toml 0.4.10",
  "tss-esapi",
+ "users",
  "uuid",
  "version",
  "zeroize",
@@ -1510,6 +1512,16 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
+name = "users"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa4227e95324a443c9fcb06e03d4d85e91aabe9a5a02aa818688b6918b6af486"
+dependencies = [
+ "libc",
+ "log",
+]
 
 [[package]]
 name = "uuid"

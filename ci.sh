@@ -67,9 +67,9 @@ while [ "$#" -gt 0 ]; do
             PROVIDER_NAME=$1
             cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
             if [ "$PROVIDER_NAME" = "all" ]; then
-                FEATURES="--features=all-providers"
+                FEATURES="--features=all-providers,no-parsec-user-and-clients-group"
             else
-                FEATURES="--features=$1-provider"
+                FEATURES="--features=$1-provider,no-parsec-user-and-clients-group"
             fi
         ;;
         *)
