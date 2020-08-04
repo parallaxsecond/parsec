@@ -7,6 +7,8 @@ use log::error;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use std::convert::TryFrom;
+use tss_esapi::structures::{Auth, Digest};
 
 impl TpmProvider {
     pub(super) fn psa_sign_hash_internal(
@@ -46,8 +48,11 @@ impl TpmProvider {
         let signature = esapi_context
             .sign(
                 password_context.context,
-                &password_context.auth_value,
-                &op.hash,
+                Some(
+                    Auth::try_from(password_context.auth_value)
+                        .map_err(utils::to_response_status)?,
+                ),
+                Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
             )
             .map_err(|e| {
                 if crate::utils::GlobalConfig::log_error_details() {
@@ -98,7 +103,11 @@ impl TpmProvider {
         let signature = utils::parsec_to_tpm_signature(op.signature, key_attributes, op.alg)?;
 
         let _ = esapi_context
-            .verify_signature(password_context.context, &op.hash, signature)
+            .verify_signature(
+                password_context.context,
+                Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
+                signature,
+            )
             .map_err(utils::to_response_status)?;
 
         Ok(psa_verify_hash::Result {})

@@ -74,7 +74,7 @@ fn check_export_public_possible() -> Result<()> {
         bits: 1024,
         policy: Policy {
             usage_flags: UsageFlags {
-                sign_hash: false,
+                sign_hash: true,
                 verify_hash: false,
                 sign_message: false,
                 verify_message: false,
