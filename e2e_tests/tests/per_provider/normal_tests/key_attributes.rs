@@ -71,7 +71,7 @@ fn wrong_usage_flags() {
             usage_flags: UsageFlags {
                 // Forbid signing
                 sign_hash: false,
-                verify_hash: false,
+                verify_hash: true,
                 sign_message: false,
                 verify_message: false,
                 export: false,

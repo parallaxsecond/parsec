@@ -88,18 +88,20 @@ impl TpmProvider {
             .expect("ESAPI Context lock poisoned");
 
         let (key_context, auth_value) = esapi_context
-            .create_signing_key(utils::parsec_to_tpm_params(attributes)?, AUTH_VAL_LEN)
+            .create_key(utils::parsec_to_tpm_params(attributes)?, AUTH_VAL_LEN)
             .map_err(|e| {
                 format_error!("Error creating a RSA signing key", e);
                 utils::to_response_status(e)
             })?;
+        // We hardcode the AUTH_VAL_LEN, so we can assume there is an auth_value
+        let auth_value = auth_value.unwrap();
 
         insert_password_context(
             &mut *store_handle,
             key_triple,
             PasswordContext {
                 context: key_context,
-                auth_value,
+                auth_value: auth_value.value().to_vec(),
             },
             attributes,
         )?;

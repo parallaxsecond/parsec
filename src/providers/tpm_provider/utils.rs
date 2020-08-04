@@ -10,9 +10,10 @@ use picky_asn1_x509::RSAPublicKey;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use tss_esapi::abstraction::transient::KeyParams;
-use tss_esapi::response_code::{Error, Tss2ResponseCodeKind};
-use tss_esapi::utils::algorithm_specifiers::{EllipticCurve, HashingAlgorithm};
+use tss_esapi::constants::algorithm::{EllipticCurve, HashingAlgorithm};
+use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
 use tss_esapi::utils::{AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext};
+use tss_esapi::Error;
 use zeroize::Zeroizing;
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
@@ -99,11 +100,20 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
                 x @ 1024 | x @ 2048 | x @ 3072 | x @ 4096 => x.try_into().unwrap(), // will not fail on the matched values
                 _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
             };
-            Ok(KeyParams::Rsa {
-                size,
-                scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
-                pub_exponent: 0,
-            })
+            if attributes.is_encrypt_permitted() || attributes.is_decrypt_permitted() {
+                Ok(KeyParams::RsaEncrypt {
+                    size,
+                    pub_exponent: 0,
+                })
+            } else if attributes.is_hash_signable() || attributes.is_hash_verifiable() {
+                Ok(KeyParams::RsaSign {
+                    size,
+                    scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
+                    pub_exponent: 0,
+                })
+            } else {
+                Err(ResponseStatus::PsaErrorNotSupported)
+            }
         }
         Type::EccKeyPair { .. } => Ok(KeyParams::Ecc {
             scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
