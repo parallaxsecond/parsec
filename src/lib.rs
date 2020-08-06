@@ -35,6 +35,12 @@
 )]
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
+// TODO: remove this if/when the Unix peer credentials PR gets merged. Link
+//       here for reference: https://github.com/rust-lang/rust/pull/75148
+#![cfg_attr(
+    feature = "unix-peer-credentials-authenticator",
+    feature(peer_credentials_unix_socket)
+)]
 
 #[allow(unused)]
 macro_rules! format_error {

@@ -70,3 +70,4 @@ pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", 
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"]
 all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider"]
 docs = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider"]
+unix-peer-credentials-authenticator = []

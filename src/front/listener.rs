@@ -34,7 +34,13 @@ pub struct ListenerConfig {
 /// Specifies metadata associated with a connection, if any.
 #[derive(Copy, Clone, Debug)]
 pub enum ConnectionMetadata {
-    // TODO: nothing here right now. Metadata types will be added as needed.
+    /// Unix peer credentials metadata for Unix domain sockets.
+    UnixPeerCredentials {
+        /// The effective UID of the connecting process.
+        uid: u32,
+        /// The effective GID of the connecting process.
+        gid: u32,
+    },
 }
 
 /// Represents a connection to a single client
@@ -69,4 +75,10 @@ pub trait Listen {
     ///
     /// If the listener has not been initialised before, with the `init` method.
     fn accept(&self) -> Option<Connection>;
+}
+
+/// Get metadata for a particular object.
+pub trait GetMetadata {
+    /// Get the metadata associated with this object.
+    fn metadata(&self) -> Option<ConnectionMetadata>;
 }

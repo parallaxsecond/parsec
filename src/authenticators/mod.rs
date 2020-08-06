@@ -8,10 +8,11 @@
 //! used throughout the service for identifying the request initiator. The input to an authentication
 //! is the `RequestAuth` field of a request, which is parsed by the authenticator specified in the header.
 //! The authentication functionality is abstracted through an `Authenticate` trait.
-//!
-//! Currently only a simple Direct Authenticator component is implemented.
 
 pub mod direct_authenticator;
+
+#[cfg(feature = "unix-peer-credentials-authenticator")]
+pub mod unix_peer_credentials_authenticator;
 
 use crate::front::listener::ConnectionMetadata;
 use parsec_interface::operations::list_authenticators;
@@ -35,7 +36,7 @@ pub trait Authenticate {
     /// Authenticates a `RequestAuth` payload and returns the `ApplicationName` if successful. A
     /// optional `ConnectionMetadata` object is passed in too, since it is sometimes possible to
     /// perform authentication based on the connection's metadata (i.e. as is the case for UNIX
-    /// domain sockets with peer credentials).
+    /// domain sockets with Unix peer credentials).
     ///
     /// # Errors
     ///

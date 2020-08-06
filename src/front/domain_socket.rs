@@ -5,8 +5,8 @@
 //! Expose Parsec functionality using Unix domain sockets as an IPC layer.
 //! The local socket is created at a predefined location.
 use super::listener;
-use listener::Connection;
 use listener::Listen;
+use listener::{Connection, ConnectionMetadata, GetMetadata};
 use log::error;
 #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
 use std::ffi::CString;
@@ -16,6 +16,7 @@ use std::io::{Error, ErrorKind, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener;
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
 
@@ -202,11 +203,10 @@ impl Listen for DomainSocketListener {
                     format_error!("Failed to set stream as blocking", err);
                     None
                 } else {
+                    let metadata = stream.metadata();
                     Some(Connection {
                         stream: Box::new(stream),
-                        // TODO: when possible, we want to replace this with the (uid, gid, pid)
-                        // triple for peer credentials. See listener.rs.
-                        metadata: None,
+                        metadata,
                     })
                 }
             }
@@ -246,5 +246,28 @@ impl DomainSocketListenerBuilder {
             error!("The listener timeout was not set.");
             Error::new(ErrorKind::InvalidInput, "listener timeout missing")
         })?)
+    }
+}
+
+impl GetMetadata for UnixStream {
+    #[cfg(feature = "unix-peer-credentials-authenticator")]
+    fn metadata(&self) -> Option<ConnectionMetadata> {
+        let ucred = self.peer_cred().or_else(|err| {
+            format_error!(
+                "Failed to grab peer credentials metadata from UnixStream",
+                err
+            );
+            None
+        })?;
+        Some(ConnectionMetadata::UnixPeerCredentials {
+            uid: ucred.uid,
+            gid: ucred.gid,
+        })
+    }
+
+    // If Unix peer credentials authenticator feature is not in use, return None for the metadata.
+    #[cfg(not(feature = "unix-peer-credentials-authenticator"))]
+    fn metadata(&self) -> Option<ConnectionMetadata> {
+        None
     }
 }
