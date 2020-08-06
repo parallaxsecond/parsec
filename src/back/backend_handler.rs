@@ -16,6 +16,7 @@ use parsec_interface::requests::{
 };
 use parsec_interface::requests::{BodyType, ProviderID};
 use std::io::{Error, ErrorKind};
+use std::sync::Arc;
 
 /// Back end handler component
 ///
@@ -29,7 +30,7 @@ use std::io::{Error, ErrorKind};
 pub struct BackEndHandler {
     // Send and Sync are required for Arc<FrontEndHandler> to be Send.
     #[derivative(Debug = "ignore")]
-    provider: Box<dyn Provide + Send + Sync>,
+    provider: Arc<dyn Provide + Send + Sync>,
     #[derivative(Debug = "ignore")]
     converter: Box<dyn Convert + Send + Sync>,
     provider_id: ProviderID,
@@ -194,7 +195,7 @@ impl BackEndHandler {
 #[derivative(Debug)]
 pub struct BackEndHandlerBuilder {
     #[derivative(Debug = "ignore")]
-    provider: Option<Box<dyn Provide + Send + Sync>>,
+    provider: Option<Arc<dyn Provide + Send + Sync>>,
     #[derivative(Debug = "ignore")]
     converter: Option<Box<dyn Convert + Send + Sync>>,
     provider_id: Option<ProviderID>,
@@ -213,7 +214,7 @@ impl BackEndHandlerBuilder {
         }
     }
 
-    pub fn with_provider(mut self, provider: Box<dyn Provide + Send + Sync>) -> Self {
+    pub fn with_provider(mut self, provider: Arc<dyn Provide + Send + Sync>) -> Self {
         self.provider = Some(provider);
         self
     }
