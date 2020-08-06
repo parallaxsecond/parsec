@@ -5,8 +5,8 @@
 //! Expose Parsec functionality using Unix domain sockets as an IPC layer.
 //! The local socket is created at a predefined location.
 use super::listener;
-use listener::Connection;
 use listener::Listen;
+use listener::{Connection, ConnectionMetadata};
 use log::error;
 #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
 use std::ffi::CString;
@@ -202,11 +202,23 @@ impl Listen for DomainSocketListener {
                     format_error!("Failed to set stream as blocking", err);
                     None
                 } else {
+                    let ucred = stream
+                        .peer_cred()
+                        .map_err(|err| {
+                            format_error!(
+                                "Failed to grab peer credentials metadata from UnixStream",
+                                err
+                            );
+                            err
+                        })
+                        .ok()?;
                     Some(Connection {
                         stream: Box::new(stream),
-                        // TODO: when possible, we want to replace this with the (uid, gid, pid)
-                        // triple for peer credentials. See listener.rs.
-                        metadata: None,
+                        metadata: Some(ConnectionMetadata::UnixPeerCredentials {
+                            uid: ucred.uid,
+                            gid: ucred.gid,
+                            pid: ucred.pid,
+                        }),
                     })
                 }
             }
