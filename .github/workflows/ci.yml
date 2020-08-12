@@ -42,3 +42,11 @@ jobs:
         run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/ci.sh tpm
+
+  installation-tests:
+    name: Installation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build and run the container
+        run: e2e_tests/installation_tests/run-installation-tests.sh
