@@ -2,6 +2,11 @@
 
 # (Required) Core settings apply to the service as a whole rather than to individual components within it.
 [core_settings]
+# Whether or not to allow the service to run as the root user. If this is false, the service will refuse to
+# start if it is run as root. If this is true, the safety check is disabled and the service will be allowed to
+# start even if it is being run as root. The recommended (and default) setting is FALSE; allowing Parsec to
+# run as root violates the principle of least privilege.
+#allow_root = false
 # Size of the thread pool used for processing requests. Defaults to the number of processors on
 # the machine.
 #thread_pool_size = 8

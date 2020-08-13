@@ -3,6 +3,10 @@
 log_timestamp = false
 log_error_details = true
 
+# The container runs the Parsec service as root, so make sure we disable root
+# checks.
+allow_root = true
+
 [listener]
 listener_type = "DomainSocket"
 # The timeout needs to be smaller than the test client timeout (five seconds) as it is testing

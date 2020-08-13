@@ -41,6 +41,7 @@ use std::sync::{
 };
 use std::time::Duration;
 use structopt::StructOpt;
+use users::get_current_uid;
 
 /// Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
 /// common API to secure services in a platform-agnostic way.
@@ -83,6 +84,17 @@ fn main() -> Result<()> {
             format!("Failed to parse service configuration ({})", e),
         )
     })?;
+
+    // Guard against running as root. This check can be overridden by changing `allow_root` inside
+    // the config file.
+    let allow_root = config.core_settings.allow_root.unwrap_or(false);
+    if !allow_root && get_current_uid() == 0 {
+        return Err(Error::new(
+            ErrorKind::Other,
+            "Insecure configuration; the Parsec service should not be running as root! You can \
+             modify `allow_root` in the config file to bypass this check (not recommended).",
+        ));
+    }
 
     log_setup(&config);
 
