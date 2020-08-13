@@ -52,7 +52,7 @@ fn list_opcodes() {
         client
             .list_opcodes(ProviderID::Tpm)
             .expect("list providers failed"),
-        crypto_providers_opcodes
+        crypto_providers_inc_encrypt_opcodes
     );
     assert_eq!(
         client

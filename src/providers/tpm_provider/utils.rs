@@ -123,7 +123,7 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     }
 }
 
-fn convert_asym_scheme_to_tpm(algorithm: Algorithm) -> Result<AsymSchemeUnion> {
+pub fn convert_asym_scheme_to_tpm(algorithm: Algorithm) -> Result<AsymSchemeUnion> {
     match algorithm {
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(hash_alg),
@@ -131,6 +131,12 @@ fn convert_asym_scheme_to_tpm(algorithm: Algorithm) -> Result<AsymSchemeUnion> {
         Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
             hash_alg: SignHash::Specific(hash_alg),
         }) => Ok(AsymSchemeUnion::ECDSA(convert_hash_to_tpm(hash_alg)?)),
+        Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaPkcs1v15Crypt) => {
+            Ok(AsymSchemeUnion::RSAES)
+        }
+        Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaOaep { hash_alg }) => {
+            Ok(AsymSchemeUnion::RSAOAEP(convert_hash_to_tpm(hash_alg)?))
+        }
         _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }

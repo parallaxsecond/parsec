@@ -11,8 +11,8 @@ use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
-    psa_verify_hash,
+    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
+    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
@@ -23,17 +23,20 @@ use tss_esapi::constants::algorithm::{Cipher, HashingAlgorithm};
 use tss_esapi::Tcti;
 use uuid::Uuid;
 
+mod asym_encryption;
 mod asym_sign;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 6] = [
+const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
+    Opcode::PsaAsymmetricDecrypt,
+    Opcode::PsaAsymmetricEncrypt,
 ];
 
 const ROOT_KEY_SIZE: u16 = 2048;
@@ -140,6 +143,24 @@ impl Provide for TpmProvider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_encrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        trace!("psa_asymmetric_encrypt ingress");
+        self.psa_asymmetric_encrypt_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_decrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
+        trace!("psa_asymmetric_decrypt ingress");
+        self.psa_asymmetric_decrypt_internal(app_name, op)
     }
 }
 
