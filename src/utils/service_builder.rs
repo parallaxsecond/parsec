@@ -53,7 +53,7 @@ const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
 const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
 
 type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
-type Provider = Box<dyn Provide + Send + Sync>;
+type Provider = Arc<dyn Provide + Send + Sync>;
 
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub struct CoreSettings {
@@ -158,10 +158,7 @@ fn build_backend_handlers(
         .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
 
     for (provider_id, provider) in providers.drain(..) {
-        let (info, opcodes) = provider
-            .describe()
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "error describing provider"))?;
-        core_provider_builder = core_provider_builder.with_provider_details(info, opcodes);
+        core_provider_builder = core_provider_builder.with_provider(provider.clone());
 
         let backend_handler = BackEndHandlerBuilder::new()
             .with_provider(provider)
@@ -174,7 +171,7 @@ fn build_backend_handlers(
     }
 
     let core_provider_backend = BackEndHandlerBuilder::new()
-        .with_provider(Box::from(core_provider_builder.build()?))
+        .with_provider(Arc::new(core_provider_builder.build()?))
         .with_converter(Box::from(ProtobufConverter {}))
         .with_provider_id(ProviderID::Core)
         .with_content_type(BodyType::Protobuf)
@@ -244,7 +241,7 @@ unsafe fn get_provider(
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderConfig::MbedCrypto { .. } => {
             info!("Creating a Mbed Crypto Provider.");
-            Ok(Box::from(
+            Ok(Arc::new(
                 MbedProviderBuilder::new()
                     .with_key_info_store(key_info_manager)
                     .build()?,
@@ -258,7 +255,7 @@ unsafe fn get_provider(
             ..
         } => {
             info!("Creating a PKCS 11 Provider.");
-            Ok(Box::from(
+            Ok(Arc::new(
                 Pkcs11ProviderBuilder::new()
                     .with_key_info_store(key_info_manager)
                     .with_pkcs11_library_path(library_path.clone())
@@ -274,7 +271,7 @@ unsafe fn get_provider(
             ..
         } => {
             info!("Creating a TPM Provider.");
-            Ok(Box::from(
+            Ok(Arc::new(
                 TpmProviderBuilder::new()
                     .with_key_info_store(key_info_manager)
                     .with_tcti(tcti)
