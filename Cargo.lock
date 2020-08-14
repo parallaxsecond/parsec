@@ -766,7 +766,7 @@ dependencies = [
  "picky",
  "picky-asn1",
  "picky-asn1-der",
- "picky-asn1-x509",
+ "picky-asn1-x509 0.3.0",
  "pkcs11",
  "psa-crypto",
  "rand",
@@ -825,7 +825,7 @@ dependencies = [
  "oid",
  "picky-asn1",
  "picky-asn1-der",
- "picky-asn1-x509",
+ "picky-asn1-x509 0.1.0",
  "rand",
  "rsa 0.2.0",
  "serde",
@@ -862,6 +862,19 @@ name = "picky-asn1-x509"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "969171630cdf5c269611dfffdc1e6d749365fc4059b86fe3620d8afa3ddce4e6"
+dependencies = [
+ "base64 0.12.3",
+ "oid",
+ "picky-asn1",
+ "picky-asn1-der",
+ "serde",
+]
+
+[[package]]
+name = "picky-asn1-x509"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b0b354f137550bb42e1f3bafd83c4047006b55903c5b2b41f7997957c716e88"
 dependencies = [
  "base64 0.12.3",
  "oid",

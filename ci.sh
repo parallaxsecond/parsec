@@ -68,8 +68,10 @@ while [ "$#" -gt 0 ]; do
             cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
             if [ "$PROVIDER_NAME" = "all" ]; then
                 FEATURES="--features=all-providers,no-parsec-user-and-clients-group"
+                TEST_FEATURES="--features=all-providers"
             else
                 FEATURES="--features=$1-provider,no-parsec-user-and-clients-group"
+                TEST_FEATURES="--features=$1-provider"
             fi
         ;;
         *)
@@ -134,15 +136,15 @@ pgrep -f target/debug/parsec >/dev/null
 
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers tests"
-    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml all_providers
-    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml config
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml config
 else
     # Per provider tests
     echo "Execute normal tests"
-    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml normal_tests
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml normal_tests
 
     echo "Execute persistent test, before the reload"
-    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml persistent_before
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_before
 
     # Create a fake mapping file for the root application, the provider and a
     # key name of "Test Key". It contains a valid KeyInfo structure.
@@ -170,7 +172,7 @@ else
     sleep 5
 
     echo "Execute persistent test, after the reload"
-    RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml persistent_after
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_after
 
     if [ -z "$NO_STRESS_TEST" ]; then
         echo "Shutdown Parsec"
@@ -186,6 +188,6 @@ else
         sleep 5
 
         echo "Execute stress tests"
-        RUST_BACKTRACE=1 cargo test --manifest-path ./e2e_tests/Cargo.toml stress_test
+        RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml stress_test
 	fi
 fi

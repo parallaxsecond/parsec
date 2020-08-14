@@ -252,6 +252,36 @@ impl TestClient {
         )
     }
 
+    #[allow(deprecated)]
+    pub fn generate_rsa_encryption_keys_rsaoaep_sha1(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: true,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaOaep {
+                        hash_alg: Hash::Sha1,
+                    }
+                    .into(),
+                },
+            },
+        )
+    }
+
     pub fn generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(
         &mut self,
         key_name: String,
@@ -604,6 +634,40 @@ impl TestClient {
             key_name,
             AsymmetricEncryption::RsaOaep {
                 hash_alg: Hash::Sha256,
+            },
+            &ciphertext,
+            Some(&salt),
+        )
+    }
+
+    #[allow(deprecated)]
+    pub fn asymmetric_encrypt_message_with_rsaoaep_sha1(
+        &mut self,
+        key_name: String,
+        plaintext: Vec<u8>,
+        salt: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.asymmetric_encrypt_message(
+            key_name,
+            AsymmetricEncryption::RsaOaep {
+                hash_alg: Hash::Sha1,
+            },
+            &plaintext,
+            Some(&salt),
+        )
+    }
+
+    #[allow(deprecated)]
+    pub fn asymmetric_decrypt_message_with_rsaoaep_sha1(
+        &mut self,
+        key_name: String,
+        ciphertext: Vec<u8>,
+        salt: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.asymmetric_decrypt_message(
+            key_name,
+            AsymmetricEncryption::RsaOaep {
+                hash_alg: Hash::Sha1,
             },
             &ciphertext,
             Some(&salt),

@@ -28,3 +28,9 @@ uuid = "0.7.4"
 rsa = "0.3.0"
 picky-asn1-x509 = "0.1.0"
 base64 = "0.12.3"
+
+[features]
+mbed-crypto-provider = []
+tpm-provider = []
+pkcs11-provider = []
+all-providers = ["pkcs11-provider","tpm-provider","mbed-crypto-provider"]
