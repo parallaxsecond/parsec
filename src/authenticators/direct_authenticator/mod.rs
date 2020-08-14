@@ -12,7 +12,9 @@ use super::ApplicationName;
 use super::Authenticate;
 use crate::front::listener::ConnectionMetadata;
 use log::error;
+use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
+use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use std::str;
@@ -21,6 +23,19 @@ use std::str;
 pub struct DirectAuthenticator;
 
 impl Authenticate for DirectAuthenticator {
+    fn describe(&self) -> Result<list_authenticators::AuthenticatorInfo> {
+        Ok(list_authenticators::AuthenticatorInfo {
+            description: String::from(
+                "Directly parses the authentication field as a UTF-8 string and uses that as the \
+                application identity. Should be used for testing only.",
+            ),
+            version_maj: 0,
+            version_min: 1,
+            version_rev: 0,
+            id: AuthType::Direct,
+        })
+    }
+
     fn authenticate(
         &self,
         auth: &RequestAuth,
