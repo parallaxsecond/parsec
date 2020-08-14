@@ -37,7 +37,7 @@ const ORIGINAL_MESSAGE: &str = "This is a test!";
 
 #[test]
 fn simple_asym_encrypt_rsa_pkcs() {
-    let key_name = String::from("asym_encrypt_and_decrypt_rsa_pkcs");
+    let key_name = String::from("simple_asym_encrypt_rsa_pkcs");
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
