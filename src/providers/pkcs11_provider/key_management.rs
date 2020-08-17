@@ -161,11 +161,23 @@ impl Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        if op.attributes.key_type != Type::RsaPublicKey {
-            error!("The PKCS 11 provider currently only supports importing RSA public key.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
+        match op.attributes.key_type {
+            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
+            _ => {
+                error!(
+                    "The pkcs11 provider does not support the {:?} key type.",
+                    op.attributes.key_type
+                );
+                Err(ResponseStatus::PsaErrorNotSupported)
+            }
         }
+    }
 
+    pub(super) fn psa_import_key_internal_rsa_public(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);

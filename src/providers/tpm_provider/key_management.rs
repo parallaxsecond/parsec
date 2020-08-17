@@ -117,11 +117,23 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        if op.attributes.key_type != Type::RsaPublicKey {
-            error!("The TPM provider currently only supports importing RSA public key.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
+        match op.attributes.key_type {
+            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
+            _ => {
+                error!(
+                    "The TPM provider does not support the {:?} key type.",
+                    op.attributes.key_type
+                );
+                Err(ResponseStatus::PsaErrorNotSupported)
+            }
         }
+    }
 
+    pub(super) fn psa_import_key_internal_rsa_public(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
         let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
