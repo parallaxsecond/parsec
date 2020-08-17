@@ -220,7 +220,7 @@ impl MbedProvider {
         let buffer_size = key_attributes.export_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
 
-        let export_length = psa_crypto_key_management::export_key(id, &mut buffer)?;
+        let export_length = psa_crypto_key_management::export(id, &mut buffer)?;
 
         buffer.resize(export_length, 0);
         Ok(psa_export_key::Result {

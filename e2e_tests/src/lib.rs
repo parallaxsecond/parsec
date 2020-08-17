@@ -14,7 +14,8 @@ use parsec_client::auth::AuthenticationData;
 use parsec_client::core::basic_client::BasicClient;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
 use parsec_client::core::interface::operations::psa_algorithm::{
-    Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
+    Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
+    KeyAgreement, RawKeyAgreement,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
@@ -193,6 +194,35 @@ impl TestClient {
         )
     }
 
+    pub fn generate_aes_keys_ccm(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::Aes,
+                bits: 192,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: true,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: Aead::AeadWithDefaultLengthTag(
+                        AeadWithDefaultLengthTag::Ccm,
+                    )
+                    .into(),
+                },
+            },
+        )
+    }
+
     pub fn generate_rsa_encryption_keys_rsaoaep_sha256(&mut self, key_name: String) -> Result<()> {
         self.generate_key(
             key_name,
@@ -254,6 +284,26 @@ impl TestClient {
                 },
             },
         )
+    }
+
+    /// Import ECC key pair with secp R1 curve family.
+    /// The key can only be used for key agreement with Ecdh algorithm.
+    pub fn generate_ecc_pair_secp_r1_key(&mut self, key_name: String) -> Result<()> {
+        let attributes = Attributes {
+            key_type: Type::EccKeyPair {
+                curve_family: EccFamily::SecpR1,
+            },
+            bits: 256,
+            lifetime: Lifetime::Volatile,
+            policy: Policy {
+                usage_flags: UsageFlags {
+                    derive: true,
+                    ..Default::default()
+                },
+                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
+            },
+        };
+        self.generate_key(key_name, attributes)
     }
 
     /// Imports and creates a key with specific attributes.
@@ -341,6 +391,82 @@ impl TestClient {
             },
             data,
         )
+    }
+
+    /// Import an AES key.
+    /// The key can only be used for AEAD encryption and decryption with the CCM algorithm
+    pub fn import_aes_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        self.import_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::Aes,
+                bits: 0,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: false,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: Aead::AeadWithDefaultLengthTag(
+                        AeadWithDefaultLengthTag::Ccm,
+                    )
+                    .into(),
+                },
+            },
+            data,
+        )
+    }
+
+    /// Import ECC key pair with secp R1 curve family.
+    /// The key can only be used for key agreement with Ecdh algorithm.
+    pub fn import_ecc_pair_secp_r1_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        let attributes = Attributes {
+            key_type: Type::EccKeyPair {
+                curve_family: EccFamily::SecpR1,
+            },
+            bits: 256,
+            lifetime: Lifetime::Volatile,
+            policy: Policy {
+                usage_flags: UsageFlags {
+                    derive: true,
+                    ..Default::default()
+                },
+                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
+            },
+        };
+        self.import_key(key_name, attributes, data)
+    }
+
+    /// Import ECC key pair with Brainpool PR1 curve family..
+    /// The key can only be used for key agreement with Ecdh algorithm.
+    pub fn import_ecc_pair_brainpoolpr1_key(
+        &mut self,
+        key_name: String,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let attributes = Attributes {
+            key_type: Type::EccKeyPair {
+                curve_family: EccFamily::BrainpoolPR1,
+            },
+            bits: 0,
+            lifetime: Lifetime::Volatile,
+            policy: Policy {
+                usage_flags: UsageFlags {
+                    derive: true,
+                    ..Default::default()
+                },
+                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
+            },
+        };
+        self.import_key(key_name, attributes, data)
     }
 
     /// Exports a key
@@ -505,6 +631,55 @@ impl TestClient {
     ) -> Result<Vec<u8>> {
         self.basic_client
             .psa_asymmetric_decrypt(key_name, encryption_alg, &ciphertext, salt)
+            .map_err(convert_error)
+    }
+
+    pub fn aead_encrypt_message(
+        &mut self,
+        key_name: String,
+        encryption_alg: Aead,
+        nonce: &[u8],
+        additional_data: &[u8],
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_aead_encrypt(key_name, encryption_alg, nonce, additional_data, plaintext)
+            .map_err(convert_error)
+    }
+
+    pub fn aead_decrypt_message(
+        &mut self,
+        key_name: String,
+        encryption_alg: Aead,
+        nonce: &[u8],
+        additional_data: &[u8],
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_aead_decrypt(key_name, encryption_alg, nonce, additional_data, ciphertext)
+            .map_err(convert_error)
+    }
+
+    pub fn hash_compute(&mut self, alg: Hash, input: &[u8]) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_hash_compute(alg, input)
+            .map_err(convert_error)
+    }
+
+    pub fn hash_compare(&mut self, alg: Hash, input: &[u8], hash: &[u8]) -> Result<()> {
+        self.basic_client
+            .psa_hash_compare(alg, input, hash)
+            .map_err(convert_error)
+    }
+
+    pub fn raw_key_agreement(
+        &mut self,
+        alg: RawKeyAgreement,
+        private_key: String,
+        peer_key: &[u8],
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_raw_key_agreement(alg, private_key, peer_key)
             .map_err(convert_error)
     }
 

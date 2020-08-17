@@ -183,8 +183,57 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_asymmetric_decrypt(app_name, op_asymmetric_decrypt));
-                trace!("psa_asymmetric_encrypt_egress");
+                trace!("psa_asymmetric_decrypt_egress");
                 self.result_to_response(NativeResult::PsaAsymmetricDecrypt(result), header)
+            }
+            NativeOperation::PsaAeadEncrypt(op_aead_encrypt) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_aead_encrypt(app_name, op_aead_encrypt));
+                trace!("psa_aead_encrypt_egress");
+                self.result_to_response(NativeResult::PsaAeadEncrypt(result), header)
+            }
+            NativeOperation::PsaAeadDecrypt(op_aead_decrypt) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_aead_decrypt(app_name, op_aead_decrypt));
+                trace!("psa_aead_decrypt_egress");
+                self.result_to_response(NativeResult::PsaAeadDecrypt(result), header)
+            }
+            NativeOperation::ListAuthenticators(_) => {
+                panic!("Unsupported in this PR");
+            }
+            NativeOperation::PsaHashCompute(op_hash_compute) => {
+                let _app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.psa_hash_compute(op_hash_compute));
+                trace!("psa_aead_decrypt_egress");
+                self.result_to_response(NativeResult::PsaHashCompute(result), header)
+            }
+            NativeOperation::PsaHashCompare(op_hash_compare) => {
+                let _app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.psa_hash_compare(op_hash_compare));
+                trace!("psa_aead_decrypt_egress");
+                self.result_to_response(NativeResult::PsaHashCompare(result), header)
+            }
+            NativeOperation::PsaGenerateRandom(_) => {
+                panic!("Unsupported in this PR");
+            }
+            NativeOperation::PsaRawKeyAgreement(op_raw_key_agreement) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_raw_key_agreement(app_name, op_raw_key_agreement));
+                trace!("psa_raw_key_agreement_egress");
+                self.result_to_response(NativeResult::PsaRawKeyAgreement(result), header)
             }
         }
     }

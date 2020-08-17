@@ -75,8 +75,9 @@ impl ProviderConfig {
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    list_opcodes, list_providers, ping, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
-    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    list_opcodes, list_providers, ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
+    psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
+    psa_generate_key, psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement,
     psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
@@ -205,6 +206,54 @@ pub trait Provide {
         _op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute an AeadEncrypt operation.
+    fn psa_aead_encrypt(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_aead_encrypt::Operation,
+    ) -> Result<psa_aead_encrypt::Result> {
+        trace!("psa_aead_encrypt ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute an AeadDecrypt operation.
+    fn psa_aead_decrypt(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_aead_decrypt::Operation,
+    ) -> Result<psa_aead_decrypt::Result> {
+        trace!("psa_aead_decrypt ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute a HashCompute operation.
+    fn psa_hash_compute(
+        &self,
+        _op: psa_hash_compute::Operation,
+    ) -> Result<psa_hash_compute::Result> {
+        trace!("psa_hash_compute ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute a HashCompare operation.
+    fn psa_hash_compare(
+        &self,
+        _op: psa_hash_compare::Operation,
+    ) -> Result<psa_hash_compare::Result> {
+        trace!("psa_hash_compare ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Execute a RawKeyAgreement operation.
+    fn psa_raw_key_agreement(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_raw_key_agreement::Operation,
+    ) -> Result<psa_raw_key_agreement::Result> {
+        trace!("psa_raw_key_agreement ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

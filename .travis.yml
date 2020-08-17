@@ -12,9 +12,9 @@ jobs:
       env: DOCKER_IMAGE_NAME=pkcs11-provider DOCKER_IMAGE_PATH=e2e_tests/provider_cfg/pkcs11 SCRIPT="ci.sh pkcs11"
   # PKCS11 tests are failing because of unidentified issues.
   # See https://github.com/parallaxsecond/parsec/issues/116
-  # allow_failures:
-  #   - env: DOCKER_IMAGE_NAME=mbed-crypto-provider DOCKER_IMAGE_PATH=e2e_tests/provider_cfg/mbed-crypto SCRIPT="ci.sh mbed-crypto"
-  #   - env: DOCKER_IMAGE_NAME=pkcs11-provider DOCKER_IMAGE_PATH=e2e_tests/provider_cfg/pkcs11 SCRIPT="ci.sh pkcs11"
+  allow_failures:
+    - env: DOCKER_IMAGE_NAME=mbed-crypto-provider DOCKER_IMAGE_PATH=e2e_tests/provider_cfg/mbed-crypto SCRIPT="ci.sh mbed-crypto"
+    - env: DOCKER_IMAGE_NAME=pkcs11-provider DOCKER_IMAGE_PATH=e2e_tests/provider_cfg/pkcs11 SCRIPT="ci.sh pkcs11"
 script:
   - docker build -t $DOCKER_IMAGE_NAME $DOCKER_IMAGE_PATH
   - docker run -v $(pwd):/tmp/parsec -w /tmp/parsec $DOCKER_IMAGE_NAME /tmp/parsec/$SCRIPT

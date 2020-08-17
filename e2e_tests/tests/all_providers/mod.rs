@@ -24,19 +24,27 @@ fn list_providers() {
 #[test]
 fn list_opcodes() {
     let mut client = TestClient::new();
-    let mut crypto_providers_opcodes = HashSet::new();
+    let mut crypto_providers_hsm = HashSet::new();
     let mut core_provider_opcodes = HashSet::new();
 
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaGenerateKey);
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaDestroyKey);
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaSignHash);
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaVerifyHash);
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaImportKey);
-    let _ = crypto_providers_opcodes.insert(Opcode::PsaExportPublicKey);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaGenerateKey);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaDestroyKey);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaSignHash);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaVerifyHash);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaImportKey);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaExportPublicKey);
 
-    let mut crypto_providers_inc_encrypt_opcodes = crypto_providers_opcodes.clone();
-    let _ = crypto_providers_inc_encrypt_opcodes.insert(Opcode::PsaAsymmetricDecrypt);
-    let _ = crypto_providers_inc_encrypt_opcodes.insert(Opcode::PsaAsymmetricEncrypt);
+    let mut crypto_providers_tpm = crypto_providers_hsm.clone();
+    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricDecrypt);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricEncrypt);
+
+    let mut crypto_providers_mbed_crypto = crypto_providers_tpm.clone();
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompute);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompare);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaRawKeyAgreement);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadEncrypt);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadDecrypt);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaExportKey);
 
     let _ = core_provider_opcodes.insert(Opcode::Ping);
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);
@@ -52,19 +60,19 @@ fn list_opcodes() {
         client
             .list_opcodes(ProviderID::Tpm)
             .expect("list providers failed"),
-        crypto_providers_inc_encrypt_opcodes
+        crypto_providers_tpm
     );
     assert_eq!(
         client
             .list_opcodes(ProviderID::Pkcs11)
             .expect("list providers failed"),
-        crypto_providers_opcodes
+        crypto_providers_hsm
     );
     assert_eq!(
         client
             .list_opcodes(ProviderID::MbedCrypto)
             .expect("list providers failed"),
-        crypto_providers_inc_encrypt_opcodes
+        crypto_providers_mbed_crypto
     );
 }
 
