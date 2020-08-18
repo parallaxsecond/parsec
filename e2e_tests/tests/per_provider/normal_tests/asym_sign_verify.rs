@@ -116,8 +116,8 @@ fn simple_sign_hash() -> Result<()> {
     let key_name = String::from("simple_sign_hash");
     let mut client = TestClient::new();
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -131,8 +131,8 @@ fn sign_hash_not_permitted() -> Result<()> {
     let key_name = String::from("sign_hash_not_permitted");
     let mut client = TestClient::new();
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
 
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -193,8 +193,8 @@ fn simple_verify_hash() -> Result<()> {
     let mut client = TestClient::new();
 
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -207,8 +207,8 @@ fn verify_hash_not_permitted() -> Result<()> {
     let key_name = String::from("verify_hash_not_permitted");
     let mut client = TestClient::new();
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
 
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -251,8 +251,8 @@ fn verify_hash_bad_format() -> Result<()> {
     let key_name = String::from("verify_hash_bad_format");
     let mut client = TestClient::new();
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let good_hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let good_hash = hasher.finalize().to_vec();
     let hash1 = vec![0xEE; 255];
     let hash2 = vec![0xBB; 257];
 
@@ -277,8 +277,8 @@ fn fail_verify_hash() -> Result<()> {
     let mut client = TestClient::new();
 
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -298,8 +298,8 @@ fn fail_verify_hash2() -> Result<()> {
     let mut client = TestClient::new();
 
     let mut hasher = Sha256::new();
-    hasher.input(b"Bob wrote this message.");
-    let mut hash = hasher.result().to_vec();
+    hasher.update(b"Bob wrote this message.");
+    let mut hash = hasher.finalize().to_vec();
 
     client.generate_rsa_sign_key(key_name.clone())?;
 

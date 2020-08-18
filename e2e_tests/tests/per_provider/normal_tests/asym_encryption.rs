@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
+use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 
@@ -50,6 +50,59 @@ fn simple_asym_encrypt_rsa_pkcs() {
     let _ciphertext = client
         .asymmetric_encrypt_message_with_rsapkcs1v15(key_name, PLAINTEXT_MESSAGE.to_vec())
         .unwrap();
+}
+
+#[test]
+fn simple_asym_encrypt_rsa_oaep() {
+    let key_name = String::from("simple_asym_encrypt_rsa_oaep");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
+        return;
+    }
+
+    client
+        .generate_rsa_encryption_keys_rsaoaep_sha256(key_name.clone())
+        .unwrap();
+    let _ciphertext = client
+        .asymmetric_encrypt_message_with_rsaoaep_sha256(
+            key_name,
+            PLAINTEXT_MESSAGE.to_vec(),
+            vec![],
+        )
+        .unwrap();
+}
+
+// Test is ignored as TPMs do not support labels that don't end in a 0 byte
+// A resolution for this has not been reached yet, so keeping as is
+// See: https://github.com/parallaxsecond/parsec/issues/217
+#[ignore]
+#[test]
+fn simple_asym_decrypt_oaep_with_salt() {
+    let key_name = String::from("simple_asym_decrypt_oaep_with_salt");
+    let salt = String::from("some random label").as_bytes().to_vec();
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
+        return;
+    }
+
+    client
+        .generate_rsa_encryption_keys_rsaoaep_sha256(key_name.clone())
+        .unwrap();
+    let ciphertext = client
+        .asymmetric_encrypt_message_with_rsaoaep_sha256(
+            key_name.clone(),
+            PLAINTEXT_MESSAGE.to_vec(),
+            salt.clone(),
+        )
+        .unwrap();
+
+    let plaintext = client
+        .asymmetric_decrypt_message_with_rsaoaep_sha256(key_name, ciphertext, salt)
+        .unwrap();
+
+    assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);
 }
 
 #[test]
@@ -179,13 +232,53 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate() {
     assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);
 }
 
+// Test is ignored as TPMs do not support labels that don't end in a 0 byte
+// A resolution for this has not been reached yet, so keeping as is
+// See: https://github.com/parallaxsecond/parsec/issues/217
+#[ignore]
+#[test]
+fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
+    let key_name = String::from("asym_encrypt_verify_decrypt_with_rsa_crate_oaep");
+    let label = String::from("encryption label");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
+        return;
+    }
+
+    client
+        .generate_rsa_encryption_keys_rsaoaep_sha256(key_name.clone())
+        .unwrap();
+    let pub_key = client.export_public_key(key_name.clone()).unwrap();
+
+    let rsa_pub_key = RSAPublicKey::from_pkcs1(&pub_key).unwrap();
+    let ciphertext = rsa_pub_key
+        .encrypt(
+            &mut OsRng,
+            PaddingScheme::new_oaep_with_label::<sha2::Sha256, &str>(&label),
+            &PLAINTEXT_MESSAGE,
+        )
+        .unwrap();
+
+    let label_bytes = label.as_bytes().to_vec();
+    let plaintext = client
+        .asymmetric_decrypt_message_with_rsaoaep_sha256(key_name, ciphertext, label_bytes)
+        .unwrap();
+
+    assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);
+}
+
 /// Uses key pair generated online to decrypt a message that has been pre-encrypted
 #[test]
 fn asym_verify_decrypt_with_internet() {
     let key_name = String::from("asym_derify_decrypt_with_pick");
     let mut client = TestClient::new();
 
-    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
+    // Check if decrypt is supported
+    // TPM does not support importing "general use keys"
+    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt)
+        || client.provider().unwrap() == ProviderID::Tpm
+    {
         return;
     }
 
