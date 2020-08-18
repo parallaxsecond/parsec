@@ -63,6 +63,7 @@ pub struct CoreSettings {
     pub log_timestamp: Option<bool>,
     pub body_len_limit: Option<usize>,
     pub log_error_details: Option<bool>,
+    pub allow_root: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
