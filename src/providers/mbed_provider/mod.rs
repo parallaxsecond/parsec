@@ -7,8 +7,9 @@ use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_key,
-    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_hash_compare,
+    psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
@@ -20,20 +21,29 @@ use std::sync::{
 };
 use uuid::Uuid;
 
+mod aead;
 mod asym_encryption;
 mod asym_sign;
+mod hash;
+mod key_agreement;
 #[allow(dead_code)]
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 8] = [
+const SUPPORTED_OPCODES: [Opcode; 14] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
+    Opcode::PsaExportKey,
     Opcode::PsaExportPublicKey,
     Opcode::PsaAsymmetricDecrypt,
     Opcode::PsaAsymmetricEncrypt,
+    Opcode::PsaAeadEncrypt,
+    Opcode::PsaAeadDecrypt,
+    Opcode::PsaHashCompare,
+    Opcode::PsaHashCompute,
+    Opcode::PsaRawKeyAgreement,
 ];
 
 #[derive(Derivative)]
@@ -224,6 +234,49 @@ impl Provide for MbedProvider {
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
         self.psa_asymmetric_decrypt_internal(app_name, op)
+    }
+
+    fn psa_aead_encrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_aead_encrypt::Operation,
+    ) -> Result<psa_aead_encrypt::Result> {
+        trace!("psa_aead_encrypt ingress");
+        self.psa_aead_encrypt_internal(app_name, op)
+    }
+
+    fn psa_aead_decrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_aead_decrypt::Operation,
+    ) -> Result<psa_aead_decrypt::Result> {
+        trace!("psa_aead_decrypt ingress");
+        self.psa_aead_decrypt_internal(app_name, op)
+    }
+
+    fn psa_hash_compute(
+        &self,
+        op: psa_hash_compute::Operation,
+    ) -> Result<psa_hash_compute::Result> {
+        trace!("psa_hash_compute ingress");
+        self.psa_hash_compute_internal(op)
+    }
+
+    fn psa_hash_compare(
+        &self,
+        op: psa_hash_compare::Operation,
+    ) -> Result<psa_hash_compare::Result> {
+        trace!("psa_hash_compare ingress");
+        self.psa_hash_compare_internal(op)
+    }
+
+    fn psa_raw_key_agreement(
+        &self,
+        app_name: ApplicationName,
+        op: psa_raw_key_agreement::Operation,
+    ) -> Result<psa_raw_key_agreement::Result> {
+        trace!("psa_raw_key_agreement");
+        self.psa_raw_key_agreement(app_name, op)
     }
 }
 

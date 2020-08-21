@@ -3,8 +3,8 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
-use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
 
 const PRIVATE_KEY: &str = "MIICWwIBAAKBgQCd+EKeRmZCKLmg7LasWqpKA9/01linY75ujilf6v/Kb8UP9r/E\
@@ -139,7 +139,6 @@ fn check_export_possible() -> Result<()> {
     Ok(())
 }
 
-
 #[test]
 fn check_export_not_possible() {
     let mut client = TestClient::new();
@@ -175,7 +174,9 @@ fn check_export_not_possible() {
         },
     };
 
-    let _generated_key = client.generate_key(key_name.clone(), key_attributes).unwrap();
+    let _generated_key = client
+        .generate_key(key_name.clone(), key_attributes)
+        .unwrap();
 
     let _exported_key = client.export_key(key_name).unwrap_err();
 }
@@ -189,7 +190,9 @@ fn export_ecc_key() {
     }
 
     let key_name = String::from("export_ecc_key");
-    let _generated_key = client.generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(key_name.clone()).unwrap();
+    let _generated_key = client
+        .generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(key_name.clone())
+        .unwrap();
     let _exported_key = client.export_key(key_name).unwrap();
 }
 
