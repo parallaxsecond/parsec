@@ -75,10 +75,10 @@ impl ProviderConfig {
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    list_opcodes, list_providers, ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
-    psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
-    psa_generate_key, psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement,
-    psa_sign_hash, psa_verify_hash,
+    list_authenticators, list_opcodes, list_providers, ping, psa_aead_decrypt, psa_aead_encrypt,
+    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_key,
+    psa_export_public_key, psa_generate_key, psa_hash_compare, psa_hash_compute, psa_import_key,
+    psa_raw_key_agreement, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -104,6 +104,15 @@ pub trait Provide {
     /// List the opcodes supported by the given provider.
     fn list_opcodes(&self, _op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
         trace!("list_opcodes ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// List the authenticators supported by the given provider.
+    fn list_authenticators(
+        &self,
+        _op: list_authenticators::Operation,
+    ) -> Result<list_authenticators::Result> {
+        trace!("list_authenticators ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 

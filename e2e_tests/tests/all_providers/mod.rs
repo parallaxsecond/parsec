@@ -1,7 +1,7 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::{Opcode, ProviderID, Result};
+use parsec_client::core::interface::requests::{AuthType, Opcode, ProviderID, Result};
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -19,6 +19,18 @@ fn list_providers() {
     assert!(uuids.contains(&Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()));
     // TPM provider
     assert!(uuids.contains(&Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()));
+}
+
+#[test]
+fn list_authenticators() {
+    let mut client = TestClient::new();
+    let authenticators = client
+        .list_authenticators()
+        .expect("list authenticators failed");
+    assert_eq!(authenticators.len(), 1);
+    let ids: HashSet<AuthType> = authenticators.iter().map(|p| p.id).collect();
+    // Direct authenticator
+    assert!(ids.contains(&AuthType::Direct));
 }
 
 #[test]
@@ -48,6 +60,7 @@ fn list_opcodes() {
 
     let _ = core_provider_opcodes.insert(Opcode::Ping);
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);
+    let _ = core_provider_opcodes.insert(Opcode::ListAuthenticators);
     let _ = core_provider_opcodes.insert(Opcode::ListOpcodes);
 
     assert_eq!(

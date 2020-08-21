@@ -6,6 +6,7 @@
 //! provided configuration.
 use super::global_config::GlobalConfigBuilder;
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
+use crate::authenticators::Authenticate;
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
     dispatcher::DispatcherBuilder,
@@ -54,6 +55,7 @@ const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
 
 type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Arc<dyn Provide + Send + Sync>;
+type Authenticator = Box<dyn Authenticate + Send + Sync>;
 
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub struct CoreSettings {
@@ -109,24 +111,33 @@ impl ServiceBuilder {
             return Err(Error::new(ErrorKind::InvalidData, "need one provider"));
         }
 
-        let backend_handlers = build_backend_handlers(providers)?;
+        // The authenticators supported by the Parsec service.
+        // NOTE: order here is important. The order in which the elements are added here is the
+        //       order in which they will be returned to any client requesting them!
+        let mut authenticators: Vec<(AuthType, Authenticator)> = Vec::new();
+        authenticators.push((AuthType::Direct, Box::from(DirectAuthenticator {})));
+
+        let backend_handlers = build_backend_handlers(providers, &authenticators)?;
 
         let dispatcher = DispatcherBuilder::new()
             .with_backends(backend_handlers)
             .build()?;
 
-        let direct_authenticator = Box::from(DirectAuthenticator {});
-
-        Ok(FrontEndHandlerBuilder::new()
+        let mut front_end_handler_builder = FrontEndHandlerBuilder::new();
+        for (auth_type, authenticator) in authenticators {
+            front_end_handler_builder =
+                front_end_handler_builder.with_authenticator(auth_type, authenticator);
+        }
+        front_end_handler_builder = front_end_handler_builder
             .with_dispatcher(dispatcher)
-            .with_authenticator(AuthType::Direct, direct_authenticator)
             .with_body_len_limit(
                 config
                     .core_settings
                     .body_len_limit
                     .unwrap_or(DEFAULT_BODY_LEN_LIMIT),
-            )
-            .build()?)
+            );
+
+        Ok(front_end_handler_builder.build()?)
     }
 
     /// Construct the service IPC front component and return ownership to it.
@@ -152,11 +163,19 @@ impl ServiceBuilder {
 
 fn build_backend_handlers(
     mut providers: Vec<(ProviderID, Provider)>,
+    authenticators: &[(AuthType, Authenticator)],
 ) -> Result<HashMap<ProviderID, BackEndHandler>> {
     let mut map = HashMap::new();
 
     let mut core_provider_builder = CoreProviderBuilder::new()
         .with_wire_protocol_version(WIRE_PROTOCOL_VERSION_MINOR, WIRE_PROTOCOL_VERSION_MAJOR);
+
+    for (_auth_type, authenticator) in authenticators {
+        let authenticator_info = authenticator
+            .describe()
+            .map_err(|_| Error::new(ErrorKind::Other, "Failed to describe authenticator"))?;
+        core_provider_builder = core_provider_builder.with_authenticator_info(authenticator_info);
+    }
 
     for (provider_id, provider) in providers.drain(..) {
         core_provider_builder = core_provider_builder.with_provider(provider.clone());

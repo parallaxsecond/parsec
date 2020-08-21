@@ -204,8 +204,12 @@ impl BackEndHandler {
                 trace!("psa_aead_decrypt_egress");
                 self.result_to_response(NativeResult::PsaAeadDecrypt(result), header)
             }
-            NativeOperation::ListAuthenticators(_) => {
-                panic!("Unsupported in this PR");
+            NativeOperation::ListAuthenticators(op_list_authenticators) => {
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .list_authenticators(op_list_authenticators));
+                trace!("list_authenticators egress");
+                self.result_to_response(NativeResult::ListAuthenticators(result), header)
             }
             NativeOperation::PsaHashCompute(op_hash_compute) => {
                 let _app_name =

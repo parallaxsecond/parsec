@@ -8,8 +8,10 @@
 use super::Provide;
 use derivative::Derivative;
 use log::trace;
-use parsec_interface::operations::list_providers::ProviderInfo;
-use parsec_interface::operations::{list_opcodes, list_providers, ping};
+use parsec_interface::operations::{list_authenticators, list_opcodes, list_providers, ping};
+use parsec_interface::operations::{
+    list_authenticators::AuthenticatorInfo, list_providers::ProviderInfo,
+};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
@@ -18,7 +20,12 @@ use std::sync::Arc;
 use uuid::Uuid;
 use version::{version, Version};
 
-const SUPPORTED_OPCODES: [Opcode; 3] = [Opcode::ListProviders, Opcode::ListOpcodes, Opcode::Ping];
+const SUPPORTED_OPCODES: [Opcode; 4] = [
+    Opcode::ListProviders,
+    Opcode::ListOpcodes,
+    Opcode::Ping,
+    Opcode::ListAuthenticators,
+];
 
 /// Service information provider
 ///
@@ -32,6 +39,7 @@ pub struct CoreProvider {
     wire_protocol_version_maj: u8,
     provider_info: Vec<ProviderInfo>,
     provider_opcodes: HashMap<ProviderID, HashSet<Opcode>>,
+    authenticator_info: Vec<AuthenticatorInfo>,
     #[derivative(Debug = "ignore")]
     prov_list: Vec<Arc<dyn Provide + Send + Sync>>,
 }
@@ -55,6 +63,16 @@ impl Provide for CoreProvider {
         })
     }
 
+    fn list_authenticators(
+        &self,
+        _op: list_authenticators::Operation,
+    ) -> Result<list_authenticators::Result> {
+        trace!("list_authenticators ingress");
+        Ok(list_authenticators::Result {
+            authenticators: self.authenticator_info.clone(),
+        })
+    }
+
     fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {
         trace!("ping ingress");
         let result = ping::Result {
@@ -74,6 +92,8 @@ pub struct CoreProviderBuilder {
     version_min: Option<u8>,
     #[derivative(Debug = "ignore")]
     prov_list: Vec<Arc<dyn Provide + Send + Sync>>,
+    #[derivative(Debug = "ignore")]
+    authenticator_info: Vec<AuthenticatorInfo>,
 }
 
 impl CoreProviderBuilder {
@@ -82,6 +102,7 @@ impl CoreProviderBuilder {
             version_maj: None,
             version_min: None,
             prov_list: Vec::new(),
+            authenticator_info: Vec::new(),
         }
     }
 
@@ -94,6 +115,12 @@ impl CoreProviderBuilder {
 
     pub fn with_provider(mut self, provider: Arc<dyn Provide + Send + Sync>) -> Self {
         self.prov_list.push(provider);
+
+        self
+    }
+
+    pub fn with_authenticator_info(mut self, authenticator_info: AuthenticatorInfo) -> Self {
+        self.authenticator_info.push(authenticator_info);
 
         self
     }
@@ -144,6 +171,7 @@ impl CoreProviderBuilder {
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version min is missing"))?,
             provider_opcodes,
             provider_info: provider_info_vec,
+            authenticator_info: self.authenticator_info,
             prov_list: self.prov_list,
         };
 
@@ -161,6 +189,7 @@ mod tests {
             wire_protocol_version_min: 8,
             wire_protocol_version_maj: 10,
             provider_info: Vec::new(),
+            authenticator_info: Vec::new(),
             provider_opcodes: HashMap::new(),
             prov_list: Vec::new(),
         };

@@ -12,6 +12,7 @@ pub use parsec_client::error;
 use log::error;
 use parsec_client::auth::AuthenticationData;
 use parsec_client::core::basic_client::BasicClient;
+use parsec_client::core::interface::operations::list_authenticators::AuthenticatorInfo;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
 use parsec_client::core::interface::operations::psa_algorithm::{
     Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
@@ -686,6 +687,13 @@ impl TestClient {
     /// Lists the provider available for the Parsec service.
     pub fn list_providers(&mut self) -> Result<Vec<ProviderInfo>> {
         self.basic_client.list_providers().map_err(convert_error)
+    }
+
+    /// Lists the authenticators available for the Parsec service.
+    pub fn list_authenticators(&mut self) -> Result<Vec<AuthenticatorInfo>> {
+        self.basic_client
+            .list_authenticators()
+            .map_err(convert_error)
     }
 
     /// Lists the opcodes available for one provider to execute.
