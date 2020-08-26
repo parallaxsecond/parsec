@@ -51,7 +51,7 @@ const WIRE_PROTOCOL_VERSION_MINOR: u8 = 0;
 const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
 
 /// Default value for the limit on the request body size (in bytes) - equal to 1MB
-const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 19;
+const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 20;
 
 type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Arc<dyn Provide + Send + Sync>;
