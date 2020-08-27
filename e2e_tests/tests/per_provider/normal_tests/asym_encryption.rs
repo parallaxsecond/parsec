@@ -1,7 +1,9 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+#![allow(unused, dead_code)]
+
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 
@@ -52,6 +54,10 @@ fn simple_asym_encrypt_rsa_pkcs() {
         .unwrap();
 }
 
+// Test is ignored for PKCS11 because the library we use for testing does not support
+// other hash algorithms to be used with OAEP apart from SHA1.
+// See: https://github.com/opendnssec/SoftHSMv2/issues/474
+#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn simple_asym_encrypt_rsa_oaep() {
     let key_name = String::from("simple_asym_encrypt_rsa_oaep");
@@ -73,10 +79,41 @@ fn simple_asym_encrypt_rsa_oaep() {
         .unwrap();
 }
 
-// Test is ignored as TPMs do not support labels that don't end in a 0 byte
+#[cfg(feature = "pkcs11-provider")]
+#[test]
+fn simple_asym_encrypt_rsa_oaep_pkcs11() {
+    let key_name = String::from("simple_asym_encrypt_rsa_oaep_pkcs11");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
+        return;
+    }
+
+    client
+        .generate_rsa_encryption_keys_rsaoaep_sha1(key_name.clone())
+        .unwrap();
+    let ciphertext = client
+        .asymmetric_encrypt_message_with_rsaoaep_sha1(
+            key_name.clone(),
+            PLAINTEXT_MESSAGE.to_vec(),
+            vec![],
+        )
+        .unwrap();
+
+    let plaintext = client
+        .asymmetric_decrypt_message_with_rsaoaep_sha1(key_name, ciphertext, vec![])
+        .unwrap();
+
+    assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);
+}
+
+// Test is ignored for TPMs as they do not support labels that don't end in a 0 byte
 // A resolution for this has not been reached yet, so keeping as is
 // See: https://github.com/parallaxsecond/parsec/issues/217
-#[ignore]
+// Test is ignored for PKCS11 because the library we use for testing does not support
+// other hash algorithms to be used with OAEP apart from SHA1.
+// See: https://github.com/opendnssec/SoftHSMv2/issues/474
+#[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn simple_asym_decrypt_oaep_with_salt() {
     let key_name = String::from("simple_asym_decrypt_oaep_with_salt");
@@ -232,10 +269,13 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate() {
     assert_eq!(&PLAINTEXT_MESSAGE[..], &plaintext[..]);
 }
 
-// Test is ignored as TPMs do not support labels that don't end in a 0 byte
+// Test is ignored for TPMs as they do not support labels that don't end in a 0 byte
 // A resolution for this has not been reached yet, so keeping as is
 // See: https://github.com/parallaxsecond/parsec/issues/217
-#[ignore]
+// Test is ignored for PKCS11 because the library we use for testing does not support
+// other hash algorithms to be used with OAEP apart from SHA1.
+// See: https://github.com/opendnssec/SoftHSMv2/issues/474
+#[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
     let key_name = String::from("asym_encrypt_verify_decrypt_with_rsa_crate_oaep");
@@ -269,16 +309,16 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
 }
 
 /// Uses key pair generated online to decrypt a message that has been pre-encrypted
+// PKCS 11 does not support important key pairs
+// TPM does not support importing "general use keys"
+#[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn asym_verify_decrypt_with_internet() {
     let key_name = String::from("asym_derify_decrypt_with_pick");
     let mut client = TestClient::new();
 
     // Check if decrypt is supported
-    // TPM does not support importing "general use keys"
-    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt)
-        || client.provider().unwrap() == ProviderID::Tpm
-    {
+    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
         return;
     }
 

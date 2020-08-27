@@ -5,6 +5,7 @@ use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
+use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 use sha2::{Digest, Sha256};
 
 const HASH: [u8; 32] = [
@@ -311,4 +312,28 @@ fn fail_verify_hash2() -> Result<()> {
         .unwrap_err();
     assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
     Ok(())
+}
+
+#[test]
+fn asym_verify_with_rsa_crate() {
+    let key_name = String::from("asym_verify_with_rsa_crate");
+    let mut client = TestClient::new();
+
+    client.generate_rsa_sign_key(key_name.clone()).unwrap();
+    let pub_key = client.export_public_key(key_name.clone()).unwrap();
+
+    let rsa_pub_key = RSAPublicKey::from_pkcs1(&pub_key).unwrap();
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
+    let signature = client.sign_with_rsa_sha256(key_name, hash.clone()).unwrap();
+
+    rsa_pub_key
+        .verify(
+            PaddingScheme::new_pkcs1v15_sign(Some(rsa::Hash::SHA2_256)),
+            &hash,
+            &signature,
+        )
+        .unwrap();
 }

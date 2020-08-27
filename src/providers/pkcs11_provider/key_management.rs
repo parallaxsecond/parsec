@@ -13,11 +13,8 @@ use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RSAPublicKey;
-use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_MECHANISM, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
+use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
 use std::mem;
-
-// Public exponent value for all RSA keys.
-const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
 /// Gets a key identifier and key attributes from the Key Info Manager.
 pub fn get_key_info(
@@ -94,8 +91,8 @@ pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo)
 }
 
 impl Pkcs11Provider {
-    /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public or
-    /// private key) given as parameters for the current session.
+    /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public,
+    /// private or any key type) given as parameters for the current session.
     pub(super) fn find_key(
         &self,
         session: CK_SESSION_HANDLE,
@@ -152,8 +149,6 @@ impl Pkcs11Provider {
 
         let key_name = op.key_name;
         let key_attributes = op.attributes;
-        // This should never panic on 32 bits or more machines.
-        let key_size = op.attributes.bits;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let mut store_handle = self
@@ -171,36 +166,15 @@ impl Pkcs11Provider {
             &mut local_ids_handle,
         )?;
 
-        let mech = CK_MECHANISM {
-            mechanism: pkcs11::types::CKM_RSA_PKCS_KEY_PAIR_GEN,
-            pParameter: std::ptr::null_mut(),
-            ulParameterLen: 0,
-        };
+        let (mech, mut pub_template, mut priv_template, mut allowed_mechanism) =
+            utils::parsec_to_pkcs11_params(key_attributes, &key_id)?;
 
-        let mut priv_template: Vec<CK_ATTRIBUTE> = Vec::new();
-        let mut pub_template: Vec<CK_ATTRIBUTE> = Vec::new();
-
-        priv_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_SIGN).with_bool(&pkcs11::types::CK_TRUE));
-        priv_template.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(&key_id));
-        priv_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_TOKEN).with_bool(&pkcs11::types::CK_TRUE));
-
-        pub_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_VERIFY).with_bool(&pkcs11::types::CK_TRUE));
-        pub_template.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(&key_id));
-        pub_template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_PUBLIC_EXPONENT).with_bytes(&PUBLIC_EXPONENT),
-        );
-        pub_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_MODULUS_BITS).with_ck_ulong(&key_size));
-        pub_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_TOKEN).with_bool(&pkcs11::types::CK_TRUE));
-        pub_template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_PRIVATE).with_bool(&pkcs11::types::CK_FALSE),
-        );
-        pub_template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ENCRYPT).with_bool(&pkcs11::types::CK_TRUE));
+        pub_template.push(utils::mech_type_to_allowed_mech_attribute(
+            &mut allowed_mechanism,
+        ));
+        priv_template.push(utils::mech_type_to_allowed_mech_attribute(
+            &mut allowed_mechanism,
+        ));
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
             format_error!("Error creating a new session", err);

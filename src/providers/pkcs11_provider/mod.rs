@@ -11,8 +11,8 @@ use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
-    psa_verify_hash,
+    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
+    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
@@ -25,17 +25,20 @@ use uuid::Uuid;
 
 type LocalIdStore = HashSet<[u8; 4]>;
 
+mod asym_encryption;
 mod asym_sign;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 6] = [
+const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
     Opcode::PsaImportKey,
     Opcode::PsaExportPublicKey,
+    Opcode::PsaAsymmetricDecrypt,
+    Opcode::PsaAsymmetricEncrypt,
 ];
 
 /// Provider for Public Key Cryptography Standard #11
@@ -245,6 +248,24 @@ impl Provide for Pkcs11Provider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_encrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        trace!("psa_asymmetric_encrypt ingress");
+        self.psa_asymmetric_encrypt_internal(app_name, op)
+    }
+
+    fn psa_asymmetric_decrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
+        trace!("psa_asymmetric_decrypt ingress");
+        self.psa_asymmetric_decrypt_internal(app_name, op)
     }
 }
 

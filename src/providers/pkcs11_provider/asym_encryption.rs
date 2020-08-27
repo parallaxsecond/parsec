@@ -6,17 +6,17 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
-use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
+use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
 use parsec_interface::requests::{ProviderID, Result};
 use std::convert::TryFrom;
 use utils::CkMechanism;
 
 impl Pkcs11Provider {
-    pub(super) fn psa_sign_hash_internal(
+    pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
         app_name: ApplicationName,
-        op: psa_sign_hash::Operation,
-    ) -> Result<psa_sign_hash::Result> {
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
@@ -28,43 +28,46 @@ impl Pkcs11Provider {
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric sign in session {}", session.session_handle());
+            info!("Asymmetric encrypt in session {}", session.session_handle());
         }
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
-        info!("Located signing key.");
+        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
+        info!("Located encrypting key.");
 
-        trace!("SignInit command");
-        match self.backend.sign_init(session.session_handle(), &mech, key) {
+        trace!("EncryptInit command");
+        match self
+            .backend
+            .encrypt_init(session.session_handle(), &mech, key)
+        {
             Ok(_) => {
-                info!("Signing operation initialized.");
+                info!("Encrypting operation initialized.");
 
-                trace!("Sign command");
-                match self.backend.sign(
-                    session.session_handle(),
-                    &utils::digest_info(op.alg, op.hash.to_vec())?,
-                ) {
-                    Ok(signature) => Ok(psa_sign_hash::Result {
-                        signature: signature.into(),
+                trace!("Encrypt command");
+                match self
+                    .backend
+                    .encrypt(session.session_handle(), &op.plaintext)
+                {
+                    Ok(ciphertext) => Ok(psa_asymmetric_encrypt::Result {
+                        ciphertext: ciphertext.into(),
                     }),
                     Err(e) => {
-                        format_error!("Failed to execute signing operation", e);
+                        format_error!("Failed to execute encrypting operation", e);
                         Err(utils::to_response_status(e))
                     }
                 }
             }
             Err(e) => {
-                format_error!("Failed to initialize signing operation", e);
+                format_error!("Failed to initialize encrypting operation", e);
                 Err(utils::to_response_status(e))
             }
         }
     }
 
-    pub(super) fn psa_verify_hash_internal(
+    pub(super) fn psa_asymmetric_decrypt_internal(
         &self,
         app_name: ApplicationName,
-        op: psa_verify_hash::Operation,
-    ) -> Result<psa_verify_hash::Result> {
+        op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
@@ -76,32 +79,33 @@ impl Pkcs11Provider {
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric verify in session {}", session.session_handle());
+            info!("Asymmetric decrypt in session {}", session.session_handle());
         }
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
-        info!("Located public key.");
+        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
+        info!("Located decrypting key.");
 
-        trace!("VerifyInit command");
+        trace!("DecryptInit command");
         match self
             .backend
-            .verify_init(session.session_handle(), &mech, key)
+            .decrypt_init(session.session_handle(), &mech, key)
         {
             Ok(_) => {
-                info!("Verify operation initialized.");
+                info!("Decrypt operation initialized.");
 
-                trace!("Verify command");
-                match self.backend.verify(
-                    session.session_handle(),
-                    &utils::digest_info(op.alg, op.hash.to_vec())?,
-                    &op.signature,
-                ) {
-                    Ok(_) => Ok(psa_verify_hash::Result {}),
+                trace!("Decrypt command");
+                match self
+                    .backend
+                    .decrypt(session.session_handle(), &op.ciphertext)
+                {
+                    Ok(plaintext) => Ok(psa_asymmetric_decrypt::Result {
+                        plaintext: plaintext.into(),
+                    }),
                     Err(e) => Err(utils::to_response_status(e)),
                 }
             }
             Err(e) => {
-                format_error!("Failed to initialize verifying operation", e);
+                format_error!("Failed to initialize decrypting operation", e);
                 Err(utils::to_response_status(e))
             }
         }

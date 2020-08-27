@@ -45,10 +45,10 @@ fn list_opcodes() {
     let _ = crypto_providers_hsm.insert(Opcode::PsaVerifyHash);
     let _ = crypto_providers_hsm.insert(Opcode::PsaImportKey);
     let _ = crypto_providers_hsm.insert(Opcode::PsaExportPublicKey);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaAsymmetricDecrypt);
+    let _ = crypto_providers_hsm.insert(Opcode::PsaAsymmetricEncrypt);
 
-    let mut crypto_providers_tpm = crypto_providers_hsm.clone();
-    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricDecrypt);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricEncrypt);
+    let crypto_providers_tpm = crypto_providers_hsm.clone();
 
     let mut crypto_providers_mbed_crypto = crypto_providers_tpm.clone();
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompute);
