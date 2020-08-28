@@ -9,7 +9,7 @@ name = "on-disk-manager"
 manager_type = "OnDisk"
 
 # [[provider]]
-# provider_type = "MbedProvider"
+# provider_type = "MbedCryptoProvider"
 # key_info_manager = "on-disk-manager"
 
 [[provider]]

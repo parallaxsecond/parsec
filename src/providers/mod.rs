@@ -17,7 +17,7 @@ pub mod core_provider;
 pub mod pkcs11_provider;
 
 #[cfg(feature = "mbed-crypto-provider")]
-pub mod mbed_provider;
+pub mod mbed_crypto_provider;
 
 #[cfg(feature = "tpm-provider")]
 pub mod tpm_provider;

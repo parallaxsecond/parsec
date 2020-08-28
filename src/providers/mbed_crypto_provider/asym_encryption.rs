@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, MbedProvider};
+use super::{key_management, MbedCryptoProvider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
@@ -8,7 +8,7 @@ use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use psa_crypto::operations::asym_encryption;
 use psa_crypto::types::key;
 
-impl MbedProvider {
+impl MbedCryptoProvider {
     pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
         app_name: ApplicationName,
