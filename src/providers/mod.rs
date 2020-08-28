@@ -22,25 +22,37 @@ pub mod mbed_crypto_provider;
 #[cfg(feature = "tpm-provider")]
 pub mod tpm_provider;
 
+/// Provider configuration structure
+/// For providers configs in parsec config.toml we use a format similar
+/// to the one described in the Internally Tagged Enum representation
+/// where "provider_type" is the tag field. For details see:
+/// https://serde.rs/enum-representations.html
 #[derive(Deserialize, Debug)]
-// For providers configs in parsec config.toml we use a format similar
-// to the one described in the Internally Tagged Enum representation
-// where "provider_type" is the tag field. For details see:
-// https://serde.rs/enum-representations.html
 #[serde(tag = "provider_type")]
 pub enum ProviderConfig {
+    /// Mbed Crypto provider configuration
     MbedCrypto {
+        /// Name of the Key Info Manager to use
         key_info_manager: String,
     },
+    /// PKCS 11 provider configuration
     Pkcs11 {
+        /// Name of the Key Info Manager to use
         key_info_manager: String,
+        /// Path of the PKCS 11 library
         library_path: String,
+        /// Slot number to use
         slot_number: usize,
+        /// User Pin
         user_pin: Option<String>,
     },
+    /// TPM provider configuration
     Tpm {
+        /// Name of the Key Info Manager to use
         key_info_manager: String,
+        /// TCTI to use with the provider
         tcti: String,
+        /// Owner Hierarchy Authentication
         owner_hierarchy_auth: String,
     },
 }
@@ -48,6 +60,7 @@ pub enum ProviderConfig {
 use self::ProviderConfig::{MbedCrypto, Pkcs11, Tpm};
 
 impl ProviderConfig {
+    /// Get the name of the Key Info Manager in the provider configuration
     pub fn key_info_manager(&self) -> &String {
         match *self {
             MbedCrypto {
@@ -64,6 +77,7 @@ impl ProviderConfig {
             } => key_info_manager,
         }
     }
+    /// Get the Provider ID of the provider
     pub fn provider_id(&self) -> ProviderID {
         match *self {
             MbedCrypto { .. } => ProviderID::MbedCrypto,

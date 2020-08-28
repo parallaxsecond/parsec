@@ -48,10 +48,12 @@ pub trait Authenticate {
 }
 
 impl ApplicationName {
+    /// Create a new ApplicationName from a String
     pub fn new(name: String) -> ApplicationName {
         ApplicationName(name)
     }
 
+    /// Get a reference to the inner string
     pub fn get_name(&self) -> &str {
         &self.0
     }

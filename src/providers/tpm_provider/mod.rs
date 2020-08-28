@@ -181,6 +181,7 @@ pub struct TpmProviderBuilder {
 }
 
 impl TpmProviderBuilder {
+    /// Create a new TPM provider builder
     pub fn new() -> TpmProviderBuilder {
         TpmProviderBuilder {
             key_info_store: None,
@@ -189,6 +190,7 @@ impl TpmProviderBuilder {
         }
     }
 
+    /// Add a KeyInfo manager
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
@@ -198,12 +200,14 @@ impl TpmProviderBuilder {
         self
     }
 
+    /// Specify the TCTI used for this provider
     pub fn with_tcti(mut self, tcti: &str) -> TpmProviderBuilder {
         self.tcti = Some(tcti.to_owned());
 
         self
     }
 
+    /// Specify the owner hierary authentication to use
     pub fn with_owner_hierarchy_auth(mut self, owner_hierarchy_auth: String) -> TpmProviderBuilder {
         self.owner_hierarchy_auth = Some(owner_hierarchy_auth);
 

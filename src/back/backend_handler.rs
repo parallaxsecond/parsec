@@ -59,10 +59,6 @@ impl BackEndHandler {
     pub fn is_capable(&self, request: &Request) -> Result<()> {
         let header = &request.header;
 
-        // TODO: Add opcode checking here; store supported opcodes as a hashset
-        //      - should we move header field parsing at deserialization?
-        // TODO: if these two don't match the service should probably panic,
-        // but I think it's reasonable to assume they do match
         if header.provider != self.provider_id {
             Err(ResponseStatus::WrongProviderID)
         } else if header.content_type != self.content_type {
@@ -257,6 +253,7 @@ pub struct BackEndHandlerBuilder {
 }
 
 impl BackEndHandlerBuilder {
+    /// Create a new BackEndHandler builder
     pub fn new() -> BackEndHandlerBuilder {
         BackEndHandlerBuilder {
             provider: None,
@@ -267,31 +264,37 @@ impl BackEndHandlerBuilder {
         }
     }
 
+    /// Add a provider to the builder
     pub fn with_provider(mut self, provider: Arc<dyn Provide + Send + Sync>) -> Self {
         self.provider = Some(provider);
         self
     }
 
+    /// Add a converter to the builder
     pub fn with_converter(mut self, converter: Box<dyn Convert + Send + Sync>) -> Self {
         self.converter = Some(converter);
         self
     }
 
+    /// Set the ID of the BackEndHandler
     pub fn with_provider_id(mut self, provider_id: ProviderID) -> Self {
         self.provider_id = Some(provider_id);
         self
     }
 
+    /// Set the content type that the BackEndHandler supports
     pub fn with_content_type(mut self, content_type: BodyType) -> Self {
         self.content_type = Some(content_type);
         self
     }
 
+    /// Set the accept type that the BackEndHandler supports
     pub fn with_accept_type(mut self, accept_type: BodyType) -> Self {
         self.accept_type = Some(accept_type);
         self
     }
 
+    /// Build into a BackEndHandler
     pub fn build(self) -> std::io::Result<BackEndHandler> {
         Ok(BackEndHandler {
             provider: self

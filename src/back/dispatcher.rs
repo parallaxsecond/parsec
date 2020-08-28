@@ -61,10 +61,12 @@ pub struct DispatcherBuilder {
 }
 
 impl DispatcherBuilder {
+    /// Create a new Dispatcher builder
     pub fn new() -> Self {
         DispatcherBuilder { backends: None }
     }
 
+    /// Add a BackEndHandler with a specific Provider ID to the dispatcher
     pub fn with_backend(
         mut self,
         provider_id: ProviderID,
@@ -77,6 +79,7 @@ impl DispatcherBuilder {
         self
     }
 
+    /// Add multiple BackEndHandler to the dispatcher in one call
     pub fn with_backends(mut self, new_backends: HashMap<ProviderID, BackEndHandler>) -> Self {
         let mut backends = self.backends.unwrap_or_default();
         backends.extend(new_backends);
@@ -85,6 +88,7 @@ impl DispatcherBuilder {
         self
     }
 
+    /// Build the builder into a dispatcher
     pub fn build(self) -> Result<Dispatcher> {
         Ok(Dispatcher {
             backends: self
