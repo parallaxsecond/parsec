@@ -27,7 +27,7 @@ pub enum ListenerType {
 pub struct ListenerConfig {
     /// Type of the Listener
     pub listener_type: ListenerType,
-    /// Timeout of the Listener before the connection errors out
+    /// Timeout of the Listener before the connection errors out (in milliseconds)
     pub timeout: u64,
 }
 

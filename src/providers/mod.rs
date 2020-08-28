@@ -23,7 +23,7 @@ pub mod mbed_crypto_provider;
 pub mod tpm_provider;
 
 /// Provider configuration structure
-/// For providers configs in parsec config.toml we use a format similar
+/// For providers configs in Parsec config.toml we use a format similar
 /// to the one described in the Internally Tagged Enum representation
 /// where "provider_type" is the tag field. For details see:
 /// https://serde.rs/enum-representations.html
