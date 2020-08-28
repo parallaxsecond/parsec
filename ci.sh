@@ -151,7 +151,7 @@ else
     # It is tested in test "should_have_been_deleted".
     # This test does not make sense for the TPM provider.
     if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-        echo "Create a fake mapping file for Mbed Provider"
+        echo "Create a fake mapping file for Mbed Crypto Provider"
         mkdir -p mappings/cm9vdA==/1
         printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
         printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=

@@ -35,7 +35,7 @@ use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 
 #[cfg(feature = "mbed-crypto-provider")]
-use crate::providers::mbed_provider::MbedProviderBuilder;
+use crate::providers::mbed_crypto_provider::MbedCryptoProviderBuilder;
 #[cfg(feature = "pkcs11-provider")]
 use crate::providers::pkcs11_provider::Pkcs11ProviderBuilder;
 #[cfg(feature = "tpm-provider")]
@@ -262,7 +262,7 @@ unsafe fn get_provider(
         ProviderConfig::MbedCrypto { .. } => {
             info!("Creating a Mbed Crypto Provider.");
             Ok(Arc::new(
-                MbedProviderBuilder::new()
+                MbedCryptoProviderBuilder::new()
                     .with_key_info_store(key_info_manager)
                     .build()?,
             ))

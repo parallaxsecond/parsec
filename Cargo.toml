@@ -72,9 +72,4 @@ mbed-crypto-provider = ["psa-crypto"]
 pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"]
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"]
 all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider"]
-# The Mbed provider is not included in the docs because of 2 reasons:
-# 1) it is currently impossible for it to be built inside the docs.rs build system (as it has dependencies
-# that cannot be fulfilled)
-# 2) we are currently not expecting the mbed provider to be used in prod and hence there should be little
-# appetite for developers to understand the code.
-docs = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs"]
+docs = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider"]
