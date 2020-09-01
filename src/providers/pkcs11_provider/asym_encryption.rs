@@ -7,7 +7,7 @@ use crate::key_info_managers::KeyTriple;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
-use parsec_interface::requests::{ProviderID, Result};
+use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
 use utils::CkMechanism;
 
@@ -105,6 +105,44 @@ impl Pkcs11Provider {
             Err(e) => {
                 format_error!("Failed to initialize decrypting operation", e);
                 Err(utils::to_response_status(e))
+            }
+        }
+    }
+
+    pub(super) fn software_psa_asymmetric_encrypt_internal(
+        &self,
+        app_name: ApplicationName,
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
+        let (_, key_attributes) = self.get_key_info(&key_triple)?;
+
+        op.validate(key_attributes)?;
+
+        let pub_key_id = self.find_or_create_pub_key_id(&key_triple)?;
+        let salt_buff = op.salt.as_ref().map(|salt| salt.as_slice());
+        let alg = op.alg;
+        let buffer_size = key_attributes.asymmetric_encrypt_output_size(alg)?;
+        let mut ciphertext = vec![0u8; buffer_size];
+
+        info!("Encrypting plaintext with PSA Crypto");
+        match psa_crypto::operations::asym_encryption::encrypt(
+            pub_key_id,
+            alg,
+            &op.plaintext,
+            salt_buff,
+            &mut ciphertext,
+        ) {
+            Ok(output_size) => {
+                ciphertext.resize(output_size, 0);
+                Ok(psa_asymmetric_encrypt::Result {
+                    ciphertext: ciphertext.into(),
+                })
+            }
+            Err(error) => {
+                let error = ResponseStatus::from(error);
+                format_error!("Asymmetric encryption failed", error);
+                Err(error)
             }
         }
     }

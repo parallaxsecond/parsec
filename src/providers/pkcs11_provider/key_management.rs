@@ -4,7 +4,7 @@ use super::{utils, KeyPairType, Pkcs11Provider, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::{error, info, trace};
-use parsec_interface::operations::psa_key_attributes::Type;
+use parsec_interface::operations::psa_key_attributes::{Id, Lifetime, Type};
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -62,6 +62,42 @@ impl Pkcs11Provider {
             }
         }
     }
+
+    pub(super) fn find_or_create_pub_key_id(&self, key_triple: &KeyTriple) -> Result<Id> {
+        if let Some(id) = self.get_pub_key_id(key_triple)? {
+            return Ok(id);
+        }
+        info!("Attempting to export public key");
+        let export_operation = psa_export_public_key::Operation {
+            key_name: key_triple.key_name().to_owned(),
+        };
+        let psa_export_public_key::Result { data } =
+            self.psa_export_public_key_internal(key_triple.app_name().clone(), export_operation)?;
+
+        info!("Importing public key into PSA Crypto");
+        let (_, mut attributes) = self.get_key_info(key_triple)?;
+        attributes.lifetime = Lifetime::Volatile;
+        attributes.key_type = match attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => Type::RsaPublicKey,
+            Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
+                Type::EccPublicKey { curve_family }
+            }
+            Type::DhKeyPair { group_family } | Type::DhPublicKey { group_family } => {
+                Type::DhPublicKey { group_family }
+            }
+            _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
+        };
+        let id = psa_crypto::operations::key_management::import(attributes, None, &data).map_err(
+            |e| {
+                format_error!("Failed to import public key in PSA crypto", e);
+                ResponseStatus::PsaErrorCommunicationFailure
+            },
+        )?;
+        self.set_pub_key_id(key_triple, id)?;
+
+        Ok(id)
+    }
+
     pub(super) fn psa_generate_key_internal(
         &self,
         app_name: ApplicationName,

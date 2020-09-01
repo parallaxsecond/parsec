@@ -37,6 +37,7 @@ pub enum ProviderConfig {
         library_path: String,
         slot_number: usize,
         user_pin: Option<String>,
+        software_public_operations: Option<bool>,
     },
     Tpm {
         key_info_manager: String,

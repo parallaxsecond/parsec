@@ -10,7 +10,7 @@ use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
-use parsec_interface::operations::psa_key_attributes::Attributes;
+use parsec_interface::operations::psa_key_attributes::{Attributes, Id};
 use parsec_interface::operations::{
     psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
@@ -47,6 +47,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 struct KeyMetadata {
     pub pkcs11_id: [u8; 4],
     pub attributes: Attributes,
+    pub pub_key_id: Option<Id>,
 }
 
 /// Provider for Public Key Cryptography Standard #11
@@ -70,12 +71,14 @@ pub struct Pkcs11Provider {
     // Mutex<()> and an AtomicUsize which would make the code more complicated. Maybe a better
     // way exists.
     key_metadata_cache: RwLock<HashMap<KeyTriple, KeyMetadata>>,
+    psa_crypto_lock: RwLock<()>,
     #[allow(clippy::mutex_atomic)]
     logged_sessions_counter: Mutex<usize>,
     backend: Ctx,
     slot_number: CK_SLOT_ID,
     // Some PKCS 11 devices do not need a pin, the None variant means that.
     user_pin: Option<String>,
+    software_public_operations: bool,
 }
 
 impl Pkcs11Provider {
@@ -88,16 +91,19 @@ impl Pkcs11Provider {
         backend: Ctx,
         slot_number: usize,
         user_pin: Option<String>,
+        software_public_operations: bool,
     ) -> Option<Pkcs11Provider> {
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Pkcs11Provider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             key_metadata_cache: RwLock::new(HashMap::new()),
+            psa_crypto_lock: RwLock::new(()),
             logged_sessions_counter: Mutex::new(0),
             backend,
             slot_number,
             user_pin,
+            software_public_operations,
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -159,6 +165,7 @@ impl Pkcs11Provider {
                                     KeyMetadata {
                                         pkcs11_id: key_id,
                                         attributes: key_info.attributes,
+                                        pub_key_id: None,
                                     },
                                 );
                             }
@@ -191,6 +198,12 @@ impl Pkcs11Provider {
                     return None;
                 }
             }
+        }
+
+        if pkcs11_provider.software_public_operations {
+            psa_crypto::init().expect(
+                "Failed to initialize PSA Crypto for public key operation software support",
+            );
         }
 
         Some(pkcs11_provider)
@@ -268,8 +281,17 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        if self.software_public_operations {
+            trace!("software_psa_verify_hash ingress");
+            let _psa_guard = self
+                .psa_crypto_lock
+                .read()
+                .expect("PSA Crypto lock poisoned");
+            self.software_psa_verify_hash_internal(app_name, op)
+        } else {
+            trace!("pkcs11_psa_verify_hash ingress");
+            self.psa_verify_hash_internal(app_name, op)
+        }
     }
 
     fn psa_asymmetric_encrypt(
@@ -277,8 +299,17 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        trace!("psa_asymmetric_encrypt ingress");
-        self.psa_asymmetric_encrypt_internal(app_name, op)
+        if self.software_public_operations {
+            trace!("software_psa_asymmetric_encrypt ingress");
+            let _psa_guard = self
+                .psa_crypto_lock
+                .read()
+                .expect("PSA Crypto lock poisoned");
+            self.software_psa_asymmetric_encrypt_internal(app_name, op)
+        } else {
+            trace!("psa_asymmetric_encrypt ingress");
+            self.psa_asymmetric_encrypt_internal(app_name, op)
+        }
     }
 
     fn psa_asymmetric_decrypt(
@@ -294,6 +325,30 @@ impl Provide for Pkcs11Provider {
 impl Drop for Pkcs11Provider {
     fn drop(&mut self) {
         trace!("Finalize command");
+
+        if self.software_public_operations {
+            info!("Removing public keys from PSA Crypto.");
+            let key_metadata_cache = self
+                .key_metadata_cache
+                .read()
+                .expect("Key metadata cache lock poisoned");
+            for (key_name, KeyMetadata { pub_key_id, .. }) in key_metadata_cache.iter() {
+                if let Some(id) = pub_key_id {
+                    // Given that at this point no other operations could be ongoing,
+                    // it is safe to destroy keys.
+                    if unsafe { psa_crypto::operations::key_management::destroy(*id).is_err() } {
+                        if crate::utils::GlobalConfig::log_error_details() {
+                            error!(
+                                "Failed to remove public part of key \"{}\" from PSA Crypto.",
+                                key_name
+                            );
+                        } else {
+                            error!("Failed to remove public key from PSA Crypto.");
+                        }
+                    }
+                }
+            }
+        }
         if let Err(e) = self.backend.finalize() {
             format_error!("Error when dropping the PKCS 11 provider", e);
         }
@@ -309,6 +364,7 @@ pub struct Pkcs11ProviderBuilder {
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,
     user_pin: Option<String>,
+    software_public_operations: Option<bool>,
 }
 
 impl Pkcs11ProviderBuilder {
@@ -318,6 +374,7 @@ impl Pkcs11ProviderBuilder {
             pkcs11_library_path: None,
             slot_number: None,
             user_pin: None,
+            software_public_operations: None,
         }
     }
 
@@ -347,6 +404,15 @@ impl Pkcs11ProviderBuilder {
 
     pub fn with_user_pin(mut self, user_pin: Option<String>) -> Pkcs11ProviderBuilder {
         self.user_pin = user_pin;
+
+        self
+    }
+
+    pub fn with_software_public_operations(
+        mut self,
+        software_public_operations: Option<bool>,
+    ) -> Pkcs11ProviderBuilder {
+        self.software_public_operations = software_public_operations;
 
         self
     }
@@ -387,6 +453,7 @@ impl Pkcs11ProviderBuilder {
             backend,
             slot_number,
             self.user_pin,
+            self.software_public_operations.unwrap_or(false),
         )
         .ok_or_else(|| Error::new(ErrorKind::InvalidData, "PKCS 11 initialization failed"))?)
     }

@@ -76,6 +76,9 @@ key_info_manager = "on-disk-manager"
 # (Optional) User pin for authentication with the specific slot. If not set, no authentication will
 # be used.
 #user_pin = "123456"
+# (Optional) Control whether missing public key operation (such as verifying signatures or asymmetric
+# encryption) are fully performed in software. 
+#software_public_operations = false
 
 # Example of a TPM provider configuration
 #[[provider]]

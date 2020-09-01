@@ -69,7 +69,7 @@ features = ["docs"]
 default = []
 no-parsec-user-and-clients-group = []
 mbed-crypto-provider = ["psa-crypto"]
-pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"]
+pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "psa-crypto"]
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"]
 all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider"]
 # The Mbed provider is not included in the docs because of 2 reasons:

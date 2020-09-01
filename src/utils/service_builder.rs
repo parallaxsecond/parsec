@@ -272,6 +272,7 @@ unsafe fn get_provider(
             library_path,
             slot_number,
             user_pin,
+            software_public_operations,
             ..
         } => {
             info!("Creating a PKCS 11 Provider.");
@@ -281,6 +282,7 @@ unsafe fn get_provider(
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
                     .with_user_pin(user_pin.clone())
+                    .with_software_public_operations(*software_public_operations)
                     .build()?,
             ))
         }

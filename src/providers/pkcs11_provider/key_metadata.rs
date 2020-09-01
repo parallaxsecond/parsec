@@ -3,7 +3,7 @@
 use super::{KeyInfo, KeyMetadata, Pkcs11Provider};
 use crate::key_info_managers;
 use crate::key_info_managers::KeyTriple;
-use log::{error, warn};
+use log::{error, info, warn};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -77,6 +77,7 @@ impl Pkcs11Provider {
                     KeyMetadata {
                         pkcs11_id: key_id,
                         attributes: key_attributes,
+                        pub_key_id: None,
                     },
                 );
                 Ok(key_id)
@@ -97,6 +98,22 @@ impl Pkcs11Provider {
             .expect("Key metadata cache lock poisoned");
         match store_handle.remove(key_triple) {
             Ok(_) => {
+                if let Some(KeyMetadata { pub_key_id, .. }) = key_metadata_cache.remove(key_triple)
+                {
+                    if let Some(id) = pub_key_id {
+                        info!("Removing public key stored in PSA.");
+                        if unsafe { psa_crypto::operations::key_management::destroy(id).is_err() } {
+                            if crate::utils::GlobalConfig::log_error_details() {
+                                error!(
+                                    "Failed to remove public part of key \"{}\" from PSA Crypto.",
+                                    key_triple.key_name()
+                                );
+                            } else {
+                                error!("Failed to remove public key from PSA Crypto.");
+                            }
+                        }
+                    }
+                }
                 let _ = local_ids_handle.remove(&key_id);
                 let _ = key_metadata_cache.remove(key_triple);
                 Ok(())
@@ -111,5 +128,30 @@ impl Pkcs11Provider {
             .read()
             .expect("Key metadata cache lock poisoned");
         key_metadata_cache.contains_key(key_triple)
+    }
+
+    pub(super) fn get_pub_key_id(&self, key_triple: &KeyTriple) -> Result<Option<Id>> {
+        let key_metadata_cache = self
+            .key_metadata_cache
+            .read()
+            .expect("Key metadata cache lock poisoned");
+        if let Some(KeyMetadata { pub_key_id, .. }) = key_metadata_cache.get(key_triple) {
+            Ok(*pub_key_id)
+        } else {
+            Err(ResponseStatus::PsaErrorDoesNotExist)
+        }
+    }
+
+    pub(super) fn set_pub_key_id(&self, key_triple: &KeyTriple, pub_key_id: Id) -> Result<()> {
+        let mut key_metadata_cache = self
+            .key_metadata_cache
+            .write()
+            .expect("Key metadata cache lock poisoned");
+        if let Some(mut key_metadata) = key_metadata_cache.get_mut(key_triple) {
+            key_metadata.pub_key_id = Some(pub_key_id);
+            Ok(())
+        } else {
+            Err(ResponseStatus::PsaErrorDoesNotExist)
+        }
     }
 }
