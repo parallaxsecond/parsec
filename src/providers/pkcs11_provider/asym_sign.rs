@@ -7,7 +7,7 @@ use crate::key_info_managers::KeyTriple;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
-use parsec_interface::requests::{ProviderID, Result};
+use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
 use utils::CkMechanism;
 
@@ -103,5 +103,36 @@ impl Pkcs11Provider {
                 Err(utils::to_response_status(e))
             }
         }
+    }
+
+    pub(super) fn software_psa_verify_hash_internal(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
+        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
+        let (_, key_attributes) = self.get_key_info(&key_triple)?;
+
+        op.validate(key_attributes)?;
+
+        let pub_key_id = self.move_pub_key_to_psa_crypto(&key_triple)?;
+
+        info!("Verifying signature with PSA Crypto");
+        let res = match psa_crypto::operations::asym_signature::verify_hash(
+            pub_key_id,
+            op.alg,
+            &op.hash,
+            &op.signature,
+        ) {
+            Ok(()) => Ok(psa_verify_hash::Result {}),
+            Err(error) => {
+                let error = ResponseStatus::from(error);
+                format_error!("Verify hash failed", error);
+                Err(error)
+            }
+        };
+
+        let _ = self.remove_psa_crypto_pub_key(pub_key_id);
+        res
     }
 }

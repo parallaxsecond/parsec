@@ -47,6 +47,8 @@ pub enum ProviderConfig {
         slot_number: usize,
         /// User Pin
         user_pin: Option<String>,
+        /// Control whether public key operations are performed in software
+        software_public_operations: Option<bool>,
     },
     /// TPM provider configuration
     Tpm {

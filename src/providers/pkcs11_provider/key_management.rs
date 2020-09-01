@@ -4,7 +4,7 @@ use super::{utils, KeyPairType, Pkcs11Provider, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::{error, info, trace};
-use parsec_interface::operations::psa_key_attributes::Type;
+use parsec_interface::operations::psa_key_attributes::{Id, Lifetime, Type};
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -62,6 +62,42 @@ impl Pkcs11Provider {
             }
         }
     }
+
+    pub(super) fn move_pub_key_to_psa_crypto(&self, key_triple: &KeyTriple) -> Result<Id> {
+        info!("Attempting to export public key");
+        let export_operation = psa_export_public_key::Operation {
+            key_name: key_triple.key_name().to_owned(),
+        };
+        let psa_export_public_key::Result { data } =
+            self.psa_export_public_key_internal(key_triple.app_name().clone(), export_operation)?;
+
+        info!("Importing public key into PSA Crypto");
+        let (_, mut attributes) = self.get_key_info(key_triple)?;
+        attributes.lifetime = Lifetime::Volatile;
+        attributes.key_type = match attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => Type::RsaPublicKey,
+            Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
+                Type::EccPublicKey { curve_family }
+            }
+            Type::DhKeyPair { group_family } | Type::DhPublicKey { group_family } => {
+                Type::DhPublicKey { group_family }
+            }
+            _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
+        };
+        let id = psa_crypto::operations::key_management::import(attributes, None, &data)?;
+
+        Ok(id)
+    }
+
+    pub(super) fn remove_psa_crypto_pub_key(&self, pub_key_id: Id) -> Result<()> {
+        info!("Removing public key stored in PSA.");
+        unsafe { psa_crypto::operations::key_management::destroy(pub_key_id) }.map_err(|e| {
+            error!("Failed to remove public key from PSA Crypto.");
+            e
+        })?;
+        Ok(())
+    }
+
     pub(super) fn psa_generate_key_internal(
         &self,
         app_name: ApplicationName,

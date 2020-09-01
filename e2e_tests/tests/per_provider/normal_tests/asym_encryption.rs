@@ -85,10 +85,6 @@ fn simple_asym_encrypt_rsa_oaep_pkcs11() {
     let key_name = String::from("simple_asym_encrypt_rsa_oaep_pkcs11");
     let mut client = TestClient::new();
 
-    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
-        return;
-    }
-
     client
         .generate_rsa_encryption_keys_rsaoaep_sha1(key_name.clone())
         .unwrap();

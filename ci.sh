@@ -137,7 +137,7 @@ pgrep -f target/debug/parsec >/dev/null
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml config
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml config -- --test-threads=1
 else
     # Per provider tests
     echo "Execute normal tests"
