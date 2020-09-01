@@ -31,6 +31,10 @@
 # such as key names or policies
 #log_error_details = false
 
+# Decide how large (in bytes) buffers inside responses from this provider can be. Requests that ask
+# for buffers larger than this threshold will be rejected. Defaults to 1MB.
+#buffer_size_limit = 1048576
+
 # (Required) Configuration for the service IPC listener component.
 [listener]
 # (Required) Type of IPC that the service will support.

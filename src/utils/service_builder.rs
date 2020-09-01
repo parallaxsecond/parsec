@@ -53,6 +53,9 @@ const WIRE_PROTOCOL_VERSION_MAJOR: u8 = 1;
 /// Default value for the limit on the request body size (in bytes) - equal to 1MB
 const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 20;
 
+/// Default value for the limit on the buffer size for response (in bytes) - equal to 1MB
+pub const DEFAULT_BUFFER_SIZE_LIMIT: usize = 1 << 20;
+
 type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Arc<dyn Provide + Send + Sync>;
 type Authenticator = Box<dyn Authenticate + Send + Sync>;
@@ -70,6 +73,7 @@ pub struct CoreSettings {
     pub body_len_limit: Option<usize>,
     pub log_error_details: Option<bool>,
     pub allow_root: Option<bool>,
+    pub buffer_size_limit: Option<usize>,
 }
 
 /// Configuration of Parsec
@@ -104,6 +108,12 @@ impl ServiceBuilder {
     pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
         GlobalConfigBuilder::new()
             .with_log_error_details(config.core_settings.log_error_details.unwrap_or(false))
+            .with_buffer_size_limit(
+                config
+                    .core_settings
+                    .buffer_size_limit
+                    .unwrap_or(DEFAULT_BUFFER_SIZE_LIMIT),
+            )
             .build();
 
         let key_info_managers =
