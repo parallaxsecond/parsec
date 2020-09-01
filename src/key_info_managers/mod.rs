@@ -69,6 +69,16 @@ impl KeyTriple {
     pub fn belongs_to_provider(&self, provider_id: ProviderID) -> bool {
         self.provider_id == provider_id
     }
+
+    /// Get the key name
+    pub fn key_name(&self) -> &str {
+        &self.key_name
+    }
+
+    /// Get the key name
+    pub fn app_name(&self) -> &ApplicationName {
+        &self.app_name
+    }
 }
 
 /// Converts the error string returned by the ManageKeyInfo methods to
@@ -98,7 +108,7 @@ pub trait ManageKeyInfo {
     /// # Errors
     ///
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
-    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String>;
+    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<(KeyTriple, KeyInfo)>, String>;
 
     /// Inserts a new mapping between the key triple and the key info. If the triple already exists,
     /// overwrite the existing mapping and returns the old `KeyInfo`. Otherwise returns `None`.

@@ -291,11 +291,12 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         }
     }
 
-    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String> {
+    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<(KeyTriple, KeyInfo)>, String> {
         Ok(self
             .key_store
-            .keys()
-            .filter(|key_triple| key_triple.belongs_to_provider(provider_id))
+            .iter()
+            .filter(|(key_triple, _)| key_triple.belongs_to_provider(provider_id))
+            .map(|(key_triple, key_info)| (key_triple.clone(), key_info.clone()))
             .collect())
     }
 

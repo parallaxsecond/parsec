@@ -10,6 +10,7 @@ use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::operations::{
     psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
@@ -17,7 +18,7 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
 use pkcs11::Ctx;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex, RwLock};
 use utils::{KeyPairType, ReadWriteSession, Session};
@@ -28,6 +29,7 @@ type LocalIdStore = HashSet<[u8; 4]>;
 mod asym_encryption;
 mod asym_sign;
 mod key_management;
+mod key_metadata;
 mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 8] = [
@@ -41,6 +43,12 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaAsymmetricEncrypt,
 ];
 
+#[derive(Debug)]
+struct KeyMetadata {
+    pub pkcs11_id: [u8; 4],
+    pub attributes: Attributes,
+}
+
 /// Provider for Public Key Cryptography Standard #11
 ///
 /// Operations for this provider are serviced through a PKCS11 interface,
@@ -51,8 +59,8 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 pub struct Pkcs11Provider {
     #[derivative(Debug = "ignore")]
     key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    // TODO: the local ID store is currently only used to prevent creating a key that does not
-    // exist, it should also act as a cache for non-desctrucitve operations. Same for Mbed Crypto.
+    // TODO: the local ID store is currently only used to prevent creating a key that already
+    // exists, it should also act as a cache for non-desctrucitve operations. Same for Mbed Crypto.
     local_ids: RwLock<LocalIdStore>,
     // The authentication state is common to all sessions. A counter of logged in sessions is used
     // to keep track of current logged in sessions, ignore logging in if the user is already
@@ -61,6 +69,7 @@ pub struct Pkcs11Provider {
     // section inside login/logout functions. The clippy warning is ignored here to not have one
     // Mutex<()> and an AtomicUsize which would make the code more complicated. Maybe a better
     // way exists.
+    key_metadata_cache: RwLock<HashMap<KeyTriple, KeyMetadata>>,
     #[allow(clippy::mutex_atomic)]
     logged_sessions_counter: Mutex<usize>,
     backend: Ctx,
@@ -84,6 +93,7 @@ impl Pkcs11Provider {
         let pkcs11_provider = Pkcs11Provider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
+            key_metadata_cache: RwLock::new(HashMap::new()),
             logged_sessions_counter: Mutex::new(0),
             backend,
             slot_number,
@@ -100,6 +110,10 @@ impl Pkcs11Provider {
                 .local_ids
                 .write()
                 .expect("Local ID lock poisoned");
+            let mut key_metadata_cache = pkcs11_provider
+                .key_metadata_cache
+                .write()
+                .expect("Key metadata cache lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
             // Go through all PKCS 11 key triple to key info mappings and check if they are still
             // present.
@@ -109,21 +123,22 @@ impl Pkcs11Provider {
                     let session =
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
 
-                    for key_triple in key_triples.iter().cloned() {
-                        let (key_id, _) = match key_management::get_key_info(
-                            key_triple,
-                            &*store_handle,
-                        ) {
-                            Ok(key_id) => key_id,
-                            Err(response_status) => {
-                                if crate::utils::GlobalConfig::log_error_details() {
-                                    error!("Error getting the KeyInfo for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
-                                } else {
-                                    error!("Error getting the KeyInfo, continuing...");
-                                }
-                                continue;
+                    for (key_triple, key_info) in key_triples.iter().cloned() {
+                        let mut key_id = [0; 4];
+                        if key_info.id.len() == 4 {
+                            key_id.copy_from_slice(&key_info.id);
+                        } else {
+                            if crate::utils::GlobalConfig::log_error_details() {
+                                error!(
+                                    "Invalid key ID (value: {:?}) for triple:\n{}\n, continuing...",
+                                    key_info.id, key_triple
+                                );
+                            } else {
+                                error!("Found invalid key ID, continuing...");
                             }
-                        };
+                            continue;
+                        }
+
                         match pkcs11_provider.find_key(
                             session.session_handle(),
                             key_id,
@@ -139,6 +154,13 @@ impl Pkcs11Provider {
                                     warn!("Key found in the PKCS 11 library, adding it.");
                                 }
                                 let _ = local_ids_handle.insert(key_id);
+                                let _ = key_metadata_cache.insert(
+                                    key_triple,
+                                    KeyMetadata {
+                                        pkcs11_id: key_id,
+                                        attributes: key_info.attributes,
+                                    },
+                                );
                             }
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
                                 if crate::utils::GlobalConfig::log_error_details() {

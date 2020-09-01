@@ -98,8 +98,8 @@ impl MbedProvider {
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::MbedCrypto) {
                 Ok(key_triples) => {
-                    for key_triple in key_triples.iter().cloned() {
-                        let key_id = match key_management::get_key_id(key_triple, &*store_handle) {
+                    for (key_triple, _) in key_triples.iter().cloned() {
+                        let key_id = match key_management::get_key_id(&key_triple, &*store_handle) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
                                 error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
