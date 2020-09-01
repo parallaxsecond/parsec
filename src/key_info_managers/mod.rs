@@ -12,6 +12,7 @@ use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::{ProviderID, ResponseStatus};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use zeroize::Zeroize;
 
 pub mod on_disk_manager;
 
@@ -53,7 +54,8 @@ impl fmt::Display for KeyTriple {
 }
 
 /// Information stored about a key
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Zeroize)]
+#[zeroize(drop)]
 pub struct KeyInfo {
     /// Reference to a key in the Provider
     pub id: Vec<u8>,

@@ -10,6 +10,7 @@ use log::trace;
 use parsec_interface::requests::{Opcode, ProviderID};
 use serde::Deserialize;
 use std::collections::HashSet;
+use zeroize::Zeroize;
 
 pub mod core_provider;
 
@@ -27,7 +28,8 @@ pub mod tpm_provider;
 /// to the one described in the Internally Tagged Enum representation
 /// where "provider_type" is the tag field. For details see:
 /// https://serde.rs/enum-representations.html
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Zeroize)]
+#[zeroize(drop)]
 #[serde(tag = "provider_type")]
 pub enum ProviderConfig {
     /// Mbed Crypto provider configuration
@@ -57,21 +59,19 @@ pub enum ProviderConfig {
     },
 }
 
-use self::ProviderConfig::{MbedCrypto, Pkcs11, Tpm};
-
 impl ProviderConfig {
     /// Get the name of the Key Info Manager in the provider configuration
     pub fn key_info_manager(&self) -> &String {
         match *self {
-            MbedCrypto {
+            ProviderConfig::MbedCrypto {
                 ref key_info_manager,
                 ..
             } => key_info_manager,
-            Pkcs11 {
+            ProviderConfig::Pkcs11 {
                 ref key_info_manager,
                 ..
             } => key_info_manager,
-            Tpm {
+            ProviderConfig::Tpm {
                 ref key_info_manager,
                 ..
             } => key_info_manager,
@@ -80,9 +80,9 @@ impl ProviderConfig {
     /// Get the Provider ID of the provider
     pub fn provider_id(&self) -> ProviderID {
         match *self {
-            MbedCrypto { .. } => ProviderID::MbedCrypto,
-            Pkcs11 { .. } => ProviderID::Pkcs11,
-            Tpm { .. } => ProviderID::Tpm,
+            ProviderConfig::MbedCrypto { .. } => ProviderID::MbedCrypto,
+            ProviderConfig::Pkcs11 { .. } => ProviderID::Pkcs11,
+            ProviderConfig::Tpm { .. } => ProviderID::Tpm,
         }
     }
 }

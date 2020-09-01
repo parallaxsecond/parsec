@@ -90,6 +90,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
 #[derive(Serialize, Deserialize)]
 pub struct PasswordContext {
     pub context: TpmsContext,
+    /// This value is confidential and needs to be zeroized by its new owner.
     pub auth_value: Vec<u8>,
 }
 

@@ -15,6 +15,7 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1_x509::RSAPublicKey;
+use zeroize::Zeroize;
 
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -24,7 +25,7 @@ const AUTH_VAL_LEN: usize = 32;
 fn insert_password_context(
     store_handle: &mut dyn ManageKeyInfo,
     key_triple: KeyTriple,
-    password_context: PasswordContext,
+    mut password_context: PasswordContext,
     key_attributes: Attributes,
 ) -> Result<()> {
     let error_storing = |e| Err(key_info_managers::to_response_status(e));
@@ -33,6 +34,8 @@ fn insert_password_context(
         id: bincode::serialize(&password_context)?,
         attributes: key_attributes,
     };
+
+    password_context.auth_value.zeroize();
 
     if store_handle
         .insert(key_triple, key_info)

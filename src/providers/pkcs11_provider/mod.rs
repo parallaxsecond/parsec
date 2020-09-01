@@ -15,13 +15,16 @@ use parsec_interface::operations::{
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::secrecy::SecretString;
 use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
 use pkcs11::Ctx;
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, RwLock};
 use utils::{KeyPairType, ReadWriteSession, Session};
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 type LocalIdStore = HashSet<[u8; 4]>;
 
@@ -66,7 +69,7 @@ pub struct Pkcs11Provider {
     backend: Ctx,
     slot_number: CK_SLOT_ID,
     // Some PKCS 11 devices do not need a pin, the None variant means that.
-    user_pin: Option<String>,
+    user_pin: Option<SecretString>,
 }
 
 impl Pkcs11Provider {
@@ -78,7 +81,7 @@ impl Pkcs11Provider {
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
         backend: Ctx,
         slot_number: usize,
-        user_pin: Option<String>,
+        user_pin: Option<SecretString>,
     ) -> Option<Pkcs11Provider> {
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Pkcs11Provider {
@@ -275,10 +278,16 @@ impl Drop for Pkcs11Provider {
         if let Err(e) = self.backend.finalize() {
             format_error!("Error when dropping the PKCS 11 provider", e);
         }
+        // The other fields containing confidential information should implement zeroizing on drop.
+        self.slot_number.zeroize();
     }
 }
 
 /// Builder for Pkcs11Provider
+///
+/// This builder contains some confidential information that is passed to the Pkcs11Provider. The
+/// Pkcs11Provider will zeroize this data when dropping. This data will not be cloned when
+/// building.
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct Pkcs11ProviderBuilder {
@@ -286,7 +295,7 @@ pub struct Pkcs11ProviderBuilder {
     key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,
-    user_pin: Option<String>,
+    user_pin: Option<SecretString>,
 }
 
 impl Pkcs11ProviderBuilder {
@@ -328,8 +337,13 @@ impl Pkcs11ProviderBuilder {
     }
 
     /// Specify the user pin
-    pub fn with_user_pin(mut self, user_pin: Option<String>) -> Pkcs11ProviderBuilder {
-        self.user_pin = user_pin;
+    pub fn with_user_pin(mut self, mut user_pin: Option<String>) -> Pkcs11ProviderBuilder {
+        self.user_pin = match user_pin {
+            // The conversion form a String is infallible.
+            Some(ref pin) => Some(SecretString::from_str(&pin).unwrap()),
+            None => None,
+        };
+        user_pin.zeroize();
 
         self
     }
