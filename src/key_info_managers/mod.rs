@@ -77,6 +77,16 @@ impl KeyTriple {
     pub fn belongs_to_provider(&self, provider_id: ProviderID) -> bool {
         self.provider_id == provider_id
     }
+
+    /// Get the key name
+    pub fn key_name(&self) -> &str {
+        &self.key_name
+    }
+
+    /// Get the app name
+    pub fn app_name(&self) -> &ApplicationName {
+        &self.app_name
+    }
 }
 
 /// Converts the error string returned by the ManageKeyInfo methods to
