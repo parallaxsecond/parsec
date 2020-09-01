@@ -1,6 +1,6 @@
 [package]
 name = "parsec-service"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Anton Antonov <anton.antonov@arm.com>",
            "Paul Howard <paul.howard@arm.com>",
            "Ionut Mihalcea <ionut.mihalcea@arm.com>",
@@ -58,9 +58,6 @@ bindgen = "0.54.0"
 cargo_toml = "0.7.0"
 toml = "0.4.2"
 serde = { version = "1.0", features = ["derive"] }
-
-[package.metadata.config]
-mbed-crypto-version = "mbedcrypto-2.0.0"
 
 [package.metadata.docs.rs]
 features = ["docs"]
