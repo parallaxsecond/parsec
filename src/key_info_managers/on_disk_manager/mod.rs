@@ -24,8 +24,10 @@ use std::fs::{DirEntry, File};
 use std::io::{Error, ErrorKind, Read, Write};
 use std::path::PathBuf;
 
+/// Default path where the mapping files will be stored on disk
 pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
 
+/// A key info manager storing key triple to key info mapping on files on disk
 #[derive(Debug)]
 pub struct OnDiskKeyInfoManager {
     /// Internal mapping, used for non-modifying operations.
@@ -326,24 +328,28 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
     }
 }
 
+/// OnDiskKeyInfoManager builder
 #[derive(Debug, Default)]
 pub struct OnDiskKeyInfoManagerBuilder {
     mappings_dir_path: Option<PathBuf>,
 }
 
 impl OnDiskKeyInfoManagerBuilder {
+    /// Create a new OnDiskKeyInfoManagerBuilder
     pub fn new() -> OnDiskKeyInfoManagerBuilder {
         OnDiskKeyInfoManagerBuilder {
             mappings_dir_path: None,
         }
     }
 
+    /// Add a mappings directory path to the builder
     pub fn with_mappings_dir_path(mut self, path: PathBuf) -> OnDiskKeyInfoManagerBuilder {
         self.mappings_dir_path = Some(path);
 
         self
     }
 
+    /// Build into a OnDiskKeyInfoManager
     pub fn build(self) -> std::io::Result<OnDiskKeyInfoManager> {
         OnDiskKeyInfoManager::new(self.mappings_dir_path.ok_or_else(|| {
             error!("Mappings directory path is missing");

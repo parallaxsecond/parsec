@@ -1,5 +1,14 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+//! Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
+//! common API to secure services in a platform-agnostic way.
+//!
+//! Parsec documentation is available
+//! [here](https://parallaxsecond.github.io/parsec-book/index.html)
+//!
+//! Most of Parsec configuration comes from its configuration file.
+//! Please check the documentation to find more about configuration
+//! [here](https://parallaxsecond.github.io/parsec-book/user_guides/configuration.html)
 #![deny(
     nonstandard_style,
     const_err,
@@ -18,8 +27,7 @@
     unused_parens,
     while_true,
     missing_debug_implementations,
-    //TODO: activate this!
-    //missing_docs,
+    missing_docs,
     trivial_casts,
     trivial_numeric_casts,
     unused_extern_crates,

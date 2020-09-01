@@ -19,6 +19,7 @@ use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use std::str;
 
+/// Direct authentication authenticator implementation
 #[derive(Copy, Clone, Debug)]
 pub struct DirectAuthenticator;
 

@@ -229,15 +229,18 @@ pub struct DomainSocketListenerBuilder {
 }
 
 impl DomainSocketListenerBuilder {
+    /// Create a new DomainSocketListener builder
     pub fn new() -> Self {
         DomainSocketListenerBuilder { timeout: None }
     }
 
+    /// Add a timeout on the Unix Domain Socket used
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
 
+    /// Build the builder into the listener
     pub fn build(self) -> Result<DomainSocketListener> {
         DomainSocketListener::new(self.timeout.ok_or_else(|| {
             error!("The listener timeout was not set.");

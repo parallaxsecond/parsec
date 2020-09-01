@@ -24,8 +24,7 @@
     unused_parens,
     while_true,
     missing_debug_implementations,
-    //TODO: activate this!
-    //missing_docs,
+    missing_docs,
     trivial_casts,
     trivial_numeric_casts,
     unused_extern_crates,

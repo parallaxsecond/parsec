@@ -57,7 +57,11 @@ type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Arc<dyn Provide + Send + Sync>;
 type Authenticator = Box<dyn Authenticate + Send + Sync>;
 
+/// Core settings
+///
+/// See the config.toml file for a description of each field.
 #[derive(Copy, Clone, Deserialize, Debug)]
+#[allow(missing_docs)]
 pub struct CoreSettings {
     pub thread_pool_size: Option<usize>,
     pub idle_listener_sleep_duration: Option<u64>,
@@ -68,7 +72,11 @@ pub struct CoreSettings {
     pub allow_root: Option<bool>,
 }
 
+/// Configuration of Parsec
+///
+/// See the config.toml file for a description of each field.
 #[derive(Deserialize, Debug)]
+#[allow(missing_docs)]
 pub struct ServiceConfig {
     pub core_settings: CoreSettings,
     pub listener: ListenerConfig,

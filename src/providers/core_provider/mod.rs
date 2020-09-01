@@ -97,6 +97,7 @@ pub struct CoreProviderBuilder {
 }
 
 impl CoreProviderBuilder {
+    /// Create a new CoreProvider builder
     pub fn new() -> Self {
         CoreProviderBuilder {
             version_maj: None,
@@ -106,6 +107,7 @@ impl CoreProviderBuilder {
         }
     }
 
+    /// Add the wire protocol version used by the service
     pub fn with_wire_protocol_version(mut self, version_min: u8, version_maj: u8) -> Self {
         self.version_maj = Some(version_maj);
         self.version_min = Some(version_min);
@@ -113,18 +115,21 @@ impl CoreProviderBuilder {
         self
     }
 
+    /// Add a provider used
     pub fn with_provider(mut self, provider: Arc<dyn Provide + Send + Sync>) -> Self {
         self.prov_list.push(provider);
 
         self
     }
 
+    /// Add the authenticator information
     pub fn with_authenticator_info(mut self, authenticator_info: AuthenticatorInfo) -> Self {
         self.authenticator_info.push(authenticator_info);
 
         self
     }
 
+    /// Build into a CoreProvider
     pub fn build(self) -> std::io::Result<CoreProvider> {
         let mut provider_opcodes = HashMap::new();
         let _ = provider_opcodes.insert(

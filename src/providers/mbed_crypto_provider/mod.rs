@@ -1,5 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+//! Mbed Crypto provider
+//!
+//! This provider is a software based implementation of PSA Crypto, Mbed Crypto.
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
@@ -46,6 +49,7 @@ const SUPPORTED_OPCODES: [Opcode; 14] = [
     Opcode::PsaRawKeyAgreement,
 ];
 
+/// Mbed Crypto provider structure
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct MbedCryptoProvider {
@@ -282,6 +286,7 @@ impl Provide for MbedCryptoProvider {
     }
 }
 
+/// Mbed Crypto provider builder
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct MbedCryptoProviderBuilder {
@@ -290,12 +295,14 @@ pub struct MbedCryptoProviderBuilder {
 }
 
 impl MbedCryptoProviderBuilder {
+    /// Create a new provider builder
     pub fn new() -> MbedCryptoProviderBuilder {
         MbedCryptoProviderBuilder {
             key_info_store: None,
         }
     }
 
+    /// Add a KeyInfo manager
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
@@ -305,6 +312,7 @@ impl MbedCryptoProviderBuilder {
         self
     }
 
+    /// Build into a MbedProvider
     pub fn build(self) -> std::io::Result<MbedCryptoProvider> {
         MbedCryptoProvider::new(
             self.key_info_store

@@ -290,6 +290,7 @@ pub struct Pkcs11ProviderBuilder {
 }
 
 impl Pkcs11ProviderBuilder {
+    /// Create a new Pkcs11Provider builder
     pub fn new() -> Pkcs11ProviderBuilder {
         Pkcs11ProviderBuilder {
             key_info_store: None,
@@ -299,6 +300,7 @@ impl Pkcs11ProviderBuilder {
         }
     }
 
+    /// Add a KeyInfo manager
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
@@ -308,6 +310,7 @@ impl Pkcs11ProviderBuilder {
         self
     }
 
+    /// Specify the path of the PKCS11 library
     pub fn with_pkcs11_library_path(
         mut self,
         pkcs11_library_path: String,
@@ -317,18 +320,21 @@ impl Pkcs11ProviderBuilder {
         self
     }
 
+    /// Specify the slot number used
     pub fn with_slot_number(mut self, slot_number: usize) -> Pkcs11ProviderBuilder {
         self.slot_number = Some(slot_number);
 
         self
     }
 
+    /// Specify the user pin
     pub fn with_user_pin(mut self, user_pin: Option<String>) -> Pkcs11ProviderBuilder {
         self.user_pin = user_pin;
 
         self
     }
 
+    /// Build into a Pkcs11Provider
     pub fn build(self) -> std::io::Result<Pkcs11Provider> {
         let library_path = self
             .pkcs11_library_path

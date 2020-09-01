@@ -15,15 +15,21 @@ use std::fmt;
 
 pub mod on_disk_manager;
 
+/// Type of the KeyInfoManager
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub enum KeyInfoManagerType {
+    /// KeyInfoManager storing the mappings on disk
     OnDisk,
 }
 
+/// KeyInfoManager configuration
 #[derive(Deserialize, Debug)]
 pub struct KeyInfoManagerConfig {
+    /// Name of the KeyInfoManager
     pub name: String,
+    /// Type of the KeyInfoManager
     pub manager_type: KeyInfoManagerType,
+    /// Path used to store the mappings
     pub store_path: Option<String>,
 }
 

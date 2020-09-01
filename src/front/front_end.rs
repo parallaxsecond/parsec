@@ -131,6 +131,7 @@ pub struct FrontEndHandlerBuilder {
 }
 
 impl FrontEndHandlerBuilder {
+    /// Create a new FrontEndHandler builder
     pub fn new() -> Self {
         FrontEndHandlerBuilder {
             dispatcher: None,
@@ -139,11 +140,13 @@ impl FrontEndHandlerBuilder {
         }
     }
 
+    /// Add a dispatcher to the builder
     pub fn with_dispatcher(mut self, dispatcher: Dispatcher) -> Self {
         self.dispatcher = Some(dispatcher);
         self
     }
 
+    /// Add an authenticator to the builder
     pub fn with_authenticator(
         mut self,
         auth_type: AuthType,
@@ -163,11 +166,13 @@ impl FrontEndHandlerBuilder {
         self
     }
 
+    /// Set a limit on the maximal body length received
     pub fn with_body_len_limit(mut self, body_len_limit: usize) -> Self {
         self.body_len_limit = Some(body_len_limit);
         self
     }
 
+    /// Build into a FrontEndHandler
     pub fn build(self) -> Result<FrontEndHandler> {
         Ok(FrontEndHandler {
             dispatcher: self

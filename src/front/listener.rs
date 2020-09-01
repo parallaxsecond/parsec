@@ -9,20 +9,25 @@ use derivative::Derivative;
 use serde::Deserialize;
 use std::time::Duration;
 
-// This trait is created to allow the iterator returned by incoming to iterate over a trait object
-// that implements both Read and Write.
+/// This trait is created to allow the iterator returned by incoming to iterate over a trait object
+/// that implements both Read and Write.
 pub trait ReadWrite: std::io::Read + std::io::Write {}
 // Automatically implements ReadWrite for all types that implement Read and Write.
 impl<T: std::io::Read + std::io::Write> ReadWrite for T {}
 
+/// Type of the Listener used
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub enum ListenerType {
+    /// Listener using Unix Domain Socket
     DomainSocket,
 }
 
+/// Configuration of the Listener
 #[derive(Copy, Clone, Deserialize, Debug)]
 pub struct ListenerConfig {
+    /// Type of the Listener
     pub listener_type: ListenerType,
+    /// Timeout of the Listener before the connection errors out (in milliseconds)
     pub timeout: u64,
 }
 
@@ -32,14 +37,14 @@ pub enum ConnectionMetadata {
     // TODO: nothing here right now. Metadata types will be added as needed.
 }
 
-/// Represents a connection to a single client. Contains a stream, used for communication with the
-/// client, and some metadata associated with the connection that might be useful elsewhere (i.e.
-/// authentication, etc).
+/// Represents a connection to a single client
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Connection {
+    /// Stream used for communication with the client
     #[derivative(Debug = "ignore")]
     pub stream: Box<dyn ReadWrite + Send>,
+    /// Metadata associated with the connection that might be useful elsewhere (i.e. authentication, etc)
     pub metadata: Option<ConnectionMetadata>,
 }
 
