@@ -1,11 +1,10 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{utils, KeyInfo, KeyPairType, LocalIdStore, Pkcs11Provider, ReadWriteSession, Session};
+use super::{utils, KeyPairType, Pkcs11Provider, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
-use crate::key_info_managers::{self, ManageKeyInfo};
-use log::{error, info, trace, warn};
-use parsec_interface::operations::psa_key_attributes::*;
+use log::{error, info, trace};
+use parsec_interface::operations::psa_key_attributes::Type;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -15,80 +14,6 @@ use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RSAPublicKey;
 use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
 use std::mem;
-
-/// Gets a key identifier and key attributes from the Key Info Manager.
-pub fn get_key_info(
-    key_triple: &KeyTriple,
-    store_handle: &dyn ManageKeyInfo,
-) -> Result<([u8; 4], Attributes)> {
-    match store_handle.get(key_triple) {
-        Ok(Some(key_info)) => {
-            if key_info.id.len() == 4 {
-                let mut dst = [0; 4];
-                dst.copy_from_slice(&key_info.id);
-                Ok((dst, key_info.attributes))
-            } else {
-                error!("Stored Key ID is not valid.");
-                Err(ResponseStatus::KeyInfoManagerError)
-            }
-        }
-        Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
-
-pub fn create_key_id(
-    key_triple: KeyTriple,
-    key_attributes: Attributes,
-    store_handle: &mut dyn ManageKeyInfo,
-    local_ids_handle: &mut LocalIdStore,
-) -> Result<[u8; 4]> {
-    let mut key_id = rand::random::<[u8; 4]>();
-    while local_ids_handle.contains(&key_id) {
-        key_id = rand::random::<[u8; 4]>();
-    }
-    let key_info = KeyInfo {
-        id: key_id.to_vec(),
-        attributes: key_attributes,
-    };
-    match store_handle.insert(key_triple.clone(), key_info) {
-        Ok(insert_option) => {
-            if insert_option.is_some() {
-                if crate::utils::GlobalConfig::log_error_details() {
-                    warn!("Overwriting Key triple mapping ({})", key_triple);
-                } else {
-                    warn!("Overwriting Key triple mapping");
-                }
-            }
-            let _ = local_ids_handle.insert(key_id);
-
-            Ok(key_id)
-        }
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
-
-pub fn remove_key_id(
-    key_triple: &KeyTriple,
-    key_id: [u8; 4],
-    store_handle: &mut dyn ManageKeyInfo,
-    local_ids_handle: &mut LocalIdStore,
-) -> Result<()> {
-    match store_handle.remove(key_triple) {
-        Ok(_) => {
-            let _ = local_ids_handle.remove(&key_id);
-            Ok(())
-        }
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
-
-pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
-    match store_handle.exists(key_triple) {
-        Ok(val) => Ok(val),
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
 
 impl Pkcs11Provider {
     /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public,
@@ -151,20 +76,10 @@ impl Pkcs11Provider {
         let key_attributes = op.attributes;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_info_exists(&key_triple, &*store_handle)? {
+        if self.key_info_exists(&key_triple)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
-        let key_id = create_key_id(
-            key_triple.clone(),
-            key_attributes,
-            &mut *store_handle,
-            &mut local_ids_handle,
-        )?;
+        let key_id = self.create_key_id(key_triple.clone(), key_attributes)?;
 
         let (mech, mut pub_template, mut priv_template, mut allowed_mechanism) =
             utils::parsec_to_pkcs11_params(key_attributes, &key_id)?;
@@ -178,12 +93,7 @@ impl Pkcs11Provider {
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
             format_error!("Error creating a new session", err);
-            remove_key_id(
-                &key_triple,
-                key_id,
-                &mut *store_handle,
-                &mut local_ids_handle,
-            )?;
+            let _ = self.remove_key_id(&key_triple)?;
             Err(err)
         })?;
 
@@ -204,12 +114,7 @@ impl Pkcs11Provider {
             Ok(_key) => Ok(psa_generate_key::Result {}),
             Err(e) => {
                 format_error!("Generate Key Pair operation failed", e);
-                remove_key_id(
-                    &key_triple,
-                    key_id,
-                    &mut *store_handle,
-                    &mut local_ids_handle,
-                )?;
+                let _ = self.remove_key_id(&key_triple)?;
                 Err(utils::to_response_status(e))
             }
         }
@@ -228,43 +133,23 @@ impl Pkcs11Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        if key_info_exists(&key_triple, &*store_handle)? {
+        if self.key_info_exists(&key_triple)? {
             return Err(ResponseStatus::PsaErrorAlreadyExists);
         }
-        let key_id = create_key_id(
-            key_triple.clone(),
-            key_attributes,
-            &mut *store_handle,
-            &mut local_ids_handle,
-        )?;
+        let key_id = self.create_key_id(key_triple.clone(), key_attributes)?;
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
         let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
             .or_else(|e| {
                 format_error!("Failed to parse RsaPublicKey data", e);
-                remove_key_id(
-                    &key_triple,
-                    key_id,
-                    &mut *store_handle,
-                    &mut local_ids_handle,
-                )?;
+                let _ = self.remove_key_id(&key_triple)?;
                 Err(ResponseStatus::PsaErrorInvalidArgument)
             })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
-            remove_key_id(
-                &key_triple,
-                key_id,
-                &mut *store_handle,
-                &mut local_ids_handle,
-            )?;
+            let _ = self.remove_key_id(&key_triple)?;
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -281,6 +166,8 @@ impl Pkcs11Provider {
             } else {
                 error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
             }
+
+            let _ = self.remove_key_id(&key_triple)?;
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -320,12 +207,7 @@ impl Pkcs11Provider {
 
         let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
             format_error!("Error creating a new session", err);
-            remove_key_id(
-                &key_triple,
-                key_id,
-                &mut *store_handle,
-                &mut local_ids_handle,
-            )?;
+            let _ = self.remove_key_id(&key_triple)?;
             Err(err)
         })?;
 
@@ -344,12 +226,7 @@ impl Pkcs11Provider {
             Ok(_key) => Ok(psa_import_key::Result {}),
             Err(e) => {
                 format_error!("Import operation failed", e);
-                remove_key_id(
-                    &key_triple,
-                    key_id,
-                    &mut *store_handle,
-                    &mut local_ids_handle,
-                )?;
+                let _ = self.remove_key_id(&key_triple)?;
                 Err(utils::to_response_status(e))
             }
         }
@@ -362,8 +239,7 @@ impl Pkcs11Provider {
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let (key_id, _key_attributes) = get_key_info(&key_triple, &*store_handle)?;
+        let (key_id, _key_attributes) = self.get_key_info(&key_triple)?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
         if crate::utils::GlobalConfig::log_error_details() {
@@ -458,12 +334,7 @@ impl Pkcs11Provider {
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        let mut local_ids_handle = self.local_ids.write().expect("Local ID lock poisoned");
-        let (key_id, _) = get_key_info(&key_triple, &*store_handle)?;
+        let (key_id, _) = self.get_key_info(&key_triple)?;
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         if crate::utils::GlobalConfig::log_error_details() {
@@ -510,12 +381,7 @@ impl Pkcs11Provider {
             }
         };
 
-        remove_key_id(
-            &key_triple,
-            key_id,
-            &mut *store_handle,
-            &mut local_ids_handle,
-        )?;
+        let _ = self.remove_key_id(&key_triple)?;
 
         Ok(psa_destroy_key::Result {})
     }

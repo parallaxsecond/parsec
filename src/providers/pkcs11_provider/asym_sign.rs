@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::Pkcs11Provider;
-use super::{key_management::get_key_info, utils, KeyPairType, ReadWriteSession, Session};
+use super::{utils, KeyPairType, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::{info, trace};
@@ -18,8 +18,7 @@ impl Pkcs11Provider {
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
+        let (key_id, key_attributes) = self.get_key_info(&key_triple)?;
 
         op.validate(key_attributes)?;
 
@@ -66,8 +65,7 @@ impl Pkcs11Provider {
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let (key_id, key_attributes) = get_key_info(&key_triple, &*store_handle)?;
+        let (key_id, key_attributes) = self.get_key_info(&key_triple)?;
 
         op.validate(key_attributes)?;
 

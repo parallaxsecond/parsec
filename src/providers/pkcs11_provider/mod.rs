@@ -31,6 +31,7 @@ type LocalIdStore = HashSet<[u8; 4]>;
 mod asym_encryption;
 mod asym_sign;
 mod key_management;
+mod key_metadata;
 mod utils;
 
 const SUPPORTED_OPCODES: [Opcode; 8] = [
@@ -54,8 +55,6 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 pub struct Pkcs11Provider {
     #[derivative(Debug = "ignore")]
     key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    // TODO: the local ID store is currently only used to prevent creating a key that does not
-    // exist, it should also act as a cache for non-desctrucitve operations. Same for Mbed Crypto.
     local_ids: RwLock<LocalIdStore>,
     // The authentication state is common to all sessions. A counter of logged in sessions is used
     // to keep track of current logged in sessions, ignore logging in if the user is already
@@ -70,6 +69,8 @@ pub struct Pkcs11Provider {
     slot_number: CK_SLOT_ID,
     // Some PKCS 11 devices do not need a pin, the None variant means that.
     user_pin: Option<SecretString>,
+    // TODO: Figure out why the SoftHSM2 throws errors when multithreading and remove this when fixed.
+    temp_mutex: Mutex<()>,
 }
 
 impl Pkcs11Provider {
@@ -91,18 +92,14 @@ impl Pkcs11Provider {
             backend,
             slot_number,
             user_pin,
+            temp_mutex: Mutex::new(()),
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
             // the pkcs11_provider.
-            let mut store_handle = pkcs11_provider
-                .key_info_store
-                .write()
-                .expect("Key store lock poisoned");
-            let mut local_ids_handle = pkcs11_provider
-                .local_ids
-                .write()
-                .expect("Local ID lock poisoned");
+            let locks = pkcs11_provider.get_ordered_locks();
+            let mut store_handle = locks.0.write().expect("Key store lock poisoned");
+            let mut local_ids_handle = locks.1.write().expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
             // Go through all PKCS 11 key triple to key info mappings and check if they are still
             // present.
@@ -113,20 +110,27 @@ impl Pkcs11Provider {
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
 
                     for key_triple in key_triples.iter().cloned() {
-                        let (key_id, _) = match key_management::get_key_info(
-                            key_triple,
-                            &*store_handle,
-                        ) {
-                            Ok(key_id) => key_id,
-                            Err(response_status) => {
-                                if crate::utils::GlobalConfig::log_error_details() {
-                                    error!("Error getting the KeyInfo for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
-                                } else {
-                                    error!("Error getting the KeyInfo, continuing...");
-                                }
-                                continue;
-                            }
+                        let key_info = if let Ok(Some(info)) = store_handle.get(key_triple) {
+                            info
+                        } else {
+                            error!("Key triple unexpectedly missing from store.");
+                            continue;
                         };
+                        let mut key_id = [0; 4];
+                        if key_info.id.len() == 4 {
+                            key_id.copy_from_slice(&key_info.id);
+                        } else {
+                            if crate::utils::GlobalConfig::log_error_details() {
+                                error!(
+                                    "Invalid key ID (value: {:?}) for triple:\n{}\n, continuing...",
+                                    key_info.id, key_triple
+                                );
+                            } else {
+                                error!("Found invalid key ID, continuing...");
+                            }
+                            continue;
+                        }
+
                         match pkcs11_provider.find_key(
                             session.session_handle(),
                             key_id,
@@ -204,6 +208,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_generate_key ingress");
         self.psa_generate_key_internal(app_name, op)
     }
@@ -213,6 +218,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_import_key ingress");
         self.psa_import_key_internal(app_name, op)
     }
@@ -222,6 +228,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_export_public_key ingress");
         self.psa_export_public_key_internal(app_name, op)
     }
@@ -231,6 +238,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_destroy_key ingress");
         self.psa_destroy_key_internal(app_name, op)
     }
@@ -240,6 +248,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_sign_hash ingress");
         self.psa_sign_hash_internal(app_name, op)
     }
@@ -249,6 +258,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
     }
@@ -258,6 +268,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_asymmetric_encrypt ingress");
         self.psa_asymmetric_encrypt_internal(app_name, op)
     }
@@ -267,6 +278,7 @@ impl Provide for Pkcs11Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
+        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_asymmetric_decrypt ingress");
         self.psa_asymmetric_decrypt_internal(app_name, op)
     }
