@@ -22,6 +22,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::constants::algorithm::{Cipher, HashingAlgorithm};
 use tss_esapi::Tcti;
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 mod asym_encryption;
 mod asym_sign;
@@ -171,6 +172,10 @@ impl Drop for TpmProvider {
 }
 
 /// Builder for TpmProvider
+///
+/// This builder contains some confidential information that is passed to the TpmProvider. The
+/// TpmProvider will zeroize this data when dropping. This data will not be cloned when
+/// building.
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct TpmProviderBuilder {
@@ -284,6 +289,8 @@ impl TpmProviderBuilder {
         .map_err(|_| {
             std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
         })?;
+        self.tcti.zeroize();
+        self.owner_hierarchy_auth.zeroize();
         TpmProvider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")

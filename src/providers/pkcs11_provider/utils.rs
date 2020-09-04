@@ -7,12 +7,14 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result;
+use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1_x509::{AlgorithmIdentifier, DigestInfo, SHAVariant};
 use pkcs11::errors::Error;
 use pkcs11::types::*;
 use pkcs11::types::{CKF_RW_SESSION, CKF_SERIAL_SESSION, CKU_USER};
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
+use zeroize::Zeroize;
 
 // Public exponent value for all RSA keys.
 const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -335,7 +337,8 @@ pub struct Session<'a> {
     is_logged_in: bool,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Zeroize)]
+#[zeroize(drop)]
 pub enum ReadWriteSession {
     ReadOnly,
     ReadWrite,
@@ -417,11 +420,11 @@ impl Session<'_> {
             Ok(())
         } else if let Some(user_pin) = self.provider.user_pin.as_ref() {
             trace!("Login command");
-            match self
-                .provider
-                .backend
-                .login(self.session_handle, CKU_USER, Some(user_pin))
-            {
+            match self.provider.backend.login(
+                self.session_handle,
+                CKU_USER,
+                Some(user_pin.expose_secret()),
+            ) {
                 Ok(_) => {
                     if crate::utils::GlobalConfig::log_error_details() {
                         info!("Logging in session {}.", self.session_handle);
@@ -517,6 +520,8 @@ impl Drop for Session<'_> {
                 }
             }
         }
+        self.session_handle.zeroize();
+        self.is_logged_in.zeroize();
     }
 }
 
