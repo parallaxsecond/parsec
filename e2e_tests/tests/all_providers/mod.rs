@@ -57,6 +57,7 @@ fn list_opcodes() {
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadEncrypt);
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadDecrypt);
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaExportKey);
+    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaGenerateRandom);
 
     let _ = core_provider_opcodes.insert(Opcode::Ping);
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);

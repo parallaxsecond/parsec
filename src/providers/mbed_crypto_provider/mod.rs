@@ -11,8 +11,9 @@ use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
     psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
-    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_hash_compare,
-    psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash, psa_verify_hash,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
+    psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
@@ -27,12 +28,12 @@ use uuid::Uuid;
 mod aead;
 mod asym_encryption;
 mod asym_sign;
+mod generate_random;
 mod hash;
 mod key_agreement;
-#[allow(dead_code)]
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 14] = [
+const SUPPORTED_OPCODES: [Opcode; 15] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -47,6 +48,7 @@ const SUPPORTED_OPCODES: [Opcode; 14] = [
     Opcode::PsaHashCompare,
     Opcode::PsaHashCompute,
     Opcode::PsaRawKeyAgreement,
+    Opcode::PsaGenerateRandom,
 ];
 
 /// Mbed Crypto provider structure
@@ -283,6 +285,14 @@ impl Provide for MbedCryptoProvider {
     ) -> Result<psa_raw_key_agreement::Result> {
         trace!("psa_raw_key_agreement");
         self.psa_raw_key_agreement(app_name, op)
+    }
+
+    fn psa_generate_random(
+        &self,
+        op: psa_generate_random::Operation,
+    ) -> Result<psa_generate_random::Result> {
+        trace!("psa_generate_random ingress");
+        self.psa_generate_random_internal(op)
     }
 }
 

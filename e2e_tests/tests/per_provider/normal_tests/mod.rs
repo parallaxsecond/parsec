@@ -8,6 +8,7 @@ mod basic;
 mod create_destroy_key;
 mod export_key;
 mod export_public_key;
+mod generate_random;
 mod hash;
 mod import_key;
 mod key_agreement;
