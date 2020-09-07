@@ -71,6 +71,7 @@ pub struct Pkcs11Provider {
     user_pin: Option<SecretString>,
     // TODO: Figure out why the SoftHSM2 throws errors when multithreading and remove this when fixed.
     temp_mutex: Mutex<()>,
+    software_public_operations: bool,
 }
 
 impl Pkcs11Provider {
@@ -83,6 +84,7 @@ impl Pkcs11Provider {
         backend: Ctx,
         slot_number: usize,
         user_pin: Option<SecretString>,
+        software_public_operations: bool,
     ) -> Option<Pkcs11Provider> {
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Pkcs11Provider {
@@ -93,6 +95,7 @@ impl Pkcs11Provider {
             slot_number,
             user_pin,
             temp_mutex: Mutex::new(()),
+            software_public_operations,
         };
         {
             // The local scope allows to drop store_handle and local_ids_handle in order to return
@@ -178,6 +181,12 @@ impl Pkcs11Provider {
             }
         }
 
+        if pkcs11_provider.software_public_operations {
+            psa_crypto::init().expect(
+                "Failed to initialize PSA Crypto for public key operation software support",
+            );
+        }
+
         Some(pkcs11_provider)
     }
 }
@@ -259,8 +268,13 @@ impl Provide for Pkcs11Provider {
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
-        trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        if self.software_public_operations {
+            trace!("software_psa_verify_hash ingress");
+            self.software_psa_verify_hash_internal(app_name, op)
+        } else {
+            trace!("pkcs11_psa_verify_hash ingress");
+            self.psa_verify_hash_internal(app_name, op)
+        }
     }
 
     fn psa_asymmetric_encrypt(
@@ -269,8 +283,13 @@ impl Provide for Pkcs11Provider {
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
-        trace!("psa_asymmetric_encrypt ingress");
-        self.psa_asymmetric_encrypt_internal(app_name, op)
+        if self.software_public_operations {
+            trace!("software_psa_asymmetric_encrypt ingress");
+            self.software_psa_asymmetric_encrypt_internal(app_name, op)
+        } else {
+            trace!("psa_asymmetric_encrypt ingress");
+            self.psa_asymmetric_encrypt_internal(app_name, op)
+        }
     }
 
     fn psa_asymmetric_decrypt(
@@ -308,6 +327,7 @@ pub struct Pkcs11ProviderBuilder {
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,
     user_pin: Option<SecretString>,
+    software_public_operations: Option<bool>,
 }
 
 impl Pkcs11ProviderBuilder {
@@ -318,6 +338,7 @@ impl Pkcs11ProviderBuilder {
             pkcs11_library_path: None,
             slot_number: None,
             user_pin: None,
+            software_public_operations: None,
         }
     }
 
@@ -360,7 +381,17 @@ impl Pkcs11ProviderBuilder {
         self
     }
 
-    /// Build into a Pkcs11Provider
+    /// Specify the `software_public_operations` flag
+    pub fn with_software_public_operations(
+        mut self,
+        software_public_operations: Option<bool>,
+    ) -> Pkcs11ProviderBuilder {
+        self.software_public_operations = software_public_operations;
+
+        self
+    }
+
+    /// Attempt to build a PKCS11 provider
     pub fn build(self) -> std::io::Result<Pkcs11Provider> {
         let library_path = self
             .pkcs11_library_path
@@ -397,6 +428,7 @@ impl Pkcs11ProviderBuilder {
             backend,
             slot_number,
             self.user_pin,
+            self.software_public_operations.unwrap_or(false),
         )
         .ok_or_else(|| Error::new(ErrorKind::InvalidData, "PKCS 11 initialization failed"))?)
     }

@@ -74,3 +74,56 @@ fn list_providers() {
         ]
     );
 }
+
+#[cfg(feature = "pkcs11-provider")]
+#[test]
+fn pkcs11_verify_software() {
+    use sha2::{Digest, Sha256};
+    set_config("pkcs11_software.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let key_name = String::from("pkcs11_verify_software");
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
+
+    client.generate_rsa_sign_key(key_name.clone()).unwrap();
+
+    let signature = client
+        .sign_with_rsa_sha256(key_name.clone(), hash.clone())
+        .unwrap();
+    client
+        .verify_with_rsa_sha256(key_name, hash, signature)
+        .unwrap();
+}
+
+#[cfg(feature = "pkcs11-provider")]
+#[test]
+fn pkcs11_encrypt_software() {
+    set_config("pkcs11_software.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let key_name = String::from("pkcs11_verify_software");
+    let plaintext_msg = [
+        0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84,
+        0xA2, 0x94, 0x8E, 0x92, 0x50, 0x35, 0xC2, 0x8C, 0x5C, 0x3C, 0xCA, 0xFE, 0x18, 0xE8, 0x81,
+        0x37, 0x78,
+    ];
+    client
+        .generate_rsa_encryption_keys_rsaoaep_sha1(key_name.clone())
+        .unwrap();
+    let ciphertext = client
+        .asymmetric_encrypt_message_with_rsaoaep_sha1(
+            key_name.clone(),
+            plaintext_msg.to_vec(),
+            vec![],
+        )
+        .unwrap();
+    let plaintext = client
+        .asymmetric_decrypt_message_with_rsaoaep_sha1(key_name, ciphertext, vec![])
+        .unwrap();
+    assert_eq!(&plaintext_msg[..], &plaintext[..]);
+}
