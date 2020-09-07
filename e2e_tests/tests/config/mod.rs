@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
 use log::{error, info};
+use parsec_client::core::interface::operations::list_providers::Uuid;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use uuid::Uuid;
 
 const CONFIG_TOMLS_FOLDER: &str = "tests/config/tomls";
 const SERVICE_CONFIG_PATH: &str = "provider_cfg/tmp_config.toml";
