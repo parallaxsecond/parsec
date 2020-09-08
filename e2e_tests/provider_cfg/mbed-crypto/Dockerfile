@@ -15,4 +15,8 @@ RUN cd mbed-crypto-mbedcrypto-2.0.0 \
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Install Rust nightly.
+RUN rustup install nightly
+
 ENV PATH="/root/.cargo/bin:${PATH}"

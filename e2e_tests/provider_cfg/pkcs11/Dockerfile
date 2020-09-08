@@ -20,6 +20,10 @@ RUN cd SoftHSMv2-2.5.0 \
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Install Rust nightly.
+RUN rustup install nightly
+
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Create a new token in a new slot. The slot number assigned will be random

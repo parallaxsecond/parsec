@@ -122,6 +122,14 @@ fi
 echo "Unit, doc and integration tests"
 RUST_BACKTRACE=1 cargo test $FEATURES
 
+# Run tests for Parsec features that require a nightly version of the compiler
+# to function. For example: Unix peer credentials authenticator is currently
+# only functional if we use the nightly compiler, since it depends on the
+# `peer_cred` function.
+# TODO: change this list as features trickle into the stable branch.
+echo "Unit testing peer credentials authenticator"
+RUST_BACKTRACE=1 cargo +nightly test --features=peer-credentials-authenticator
+
 # Removing any mappings left over from integration tests
 rm -rf mappings/
 

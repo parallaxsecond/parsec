@@ -46,4 +46,8 @@ RUN softhsm2-util --init-token --slot 0 --label "Parsec Tests" --pin 123456 --so
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Install Rust nightly.
+RUN rustup install nightly
+
 ENV PATH="/root/.cargo/bin:${PATH}"
