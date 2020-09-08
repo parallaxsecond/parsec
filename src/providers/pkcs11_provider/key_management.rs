@@ -342,8 +342,8 @@ impl Pkcs11Provider {
 
                     // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
                     // integer if highest significant bit is one, to differentiate it from a negative number.
-                    let modulus = IntegerAsn1::from_unsigned_bytes_be(modulus);
-                    let public_exponent = IntegerAsn1::from_unsigned_bytes_be(public_exponent);
+                    let modulus = IntegerAsn1::from_bytes_be_unsigned(modulus);
+                    let public_exponent = IntegerAsn1::from_bytes_be_unsigned(public_exponent);
 
                     let key = RSAPublicKey {
                         modulus,
