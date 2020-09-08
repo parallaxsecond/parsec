@@ -638,9 +638,9 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0396233fb2d5b0ae3f05ff6aba9a09185f7f6e70f87fb01147d545f85364665"
+checksum = "6f09b9841adb6b5e1f89ef7087ea636e0fd94b2851f887c1e3eb5d5f8228fab3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -764,9 +764,9 @@ dependencies = [
  "log",
  "parsec-interface",
  "picky",
- "picky-asn1",
+ "picky-asn1 0.3.0",
  "picky-asn1-der",
- "picky-asn1-x509 0.3.0",
+ "picky-asn1-x509 0.3.2",
  "pkcs11",
  "psa-crypto",
  "rand",
@@ -823,7 +823,7 @@ dependencies = [
  "base64 0.12.3",
  "http",
  "oid",
- "picky-asn1",
+ "picky-asn1 0.2.2",
  "picky-asn1-der",
  "picky-asn1-x509 0.1.0",
  "rand",
@@ -847,12 +847,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "picky-asn1"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0718a593406db1ad8be482278f79215a0901e978925462159d8598cacb004ea"
+dependencies = [
+ "oid",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "picky-asn1-der"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1870d13b5ce802665d715a6a0b551ad48f27d0f5689a5951697cf00cab64f09a"
 dependencies = [
- "picky-asn1",
+ "picky-asn1 0.2.2",
  "serde",
  "serde_bytes",
 ]
@@ -865,20 +876,20 @@ checksum = "969171630cdf5c269611dfffdc1e6d749365fc4059b86fe3620d8afa3ddce4e6"
 dependencies = [
  "base64 0.12.3",
  "oid",
- "picky-asn1",
+ "picky-asn1 0.2.2",
  "picky-asn1-der",
  "serde",
 ]
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.3.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b0b354f137550bb42e1f3bafd83c4047006b55903c5b2b41f7997957c716e88"
+checksum = "d79146ca2d1a8fdbe9f2653a04cc8914acd9e5702b052c08100d99f629b626bf"
 dependencies = [
  "base64 0.12.3",
  "oid",
- "picky-asn1",
+ "picky-asn1 0.3.0",
  "picky-asn1-der",
  "serde",
 ]
@@ -1520,9 +1531,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "4.0.8-alpha.1"
+version = "4.0.9-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2e699debe6392012e06a57157ce6f288f9ca0e0b2ae1ad3304ff07a977bcfec"
+checksum = "a09d4314f5c2e87e86838a56363c35a941004a64a89af135ab9e2d0b6bddc5f4"
 dependencies = [
  "bindgen",
  "bitfield",

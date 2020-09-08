@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::utils;
 use super::utils::PasswordContext;
+use super::utils::{validate_private_key, validate_public_key, PUBLIC_EXPONENT};
 use super::TpmProvider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
@@ -14,11 +15,10 @@ use parsec_interface::operations::{
 };
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
+use tss_esapi::abstraction::transient::RsaExponent;
 use zeroize::Zeroize;
 
-// Public exponent value for all RSA keys.
-const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 const AUTH_VAL_LEN: usize = 32;
 
 // Inserts a new mapping in the Key Info manager that stores the PasswordContext.
@@ -119,9 +119,10 @@ impl TpmProvider {
     ) -> Result<psa_import_key::Result> {
         match op.attributes.key_type {
             Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
+            Type::RsaKeyPair => self.psa_import_key_internal_rsa_keypair(app_name, op),
             _ => {
                 error!(
-                    "The TPM provider does not support the {:?} key type.",
+                    "The TPM provider does not support importing for the {:?} key type.",
                     op.attributes.key_type
                 );
                 Err(ResponseStatus::PsaErrorNotSupported)
@@ -154,50 +155,9 @@ impl TpmProvider {
                 ResponseStatus::PsaErrorInvalidArgument
             })?;
 
-        if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
-            error!("Only positive modulus and public exponent are supported.");
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
+        validate_public_key(&public_key, &attributes)?;
 
-        if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT {
-            if crate::utils::GlobalConfig::log_error_details() {
-                error!("The TPM Provider only supports 0x101 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
-            } else {
-                error!(
-                    "The TPM Provider only supports 0x101 as public exponent for RSA public keys"
-                );
-            }
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
         let key_data = public_key.modulus.as_unsigned_bytes_be();
-        let len = key_data.len();
-
-        let key_bits = attributes.bits;
-        if key_bits != 0 && len * 8 != key_bits {
-            if crate::utils::GlobalConfig::log_error_details() {
-                error!(
-                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
-                    attributes.bits,
-                    len * 8
-                );
-            } else {
-                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
-            }
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-
-        if len != 128 && len != 256 {
-            if crate::utils::GlobalConfig::log_error_details() {
-                error!(
-                "The TPM provider only supports 1024 and 2048 bits RSA public keys ({} bits given).",
-                len * 8
-            );
-            } else {
-                error!("The TPM provider only supports 1024 and 2048 bits RSA public keys");
-            }
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
         let pub_key_context = esapi_context
             .load_external_rsa_public_key(&key_data)
             .map_err(|e| {
@@ -210,6 +170,64 @@ impl TpmProvider {
             key_triple,
             PasswordContext {
                 context: pub_key_context,
+                auth_value: Vec::new(),
+            },
+            attributes,
+        )?;
+
+        Ok(psa_import_key::Result {})
+    }
+
+    pub(super) fn psa_import_key_internal_rsa_keypair(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
+        let key_name = op.key_name;
+        let attributes = op.attributes;
+        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_data = op.data;
+
+        let mut store_handle = self
+            .key_info_store
+            .write()
+            .expect("Key store lock poisoned");
+        let mut esapi_context = self
+            .esapi_context
+            .lock()
+            .expect("ESAPI Context lock poisoned");
+
+        let private_key: RSAPrivateKey = picky_asn1_der::from_bytes(key_data.expose_secret())
+            .map_err(|err| {
+                format_error!("Could not deserialise key elements", err);
+                ResponseStatus::PsaErrorInvalidArgument
+            })?;
+
+        // Derive the public key from the keypair.
+        let public_key = RSAPublicKey {
+            modulus: private_key.modulus.clone(),
+            public_exponent: private_key.public_exponent.clone(),
+        };
+
+        // Validate the public and the private key.
+        validate_public_key(&public_key, &attributes)?;
+        validate_private_key(&private_key, &attributes)?;
+
+        let key_prime = private_key.prime_1.as_unsigned_bytes_be();
+        let public_modulus = private_key.modulus.as_unsigned_bytes_be();
+
+        let keypair_context = esapi_context
+            .load_external_rsa(key_prime, public_modulus, RsaExponent::new(PUBLIC_EXPONENT))
+            .map_err(|e| {
+                format_error!("Error creating a RSA signing key", e);
+                utils::to_response_status(e)
+            })?;
+
+        insert_password_context(
+            &mut *store_handle,
+            key_triple,
+            PasswordContext {
+                context: keypair_context,
                 auth_value: Vec::new(),
             },
             attributes,
