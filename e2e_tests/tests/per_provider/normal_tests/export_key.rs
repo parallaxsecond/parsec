@@ -22,6 +22,19 @@ VJ8gc1rd0y/NXVtGwQJAc2w23nTmZ/olcMVRia1+AFsELcCnD+JqaJ2AEF1Ng6Ix\
 V/X2l32v6t3B57sw/8ce3LCheEdqLHlSOpQiaD7Qfw==";
 
 #[test]
+fn export_key_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaExportKey) {
+        assert_eq!(
+            client
+                .export_key(String::from("some key name"),)
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
+
+#[test]
 fn export_key() -> Result<()> {
     let mut client = TestClient::new();
 
@@ -30,8 +43,32 @@ fn export_key() -> Result<()> {
     }
 
     let key_name = String::from("export_key");
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: true,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
+        },
+    };
 
-    client.generate_rsa_sign_key(key_name.clone())?;
+    client.generate_key(key_name.clone(), key_attributes)?;
 
     let _ = client.export_key(key_name)?;
 
@@ -88,7 +125,32 @@ fn check_rsa_export_format() -> Result<()> {
     }
 
     let key_name = String::from("check_public_rsa_export_format");
-    client.generate_rsa_sign_key(key_name.clone())?;
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: true,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(
+                AsymmetricSignature::RsaPkcs1v15Sign {
+                    hash_alg: Hash::Sha256.into(),
+                },
+            ),
+        },
+    };
+
+    client.generate_key(key_name.clone(), key_attributes)?;
     let key = client.export_key(key_name)?;
 
     // That should not fail if the bytes are in the expected format.
@@ -190,8 +252,33 @@ fn export_ecc_key() {
     }
 
     let key_name = String::from("export_ecc_key");
-    let _generated_key = client
-        .generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(key_name.clone())
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 256,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: true,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    client
+        .generate_key(key_name.clone(), key_attributes)
         .unwrap();
     let _exported_key = client.export_key(key_name).unwrap();
 }
@@ -208,7 +295,30 @@ fn export_key_matches_import() {
 
     let decoded_key = base64::decode(PRIVATE_KEY).unwrap();
     client
-        .import_rsa_key_pair_for_encryption(key_name.clone(), decoded_key.to_vec())
+        .import_key(
+            key_name.clone(),
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: true,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+                },
+            },
+            decoded_key.clone(),
+        )
         .unwrap();
     let exported_key = client.export_key(key_name).unwrap();
     assert_eq!(decoded_key, exported_key);

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::{Aead, AeadWithDefaultLengthTag};
-use parsec_client::core::interface::requests::Opcode;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
 const KEY_DATA: [u8; 16] = [
     0x41, 0x89, 0x35, 0x1B, 0x5C, 0xAE, 0xA3, 0x75, 0xA0, 0x29, 0x9E, 0x81, 0xC6, 0x21, 0xBF, 0x43,
@@ -36,6 +36,40 @@ const RANDOM_DATA: [u8; 32] = [
     0xfb, 0x1a, 0x02, 0xa3, 0xe4, 0xd8, 0x5f, 0xa4, 0x8c, 0x2b, 0x5c, 0x1f, 0x57, 0xdd, 0x3a, 0x7d,
     0xfe, 0xd3, 0xc5, 0xef, 0x24, 0x1f, 0xa3, 0xf0, 0x0c, 0x5c, 0x02, 0xda, 0x98, 0x55, 0x97, 0x0d,
 ];
+
+#[test]
+fn aead_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaAeadEncrypt) {
+        assert_eq!(
+            client
+                .aead_encrypt_message(
+                    String::from("some key name"),
+                    Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
+                    &NONCE,
+                    &ADDITIONAL_DATA,
+                    &PLAINTEXT,
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+
+    if !client.is_operation_supported(Opcode::PsaAeadDecrypt) {
+        assert_eq!(
+            client
+                .aead_decrypt_message(
+                    String::from("some key name"),
+                    Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
+                    &NONCE,
+                    &ADDITIONAL_DATA,
+                    &PLAINTEXT,
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
 
 #[test]
 fn simple_aead_encrypt_ccm() {

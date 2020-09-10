@@ -19,6 +19,7 @@ log = "0.4.11"
 rand = "0.7.3"
 
 [dev-dependencies]
+ring = "0.16.15"
 env_logger = "0.7.1"
 rsa = "0.3.0"
 picky-asn1-x509 = "0.3.2"

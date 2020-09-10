@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
-use parsec_client::core::interface::requests::{Opcode, Result};
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus, Result};
 
 const MESSAGE: [u8; 14] = [
     0x49, 0x20, 0x61, 0x6d, 0x20, 0x61, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
@@ -21,6 +21,26 @@ const SHA_512: [u8; 64] = [
     0x0a, 0x99, 0x14, 0xf7, 0x3d, 0xf6, 0xe7, 0x01, 0x1c, 0x97, 0x0b, 0x74, 0x84, 0x26, 0xfa, 0x0c,
     0x84, 0x4c, 0xc3, 0xa1, 0x8f, 0x9d, 0x5b, 0x74, 0x01, 0xa4, 0x66, 0x8f, 0x75, 0x73, 0x65, 0xc5,
 ];
+
+#[test]
+fn hash_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaHashCompute) {
+        assert_eq!(
+            client.hash_compute(Hash::Sha256, &vec![],).unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+
+    if !client.is_operation_supported(Opcode::PsaHashCompare) {
+        assert_eq!(
+            client
+                .hash_compare(Hash::Sha256, &vec![], &vec![])
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
 
 #[test]
 fn hash_compute_sha256() {

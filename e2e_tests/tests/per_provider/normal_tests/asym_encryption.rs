@@ -38,6 +38,36 @@ const ENCRYPTED_MESSAGE: &str =
 const ORIGINAL_MESSAGE: &str = "This is a test!";
 
 #[test]
+fn asym_encrypt_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
+        assert_eq!(
+            client
+                .asymmetric_encrypt_message_with_rsaoaep_sha256(
+                    String::from("some key name"),
+                    vec![],
+                    vec![],
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
+        assert_eq!(
+            client
+                .asymmetric_decrypt_message_with_rsaoaep_sha256(
+                    String::from("some key name"),
+                    vec![],
+                    vec![],
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
+
+#[test]
 fn simple_asym_encrypt_rsa_pkcs() {
     let key_name = String::from("simple_asym_encrypt_rsa_pkcs");
     let mut client = TestClient::new();

@@ -5,6 +5,8 @@ use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
+#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+use ring::signature::{self, UnparsedPublicKey};
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 use sha2::{Digest, Sha256};
 
@@ -199,7 +201,9 @@ fn simple_verify_hash() -> Result<()> {
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
-    let signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
+    let signature = client
+        .sign_with_rsa_sha256(key_name.clone(), hash.clone())
+        .unwrap();
     client.verify_with_rsa_sha256(key_name, hash, signature)
 }
 
@@ -336,4 +340,108 @@ fn asym_verify_with_rsa_crate() {
             &signature,
         )
         .unwrap();
+}
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+#[test]
+fn verify_with_ring() {
+    let key_name = String::from("verify_with_ring");
+    let mut client = TestClient::new();
+    let message = b"Bob wrote this message.";
+
+    client.generate_long_rsa_sign_key(key_name.clone()).unwrap();
+    let pub_key = client.export_public_key(key_name.clone()).unwrap();
+
+    let mut hasher = Sha256::new();
+    hasher.update(message.clone());
+    let hash = hasher.finalize().to_vec();
+    let signature = client.sign_with_rsa_sha256(key_name, hash.clone()).unwrap();
+
+    let pk = UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA256, pub_key);
+    pk.verify(message, &signature).unwrap();
+}
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+#[test]
+fn verify_ecc_with_ring() {
+    let key_name = String::from("verify_ecc_with_ring");
+    let mut client = TestClient::new();
+    let message = b"Bob wrote this message.";
+
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
+    let pub_key = client.export_public_key(key_name.clone()).unwrap();
+
+    let mut hasher = Sha256::new();
+    hasher.update(message.clone());
+    let hash = hasher.finalize().to_vec();
+    let signature = client
+        .sign_with_ecdsa_sha256(key_name, hash.clone())
+        .unwrap();
+
+    let pk = UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, pub_key);
+    pk.verify(message, &signature).unwrap();
+}
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+#[test]
+fn sign_verify_ecc() {
+    let key_name = String::from("sign_verify_ecc");
+    let mut client = TestClient::new();
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
+
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
+
+    let signature = client
+        .sign_with_ecdsa_sha256(key_name.clone(), hash.clone())
+        .unwrap();
+    client
+        .verify_with_ecdsa_sha256(key_name.clone(), hash, signature)
+        .unwrap();
+}
+
+#[cfg(feature = "tpm-provider")]
+#[test]
+fn wildcard_hash_not_supported() {
+    let key_name = String::from("sign_verify_ecc");
+    let mut client = TestClient::new();
+
+    assert_eq!(
+        client
+            .generate_key(
+                key_name,
+                Attributes {
+                    lifetime: Lifetime::Persistent,
+                    key_type: Type::RsaKeyPair,
+                    bits: 1024,
+                    policy: Policy {
+                        usage_flags: UsageFlags {
+                            sign_hash: true,
+                            verify_hash: true,
+                            sign_message: false,
+                            verify_message: false,
+                            export: false,
+                            encrypt: false,
+                            decrypt: false,
+                            cache: false,
+                            copy: false,
+                            derive: false,
+                        },
+                        permitted_algorithms: Algorithm::AsymmetricSignature(
+                            AsymmetricSignature::RsaPkcs1v15Sign {
+                                hash_alg: SignHash::Any,
+                            },
+                        ),
+                    },
+                }
+            )
+            .unwrap_err(),
+        ResponseStatus::PsaErrorNotSupported
+    );
 }

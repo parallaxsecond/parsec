@@ -159,7 +159,37 @@ impl TestClient {
                         verify_hash: true,
                         sign_message: true,
                         verify_message: true,
-                        export: true,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Sha256.into(),
+                        },
+                    ),
+                },
+            },
+        )
+    }
+
+    pub fn generate_long_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaKeyPair,
+                bits: 2048,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: true,
+                        verify_hash: true,
+                        sign_message: true,
+                        verify_message: true,
+                        export: false,
                         encrypt: false,
                         decrypt: false,
                         cache: false,
@@ -192,7 +222,7 @@ impl TestClient {
                         verify_hash: false,
                         sign_message: false,
                         verify_message: false,
-                        export: true,
+                        export: false,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -218,7 +248,7 @@ impl TestClient {
                         verify_hash: false,
                         sign_message: false,
                         verify_message: false,
-                        export: true,
+                        export: false,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -247,7 +277,7 @@ impl TestClient {
                         verify_hash: false,
                         sign_message: false,
                         verify_message: false,
-                        export: true,
+                        export: false,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -277,7 +307,7 @@ impl TestClient {
                         verify_hash: false,
                         sign_message: false,
                         verify_message: false,
-                        export: true,
+                        export: false,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -308,10 +338,10 @@ impl TestClient {
                 policy: Policy {
                     usage_flags: UsageFlags {
                         sign_hash: true,
-                        verify_hash: false,
+                        verify_hash: true,
                         sign_message: true,
                         verify_message: false,
-                        export: true,
+                        export: false,
                         encrypt: false,
                         decrypt: false,
                         cache: false,
@@ -319,6 +349,37 @@ impl TestClient {
                         derive: false,
                     },
                     permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
+                        hash_alg: Hash::Sha256.into(),
+                    }
+                    .into(),
+                },
+            },
+        )
+    }
+
+    pub fn generate_ecc_key_pair_secpr1_ecdsa_sha256(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: true,
+                        verify_hash: true,
+                        sign_message: true,
+                        verify_message: true,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
                     .into(),
@@ -386,8 +447,39 @@ impl TestClient {
                         sign_hash: false,
                         verify_hash: false,
                         sign_message: false,
+                        verify_message: false,
+                        export: false,
+                        encrypt: true,
+                        decrypt: true,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+                },
+            },
+            data,
+        )
+    }
+
+    pub fn import_rsa_public_key_for_encryption(
+        &mut self,
+        key_name: String,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        self.import_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaPublicKey,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
                         verify_message: true,
-                        export: true,
+                        export: false,
                         encrypt: true,
                         decrypt: true,
                         cache: false,
@@ -563,6 +655,17 @@ impl TestClient {
         )
     }
 
+    /// Signs a short digest with an ECDSA key.
+    pub fn sign_with_ecdsa_sha256(&mut self, key_name: String, hash: Vec<u8>) -> Result<Vec<u8>> {
+        self.sign(
+            key_name,
+            AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            },
+            hash,
+        )
+    }
+
     /// Verifies a signature.
     pub fn verify(
         &mut self,
@@ -586,6 +689,23 @@ impl TestClient {
         self.verify(
             key_name,
             AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha256.into(),
+            },
+            hash,
+            signature,
+        )
+    }
+
+    /// Verifies a signature made with an ECDSA key.
+    pub fn verify_with_ecdsa_sha256(
+        &mut self,
+        key_name: String,
+        hash: Vec<u8>,
+        signature: Vec<u8>,
+    ) -> Result<()> {
+        self.verify(
+            key_name,
+            AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             },
             hash,

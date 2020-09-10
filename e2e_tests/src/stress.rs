@@ -46,14 +46,18 @@ fn generate_string(size: usize) -> String {
         .collect()
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 enum Operation {
     CreateDestroyKey,
     Sign,
     Verify,
+    SignEcc,
+    VerifyEcc,
     DestroyKey,
     ImportDestroyKey,
     ExportPublicKey,
+    AsymEncrypt,
+    AsymDecrypt,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -90,7 +94,9 @@ impl StressClient {
 
 struct StressTestWorker {
     config: StressTestConfig,
-    test_key_name: String,
+    sign_key_name: String,
+    ecc_key_name: Option<String>,
+    encrypt_key_name: String,
     client: TestClient,
 }
 
@@ -104,14 +110,37 @@ impl StressTestWorker {
         client.set_auth(auth);
 
         // Create sign/verify key
-        let test_key_name = generate_string(10);
+        let sign_key_name = generate_string(10);
         client
-            .generate_rsa_sign_key(test_key_name.clone())
-            .expect("Failed to create key");
+            .generate_rsa_sign_key(sign_key_name.clone())
+            .expect("Failed to create sign key");
+
+        // Create ECC sign/verify key
+        let ecc_key_name = generate_string(10);
+        let res = client.generate_ecc_key_pair_secpr1_ecdsa_sha256(ecc_key_name.clone());
+        if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
+            panic!(
+                "Failed to create ECC key with something different than NotSupported: {}",
+                res.unwrap_err()
+            );
+        }
+        let ecc_key_name = if res.is_ok() {
+            Some(ecc_key_name)
+        } else {
+            None
+        };
+
+        // Create asym encrypt/decrypt key
+        let encrypt_key_name = generate_string(10);
+        client
+            .generate_rsa_encryption_keys_rsapkcs1v15crypt(encrypt_key_name.clone())
+            .expect("Failed to generate asym encr key");
 
         StressTestWorker {
             config,
-            test_key_name,
+            sign_key_name,
+            ecc_key_name,
+            encrypt_key_name,
             client,
         }
     }
@@ -132,7 +161,12 @@ impl StressTestWorker {
     }
 
     fn execute_request(&mut self) {
-        let op: Operation = rand::random();
+        let mut op: Operation = rand::random();
+        while self.ecc_key_name.is_none()
+            && (op == Operation::SignEcc || op == Operation::VerifyEcc)
+        {
+            op = rand::random();
+        }
         info!("Executing operation: {:?}", op);
 
         match op {
@@ -147,34 +181,63 @@ impl StressTestWorker {
                     .expect("Failed to destroy key");
             }
             Operation::Sign => {
-                info!("Signing with key: {}", self.test_key_name.clone());
+                info!("Signing with key: {}", self.sign_key_name.clone());
                 let _ = self
                     .client
-                    .sign_with_rsa_sha256(self.test_key_name.clone(), HASH.to_vec())
+                    .sign_with_rsa_sha256(self.sign_key_name.clone(), HASH.to_vec())
                     .expect("Failed to sign");
             }
             Operation::Verify => {
-                info!("Verifying with key: {}", self.test_key_name.clone());
-                let _ = self
-                    .client
-                    .verify_with_rsa_sha256(
-                        self.test_key_name.clone(),
-                        HASH.to_vec(),
-                        vec![0xff; 128],
-                    )
-                    .expect_err("Verification should faild.");
+                info!("Verifying with key: {}", self.sign_key_name.clone());
                 let status = self
                     .client
                     .verify_with_rsa_sha256(
-                        self.test_key_name.clone(),
+                        self.sign_key_name.clone(),
                         HASH.to_vec(),
                         vec![0xff; 128],
                     )
-                    .expect_err("Verification should faild.");
+                    .expect_err("Verification should fail.");
                 if !(status == ResponseStatus::PsaErrorInvalidSignature
                     || status == ResponseStatus::PsaErrorCorruptionDetected)
                 {
                     panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.", status);
+                }
+            }
+            Operation::SignEcc => {
+                info!(
+                    "Signing with key: {}",
+                    self.ecc_key_name.as_ref().unwrap().clone()
+                );
+                let res = self.client.sign_with_ecdsa_sha256(
+                    self.ecc_key_name.as_ref().unwrap().clone(),
+                    HASH.to_vec(),
+                );
+
+                if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
+                    panic!(
+                        "ECC signing failed with an error other than NotSupported: {}",
+                        res.unwrap_err()
+                    );
+                }
+            }
+            Operation::VerifyEcc => {
+                info!(
+                    "Verifying with key: {}",
+                    self.ecc_key_name.as_ref().unwrap().clone()
+                );
+                let status = self
+                    .client
+                    .verify_with_ecdsa_sha256(
+                        self.ecc_key_name.as_ref().unwrap().clone(),
+                        HASH.to_vec(),
+                        vec![0xff; 64],
+                    )
+                    .expect_err("Verification should fail.");
+                if !(status == ResponseStatus::PsaErrorInvalidSignature
+                    || status == ResponseStatus::PsaErrorCorruptionDetected
+                    || status == ResponseStatus::PsaErrorNotSupported)
+                {
+                    panic!("An invalid signature, a tampering detection or no support should be the only reasons of the ECC verification failing. Status returned: {:?}.", status);
                 }
             }
             Operation::DestroyKey => {
@@ -198,12 +261,33 @@ impl StressTestWorker {
             Operation::ExportPublicKey => {
                 info!(
                     "Exporting public key with name: {}",
-                    self.test_key_name.clone()
+                    self.sign_key_name.clone()
                 );
                 let _ = self
                     .client
-                    .export_public_key(self.test_key_name.clone())
+                    .export_public_key(self.sign_key_name.clone())
                     .expect("Failed to export key");
+            }
+            Operation::AsymEncrypt => {
+                info!("Encrypting with key: {}", self.encrypt_key_name.clone());
+                let _ = self
+                    .client
+                    .asymmetric_encrypt_message_with_rsapkcs1v15(
+                        self.encrypt_key_name.clone(),
+                        vec![0xa5; 16],
+                    )
+                    .expect("Failed to encrypt");
+            }
+            Operation::AsymDecrypt => {
+                info!("Decrypting with key: {}", self.encrypt_key_name.clone());
+                // This will fail with a very generic error for PKCS11 at least
+                let _status = self
+                    .client
+                    .asymmetric_decrypt_message_with_rsapkcs1v15(
+                        self.encrypt_key_name.clone(),
+                        vec![0xa5; 128],
+                    )
+                    .expect_err("Should have failed to decrypt");
             }
         }
     }
@@ -218,43 +302,74 @@ impl ServiceChecker {
         }
 
         let mut client = TestClient::new();
-        let key_name = String::from("checking_key");
 
         loop {
             info!("Verifying that the service is still operating correctly");
-            client
-                .generate_rsa_sign_key(key_name.clone())
-                .expect("Failed to create signing key");
-
-            let signature = client
-                .sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())
-                .expect("Failed to sign");
-
-            client
-                .verify_with_rsa_sha256(key_name.clone(), HASH.to_vec(), signature)
-                .expect("Verification failed");
-
-            client
-                .destroy_key(key_name.clone())
-                .expect("Failed to destroy key");
-
+            ServiceChecker::check_sign(&mut client);
+            ServiceChecker::check_encrypt(&mut client);
             thread::sleep(config.check_interval.unwrap());
             if recv.try_recv().is_ok() {
                 return;
             }
         }
     }
+
+    fn check_sign(client: &mut TestClient) {
+        let sign_key_name = String::from("checking_key");
+        info!("Verifying signing");
+        client
+            .generate_rsa_sign_key(sign_key_name.clone())
+            .expect("Failed to create signing key");
+
+        let signature = client
+            .sign_with_rsa_sha256(sign_key_name.clone(), HASH.to_vec())
+            .expect("Failed to sign");
+
+        client
+            .verify_with_rsa_sha256(sign_key_name.clone(), HASH.to_vec(), signature)
+            .expect("Verification failed");
+
+        client
+            .destroy_key(sign_key_name.clone())
+            .expect("Failed to destroy key");
+    }
+
+    fn check_encrypt(client: &mut TestClient) {
+        let encr_key_name = String::from("checking_key");
+        info!("Verifying signing");
+        client
+            .generate_rsa_encryption_keys_rsapkcs1v15crypt(encr_key_name.clone())
+            .expect("Failed to create signing key");
+
+        let ciphertext = client
+            .asymmetric_encrypt_message_with_rsapkcs1v15(encr_key_name.clone(), vec![0xa5; 16])
+            .expect("Failed to encrypt");
+
+        let plaintext = client
+            .asymmetric_decrypt_message_with_rsapkcs1v15(encr_key_name.clone(), ciphertext)
+            .expect("Failed to decrypt");
+
+        assert_eq!(plaintext, vec![0xa5; 16]);
+
+        client
+            .destroy_key(encr_key_name.clone())
+            .expect("Failed to destroy key");
+    }
 }
 
 impl Distribution<Operation> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Operation {
-        match rng.gen_range(0, 6) {
+        match rng.gen_range(0, 10) {
             0 => Operation::CreateDestroyKey,
             1 => Operation::Sign,
             2 => Operation::Verify,
             3 => Operation::DestroyKey,
             4 => Operation::ImportDestroyKey,
-            _ => Operation::ExportPublicKey,
+            5 => Operation::ExportPublicKey,
+            6 => Operation::AsymEncrypt,
+            7 => Operation::AsymDecrypt,
+            8 => Operation::SignEcc,
+            _ => Operation::VerifyEcc,
         }
     }
 }
