@@ -6,16 +6,19 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use tss_esapi::abstraction::transient::KeyParams;
 use tss_esapi::constants::algorithm::{EllipticCurve, HashingAlgorithm};
 use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
-use tss_esapi::utils::{AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext};
+use tss_esapi::utils::{
+    AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext, RSA_KEY_SIZES,
+};
 use tss_esapi::Error;
 use zeroize::Zeroizing;
-const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
+pub const PUBLIC_EXPONENT: u32 = 0x10001;
+const PUBLIC_EXPONENT_BYTES: [u8; 3] = [0x01, 0x00, 0x01];
 
 /// Convert the TSS library specific error values to ResponseStatus values that are returned on
 /// the wire protocol
@@ -178,8 +181,8 @@ fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EllipticCurve> {
 pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Result<Vec<u8>> {
     match pub_key {
         PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RSAPublicKey {
-            modulus: IntegerAsn1::from_unsigned_bytes_be(key),
-            public_exponent: IntegerAsn1::from_signed_bytes_be(PUBLIC_EXPONENT.to_vec()),
+            modulus: IntegerAsn1::from_bytes_be_unsigned(key),
+            public_exponent: IntegerAsn1::from_bytes_be_signed(PUBLIC_EXPONENT_BYTES.to_vec()),
         })
         .or(Err(ResponseStatus::PsaErrorGenericError)),
         PublicKey::Ecc { x, y } => {
@@ -248,6 +251,99 @@ pub fn parsec_to_tpm_signature(
         scheme: convert_asym_scheme_to_tpm(Algorithm::AsymmetricSignature(signature_alg))?,
         signature: bytes_to_signature_data(data, key_attributes)?,
     })
+}
+
+/// Validates an RSAPublicKey against the attributes we expect. Returns ok on success, otherwise
+/// returns an error.
+pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
+    if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
+        error!("Only positive modulus and public exponent are supported.");
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+
+    if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT_BYTES {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!("The TPM Provider only supports 0x10001 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
+        } else {
+            error!("The TPM Provider only supports 0x10001 as public exponent for RSA public keys");
+        }
+        return Err(ResponseStatus::PsaErrorNotSupported);
+    }
+    let key_data = public_key.modulus.as_unsigned_bytes_be();
+    let len = key_data.len();
+
+    let key_bits = attributes.bits;
+    if key_bits != 0 && len * 8 != key_bits {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!(
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
+                    attributes.bits,
+                    len * 8
+                );
+        } else {
+            error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+        }
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+
+    let valid_key_sizes_vec = RSA_KEY_SIZES.to_vec();
+    if !valid_key_sizes_vec.contains(&((len * 8) as u16)) {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!(
+                "The TPM provider only supports RSA public keys of size {:?} bits ({} bits given).",
+                valid_key_sizes_vec,
+                len * 8,
+            );
+        } else {
+            error!(
+                "The TPM provider only supports RSA public keys of size {:?} bits",
+                valid_key_sizes_vec,
+            );
+        }
+        return Err(ResponseStatus::PsaErrorNotSupported);
+    }
+
+    Ok(())
+}
+
+/// Validates an RSAPrivateKey against the attributes we expect. Returns ok on success, otherwise
+/// returns an error.
+pub fn validate_private_key(private_key: &RSAPrivateKey, attributes: &Attributes) -> Result<()> {
+    // NOTE: potentially incomplete, but any errors that aren't caught here should be caught
+    //       further down the stack (i.e. in the tss crate).
+
+    // The public exponent must be exactly 0x10001 -- that is the only value supported by the TPM
+    // provider. Reject everything else.
+    let given_public_exponent = private_key.public_exponent.as_unsigned_bytes_be();
+    if given_public_exponent != PUBLIC_EXPONENT_BYTES {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!(
+                "Unexpected public exponent in private key (expected: {:?}, got: {:?}).",
+                PUBLIC_EXPONENT_BYTES, given_public_exponent
+            );
+        } else {
+            error!("Unexpected public exponent in private key.");
+        }
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+
+    // The key prime's length in bits should be exactly half of the size of the size of the key's
+    // public modulus.
+    let key_prime = private_key.prime_1.as_unsigned_bytes_be();
+    let key_prime_len_bits = key_prime.len() * 8;
+    if key_prime_len_bits != attributes.bits / 2 {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!(
+                "The key prime is not of the expected size (expected {}, got {}).",
+                attributes.bits / 2,
+                key_prime_len_bits,
+            );
+        } else {
+            error!("The key prime is not of the expected size.",);
+        }
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+    Ok(())
 }
 
 fn bytes_to_signature_data(

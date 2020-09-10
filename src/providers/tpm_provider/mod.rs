@@ -301,7 +301,7 @@ impl TpmProviderBuilder {
                 .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
                 .with_hierarchy_auth(hierarchy_auth)
                 .with_hierarchy(tss_esapi::utils::Hierarchy::Owner)
-                .with_session_hash_alg(HashingAlgorithm::Sha256.into())
+                .with_session_hash_alg(HashingAlgorithm::Sha256)
                 .with_default_context_cipher(default_cipher)
                 .build()
                 .map_err(|e| {
