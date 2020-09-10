@@ -8,10 +8,6 @@ RUN apt-get update && \
 	apt-get install -y pkg-config libssl-dev
 
 WORKDIR /tmp
-RUN wget https://github.com/ARMmbed/mbed-crypto/archive/mbedcrypto-2.0.0.tar.gz
-RUN tar xf mbedcrypto-2.0.0.tar.gz
-RUN cd mbed-crypto-mbedcrypto-2.0.0 \
-		&& make
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

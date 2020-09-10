@@ -1,0 +1,35 @@
+name: Nightly Checks
+
+on:
+  schedule:
+    # Every night at midnight
+    - cron:  '0 0 * * *'
+
+jobs:
+  dependencies:
+    name: Check for unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install latest Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Install cargo udeps
+        run: cargo install cargo-udeps --locked
+      - name: Execute cargo udeps
+        run: cargo +nightly udeps
+
+  audit:
+    name: Check for crates with security vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install latest Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Install cargo audit
+        run: cargo install cargo-audit
+      - name: Execute cargo audit
+        run: cargo audit
