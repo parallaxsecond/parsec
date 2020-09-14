@@ -111,7 +111,6 @@ This project uses the following third party crates:
 * version (MIT and Apache-2.0)
 * sha2 (MIT and Apache-2.0)
 * hex (MIT and Apache-2.0)
-* picky (MIT and Apache-2.0)
 * users (MIT)
 * libc (MIT and Apache-2.0)
 
