@@ -81,39 +81,3 @@ need any ideas 🙂!
 # License
 
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
-
-This project uses the following third party crates:
-* serde (MIT and Apache-2.0)
-* bindgen (BSD-3-Clause)
-* cargo\_toml (Apache-2.0)
-* toml (MIT and Apache-2.0)
-* rand (MIT and Apache-2.0)
-* base64 (MIT and Apache-2.0)
-* uuid (MIT and Apache-2.0)
-* threadpool (MIT and Apache-2.0)
-* std-semaphore (MIT and Apache-2.0)
-* num\_cpus (MIT and Apache-2.0)
-* signal-hook (MIT and Apache-2.0)
-* sd-notify (MIT and Apache-2.0)
-* log (MIT and Apache-2.0)
-* env\_logger (MIT and Apache-2.0)
-* pkcs11 (Apache-2.0)
-* picky-asn1-der (MIT and Apache-2.0)
-* picky-asn1 (MIT and Apache-2.0)
-* picky-asn1-x509 (MIT and Apache-2.0)
-* bincode (MIT)
-* structopt (MIT and Apache-2.0)
-* derivative (MIT and Apache-2.0)
-* arbitrary (MIT and Apache-2.0)
-* libfuzzer-sys (MIT, Apache-2.0 and NCSA)
-* flexi_logger (MIT and Apache-2.0)
-* lazy_static (MIT and Apache-2.0)
-* version (MIT and Apache-2.0)
-* sha2 (MIT and Apache-2.0)
-* hex (MIT and Apache-2.0)
-* picky (MIT and Apache-2.0)
-* users (MIT)
-* libc (MIT and Apache-2.0)
-
-This project uses the following third party libraries:
-* [**Mbed Crypto**](https://github.com/ARMmbed/mbed-crypto) (Apache-2.0)

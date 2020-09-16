@@ -92,7 +92,7 @@ impl Pkcs11Provider {
             local_ids: RwLock::new(HashSet::new()),
             logged_sessions_counter: Mutex::new(0),
             backend,
-            slot_number,
+            slot_number: slot_number as CK_SLOT_ID,
             user_pin,
             temp_mutex: Mutex::new(()),
             software_public_operations,

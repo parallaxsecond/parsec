@@ -73,8 +73,8 @@ fn check_format_import1() -> Result<()> {
     let key_name = String::from("check_format_import");
 
     let public_key = RSAPublicKey {
-        modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
-        public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
+        modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
+        public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
 
     client.import_rsa_public_key(key_name, picky_asn1_der::to_vec(&public_key).unwrap())?;
@@ -90,8 +90,8 @@ fn check_format_import2() -> Result<()> {
     let key_name = String::from("check_format_import2");
 
     let public_key = RSAPublicKey {
-        modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
-        public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
+        modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
+        public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
 
     let attributes = Attributes {
@@ -136,8 +136,8 @@ fn check_format_import3() -> Result<()> {
     let key_name = String::from("check_format_import3");
 
     let public_key = RSAPublicKey {
-        modulus: IntegerAsn1::from_unsigned_bytes_be(vec![0xDE; 1024]),
-        public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
+        modulus: IntegerAsn1::from_bytes_be_unsigned(vec![0xDE; 1024]),
+        public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
 
     let attributes = Attributes {
@@ -184,8 +184,8 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
     let key_name = String::from("failed_imported_key_should_be_removed");
 
     let public_key = RSAPublicKey {
-        modulus: IntegerAsn1::from_unsigned_bytes_be(example_modulus_1024()),
-        public_exponent: IntegerAsn1::from_unsigned_bytes_be(vec![0x01, 0x00, 0x01]),
+        modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
+        public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
 
     let attributes = Attributes {

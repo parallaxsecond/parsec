@@ -117,8 +117,9 @@ impl Pkcs11Provider {
         }
         let key_id = self.create_key_id(key_triple.clone(), key_attributes)?;
 
+        let modulus_bits = key_attributes.bits as u64;
         let (mech, mut pub_template, mut priv_template, mut allowed_mechanism) =
-            utils::parsec_to_pkcs11_params(key_attributes, &key_id)?;
+            utils::parsec_to_pkcs11_params(key_attributes, &key_id, &modulus_bits)?;
 
         pub_template.push(utils::mech_type_to_allowed_mech_attribute(
             &mut allowed_mechanism,
@@ -247,7 +248,7 @@ impl Pkcs11Provider {
         // ulValueLen.
         let mut allowed_mechanisms_attribute =
             CK_ATTRIBUTE::new(pkcs11::types::CKA_ALLOWED_MECHANISMS);
-        allowed_mechanisms_attribute.ulValueLen = mem::size_of_val(&allowed_mechanisms);
+        allowed_mechanisms_attribute.ulValueLen = mem::size_of_val(&allowed_mechanisms) as u64;
         allowed_mechanisms_attribute.pValue = &allowed_mechanisms
             as *const pkcs11::types::CK_MECHANISM_TYPE
             as pkcs11::types::CK_VOID_PTR;
@@ -327,8 +328,8 @@ impl Pkcs11Provider {
 
         let mut modulus: Vec<pkcs11::types::CK_BYTE> = Vec::new();
         let mut public_exponent: Vec<pkcs11::types::CK_BYTE> = Vec::new();
-        modulus.resize(modulus_len, 0);
-        public_exponent.resize(public_exponent_len, 0);
+        modulus.resize(modulus_len as usize, 0);
+        public_exponent.resize(public_exponent_len as usize, 0);
 
         let mut extract_attrs: Vec<CK_ATTRIBUTE> = Vec::new();
         extract_attrs
@@ -349,8 +350,14 @@ impl Pkcs11Provider {
                     format_error!("Error when extracting attribute", rv);
                     Err(utils::rv_to_response_status(rv))
                 } else {
-                    let modulus = attrs[0].get_bytes();
-                    let public_exponent = attrs[1].get_bytes();
+                    let modulus = attrs[0].get_bytes().map_err(|err| {
+                        format_error!("Error getting bytes from modulus attribute", err);
+                        ResponseStatus::PsaErrorCommunicationFailure
+                    })?;
+                    let public_exponent = attrs[1].get_bytes().map_err(|err| {
+                        format_error!("Error getting bytes from public exponent attribute", err);
+                        ResponseStatus::PsaErrorCommunicationFailure
+                    })?;
 
                     // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
                     // integer if highest significant bit is one, to differentiate it from a negative number.

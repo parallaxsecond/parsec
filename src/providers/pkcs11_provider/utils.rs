@@ -48,7 +48,7 @@ impl From<CkMechanismType> for CK_MECHANISM_TYPE {
 pub fn mech_type_to_allowed_mech_attribute(mech_type: &mut CK_MECHANISM_TYPE) -> CK_ATTRIBUTE {
     let param: CK_MECHANISM_TYPE_PTR = mech_type;
     let mut allowed_mechanisms_attr = CK_ATTRIBUTE::new(CKA_ALLOWED_MECHANISMS);
-    allowed_mechanisms_attr.ulValueLen = ::std::mem::size_of::<CK_MECHANISM_TYPE>();
+    allowed_mechanisms_attr.ulValueLen = ::std::mem::size_of::<CK_MECHANISM_TYPE>() as u64;
     allowed_mechanisms_attr.pValue = param as CK_VOID_PTR;
     allowed_mechanisms_attr
 }
@@ -85,7 +85,7 @@ impl CkRsaPkcsPssParams {
         CK_RSA_PKCS_PSS_PARAMS {
             hashAlg: self.hash_alg.into(),
             mgf: self.mgf.into(),
-            sLen: self.s_len,
+            sLen: self.s_len as u64,
         }
     }
 }
@@ -109,7 +109,7 @@ impl CkRsaPkcsOaepParams {
             } else {
                 self.source_data.as_mut_ptr() as CK_VOID_PTR
             },
-            ulSourceDataLen: self.source_data.len(),
+            ulSourceDataLen: self.source_data.len() as u64,
         }
     }
 }
@@ -245,7 +245,7 @@ impl CkMechanism {
                     CK_MECHANISM {
                         mechanism: self.mech_type().into(),
                         pParameter: p_params as CK_VOID_PTR,
-                        ulParameterLen: len,
+                        ulParameterLen: len as u64,
                     },
                     Some(CParams::CkmRsaPkcsPssParams(params)),
                 )
@@ -264,7 +264,7 @@ impl CkMechanism {
                     CK_MECHANISM {
                         mechanism: self.mech_type().into(),
                         pParameter: p_params as CK_VOID_PTR,
-                        ulParameterLen: len,
+                        ulParameterLen: len as u64,
                     },
                     Some(CParams::CkmRsaPkcsOaepParams(params)),
                 )
@@ -290,6 +290,10 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
             ResponseStatus::PsaErrorCommunicationFailure
         }
         Error::Pkcs11(ck_rv) => rv_to_response_status(ck_rv),
+        Error::UnavailableInformation => {
+            error!("Conversion of UnavailableInformation to PsaErrorCommunicationFailure");
+            ResponseStatus::PsaErrorCommunicationFailure
+        }
     }
 }
 
@@ -535,6 +539,7 @@ impl Drop for Session<'_> {
 pub fn parsec_to_pkcs11_params(
     attributes: Attributes,
     key_id: &[u8],
+    modulus_bits: &u64,
 ) -> Result<(
     CK_MECHANISM,
     Vec<CK_ATTRIBUTE>,
@@ -558,7 +563,7 @@ pub fn parsec_to_pkcs11_params(
             pub_template.push(CK_ATTRIBUTE::new(CKA_TOKEN).with_bool(&CK_TRUE));
             pub_template.push(CK_ATTRIBUTE::new(CKA_PRIVATE).with_bool(&CK_FALSE));
             pub_template.push(CK_ATTRIBUTE::new(CKA_PUBLIC_EXPONENT).with_bytes(&PUBLIC_EXPONENT));
-            pub_template.push(CK_ATTRIBUTE::new(CKA_MODULUS_BITS).with_ck_ulong(&attributes.bits));
+            pub_template.push(CK_ATTRIBUTE::new(CKA_MODULUS_BITS).with_ck_ulong(modulus_bits));
 
             key_pair_usage_flags_to_pkcs11_attributes(
                 attributes.policy.usage_flags,
