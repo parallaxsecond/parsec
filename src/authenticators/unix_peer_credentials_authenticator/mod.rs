@@ -88,6 +88,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
 mod test {
     use super::super::Authenticate;
     use super::UnixPeerCredentialsAuthenticator;
+    use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
     use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
@@ -102,7 +103,10 @@ mod test {
 
         // Create two connected sockets.
         let (sock_a, _sock_b) = UnixStream::pair().unwrap();
-        let (cred_a, _cred_b) = (sock_a.peer_cred().unwrap(), _sock_b.peer_cred().unwrap());
+        let (cred_a, _cred_b) = (
+            peer_credentials::peer_cred(&sock_a).unwrap(),
+            peer_credentials::peer_cred(&_sock_b).unwrap(),
+        );
 
         let authenticator = UnixPeerCredentialsAuthenticator {};
 
@@ -128,7 +132,10 @@ mod test {
 
         // Create two connected sockets.
         let (sock_a, _sock_b) = UnixStream::pair().unwrap();
-        let (cred_a, _cred_b) = (sock_a.peer_cred().unwrap(), _sock_b.peer_cred().unwrap());
+        let (cred_a, _cred_b) = (
+            peer_credentials::peer_cred(&sock_a).unwrap(),
+            peer_credentials::peer_cred(&_sock_b).unwrap(),
+        );
 
         let authenticator = UnixPeerCredentialsAuthenticator {};
 
@@ -151,7 +158,10 @@ mod test {
 
         // Create two connected sockets.
         let (sock_a, _sock_b) = UnixStream::pair().unwrap();
-        let (cred_a, _cred_b) = (sock_a.peer_cred().unwrap(), _sock_b.peer_cred().unwrap());
+        let (cred_a, _cred_b) = (
+            peer_credentials::peer_cred(&sock_a).unwrap(),
+            peer_credentials::peer_cred(&_sock_b).unwrap(),
+        );
 
         let authenticator = UnixPeerCredentialsAuthenticator {};
 
