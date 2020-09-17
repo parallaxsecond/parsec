@@ -590,9 +590,9 @@ fn key_pair_usage_flags_to_pkcs11_attributes(
     priv_template: &mut Vec<CK_ATTRIBUTE>,
 ) {
     if usage_flags.sign_hash || usage_flags.sign_message {
-        priv_template.push(CK_ATTRIBUTE::new(CKA_SIGN_RECOVER).with_bool(&CK_TRUE));
+        priv_template.push(CK_ATTRIBUTE::new(CKA_SIGN).with_bool(&CK_TRUE));
     } else {
-        priv_template.push(CK_ATTRIBUTE::new(CKA_SIGN_RECOVER).with_bool(&CK_FALSE));
+        priv_template.push(CK_ATTRIBUTE::new(CKA_SIGN).with_bool(&CK_FALSE));
     }
 
     if usage_flags.verify_hash || usage_flags.verify_message {
