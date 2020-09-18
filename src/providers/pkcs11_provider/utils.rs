@@ -620,11 +620,11 @@ fn key_pair_usage_flags_to_pkcs11_attributes(
     }
 
     if usage_flags.export {
-        priv_template.push(CK_ATTRIBUTE::new(CKA_EXTRACTABLE).with_bool(&CK_FALSE));
-        priv_template.push(CK_ATTRIBUTE::new(CKA_SENSITIVE).with_bool(&CK_TRUE));
-    } else {
         priv_template.push(CK_ATTRIBUTE::new(CKA_EXTRACTABLE).with_bool(&CK_TRUE));
         priv_template.push(CK_ATTRIBUTE::new(CKA_SENSITIVE).with_bool(&CK_FALSE));
+    } else {
+        priv_template.push(CK_ATTRIBUTE::new(CKA_EXTRACTABLE).with_bool(&CK_FALSE));
+        priv_template.push(CK_ATTRIBUTE::new(CKA_SENSITIVE).with_bool(&CK_TRUE));
     }
 
     if usage_flags.copy {
