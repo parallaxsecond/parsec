@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::RawKeyAgreement;
-use parsec_client::core::interface::requests::Opcode;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
 const PEER_PUBLIC_KEY_SECPR1: [u8; 65] = [
     0x04, 0xd1, 0x2d, 0xfb, 0x52, 0x89, 0xc8, 0xd4, 0xf8, 0x12, 0x08, 0xb7, 0x02, 0x70, 0x39, 0x8c,
@@ -39,6 +39,23 @@ const EXPECTED_OUTPUT_BRAINPOOL_R1: [u8; 32] = [
     0x89, 0xaf, 0xc3, 0x9d, 0x41, 0xd3, 0xb3, 0x27, 0x81, 0x4b, 0x80, 0x94, 0x0b, 0x04, 0x25, 0x90,
     0xf9, 0x65, 0x56, 0xec, 0x91, 0xe6, 0xae, 0x79, 0x39, 0xbc, 0xe3, 0x1f, 0x3a, 0x18, 0xbf, 0x2b,
 ];
+
+#[test]
+fn key_agreement_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaRawKeyAgreement) {
+        assert_eq!(
+            client
+                .raw_key_agreement(
+                    RawKeyAgreement::Ecdh,
+                    String::from("some key"),
+                    &PEER_PUBLIC_KEY_SECPR1
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
 
 #[test]
 fn simple_raw_key_agreement() {
@@ -99,7 +116,7 @@ fn raw_key_agreement_brainpoolpr1() {
     let shared_secret = client
         .raw_key_agreement(
             RawKeyAgreement::Ecdh,
-            key_name.clone(),
+            key_name,
             &PEER_PUBLIC_KEY_BRAINPOOL_R1,
         )
         .unwrap();
@@ -128,10 +145,10 @@ fn raw_key_agreement_two_generated_parties() {
     let public_key_2 = client.export_public_key(key_name_2.clone()).unwrap();
 
     let shared_secret_1_then_2 = client
-        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name_1.clone(), &public_key_2)
+        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name_1, &public_key_2)
         .unwrap();
     let shared_secret_2_then_1 = client
-        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name_2.clone(), &public_key_1)
+        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name_2, &public_key_1)
         .unwrap();
     assert_eq!(shared_secret_1_then_2, shared_secret_2_then_1);
 }

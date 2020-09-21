@@ -1,7 +1,18 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::Opcode;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
+
+#[test]
+fn generate_random_not_supported() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaGenerateRandom) {
+        assert_eq!(
+            client.generate_bytes(15,).unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
+}
 
 #[test]
 fn simple_generate_random() {
