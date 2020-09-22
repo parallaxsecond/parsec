@@ -34,7 +34,19 @@ pub struct ListenerConfig {
 /// Specifies metadata associated with a connection, if any.
 #[derive(Copy, Clone, Debug)]
 pub enum ConnectionMetadata {
-    // TODO: nothing here right now. Metadata types will be added as needed.
+    /// Unix peer credentials metadata for Unix domain sockets.
+    UnixPeerCredentials {
+        /// The effective UID of the connecting process.
+        uid: u32,
+        /// The effective GID of the connecting process.
+        gid: u32,
+        /// The optional PID of the connecting process. This is an Option<u32> because not all
+        /// platforms support retrieving PID via a domain socket.
+        pid: Option<i32>,
+    },
+    // NOTE: there is currently only _one_ variant of the ConnectionMetadata enum. When a second
+    //       variant is added, you will need to update some tests!
+    //       You should grep the tests for `TODO(new_metadata_variant)` and update them accordingly.
 }
 
 /// Represents a connection to a single client
