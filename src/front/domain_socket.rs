@@ -19,7 +19,7 @@ use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::time::Duration;
 
-static SOCKET_PATH: &str = "/tmp/parsec/parsec.sock";
+static SOCKET_PATH: &str = "/run/parsec/parsec.sock";
 #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
 const PARSEC_USERNAME: &str = "parsec";
 #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
@@ -42,11 +42,8 @@ impl DomainSocketListener {
         #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
         DomainSocketListener::check_user_details()?;
 
-        // is Parsec instance was socket activated (see the `parsec.socket`
-        // file), the listener will be opened by systemd and passed to the
-        // process.
         // If Parsec was service activated or not started under systemd, this
-        // will return `0`.
+        // will return `0`. `1` will be returned in case Parsec is socket activated.
         let listener = match sd_notify::listen_fds()? {
             0 => {
                 let socket = Path::new(SOCKET_PATH);
@@ -56,8 +53,6 @@ impl DomainSocketListener {
                 } else if socket.exists() {
                     fs::remove_file(&socket)?;
                 }
-                #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
-                DomainSocketListener::set_socket_dir_permissions(parent_dir)?;
 
                 let listener = UnixListener::bind(SOCKET_PATH)?;
                 listener.set_nonblocking(true)?;
@@ -91,45 +86,6 @@ impl DomainSocketListener {
         };
 
         Ok(Self { listener, timeout })
-    }
-
-    #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
-    fn set_socket_dir_permissions(parent_dir: &Path) -> Result<()> {
-        if let Some(parent_dir_str) = parent_dir.to_str() {
-            fs::set_permissions(parent_dir, Permissions::from_mode(0o750))?;
-            // Although `parsec` has to be part of the `parsec_clients` group, it may not be the primary group. Therefore force group ownership to `parsec_clients`
-            if unsafe {
-                let parent_dir_cstr = CString::new(parent_dir_str)
-                    .expect("Failed to convert socket path parent to cstring");
-                {
-                    libc::chown(
-                        parent_dir_cstr.as_ptr(),
-                        users::get_current_uid(), // To get to this point, user has to be `parsec`
-                        users::get_group_by_name(PARSEC_GROUPNAME).unwrap().gid(), // `parsec_clients` exists by this point so should be safe
-                    )
-                }
-            } != 0
-            {
-                error!(
-                    "Changing ownership of {} to user {} and group {} failed.",
-                    parent_dir_str, PARSEC_USERNAME, PARSEC_GROUPNAME
-                );
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    "Changing ownership of socket directory failed",
-                ));
-            }
-        } else {
-            error!(
-                "Error converting {} parent directory to string.",
-                SOCKET_PATH
-            );
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "Error retrieving parent directory for socket",
-            ));
-        }
-        Ok(())
     }
 
     #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
