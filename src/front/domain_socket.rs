@@ -7,22 +7,19 @@
 use super::listener;
 use listener::Listen;
 use listener::{Connection, ConnectionMetadata};
-use log::error;
-#[cfg(not(feature = "no-parsec-user-and-clients-group"))]
-use std::ffi::CString;
+use log::{error, warn};
 use std::fs;
 use std::fs::Permissions;
 use std::io::{Error, ErrorKind, Result};
+use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::FromRawFd;
 use std::os::unix::net::UnixListener;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::Duration;
 
-static SOCKET_PATH: &str = "/run/parsec/parsec.sock";
-#[cfg(not(feature = "no-parsec-user-and-clients-group"))]
+static DEFAULT_SOCKET_PATH: &str = "/run/parsec/parsec.sock";
 const PARSEC_USERNAME: &str = "parsec";
-#[cfg(not(feature = "no-parsec-user-and-clients-group"))]
 const PARSEC_GROUPNAME: &str = "parsec-clients";
 
 /// Unix Domain Socket IPC manager
@@ -38,29 +35,37 @@ pub struct DomainSocketListener {
 
 impl DomainSocketListener {
     /// Initialise the connection to the Unix socket.
-    pub fn new(timeout: Duration) -> Result<Self> {
-        #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
-        DomainSocketListener::check_user_details()?;
+    pub fn new(timeout: Duration, socket_path: PathBuf) -> Result<Self> {
+        DomainSocketListener::check_user_details();
 
         // If Parsec was service activated or not started under systemd, this
         // will return `0`. `1` will be returned in case Parsec is socket activated.
         let listener = match sd_notify::listen_fds()? {
             0 => {
-                let socket = Path::new(SOCKET_PATH);
-                let parent_dir = socket.parent().unwrap();
-                if !parent_dir.exists() {
-                    fs::create_dir_all(parent_dir)?;
-                } else if socket.exists() {
-                    fs::remove_file(&socket)?;
+                if socket_path.exists() {
+                    let meta = fs::metadata(&socket_path)?;
+                    if meta.file_type().is_socket() {
+                        warn!(
+                            "Removing the existing socket file at {}.",
+                            socket_path.display()
+                        );
+                        fs::remove_file(&socket_path)?;
+                    } else {
+                        error!(
+                            "A file exists at {} but is not a Unix Domain Socket.",
+                            socket_path.display()
+                        );
+                    }
                 }
 
-                let listener = UnixListener::bind(SOCKET_PATH)?;
+                // Will fail if a file already exists at the path.
+                let listener = UnixListener::bind(&socket_path)?;
                 listener.set_nonblocking(true)?;
 
                 // Set the socket's permission to 666 to allow clients of different user to
                 // connect.
                 let permissions = Permissions::from_mode(0o666);
-                fs::set_permissions(SOCKET_PATH, permissions)?;
+                fs::set_permissions(socket_path, permissions)?;
 
                 listener
             }
@@ -88,53 +93,17 @@ impl DomainSocketListener {
         Ok(Self { listener, timeout })
     }
 
-    #[cfg(not(feature = "no-parsec-user-and-clients-group"))]
-    fn check_user_details() -> Result<()> {
+    fn check_user_details() {
         // Check Parsec is running as parsec user
         if users::get_current_username() != Some(PARSEC_USERNAME.into()) {
-            error!(
-                "Incorrect user. Parsec should be run as user {}.",
+            warn!(
+                "Incorrect user. Parsec should be run as user {}. Follow recommendations to install Parsec securely or clients might not be able to connect.",
                 PARSEC_USERNAME
             );
-            return Err(Error::new(
-                ErrorKind::PermissionDenied,
-                "Parsec run as incorrect user",
-            ));
         }
-        // Check Parsec client group exists and parsec user is a member of it
-        if let Some(parsec_clients_group) = users::get_group_by_name(PARSEC_GROUPNAME) {
-            if let Some(groups) = users::get_user_groups(PARSEC_USERNAME, users::get_current_gid())
-            {
-                // Split to make `clippy` happy
-                let parsec_user_in_parsec_clients_group = groups.into_iter().any(|group| {
-                    group.gid() == parsec_clients_group.gid()
-                        && group.name() == parsec_clients_group.name()
-                });
-                // Check the parsec user is a member of the parsec clients group
-                if parsec_user_in_parsec_clients_group {
-                    return Ok(());
-                }
-                error!(
-                    "{} user not a member of {}.",
-                    PARSEC_USERNAME, PARSEC_GROUPNAME
-                );
-                Err(Error::new(
-                    ErrorKind::PermissionDenied,
-                    "User permissions incorrect",
-                ))
-            } else {
-                error!("Retrieval of groups for user {} failed.", PARSEC_USERNAME);
-                Err(Error::new(
-                    ErrorKind::InvalidInput,
-                    "Failed to retrieve user groups",
-                ))
-            }
-        } else {
-            error!("{} group does not exist.", PARSEC_GROUPNAME);
-            Err(Error::new(
-                ErrorKind::PermissionDenied,
-                "Group permissions incorrect",
-            ))
+        // Check Parsec client group exists
+        if users::get_group_by_name(PARSEC_GROUPNAME).is_none() {
+            warn!("{} group does not exist. Follow recommendations to install Parsec securely or clients might not be able to connect.", PARSEC_GROUPNAME);
         }
     }
 }
@@ -190,15 +159,19 @@ impl Listen for DomainSocketListener {
 }
 
 /// Builder for `DomainSocketListener`
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct DomainSocketListenerBuilder {
     timeout: Option<Duration>,
+    socket_path: Option<PathBuf>,
 }
 
 impl DomainSocketListenerBuilder {
     /// Create a new DomainSocketListener builder
     pub fn new() -> Self {
-        DomainSocketListenerBuilder { timeout: None }
+        DomainSocketListenerBuilder {
+            timeout: None,
+            socket_path: None,
+        }
     }
 
     /// Add a timeout on the Unix Domain Socket used
@@ -207,12 +180,22 @@ impl DomainSocketListenerBuilder {
         self
     }
 
+    /// Specify the Unix Domain Socket path
+    pub fn with_socket_path(mut self, socket_path: Option<PathBuf>) -> Self {
+        self.socket_path = socket_path;
+        self
+    }
+
     /// Build the builder into the listener
     pub fn build(self) -> Result<DomainSocketListener> {
-        DomainSocketListener::new(self.timeout.ok_or_else(|| {
-            error!("The listener timeout was not set.");
-            Error::new(ErrorKind::InvalidInput, "listener timeout missing")
-        })?)
+        DomainSocketListener::new(
+            self.timeout.ok_or_else(|| {
+                error!("The listener timeout was not set.");
+                Error::new(ErrorKind::InvalidInput, "listener timeout missing")
+            })?,
+            self.socket_path
+                .unwrap_or_else(|| DEFAULT_SOCKET_PATH.into()),
+        )
     }
 }
 

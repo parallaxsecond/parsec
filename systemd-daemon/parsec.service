@@ -4,7 +4,7 @@ Documentation=https://parallaxsecond.github.io/parsec-book/parsec_service/instal
 
 [Service]
 WorkingDirectory=/home/parsec/
-ExecStart=/home/parsec/.cargo/bin/parsec
+ExecStart=/usr/libexec/parsec/parsec --config /etc/parsec/config.toml
 
 [Install]
 WantedBy=default.target

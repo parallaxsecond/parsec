@@ -23,12 +23,14 @@ pub enum ListenerType {
 }
 
 /// Configuration of the Listener
-#[derive(Copy, Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct ListenerConfig {
     /// Type of the Listener
     pub listener_type: ListenerType,
     /// Timeout of the Listener before the connection errors out (in milliseconds)
     pub timeout: u64,
+    /// Path of the Unix Domain socket
+    pub socket_path: Option<String>,
 }
 
 /// Specifies metadata associated with a connection, if any.

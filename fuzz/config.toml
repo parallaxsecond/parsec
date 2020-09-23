@@ -3,10 +3,12 @@
 [listener]
 listener_type = "DomainSocket"
 timeout = 200 # in milliseconds
+socket_path = "/tmp/parsec.sock"
 
 [[key_manager]]
 name = "on-disk-manager"
 manager_type = "OnDisk"
+store_path = "./mappings"
 
 # [[provider]]
 # provider_type = "MbedCryptoProvider"

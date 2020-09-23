@@ -25,7 +25,7 @@ use std::io::{Error, ErrorKind, Read, Write};
 use std::path::PathBuf;
 
 /// Default path where the mapping files will be stored on disk
-pub const DEFAULT_MAPPINGS_PATH: &str = "./mappings";
+pub const DEFAULT_MAPPINGS_PATH: &str = "/var/lib/parsec/mappings";
 
 /// A key info manager storing key triple to key info mapping on files on disk
 #[derive(Debug)]

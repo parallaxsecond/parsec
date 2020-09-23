@@ -52,7 +52,6 @@ features = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-pr
 
 [features]
 default = []
-no-parsec-user-and-clients-group = []
 mbed-crypto-provider = ["psa-crypto"]
 pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "psa-crypto", "rand"]
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "hex"]

@@ -17,6 +17,7 @@
 
 # Log level to be applied across the service. Can be overwritten for certain modules which have the same
 # configuration key. Possible values: "debug", "info", "warn", "error", "trace"
+# WARNING: This option will not be updated if the configuration is reloaded with a different one.
 #log_level = "warn"
 
 # Control whether log entries contain a timestamp.
@@ -44,6 +45,12 @@ listener_type = "DomainSocket"
 # timeout expires, the connection is dropped.
 timeout = 200 # in milliseconds
 
+# Specify the Unix Domain Socket path. The path is fixed and should always be the default one for
+# clients to connect. However, it is useful to change it for tests.
+# WARNING: If a file already exists at that path, the service will remove it before creating the
+# socket file.
+#socket_path = "/run/parsec/parsec.sock"
+
 # (Required) Configuration for the components managing key info for providers.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
 [[key_manager]]
@@ -54,7 +61,7 @@ name = "on-disk-manager"
 manager_type = "OnDisk"
 
 # Path to the location where the mapping will be persisted (in this case, the filesystem path)
-#store_path = "./mappings"
+#store_path = "/var/lib/parsec/mappings"
 
 # (Required) Provider configurations.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
