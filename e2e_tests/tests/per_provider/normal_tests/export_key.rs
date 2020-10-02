@@ -91,14 +91,14 @@ fn export_without_create() {
 }
 
 #[test]
-fn import_and_export_public_key() -> Result<()> {
+fn import_and_export_key() -> Result<()> {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return Ok(());
     }
 
-    let key_name = String::from("import_and_export_public_key");
+    let key_name = String::from("import_and_export_key");
     let key_data = vec![
         48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20,
         102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81,

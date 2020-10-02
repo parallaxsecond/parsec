@@ -7,6 +7,8 @@ use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ProviderID;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
+use parsec_client::core::ipc_handler::unix_socket;
+use std::time::Duration;
 
 #[test]
 fn test_ping() -> Result<()> {
@@ -20,7 +22,13 @@ fn test_ping() -> Result<()> {
 
 #[test]
 fn mangled_ping() {
-    let client = RequestClient::default();
+    let client = RequestClient {
+        ipc_handler: Box::from(unix_socket::Handler::new(
+            "/tmp/parsec.sock".into(),
+            Some(Duration::from_secs(1)),
+        )),
+        ..Default::default()
+    };
     let mut req = Request::new();
     req.header.provider = ProviderID::Core;
     req.header.opcode = Opcode::Ping;

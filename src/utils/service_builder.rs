@@ -163,6 +163,7 @@ impl ServiceBuilder {
         let listener = match config.listener_type {
             ListenerType::DomainSocket => DomainSocketListenerBuilder::new()
                 .with_timeout(Duration::from_millis(config.timeout))
+                .with_socket_path(config.socket_path.map(|s| s.into()))
                 .build(),
         }?;
 

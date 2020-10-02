@@ -107,7 +107,7 @@ impl FrontEndHandler {
                 if crate::utils::GlobalConfig::log_error_details() {
                     if let Some(app_name_string) = app_name {
                         info!(
-                            "Response from application name \"{}\" sent back",
+                            "Response for application name \"{}\" sent back",
                             app_name_string
                         );
                     } else {
