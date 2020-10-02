@@ -7,7 +7,7 @@ jobs:
     name: Various tests targeting a Parsec image with all providers included
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Build the container
         run: docker build -t all-providers e2e_tests/provider_cfg/all
       - name: Run the container to execute the test script
@@ -17,7 +17,7 @@ jobs:
     name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Build the container
         run: docker build -t mbed-crypto-provider e2e_tests/provider_cfg/mbed-crypto
       - name: Run the container to execute the test script
@@ -27,7 +27,7 @@ jobs:
     name: Integration tests using PKCS 11 provider
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Build the container
         run: docker build -t pkcs11-provider e2e_tests/provider_cfg/pkcs11
       - name: Run the container to execute the test script
@@ -37,8 +37,20 @@ jobs:
     name: Integration tests using TPM provider
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Build the container
         run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/ci.sh tpm
+
+  links:
+    name: Check links
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Link Checker
+      uses: peter-evans/link-checker@v1
+      with:
+        args: -v -r *.md
+    - name: Fail if there were link errors
+      run: exit ${{ steps.lc.outputs.exit_code }}

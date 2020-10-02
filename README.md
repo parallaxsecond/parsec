@@ -6,9 +6,8 @@
 <p align="center">
   <img src="./doc/images/parsec/ARM1007_PARSEC Logo_ST2_RGB_Stacked_Colour.png" alt="Parsec logo"/>
   <br><br>
-  <a href="https://github.com/parallaxsecond/parsec/actions?query=workflow%3A%22Continuous+Integration%22"><img src="https://github.com/parallaxsecond/parsec/workflows/Continuous%20Integration/badge.svg" alt="CI tests"/></a>
-  <a href="https://travis-ci.com/parallaxsecond/parsec"><img src="https://travis-ci.com/parallaxsecond/parsec.svg?branch=master" alt="Travis CI tests"/></a>
-  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"/></a>
+  <a href="https://crates.io/crates/parsec-service"><img alt="Crates.io" src="https://img.shields.io/crates/v/parsec-service"></a>
+  <a href="https://docs.rs/parsec-service"><img src="https://docs.rs/parsec-service/badge.svg" alt="Code documentation"/></a>
 </p>
 
 # Welcome To PARSEC
@@ -48,16 +47,6 @@ PARSEC is a collaborative project. The current list of the individuals and organ
 # Partner Organizations
 
 See who is [**using and contributing to PARSEC**](./PARTNERS.md).
-
-# Disclaimer
-
-Parsec is a new open source project and is under active development. This code repository is being made
-available so that the developer community can learn and give feedback about the new interfaces and the concepts of platform-agnostic security.
-The implementation that is provided is suitable for exploratory testing and experimentation only.
-This test implementation does not offer any tangible security benefits and therefore is not
-suitable for use in production. Documentation pages may be incomplete and are subject to change
-without notice. Interfaces may change in such a way as to break compatibility with client code.
-Contributions from the developer community are welcome. Please refer to the contribution guidelines.
 
 # Example
 
