@@ -9,6 +9,7 @@ use crate::key_info_managers;
 use crate::key_info_managers::KeyTriple;
 use crate::key_info_managers::{KeyInfo, ManageKeyInfo};
 use log::error;
+use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
@@ -135,6 +136,16 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        // Currently only the RSA PKCS1 v1.5 signature scheme is supported
+        // by the tss-esapi crate.
+        if op.attributes.policy.permitted_algorithms
+            != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: SignHash::Specific(Hash::Sha256),
+            })
+        {
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
+
         let key_name = op.key_name;
         let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
@@ -183,6 +194,15 @@ impl TpmProvider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        // Currently only the RSA PKCS1 v1.5 signature scheme is supported
+        // by the tss-esapi crate.
+        if op.attributes.policy.permitted_algorithms
+            != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: SignHash::Specific(Hash::Sha256),
+            })
+        {
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
         let key_name = op.key_name;
         let attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
