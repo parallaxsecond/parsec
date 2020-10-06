@@ -21,13 +21,14 @@ use crate::key_info_managers::on_disk_manager::{
 };
 use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerType, ManageKeyInfo};
 use crate::providers::{core_provider::CoreProviderBuilder, Provide, ProviderConfig};
+use anyhow::Result;
 use log::{error, warn, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderID};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -126,7 +127,7 @@ impl ServiceBuilder {
 
         if providers.is_empty() {
             error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
-            return Err(Error::new(ErrorKind::InvalidData, "need one provider"));
+            return Err(Error::new(ErrorKind::InvalidData, "need one provider").into());
         }
 
         // The authenticators supported by the Parsec service.
@@ -330,7 +331,7 @@ unsafe fn get_provider(
                 "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
                 config
             );
-            Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
+            Err(Error::new(ErrorKind::InvalidData, "provider not compiled").into())
         }
     }
 }

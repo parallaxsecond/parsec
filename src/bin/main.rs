@@ -39,10 +39,11 @@
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 
+use anyhow::Result;
 use log::{info, trace};
 use parsec_service::utils::{ServiceBuilder, ServiceConfig};
 use signal_hook::{flag, SIGHUP, SIGTERM};
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -101,7 +102,8 @@ fn main() -> Result<()> {
             ErrorKind::Other,
             "Insecure configuration; the Parsec service should not be running as root! You can \
              modify `allow_root` in the config file to bypass this check (not recommended).",
-        ));
+        )
+        .into());
     }
 
     log_setup(&config);

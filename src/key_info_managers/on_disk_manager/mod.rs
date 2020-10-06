@@ -14,6 +14,7 @@
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use super::{KeyInfo, KeyTriple, ManageKeyInfo};
 use crate::authenticators::ApplicationName;
+use anyhow::{Context, Result};
 use log::{error, info, warn};
 use parsec_interface::requests::ProviderID;
 use std::collections::HashMap;
@@ -180,17 +181,27 @@ impl OnDiskKeyInfoManager {
     /// # Errors
     ///
     /// Returns an std::io error if the function failed reading the mapping files.
-    fn new(mappings_dir_path: PathBuf) -> std::io::Result<OnDiskKeyInfoManager> {
+    fn new(mappings_dir_path: PathBuf) -> Result<OnDiskKeyInfoManager> {
         let mut key_store = HashMap::new();
 
         // Will ignore if the mappings directory already exists.
-        fs::create_dir_all(&mappings_dir_path)?;
+        fs::create_dir_all(&mappings_dir_path).with_context(|| {
+            format!(
+                "Failed to create Key Info Mappings directory at {:?}",
+                mappings_dir_path
+            )
+        })?;
 
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(&provider_dir_path)?.iter() {
                     let mut key_info = Vec::new();
-                    let mut key_info_file = File::open(&key_name_file_path)?;
+                    let mut key_info_file = File::open(&key_name_file_path).with_context(|| {
+                        format!(
+                            "Failed to open Key Info Mappings file at {:?}",
+                            key_name_file_path
+                        )
+                    })?;
                     let _ = key_info_file.read_to_end(&mut key_info)?;
                     let key_info = bincode::deserialize(&key_info[..]).map_err(|e| {
                         format_error!("Error deserializing key info", e);
@@ -258,7 +269,13 @@ impl OnDiskKeyInfoManager {
             fs::remove_file(&key_name_file_path)?;
         }
 
-        let mut mapping_file = fs::File::create(&key_name_file_path)?;
+        let mut mapping_file = fs::File::create(&key_name_file_path).map_err(|e| {
+            error!(
+                "Failed to create Key Info Mapping file at {:?}",
+                key_name_file_path
+            );
+            e
+        })?;
         mapping_file.write_all(&bincode::serialize(key_info).map_err(|e| {
             format_error!("Error serializing key info", e);
             Error::new(ErrorKind::Other, "error serializing key info")
@@ -350,10 +367,13 @@ impl OnDiskKeyInfoManagerBuilder {
     }
 
     /// Build into a OnDiskKeyInfoManager
-    pub fn build(self) -> std::io::Result<OnDiskKeyInfoManager> {
+    pub fn build(self) -> Result<OnDiskKeyInfoManager> {
         OnDiskKeyInfoManager::new(self.mappings_dir_path.ok_or_else(|| {
-            error!("Mappings directory path is missing");
-            Error::new(ErrorKind::InvalidData, "mappings directory path is missing")
+            error!("Mappings directory path was not provided");
+            Error::new(
+                ErrorKind::InvalidData,
+                "mappings directory path was not provided",
+            )
         })?)
     }
 }

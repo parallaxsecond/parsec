@@ -5,12 +5,13 @@
 //! Expose Parsec functionality using Unix domain sockets as an IPC layer.
 //! The local socket is created at a predefined location.
 use super::listener;
+use anyhow::{Context, Result};
 use listener::Listen;
 use listener::{Connection, ConnectionMetadata};
 use log::{error, warn};
 use std::fs;
 use std::fs::Permissions;
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind};
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::FromRawFd;
@@ -59,7 +60,9 @@ impl DomainSocketListener {
                 }
 
                 // Will fail if a file already exists at the path.
-                let listener = UnixListener::bind(&socket_path)?;
+                let listener = UnixListener::bind(&socket_path).with_context(|| {
+                    format!("Failed to bind to Unix socket at {:?}", socket_path)
+                })?;
                 listener.set_nonblocking(true)?;
 
                 // Set the socket's permission to 666 to allow clients of different user to
@@ -86,7 +89,8 @@ impl DomainSocketListener {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
                     "too many file descriptors received",
-                ));
+                )
+                .into());
             }
         };
 
