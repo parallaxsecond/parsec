@@ -107,6 +107,24 @@ if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ]; then
     popd
 fi
 
+if [ "$PROVIDER_NAME" = "all" ]; then
+    # Start SPIRE server and agent
+    pushd /tmp/spire-0.11.1
+    ./bin/spire-server run -config conf/server/server.conf &
+    sleep 2
+    TOKEN=`bin/spire-server token generate -spiffeID spiffe://example.org/myagent | cut -d ' ' -f 2`
+    ./bin/spire-agent run -config conf/agent/agent.conf -joinToken $TOKEN &
+    sleep 2
+	# Register parsec-client-1
+    ./bin/spire-server entry create -parentID spiffe://example.org/myagent \
+		    -spiffeID spiffe://example.org/parsec-client-1 -selector unix:uid:$(id -u parsec-client-1)
+	# Register parsec-client-2
+    ./bin/spire-server entry create -parentID spiffe://example.org/myagent \
+		    -spiffeID spiffe://example.org/parsec-client-2 -selector unix:uid:$(id -u parsec-client-2)
+    sleep 5
+    popd
+fi
+
 echo "Build test"
 RUST_BACKTRACE=1 cargo build $FEATURES
 
@@ -139,16 +157,31 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::normal
 
     echo "Execute all-providers multi-tenancy tests"
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
+    # Needed because parsec-client-1 and 2 write to those locations owned by root
+    chmod 777 /tmp/parsec/e2e_tests
+    chmod 777 /tmp/
+    export SPIFFE_ENDPOINT_SOCKET="unix:///tmp/agent.sock"
+
+    # PATH is defined before each command for user to use their own version of the Rust toolchain
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
+    su -c "PATH=\"/home/parsec-client-2/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
     # Change the authentication method
     sed -i 's/^\(auth_type\s*=\s*\).*$/\1\"UnixPeerCredentials\"/' $CONFIG_PATH
     pkill -SIGHUP parsec
     sleep 5
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
-    su -c "RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
+    su -c "PATH=\"/home/parsec-client-2/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
+
+    # Change the authentication method
+    sed -i 's/^\(auth_type\s*=\s*\).*$/\1\"JwtSvid\"/' $CONFIG_PATH
+    sed -i 's@#workload_endpoint@workload_endpoint@' $CONFIG_PATH
+    pkill -SIGHUP parsec
+    sleep 5
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
+    su -c "PATH=\"/home/parsec-client-2/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
+    su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
 
     # Last test as it changes the service configuration
     echo "Execute all-providers config tests"

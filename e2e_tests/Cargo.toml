@@ -14,13 +14,13 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.115", features = ["derive"] }
-parsec-client = { version = "0.11.0", features = ["testing"] }
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", features = ["testing", "spiffe-auth"] }
 log = "0.4.11"
 rand = "0.7.3"
+env_logger = "0.7.1"
 
 [dev-dependencies]
 ring = "0.16.15"
-env_logger = "0.7.1"
 rsa = "0.3.0"
 picky-asn1-x509 = "0.3.2"
 base64 = "0.12.3"

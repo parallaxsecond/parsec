@@ -52,6 +52,9 @@ fn convert_error(err: Error) -> ResponseStatus {
 impl TestClient {
     /// Creates a TestClient instance.
     pub fn new() -> TestClient {
+        // As this method is called in test, it will be called more than once per application.
+        if let Err(_) = env_logger::try_init() {};
+
         let mut basic_client = BasicClient::new_naked();
 
         let ipc_handler = unix_socket::Handler::new(TEST_SOCKET_PATH.into(), Some(TEST_TIMEOUT));
