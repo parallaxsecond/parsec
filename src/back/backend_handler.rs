@@ -8,7 +8,7 @@
 use crate::authenticators::ApplicationName;
 use crate::providers::Provide;
 use derivative::Derivative;
-use log::trace;
+use log::{error, trace};
 use parsec_interface::operations::Convert;
 use parsec_interface::operations::{NativeOperation, NativeResult};
 use parsec_interface::requests::{
@@ -53,11 +53,18 @@ impl BackEndHandler {
     /// the request.
     ///
     /// # Errors
+    /// - if the provider ID can not perform the type of operation, returns
+    /// `ResponseStatus::PsaErrorNotSupported`
     /// - if the provider ID does not match, returns `ResponseStatus::WrongProviderID`
     /// - if the content type does not match, returns `ResponseStatus::ContentTypeNotSupported`
     /// - if the accept type does not match, returns `ResponseStatus::AcceptTypeNotSupported`
     pub fn is_capable(&self, request: &Request) -> Result<()> {
         let header = &request.header;
+
+        if (self.provider_id == ProviderID::Core) != header.opcode.is_core() {
+            error!("The request's operation is not compatible with the provider targeted.");
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
 
         if header.provider != self.provider_id {
             Err(ResponseStatus::WrongProviderID)
@@ -206,6 +213,14 @@ impl BackEndHandler {
                     .list_authenticators(op_list_authenticators));
                 trace!("list_authenticators egress");
                 self.result_to_response(NativeResult::ListAuthenticators(result), header)
+            }
+            NativeOperation::ListKeys(op_list_keys) => {
+                let app_name =
+                    unwrap_or_else_return!(app_name.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.list_keys(app_name, op_list_keys));
+                trace!("list_keys egress");
+                self.result_to_response(NativeResult::ListKeys(result), header)
             }
             NativeOperation::PsaHashCompute(op_hash_compute) => {
                 let _app_name =

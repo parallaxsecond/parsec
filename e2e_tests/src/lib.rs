@@ -13,6 +13,7 @@ use log::error;
 use parsec_client::auth::AuthenticationData;
 use parsec_client::core::basic_client::BasicClient;
 use parsec_client::core::interface::operations::list_authenticators::AuthenticatorInfo;
+use parsec_client::core::interface::operations::list_keys::KeyInfo;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
 use parsec_client::core::interface::operations::psa_algorithm::{
     Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
@@ -902,6 +903,11 @@ impl TestClient {
         self.basic_client
             .list_opcodes(provider_id)
             .map_err(convert_error)
+    }
+
+    /// Lists the keys created.
+    pub fn list_keys(&mut self) -> Result<Vec<KeyInfo>> {
+        self.basic_client.list_keys().map_err(convert_error)
     }
 
     /// Executes a ping operation.

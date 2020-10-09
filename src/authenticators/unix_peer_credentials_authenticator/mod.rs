@@ -35,7 +35,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: AuthType::PeerCredentials,
+            id: AuthType::UnixPeerCredentials,
         })
     }
 

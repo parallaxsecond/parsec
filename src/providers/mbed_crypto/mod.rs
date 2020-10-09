@@ -5,10 +5,10 @@
 //! This provider is a software based implementation of PSA Crypto, Mbed Crypto.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::{self, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, trace};
-use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::{list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
     psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
@@ -19,6 +19,7 @@ use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
+use std::ops::Deref;
 use std::sync::{
     atomic::{AtomicU32, Ordering::Relaxed},
     Arc, Mutex, RwLock,
@@ -159,6 +160,25 @@ impl Provide for Provider {
             version_rev: 0,
             id: ProviderID::MbedCrypto,
         }, SUPPORTED_OPCODES.iter().copied().collect()))
+    }
+
+    fn list_keys(
+        &self,
+        app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        Ok(list_keys::Result {
+            keys: key_info_managers::list_keys(
+                store_handle.deref(),
+                &app_name,
+                ProviderID::MbedCrypto,
+            )
+            .map_err(|e| {
+                format_error!("Error occurred when fetching key information", e);
+                ResponseStatus::KeyInfoManagerError
+            })?,
+        })
     }
 
     fn psa_generate_key(

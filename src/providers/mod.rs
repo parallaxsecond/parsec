@@ -91,9 +91,9 @@ impl ProviderConfig {
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    list_authenticators, list_opcodes, list_providers, ping, psa_aead_decrypt, psa_aead_encrypt,
-    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_key,
-    psa_export_public_key, psa_generate_key, psa_generate_random, psa_hash_compare,
+    list_authenticators, list_keys, list_opcodes, list_providers, ping, psa_aead_decrypt,
+    psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
+    psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random, psa_hash_compare,
     psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
@@ -129,6 +129,16 @@ pub trait Provide {
         _op: list_authenticators::Operation,
     ) -> Result<list_authenticators::Result> {
         trace!("list_authenticators ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Lists all keys belonging to the application.
+    fn list_keys(
+        &self,
+        _app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        trace!("list_keys ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 

@@ -6,11 +6,14 @@
 //! aiding clients in discovering the capabilities offered by their underlying
 //! platform.
 use super::Provide;
+use crate::authenticators::ApplicationName;
 use derivative::Derivative;
 use log::trace;
-use parsec_interface::operations::{list_authenticators, list_opcodes, list_providers, ping};
 use parsec_interface::operations::{
-    list_authenticators::AuthenticatorInfo, list_providers::ProviderInfo,
+    list_authenticators, list_keys, list_opcodes, list_providers, ping,
+};
+use parsec_interface::operations::{
+    list_authenticators::AuthenticatorInfo, list_keys::KeyInfo, list_providers::ProviderInfo,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::{HashMap, HashSet};
@@ -20,11 +23,12 @@ use std::sync::Arc;
 use uuid::Uuid;
 use version::{version, Version};
 
-const SUPPORTED_OPCODES: [Opcode; 4] = [
+const SUPPORTED_OPCODES: [Opcode; 5] = [
     Opcode::ListProviders,
     Opcode::ListOpcodes,
     Opcode::Ping,
     Opcode::ListAuthenticators,
+    Opcode::ListKeys,
 ];
 
 /// Service information provider
@@ -71,6 +75,22 @@ impl Provide for Provider {
         Ok(list_authenticators::Result {
             authenticators: self.authenticator_info.clone(),
         })
+    }
+
+    fn list_keys(
+        &self,
+        app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        trace!("list_keys ingress");
+
+        let mut keys: Vec<KeyInfo> = Vec::new();
+        for provider in &self.prov_list {
+            let mut result = provider.list_keys(app_name.clone(), _op)?;
+            keys.append(&mut result.keys);
+        }
+
+        Ok(list_keys::Result { keys })
     }
 
     fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {

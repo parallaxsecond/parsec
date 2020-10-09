@@ -6,10 +6,10 @@
 //! through the Parsec interface.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::{self, KeyInfo, KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, info, trace, warn};
-use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::{list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
     psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
@@ -20,6 +20,7 @@ use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
 use pkcs11::Ctx;
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, RwLock};
 use utils::{KeyPairType, ReadWriteSession, Session};
@@ -210,6 +211,21 @@ impl Provide for Provider {
             },
             SUPPORTED_OPCODES.iter().copied().collect(),
         ))
+    }
+
+    fn list_keys(
+        &self,
+        app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        Ok(list_keys::Result {
+            keys: key_info_managers::list_keys(store_handle.deref(), &app_name, ProviderID::Pkcs11)
+                .map_err(|e| {
+                    format_error!("Error occurred when fetching key information", e);
+                    ResponseStatus::KeyInfoManagerError
+                })?,
+        })
     }
 
     fn psa_generate_key(

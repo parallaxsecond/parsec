@@ -18,7 +18,8 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.20.2"
+# Set to the newest interface version before releasing
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs.git", rev = "4986c0d6b4610237c85eb799fc469d1658c1a2f0" }
 rand = { version = "0.7.3", features = ["small_rng"], optional = true }
 base64 = "0.12.3"
 uuid = "0.8.1"
