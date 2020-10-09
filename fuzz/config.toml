@@ -5,6 +5,9 @@ listener_type = "DomainSocket"
 timeout = 200 # in milliseconds
 socket_path = "/tmp/parsec.sock"
 
+[authenticator]
+auth_type = "Direct"
+
 [[key_manager]]
 name = "on-disk-manager"
 manager_type = "OnDisk"

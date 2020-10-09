@@ -6,7 +6,8 @@
 //! provided configuration.
 use super::global_config::GlobalConfigBuilder;
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
-use crate::authenticators::Authenticate;
+use crate::authenticators::unix_peer_credentials_authenticator::UnixPeerCredentialsAuthenticator;
+use crate::authenticators::{Authenticate, AuthenticatorConfig};
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
     dispatcher::DispatcherBuilder,
@@ -85,6 +86,7 @@ pub struct CoreSettings {
 pub struct ServiceConfig {
     pub core_settings: CoreSettings,
     pub listener: ListenerConfig,
+    pub authenticator: AuthenticatorConfig,
     pub key_manager: Option<Vec<KeyInfoManagerConfig>>,
     pub provider: Option<Vec<ProviderConfig>>,
 }
@@ -130,11 +132,7 @@ impl ServiceBuilder {
             return Err(Error::new(ErrorKind::InvalidData, "need one provider").into());
         }
 
-        // The authenticators supported by the Parsec service.
-        // NOTE: order here is important. The order in which the elements are added here is the
-        //       order in which they will be returned to any client requesting them!
-        let mut authenticators: Vec<(AuthType, Authenticator)> = Vec::new();
-        authenticators.push((AuthType::Direct, Box::from(DirectAuthenticator {})));
+        let authenticators = build_authenticators(&config.authenticator);
 
         let backend_handlers = build_backend_handlers(providers, &authenticators)?;
 
@@ -363,4 +361,25 @@ fn get_key_info_manager(config: &KeyInfoManagerConfig) -> Result<KeyInfoManager>
     };
 
     Ok(Arc::new(RwLock::new(manager)))
+}
+
+fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenticator)> {
+    // The authenticators supported by the Parsec service.
+    // NOTE: order here is important. The order in which the elements are added here is the
+    // order in which they will be returned to any client requesting them!
+    // Currently only one authenticator is allowed by the Parsec service
+    // See parallaxsecond/parsec#271
+    let mut authenticators: Vec<(AuthType, Authenticator)> = Vec::new();
+
+    match config {
+        AuthenticatorConfig::Direct => {
+            authenticators.push((AuthType::Direct, Box::from(DirectAuthenticator {})))
+        }
+        AuthenticatorConfig::UnixPeerCredentials => authenticators.push((
+            AuthType::UnixPeerCredentials,
+            Box::from(UnixPeerCredentialsAuthenticator {}),
+        )),
+    };
+
+    authenticators
 }

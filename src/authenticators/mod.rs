@@ -17,6 +17,8 @@ use crate::front::listener::ConnectionMetadata;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;
+use serde::Deserialize;
+use zeroize::Zeroize;
 
 /// String wrapper for app names
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -63,4 +65,15 @@ impl std::fmt::Display for ApplicationName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+/// Authenticator configuration structure
+#[derive(Copy, Clone, Deserialize, Debug, Zeroize)]
+#[zeroize(drop)]
+#[serde(tag = "auth_type")]
+pub enum AuthenticatorConfig {
+    /// Direct authentication
+    Direct,
+    /// Unix Peer Credenditals authentication
+    UnixPeerCredentials,
 }
