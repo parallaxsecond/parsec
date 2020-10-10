@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::Pkcs11Provider;
+use super::Provider;
 use log::error;
 use log::{info, trace, warn};
 use parsec_interface::operations::psa_algorithm::*;
@@ -335,7 +335,7 @@ pub enum KeyPairType {
 
 // Representation of a PKCS 11 session.
 pub struct Session<'a> {
-    provider: &'a Pkcs11Provider,
+    provider: &'a Provider,
     session_handle: CK_SESSION_HANDLE,
     // This information is necessary to log out when dropped.
     is_logged_in: bool,
@@ -349,7 +349,7 @@ pub enum ReadWriteSession {
 }
 
 impl Session<'_> {
-    pub fn new(provider: &Pkcs11Provider, read_write: ReadWriteSession) -> Result<Session> {
+    pub fn new(provider: &Provider, read_write: ReadWriteSession) -> Result<Session> {
         if crate::utils::GlobalConfig::log_error_details() {
             info!("Opening session on slot {}", provider.slot_number);
         }

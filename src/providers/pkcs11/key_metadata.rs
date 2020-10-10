@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::LocalIdStore;
-use super::{KeyInfo, Pkcs11Provider};
+use super::{KeyInfo, Provider};
 use crate::key_info_managers;
 use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
 use log::{error, warn};
@@ -9,7 +9,7 @@ use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::sync::RwLock;
 
-impl Pkcs11Provider {
+impl Provider {
     // This function returns the `RWLocks` found on the `Pkcs11Provider`
     // in the order in which they should *always* be taken. Changing the order
     // of locking in one method can very easily result in deadlocking.

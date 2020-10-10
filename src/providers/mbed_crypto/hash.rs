@@ -1,11 +1,11 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::MbedCryptoProvider;
+use super::Provider;
 use parsec_interface::operations::{psa_hash_compare, psa_hash_compute};
 use parsec_interface::requests::{ResponseStatus, Result};
 use psa_crypto::operations::hash;
 
-impl MbedCryptoProvider {
+impl Provider {
     pub(super) fn psa_hash_compute_internal(
         &self,
         op: psa_hash_compute::Operation,

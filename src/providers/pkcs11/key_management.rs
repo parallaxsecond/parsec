@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{utils, KeyPairType, Pkcs11Provider, ReadWriteSession, Session};
+use super::{utils, KeyPairType, Provider, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::{error, info, trace};
@@ -15,7 +15,7 @@ use picky_asn1_x509::RSAPublicKey;
 use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
 use std::mem;
 
-impl Pkcs11Provider {
+impl Provider {
     /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public,
     /// private or any key type) given as parameters for the current session.
     pub(super) fn find_key(

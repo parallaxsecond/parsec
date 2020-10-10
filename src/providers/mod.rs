@@ -12,16 +12,16 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use zeroize::Zeroize;
 
-pub mod core_provider;
+pub mod core;
 
 #[cfg(feature = "pkcs11-provider")]
-pub mod pkcs11_provider;
+pub mod pkcs11;
 
 #[cfg(feature = "mbed-crypto-provider")]
-pub mod mbed_crypto_provider;
+pub mod mbed_crypto;
 
 #[cfg(feature = "tpm-provider")]
-pub mod tpm_provider;
+pub mod tpm;
 
 /// Provider configuration structure
 /// For providers configs in Parsec config.toml we use a format similar

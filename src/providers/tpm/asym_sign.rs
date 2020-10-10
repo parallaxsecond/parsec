@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, utils, TpmProvider};
+use super::{key_management, utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::error;
@@ -10,7 +10,7 @@ use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
 use tss_esapi::structures::{Auth, Digest};
 
-impl TpmProvider {
+impl Provider {
     pub(super) fn psa_sign_hash_internal(
         &self,
         app_name: ApplicationName,

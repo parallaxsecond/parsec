@@ -3,7 +3,7 @@
 use super::utils;
 use super::utils::PasswordContext;
 use super::utils::{validate_private_key, validate_public_key, PUBLIC_EXPONENT};
-use super::TpmProvider;
+use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
 use crate::key_info_managers::KeyTriple;
@@ -72,7 +72,7 @@ pub fn get_password_context(
     Ok((bincode::deserialize(&key_info.id)?, key_info.attributes))
 }
 
-impl TpmProvider {
+impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
         app_name: ApplicationName,
