@@ -52,7 +52,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 /// at runtime.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Pkcs11Provider {
+pub struct Provider {
     #[derivative(Debug = "ignore")]
     key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     local_ids: RwLock<LocalIdStore>,
@@ -74,7 +74,7 @@ pub struct Pkcs11Provider {
     software_public_operations: bool,
 }
 
-impl Pkcs11Provider {
+impl Provider {
     /// Creates and initialise a new instance of Pkcs11Provider.
     /// Checks if there are not more keys stored in the Key Info Manager than in the PKCS 11 library
     /// and if there are, delete them. Adds Key IDs currently in use in the local IDs store.
@@ -85,9 +85,9 @@ impl Pkcs11Provider {
         slot_number: usize,
         user_pin: Option<SecretString>,
         software_public_operations: bool,
-    ) -> Option<Pkcs11Provider> {
+    ) -> Option<Provider> {
         #[allow(clippy::mutex_atomic)]
-        let pkcs11_provider = Pkcs11Provider {
+        let pkcs11_provider = Provider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             logged_sessions_counter: Mutex::new(0),
@@ -191,7 +191,7 @@ impl Pkcs11Provider {
     }
 }
 
-impl Provide for Pkcs11Provider {
+impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
         Ok((
@@ -303,7 +303,7 @@ impl Provide for Pkcs11Provider {
     }
 }
 
-impl Drop for Pkcs11Provider {
+impl Drop for Provider {
     fn drop(&mut self) {
         trace!("Finalize command");
         if let Err(e) = self.backend.finalize() {
@@ -321,7 +321,7 @@ impl Drop for Pkcs11Provider {
 /// building.
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
-pub struct Pkcs11ProviderBuilder {
+pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
     pkcs11_library_path: Option<String>,
@@ -330,10 +330,10 @@ pub struct Pkcs11ProviderBuilder {
     software_public_operations: Option<bool>,
 }
 
-impl Pkcs11ProviderBuilder {
+impl ProviderBuilder {
     /// Create a new Pkcs11Provider builder
-    pub fn new() -> Pkcs11ProviderBuilder {
-        Pkcs11ProviderBuilder {
+    pub fn new() -> ProviderBuilder {
+        ProviderBuilder {
             key_info_store: None,
             pkcs11_library_path: None,
             slot_number: None,
@@ -346,31 +346,28 @@ impl Pkcs11ProviderBuilder {
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> Pkcs11ProviderBuilder {
+    ) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self
     }
 
     /// Specify the path of the PKCS11 library
-    pub fn with_pkcs11_library_path(
-        mut self,
-        pkcs11_library_path: String,
-    ) -> Pkcs11ProviderBuilder {
+    pub fn with_pkcs11_library_path(mut self, pkcs11_library_path: String) -> ProviderBuilder {
         self.pkcs11_library_path = Some(pkcs11_library_path);
 
         self
     }
 
     /// Specify the slot number used
-    pub fn with_slot_number(mut self, slot_number: usize) -> Pkcs11ProviderBuilder {
+    pub fn with_slot_number(mut self, slot_number: usize) -> ProviderBuilder {
         self.slot_number = Some(slot_number);
 
         self
     }
 
     /// Specify the user pin
-    pub fn with_user_pin(mut self, mut user_pin: Option<String>) -> Pkcs11ProviderBuilder {
+    pub fn with_user_pin(mut self, mut user_pin: Option<String>) -> ProviderBuilder {
         self.user_pin = match user_pin {
             // The conversion form a String is infallible.
             Some(ref pin) => Some(SecretString::from_str(&pin).unwrap()),
@@ -385,14 +382,14 @@ impl Pkcs11ProviderBuilder {
     pub fn with_software_public_operations(
         mut self,
         software_public_operations: Option<bool>,
-    ) -> Pkcs11ProviderBuilder {
+    ) -> ProviderBuilder {
         self.software_public_operations = software_public_operations;
 
         self
     }
 
     /// Attempt to build a PKCS11 provider
-    pub fn build(self) -> std::io::Result<Pkcs11Provider> {
+    pub fn build(self) -> std::io::Result<Provider> {
         let library_path = self
             .pkcs11_library_path
             .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing library path"))?;
@@ -422,7 +419,7 @@ impl Pkcs11ProviderBuilder {
                 "PKCS 11 backend initializing failed",
             )
         })?;
-        Ok(Pkcs11Provider::new(
+        Ok(Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,

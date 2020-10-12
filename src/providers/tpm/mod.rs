@@ -53,7 +53,7 @@ const AUTH_HEX_PREFIX: &str = "hex:";
 /// (e.g. firmware TPMs).
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct TpmProvider {
+pub struct Provider {
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
@@ -64,20 +64,20 @@ pub struct TpmProvider {
     key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
 }
 
-impl TpmProvider {
+impl Provider {
     // Creates and initialise a new instance of TpmProvider.
     fn new(
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
         esapi_context: tss_esapi::TransientKeyContext,
-    ) -> Option<TpmProvider> {
-        Some(TpmProvider {
+    ) -> Option<Provider> {
+        Some(Provider {
             esapi_context: Mutex::new(esapi_context),
             key_info_store,
         })
     }
 }
 
-impl Provide for TpmProvider {
+impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
         Ok((ProviderInfo {
@@ -165,7 +165,7 @@ impl Provide for TpmProvider {
     }
 }
 
-impl Drop for TpmProvider {
+impl Drop for Provider {
     fn drop(&mut self) {
         info!("Dropping the TPM Provider.");
     }
@@ -178,17 +178,17 @@ impl Drop for TpmProvider {
 /// building.
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
-pub struct TpmProviderBuilder {
+pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
     tcti: Option<String>,
     owner_hierarchy_auth: Option<String>,
 }
 
-impl TpmProviderBuilder {
+impl ProviderBuilder {
     /// Create a new TPM provider builder
-    pub fn new() -> TpmProviderBuilder {
-        TpmProviderBuilder {
+    pub fn new() -> ProviderBuilder {
+        ProviderBuilder {
             key_info_store: None,
             tcti: None,
             owner_hierarchy_auth: None,
@@ -199,21 +199,21 @@ impl TpmProviderBuilder {
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> TpmProviderBuilder {
+    ) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self
     }
 
     /// Specify the TCTI used for this provider
-    pub fn with_tcti(mut self, tcti: &str) -> TpmProviderBuilder {
+    pub fn with_tcti(mut self, tcti: &str) -> ProviderBuilder {
         self.tcti = Some(tcti.to_owned());
 
         self
     }
 
     /// Specify the owner hierary authentication to use
-    pub fn with_owner_hierarchy_auth(mut self, owner_hierarchy_auth: String) -> TpmProviderBuilder {
+    pub fn with_owner_hierarchy_auth(mut self, owner_hierarchy_auth: String) -> ProviderBuilder {
         self.owner_hierarchy_auth = Some(owner_hierarchy_auth);
 
         self
@@ -280,7 +280,7 @@ impl TpmProviderBuilder {
     ///
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
-    pub unsafe fn build(mut self) -> std::io::Result<TpmProvider> {
+    pub unsafe fn build(mut self) -> std::io::Result<Provider> {
         let hierarchy_auth = self.get_hierarchy_auth()?;
         let default_cipher = self.find_default_context_cipher()?;
         let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
@@ -291,7 +291,7 @@ impl TpmProviderBuilder {
         })?;
         self.tcti.zeroize();
         self.owner_hierarchy_auth.zeroize();
-        TpmProvider::new(
+        Provider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,

@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::Pkcs11Provider;
+use super::Provider;
 use super::{utils, KeyPairType, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
@@ -11,7 +11,7 @@ use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
 use utils::CkMechanism;
 
-impl Pkcs11Provider {
+impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
         app_name: ApplicationName,

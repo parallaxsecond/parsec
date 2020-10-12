@@ -20,7 +20,7 @@ use crate::key_info_managers::on_disk_manager::{
     OnDiskKeyInfoManagerBuilder, DEFAULT_MAPPINGS_PATH,
 };
 use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerType, ManageKeyInfo};
-use crate::providers::{core_provider::CoreProviderBuilder, Provide, ProviderConfig};
+use crate::providers::{core::ProviderBuilder as CoreProviderBuilder, Provide, ProviderConfig};
 use anyhow::Result;
 use log::{error, warn, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
@@ -36,11 +36,11 @@ use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 
 #[cfg(feature = "mbed-crypto-provider")]
-use crate::providers::mbed_crypto_provider::MbedCryptoProviderBuilder;
+use crate::providers::mbed_crypto::ProviderBuilder as MbedCryptoProviderBuilder;
 #[cfg(feature = "pkcs11-provider")]
-use crate::providers::pkcs11_provider::Pkcs11ProviderBuilder;
+use crate::providers::pkcs11::ProviderBuilder as Pkcs11ProviderBuilder;
 #[cfg(feature = "tpm-provider")]
-use crate::providers::tpm_provider::TpmProviderBuilder;
+use crate::providers::tpm::ProviderBuilder as TpmProviderBuilder;
 #[cfg(any(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",

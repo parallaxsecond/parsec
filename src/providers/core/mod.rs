@@ -34,7 +34,7 @@ const SUPPORTED_OPCODES: [Opcode; 4] = [
 /// available.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct CoreProvider {
+pub struct Provider {
     wire_protocol_version_min: u8,
     wire_protocol_version_maj: u8,
     provider_info: Vec<ProviderInfo>,
@@ -44,7 +44,7 @@ pub struct CoreProvider {
     prov_list: Vec<Arc<dyn Provide + Send + Sync>>,
 }
 
-impl Provide for CoreProvider {
+impl Provide for Provider {
     fn list_opcodes(&self, op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
         trace!("list_opcodes ingress");
         Ok(list_opcodes::Result {
@@ -87,7 +87,7 @@ impl Provide for CoreProvider {
 /// Builder for CoreProvider
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
-pub struct CoreProviderBuilder {
+pub struct ProviderBuilder {
     version_maj: Option<u8>,
     version_min: Option<u8>,
     #[derivative(Debug = "ignore")]
@@ -96,10 +96,10 @@ pub struct CoreProviderBuilder {
     authenticator_info: Vec<AuthenticatorInfo>,
 }
 
-impl CoreProviderBuilder {
+impl ProviderBuilder {
     /// Create a new CoreProvider builder
     pub fn new() -> Self {
-        CoreProviderBuilder {
+        ProviderBuilder {
             version_maj: None,
             version_min: None,
             prov_list: Vec::new(),
@@ -130,7 +130,7 @@ impl CoreProviderBuilder {
     }
 
     /// Build into a CoreProvider
-    pub fn build(self) -> std::io::Result<CoreProvider> {
+    pub fn build(self) -> std::io::Result<Provider> {
         let mut provider_opcodes = HashMap::new();
         let _ = provider_opcodes.insert(
             ProviderID::Core,
@@ -167,7 +167,7 @@ impl CoreProviderBuilder {
             id: ProviderID::Core,
         });
 
-        let core_provider = CoreProvider {
+        let core_provider = Provider {
             wire_protocol_version_maj: self
                 .version_maj
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "version maj is missing"))?,
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_ping() {
-        let provider = CoreProvider {
+        let provider = Provider {
             wire_protocol_version_min: 8,
             wire_protocol_version_maj: 10,
             provider_info: Vec::new(),

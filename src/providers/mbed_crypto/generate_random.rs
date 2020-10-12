@@ -1,9 +1,9 @@
-use super::MbedCryptoProvider;
+use super::Provider;
 use parsec_interface::operations::psa_generate_random;
 use parsec_interface::requests::{ResponseStatus, Result};
 use psa_crypto::operations::other::generate_random;
 
-impl MbedCryptoProvider {
+impl Provider {
     pub(super) fn psa_generate_random_internal(
         &self,
         op: psa_generate_random::Operation,

@@ -54,7 +54,7 @@ const SUPPORTED_OPCODES: [Opcode; 15] = [
 /// Mbed Crypto provider structure
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct MbedCryptoProvider {
+pub struct Provider {
     // When calling write on a reference of key_info_store, a type
     // std::sync::RwLockWriteGuard<dyn ManageKeyInfo + Send + Sync> is returned. We need to use the
     // dereference operator (*) to access the inner type dyn ManageKeyInfo + Send + Sync and then
@@ -73,21 +73,19 @@ pub struct MbedCryptoProvider {
     id_counter: AtomicU32,
 }
 
-impl MbedCryptoProvider {
+impl Provider {
     /// Creates and initialise a new instance of MbedCryptoProvider.
     /// Checks if there are not more keys stored in the Key Info Manager than in the MbedCryptoProvider and
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
-    fn new(
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> Option<MbedCryptoProvider> {
+    fn new(key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>) -> Option<Provider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
         if let Err(error) = psa_crypto::init() {
             format_error!("Error when initialising Mbed Crypto", error);
             return None;
         }
-        let mbed_crypto_provider = MbedCryptoProvider {
+        let mbed_crypto_provider = Provider {
             key_info_store,
             key_handle_mutex: Mutex::new(()),
             id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
@@ -148,7 +146,7 @@ impl MbedCryptoProvider {
     }
 }
 
-impl Provide for MbedCryptoProvider {
+impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
         Ok((ProviderInfo {
@@ -299,15 +297,15 @@ impl Provide for MbedCryptoProvider {
 /// Mbed Crypto provider builder
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
-pub struct MbedCryptoProviderBuilder {
+pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
 }
 
-impl MbedCryptoProviderBuilder {
+impl ProviderBuilder {
     /// Create a new provider builder
-    pub fn new() -> MbedCryptoProviderBuilder {
-        MbedCryptoProviderBuilder {
+    pub fn new() -> ProviderBuilder {
+        ProviderBuilder {
             key_info_store: None,
         }
     }
@@ -316,15 +314,15 @@ impl MbedCryptoProviderBuilder {
     pub fn with_key_info_store(
         mut self,
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> MbedCryptoProviderBuilder {
+    ) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self
     }
 
     /// Build into a MbedProvider
-    pub fn build(self) -> std::io::Result<MbedCryptoProvider> {
-        MbedCryptoProvider::new(
+    pub fn build(self) -> std::io::Result<Provider> {
+        Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
         )

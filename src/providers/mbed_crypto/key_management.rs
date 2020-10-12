@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::MbedCryptoProvider;
+use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers;
 use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
@@ -90,7 +90,7 @@ pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo)
         .map_err(key_info_managers::to_response_status)
 }
 
-impl MbedCryptoProvider {
+impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
         app_name: ApplicationName,

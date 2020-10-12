@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, utils, TpmProvider};
+use super::{key_management, utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
@@ -8,7 +8,7 @@ use parsec_interface::requests::{ProviderID, Result};
 use std::convert::TryInto;
 use std::ops::Deref;
 
-impl TpmProvider {
+impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
         app_name: ApplicationName,

@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, MbedCryptoProvider};
+use super::{key_management, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::psa_raw_key_agreement;
@@ -9,7 +9,7 @@ use parsec_interface::secrecy::Secret;
 use psa_crypto::operations::key_agreement;
 use psa_crypto::types::key;
 
-impl MbedCryptoProvider {
+impl Provider {
     pub(super) fn psa_raw_key_agreement(
         &self,
         app_name: ApplicationName,
