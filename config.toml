@@ -51,6 +51,19 @@ timeout = 200 # in milliseconds
 # socket file.
 #socket_path = "/run/parsec/parsec.sock"
 
+# (Required) Authenticator configuration.
+# WARNING: the authenticator MUST NOT be changed if there are existing keys stored in Parsec.
+# In a future version, Parsec might support multiple authenticators, see parallaxsecond/parsec#271
+# for details.
+[authenticator]
+# (Required) Type of authenticator that will be used to authenticate clients' authentication
+# payloads.
+# Possible values: "Direct" and "UnixPeerCredentials".
+# WARNING: The "Direct" authenticator is only secure under specific requirements. Please make sure
+# to read the Recommendations on a Secure Parsec Deployment at
+# https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html
+auth_type = "UnixPeerCredentials"
+
 # (Required) Configuration for the components managing key info for providers.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
 [[key_manager]]
