@@ -65,6 +65,7 @@ fn list_opcodes() {
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);
     let _ = core_provider_opcodes.insert(Opcode::ListAuthenticators);
     let _ = core_provider_opcodes.insert(Opcode::ListOpcodes);
+    let _ = core_provider_opcodes.insert(Opcode::ListKeys);
 
     assert_eq!(
         client
@@ -112,4 +113,37 @@ fn sign_verify_with_provider_discovery() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("sign_verify_with_provider_discovery");
     client.generate_rsa_sign_key(key_name)
+}
+
+#[test]
+fn list_keys() {
+    let mut client = TestClient::new();
+    client.set_auth("list_keys test".to_string());
+
+    let keys = client.list_keys().expect("list_keys failed");
+
+    assert!(keys.is_empty());
+
+    let key1 = String::from("list_keys1");
+    let key2 = String::from("list_keys2");
+    let key3 = String::from("list_keys3");
+
+    client.set_provider(ProviderID::MbedCrypto);
+    client.generate_rsa_sign_key(key1.clone()).unwrap();
+    client.set_provider(ProviderID::Pkcs11);
+    client.generate_rsa_sign_key(key2.clone()).unwrap();
+    client.set_provider(ProviderID::Tpm);
+    client.generate_rsa_sign_key(key3.clone()).unwrap();
+
+    let key_names: Vec<String> = client
+        .list_keys()
+        .expect("list_keys failed")
+        .into_iter()
+        .map(|k| k.name)
+        .collect();
+
+    assert_eq!(key_names.len(), 3);
+    assert!(key_names.contains(&key1));
+    assert!(key_names.contains(&key2));
+    assert!(key_names.contains(&key3));
 }

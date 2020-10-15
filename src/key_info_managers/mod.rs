@@ -145,3 +145,40 @@ pub trait ManageKeyInfo {
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String>;
 }
+
+/// Returns a Vec of the KeyInfo objects corresponding to the given application name and
+/// provider ID.
+///
+/// # Errors
+///
+/// Returns an error as a String if there was a problem accessing the Key Info Manager.
+pub fn list_keys(
+    manager: &dyn ManageKeyInfo,
+    app_name: &ApplicationName,
+    provider_id: ProviderID,
+) -> Result<Vec<parsec_interface::operations::list_keys::KeyInfo>, String> {
+    use parsec_interface::operations::list_keys::KeyInfo;
+
+    let mut keys: Vec<KeyInfo> = Vec::new();
+    let key_triples = manager.get_all(provider_id)?;
+
+    for key_triple in key_triples {
+        if key_triple.app_name() != app_name {
+            continue;
+        }
+
+        let key_info = manager.get(key_triple)?;
+        let key_info = match key_info {
+            Some(key_info) => key_info,
+            _ => continue,
+        };
+
+        keys.push(KeyInfo {
+            provider_id: ProviderID::MbedCrypto,
+            name: key_triple.key_name().to_string(),
+            attributes: key_info.attributes,
+        });
+    }
+
+    Ok(keys)
+}
