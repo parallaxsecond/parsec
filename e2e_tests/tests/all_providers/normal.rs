@@ -116,7 +116,7 @@ fn sign_verify_with_provider_discovery() -> Result<()> {
 #[test]
 fn list_keys() {
     let mut client = TestClient::new();
-    client.set_auth("list_keys test".to_string());
+    client.set_default_auth(Some("list_keys test".to_string()));
 
     let keys = client.list_keys().expect("list_keys failed");
 

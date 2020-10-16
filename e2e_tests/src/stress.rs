@@ -107,7 +107,7 @@ impl StressTestWorker {
         // Create unique client auth
         let auth = generate_string(10);
         info!("Worker with auth `{}` starting.", auth);
-        client.set_auth(auth);
+        client.set_default_auth(Some(auth));
 
         // Create sign/verify key
         let sign_key_name = generate_string(10);

@@ -6,7 +6,9 @@ RUN apt-get update && \
 	apt-get install -y git make gcc python3 python curl wget cmake && \
 	apt-get install -y automake autoconf libtool pkg-config libssl-dev && \
 	# These libraries are needed for bindgen as it uses libclang.so
-	apt-get install -y clang libclang-dev libc6-dev-i386
+	apt-get install -y clang libclang-dev libc6-dev-i386 && \
+	# Install cargo globally to not have to install it for each user for multitenancy tests
+	apt-get install -y cargo
 
 WORKDIR /tmp
 RUN wget https://github.com/ARMmbed/mbed-crypto/archive/mbedcrypto-2.0.0.tar.gz
@@ -44,6 +46,6 @@ RUN cd SoftHSMv2-2.5.0 \
 # and is found with the find_slot_number script.
 RUN softhsm2-util --init-token --slot 0 --label "Parsec Tests" --pin 123456 --so-pin 123456
 
-# Install Rust toolchain
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+# Add users for multitenancy tests
+RUN useradd -m parsec-client-1
+RUN useradd -m parsec-client-2

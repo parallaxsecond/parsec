@@ -3,4 +3,5 @@
 
 mod config;
 mod cross;
+mod multitenancy;
 mod normal;

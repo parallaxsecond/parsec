@@ -28,7 +28,7 @@ fn reuse_to_sign() -> Result<()> {
 fn should_have_been_deleted() {
     let mut client = TestClient::new();
 
-    if client.provider().unwrap() == ProviderID::Tpm {
+    if client.provider() == ProviderID::Tpm {
         // This test does not make sense for the TPM Provider.
         return;
     }
