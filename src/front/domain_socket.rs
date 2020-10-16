@@ -20,8 +20,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 static DEFAULT_SOCKET_PATH: &str = "/run/parsec/parsec.sock";
-const PARSEC_USERNAME: &str = "parsec";
-const PARSEC_GROUPNAME: &str = "parsec-clients";
 
 /// Unix Domain Socket IPC manager
 ///
@@ -37,8 +35,6 @@ pub struct DomainSocketListener {
 impl DomainSocketListener {
     /// Initialise the connection to the Unix socket.
     pub fn new(timeout: Duration, socket_path: PathBuf) -> Result<Self> {
-        DomainSocketListener::check_user_details();
-
         // If Parsec was service activated or not started under systemd, this
         // will return `0`. `1` will be returned in case Parsec is socket activated.
         let listener = match sd_notify::listen_fds()? {
@@ -95,20 +91,6 @@ impl DomainSocketListener {
         };
 
         Ok(Self { listener, timeout })
-    }
-
-    fn check_user_details() {
-        // Check Parsec is running as parsec user
-        if users::get_current_username() != Some(PARSEC_USERNAME.into()) {
-            warn!(
-                "Incorrect user. Parsec should be run as user {}. Follow recommendations to install Parsec securely or clients might not be able to connect.",
-                PARSEC_USERNAME
-            );
-        }
-        // Check Parsec client group exists
-        if users::get_group_by_name(PARSEC_GROUPNAME).is_none() {
-            warn!("{} group does not exist. Follow recommendations to install Parsec securely or clients might not be able to connect.", PARSEC_GROUPNAME);
-        }
     }
 }
 

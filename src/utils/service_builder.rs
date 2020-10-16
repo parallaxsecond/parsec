@@ -134,6 +134,10 @@ impl ServiceBuilder {
 
         let authenticators = build_authenticators(&config.authenticator);
 
+        if authenticators[0].0 == AuthType::Direct {
+            warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
+        }
+
         let backend_handlers = build_backend_handlers(providers, &authenticators)?;
 
         let dispatcher = DispatcherBuilder::new()
