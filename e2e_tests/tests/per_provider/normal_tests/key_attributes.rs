@@ -129,7 +129,7 @@ fn wrong_permitted_algorithm() {
 
     // The Mbed Crypto provider currently does not support other algorithms than the RSA PKCS 1v15
     // signing algorithm with hash when checking policies only.
-    if client.provider().unwrap() == ProviderID::MbedCrypto {
+    if client.provider() == ProviderID::MbedCrypto {
         return;
     }
 

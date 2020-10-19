@@ -10,7 +10,7 @@ pub use parsec_client::core::request_client::RequestClient;
 pub use parsec_client::error;
 
 use log::error;
-use parsec_client::auth::AuthenticationData;
+use parsec_client::auth::Authentication;
 use parsec_client::core::basic_client::BasicClient;
 use parsec_client::core::interface::operations::list_authenticators::AuthenticatorInfo;
 use parsec_client::core::interface::operations::list_keys::KeyInfo;
@@ -24,7 +24,6 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
 };
 use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use parsec_client::core::ipc_handler::unix_socket;
-use parsec_client::core::secrecy::{ExposeSecret, Secret};
 use parsec_client::error::Error;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -36,7 +35,7 @@ const TEST_TIMEOUT: Duration = Duration::from_secs(1);
 #[derive(Debug)]
 pub struct TestClient {
     basic_client: BasicClient,
-    created_keys: Option<HashSet<(String, String, ProviderID)>>,
+    created_keys: Option<HashSet<(String, Option<String>, ProviderID)>>,
 }
 
 fn convert_error(err: Error) -> ResponseStatus {
@@ -52,47 +51,26 @@ fn convert_error(err: Error) -> ResponseStatus {
 
 impl TestClient {
     /// Creates a TestClient instance.
-    ///
-    /// The implicit provider chosen for servicing cryptographic operations is decided through
-    /// a call to `list_providers`, followed by choosing the first non-Core provider.
     pub fn new() -> TestClient {
-        let mut client = TestClient {
-            basic_client: BasicClient::new(AuthenticationData::AppIdentity(Secret::new(
-                String::from("root"),
-            ))),
-            created_keys: Some(HashSet::new()),
-        };
+        let mut basic_client = BasicClient::new_naked();
 
         let ipc_handler = unix_socket::Handler::new(TEST_SOCKET_PATH.into(), Some(TEST_TIMEOUT));
-        client.basic_client.set_ipc_handler(Box::from(ipc_handler));
+        basic_client.set_ipc_handler(Box::from(ipc_handler));
+        basic_client.set_timeout(Some(Duration::from_secs(10)));
 
-        let crypto_provider = client.find_crypto_provider();
-        client.set_provider(crypto_provider);
-        client
-            .basic_client
-            .set_timeout(Some(Duration::from_secs(10)));
+        basic_client.set_default_provider().unwrap();
+        basic_client
+            .set_default_auth(Some(String::from("root")))
+            .unwrap();
 
-        client
-    }
-
-    fn find_crypto_provider(&self) -> ProviderID {
-        let providers = self
-            .basic_client
-            .list_providers()
-            .expect("List providers failed");
-        for provider in providers {
-            if provider.id != ProviderID::Core {
-                return provider.id;
-            }
+        TestClient {
+            basic_client,
+            created_keys: Some(HashSet::new()),
         }
-
-        ProviderID::Core
     }
 
     pub fn is_operation_supported(&mut self, op: Opcode) -> bool {
-        self.list_opcodes(self.provider().unwrap())
-            .unwrap()
-            .contains(&op)
+        self.list_opcodes(self.provider()).unwrap().contains(&op)
     }
 
     /// Manually set the provider to execute the requests.
@@ -101,22 +79,23 @@ impl TestClient {
     }
 
     /// Get client provider
-    pub fn provider(&self) -> Option<ProviderID> {
+    pub fn provider(&self) -> ProviderID {
         self.basic_client.implicit_provider()
     }
 
-    /// Set the client authentication string.
-    pub fn set_auth(&mut self, auth: String) {
-        self.basic_client
-            .set_auth_data(AuthenticationData::AppIdentity(Secret::new(auth)));
+    /// Set the client default authentication method
+    ///
+    /// `auth` will get ignored if the default authenticator is not the Direct one.
+    pub fn set_default_auth(&mut self, auth: Option<String>) {
+        self.basic_client.set_default_auth(auth).unwrap();
     }
 
-    /// Get client authentication string.
-    pub fn auth(&self) -> String {
-        if let AuthenticationData::AppIdentity(app_name) = self.basic_client.auth_data() {
-            app_name.expose_secret().to_string()
+    /// Get client application name if using direct authentication
+    pub fn get_direct_auth(&self) -> Option<String> {
+        if let Authentication::Direct(app_name) = self.basic_client.auth_data() {
+            Some(app_name)
         } else {
-            panic!("Client should always be using AppIdentity-based authentication");
+            None
         }
     }
 
@@ -132,8 +111,8 @@ impl TestClient {
             .psa_generate_key(key_name.clone(), attributes)
             .map_err(convert_error)?;
 
-        let provider = self.provider().unwrap();
-        let auth = self.auth();
+        let provider = self.provider();
+        let auth = self.get_direct_auth();
 
         if let Some(ref mut created_keys) = self.created_keys {
             let _ = created_keys.insert((key_name, auth, provider));
@@ -427,8 +406,8 @@ impl TestClient {
             .psa_import_key(key_name.clone(), &data, attributes)
             .map_err(convert_error)?;
 
-        let provider = self.provider().unwrap();
-        let auth = self.auth();
+        let provider = self.provider();
+        let auth = self.get_direct_auth();
 
         if let Some(ref mut created_keys) = self.created_keys {
             let _ = created_keys.insert((key_name, auth, provider));
@@ -630,8 +609,8 @@ impl TestClient {
             .psa_destroy_key(key_name.clone())
             .map_err(convert_error)?;
 
-        let provider = self.provider().unwrap();
-        let auth = self.auth();
+        let provider = self.provider();
+        let auth = self.get_direct_auth();
 
         if let Some(ref mut created_keys) = self.created_keys {
             let _ = created_keys.remove(&(key_name, auth, provider));
@@ -927,7 +906,7 @@ impl Drop for TestClient {
         if let Some(ref mut created_keys) = self.created_keys {
             for (key_name, auth, provider) in created_keys.clone().iter() {
                 self.set_provider(*provider);
-                self.set_auth(auth.clone());
+                self.set_default_auth(auth.clone());
                 if self.destroy_key(key_name.clone()).is_err() {
                     error!("Failed to destroy key '{}'", key_name);
                 }
