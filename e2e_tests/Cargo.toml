@@ -14,12 +14,9 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.115", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust", rev = "3f7dfc7bd06bea7cb3aa38cdcb270af7b8899f89", features = ["testing"] }
+parsec-client = { version = "0.11.0", features = ["testing"] }
 log = "0.4.11"
 rand = "0.7.3"
-
-[patch.crates-io]
-psa-crypto = { git = "https://github.com/parallaxsecond/rust-psa-crypto", rev = "22a505bedce1c21246ce5c3cf41ea97b0b781830" }
 
 [dev-dependencies]
 ring = "0.16.15"

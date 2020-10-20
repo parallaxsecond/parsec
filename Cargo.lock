@@ -494,8 +494,9 @@ dependencies = [
 
 [[package]]
 name = "parsec-interface"
-version = "0.20.2"
-source = "git+https://github.com/parallaxsecond/parsec-interface-rs.git?rev=4986c0d6b4610237c85eb799fc469d1658c1a2f0#4986c0d6b4610237c85eb799fc469d1658c1a2f0"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2f484fbe6ae8a4f676da07140094a5da5216ac79b17ab72b58ffb31fecfccd8"
 dependencies = [
  "bincode",
  "derivative",
@@ -514,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "parsec-service"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -703,8 +704,9 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto"
-version = "0.5.1"
-source = "git+https://github.com/parallaxsecond/rust-psa-crypto?rev=a1647d64e19e6e46baad708b84c2b5d0d3b543c7#a1647d64e19e6e46baad708b84c2b5d0d3b543c7"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55f044e14e35fbb9495f6949b4da6b6febca2c71c98d936a2f827d3b524e4101"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -714,8 +716,9 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.5.1"
-source = "git+https://github.com/parallaxsecond/rust-psa-crypto?rev=a1647d64e19e6e46baad708b84c2b5d0d3b543c7#a1647d64e19e6e46baad708b84c2b5d0d3b543c7"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e3b11018ea39be545f7a7254449acf010e19db9fe7cf4a71467c32e628938af"
 dependencies = [
  "bindgen",
  "cc",

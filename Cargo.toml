@@ -1,6 +1,6 @@
 [package]
 name = "parsec-service"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Anton Antonov <anton.antonov@arm.com>",
            "Paul Howard <paul.howard@arm.com>",
            "Ionut Mihalcea <ionut.mihalcea@arm.com>",
@@ -19,7 +19,7 @@ path = "src/bin/main.rs"
 
 [dependencies]
 # Set to the newest interface version before releasing
-parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs.git", rev = "4986c0d6b4610237c85eb799fc469d1658c1a2f0" }
+parsec-interface = "0.21.0"
 rand = { version = "0.7.3", features = ["small_rng"], optional = true }
 base64 = "0.12.3"
 uuid = "0.8.1"
@@ -39,15 +39,12 @@ structopt = "0.3.17"
 derivative = "2.1.1"
 version = "3.0.0"
 hex = { version = "0.4.2", optional = true }
-psa-crypto = { version = "0.5.1", default-features = false, features = ["operations"], optional = true }
+psa-crypto = { version = "0.6.0", default-features = false, features = ["operations"], optional = true }
 zeroize = { version = "1.1.0", features = ["zeroize_derive"] }
 picky-asn1-x509 = { version = "0.3.2", optional = true }
 users = "0.10.0"
 libc = "0.2.77"
 anyhow = "1.0.32"
-
-[patch.crates-io]
-psa-crypto = { git = "https://github.com/parallaxsecond/rust-psa-crypto", rev = "a1647d64e19e6e46baad708b84c2b5d0d3b543c7" }
 
 [dev-dependencies]
 rand = { version = "0.7.3", features = ["small_rng"] }
