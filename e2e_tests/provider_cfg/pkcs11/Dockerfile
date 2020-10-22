@@ -1,22 +1,28 @@
 FROM ubuntu:18.04
 
 RUN apt-get update && \
-	apt-get install -y wget automake autoconf libtool pkg-config && \
-    apt-get install -y curl libssl-dev libgcc1 && \
-	apt-get install -y git make gcc python3 python curl wget libgcc1 cmake && \
+	apt-get install -y wget automake autoconf libtool && \
+    apt-get install -y curl libgcc1 && \
+	apt-get install -y git make gcc python3 python curl cmake && \
 	# These libraries are needed for bindgen as it uses libclang.so
 	apt-get install -y clang libclang-dev && \
 	# Needed for Open SSL
 	apt-get install -y pkg-config libssl-dev
 
 WORKDIR /tmp
-RUN wget https://github.com/opendnssec/SoftHSMv2/archive/2.5.0.tar.gz
-RUN tar xf 2.5.0.tar.gz
-RUN cd SoftHSMv2-2.5.0 \
-		&& sh autogen.sh \
-		&& ./configure --disable-gost \
-		&& make \
-		&& make install
+RUN git clone https://github.com/opendnssec/SoftHSMv2.git \
+	&& cd SoftHSMv2 \
+	&& git reset --hard 20a53bd083a6134ce2230f80edda5dc8be0366bd
+
+RUN cd SoftHSMv2 \
+	&& sh autogen.sh \
+	# Autogen might fail because of some limitations of autoconf, see:
+	# https://bugzilla.redhat.com/show_bug.cgi?id=1826935#c3
+	|| sh autogen.sh
+RUN cd SoftHSMv2 \
+	&& ./configure --disable-gost \
+	&& make \
+	&& make install
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

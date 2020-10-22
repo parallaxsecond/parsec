@@ -315,7 +315,7 @@ impl ServiceChecker {
     }
 
     fn check_sign(client: &mut TestClient) {
-        let sign_key_name = String::from("checking_key");
+        let sign_key_name = String::from("sign_checking_key");
         info!("Verifying signing");
         client
             .generate_rsa_sign_key(sign_key_name.clone())
@@ -335,11 +335,11 @@ impl ServiceChecker {
     }
 
     fn check_encrypt(client: &mut TestClient) {
-        let encr_key_name = String::from("checking_key");
-        info!("Verifying signing");
+        let encr_key_name = String::from("encrypt_checking_key");
+        info!("Verifying encryption");
         client
             .generate_rsa_encryption_keys_rsapkcs1v15crypt(encr_key_name.clone())
-            .expect("Failed to create signing key");
+            .expect("Failed to create encryption key");
 
         let ciphertext = client
             .asymmetric_encrypt_message_with_rsapkcs1v15(encr_key_name.clone(), vec![0xa5; 16])

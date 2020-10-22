@@ -70,8 +70,6 @@ pub struct Provider {
     slot_number: CK_SLOT_ID,
     // Some PKCS 11 devices do not need a pin, the None variant means that.
     user_pin: Option<SecretString>,
-    // TODO: Figure out why the SoftHSM2 throws errors when multithreading and remove this when fixed.
-    temp_mutex: Mutex<()>,
     software_public_operations: bool,
 }
 
@@ -95,7 +93,6 @@ impl Provider {
             backend,
             slot_number: slot_number as CK_SLOT_ID,
             user_pin,
-            temp_mutex: Mutex::new(()),
             software_public_operations,
         };
         {
@@ -233,7 +230,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_generate_key ingress");
         self.psa_generate_key_internal(app_name, op)
     }
@@ -243,7 +239,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_import_key ingress");
         self.psa_import_key_internal(app_name, op)
     }
@@ -253,7 +248,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_export_public_key ingress");
         self.psa_export_public_key_internal(app_name, op)
     }
@@ -263,7 +257,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_destroy_key ingress");
         self.psa_destroy_key_internal(app_name, op)
     }
@@ -273,7 +266,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_sign_hash ingress");
         self.psa_sign_hash_internal(app_name, op)
     }
@@ -283,7 +275,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         if self.software_public_operations {
             trace!("software_psa_verify_hash ingress");
             self.software_psa_verify_hash_internal(app_name, op)
@@ -298,7 +289,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         if self.software_public_operations {
             trace!("software_psa_asymmetric_encrypt ingress");
             self.software_psa_asymmetric_encrypt_internal(app_name, op)
@@ -313,7 +303,6 @@ impl Provide for Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let _guard = self.temp_mutex.lock().expect("temp_mutex poisoned");
         trace!("psa_asymmetric_decrypt ingress");
         self.psa_asymmetric_decrypt_internal(app_name, op)
     }
