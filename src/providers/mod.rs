@@ -23,6 +23,9 @@ pub mod mbed_crypto;
 #[cfg(feature = "tpm-provider")]
 pub mod tpm;
 
+#[cfg(feature = "trusted-service-provider")]
+pub mod trusted_service;
+
 /// Provider configuration structure
 /// For providers configs in Parsec config.toml we use a format similar
 /// to the one described in the Internally Tagged Enum representation
@@ -59,6 +62,11 @@ pub enum ProviderConfig {
         /// Owner Hierarchy Authentication
         owner_hierarchy_auth: String,
     },
+    /// Trusted Service provider configuration
+    TrustedService {
+        /// Name of Key Info Manager to use
+        key_info_manager: String,
+    },
 }
 
 impl ProviderConfig {
@@ -77,6 +85,10 @@ impl ProviderConfig {
                 ref key_info_manager,
                 ..
             } => key_info_manager,
+            ProviderConfig::TrustedService {
+                ref key_info_manager,
+                ..
+            } => key_info_manager,
         }
     }
     /// Get the Provider ID of the provider
@@ -85,6 +97,7 @@ impl ProviderConfig {
             ProviderConfig::MbedCrypto { .. } => ProviderID::MbedCrypto,
             ProviderConfig::Pkcs11 { .. } => ProviderID::Pkcs11,
             ProviderConfig::Tpm { .. } => ProviderID::Tpm,
+            ProviderConfig::TrustedService { .. } => ProviderID::TrustedService,
         }
     }
 }
