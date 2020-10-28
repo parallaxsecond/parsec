@@ -563,6 +563,7 @@ dependencies = [
  "picky-asn1-der",
  "picky-asn1-x509",
  "pkcs11",
+ "prost",
  "prost-build",
  "psa-crypto",
  "rand 0.8.2",
