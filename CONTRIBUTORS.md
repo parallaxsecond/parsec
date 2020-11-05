@@ -13,3 +13,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Hugues de Valon (@hug-dev)
 * Jesper Brynolf (@Superhepper)
 * Samuel Bailey (@sbailey-arm)
+* Patrick Uiterwijk (@puiterwijk)
