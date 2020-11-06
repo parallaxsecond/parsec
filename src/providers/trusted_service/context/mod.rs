@@ -1,10 +1,16 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use log::info;
+use log::{error, info, trace};
+use prost::Message;
+use psa_crypto::types::status::{Error as PsaError, Status};
+use std::convert::TryInto;
 use std::ffi::{c_void, CString};
 use std::io::{Error, ErrorKind};
 use std::ptr::null_mut;
+use std::slice;
+use std::sync::Mutex;
 use ts_binding::*;
+use ts_protobuf::Opcode;
 
 #[allow(
     non_snake_case,
@@ -24,6 +30,8 @@ pub mod ts_binding {
     include!(concat!(env!("OUT_DIR"), "/ts_bindings.rs"));
 }
 
+mod key_management;
+
 #[allow(
     non_snake_case,
     non_camel_case_types,
@@ -42,11 +50,17 @@ mod ts_protobuf {
     include!(concat!(env!("OUT_DIR"), "/ts_crypto.rs"));
 }
 
+// TODO:
+// * RPC caller error handling
+// * proper logging
+// * docs
+
 #[derive(Debug)]
 pub struct Context {
     rpc_caller: *mut rpc_caller,
     service_context: *mut service_context,
     rpc_session_handle: *mut c_void,
+    call_mutex: Mutex<()>,
 }
 
 impl Context {
@@ -82,9 +96,69 @@ impl Context {
             rpc_caller,
             service_context,
             rpc_session_handle,
+            call_mutex: Mutex::new(()),
         };
 
         Ok(ctx)
+    }
+
+    fn send_request<T: Message + Default>(
+        &self,
+        req: &impl Message,
+        opcode: Opcode,
+        rpc_cl: *mut rpc_caller,
+    ) -> Result<T, PsaError> {
+        let _mutex_guard = self.call_mutex.try_lock().expect("Call mutex poisoned");
+        info!("Beginning call to Trusted Service");
+
+        let mut buf_out = null_mut();
+        let call_handle = unsafe { rpc_caller_begin(rpc_cl, &mut buf_out, req.encoded_len()) };
+        if call_handle == null_mut() {
+            error!("Call handle was null");
+            return Err(PsaError::CommunicationFailure);
+        } else if buf_out == null_mut() {
+            error!("Call buffer was null");
+            return Err(PsaError::CommunicationFailure);
+        }
+        let mut buf_out = unsafe { slice::from_raw_parts_mut(buf_out, req.encoded_len()) };
+        req.encode(&mut buf_out).map_err(|e| {
+            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            format_error!("Failed to serialize Protobuf request", e);
+            PsaError::CommunicationFailure
+        })?;
+
+        trace!("Invoking RPC call");
+        let mut opstatus = 0;
+        let mut resp = T::default();
+        let mut resp_buf = null_mut();
+        let mut resp_buf_size = 0;
+        let status = unsafe {
+            rpc_caller_invoke(
+                rpc_cl,
+                call_handle,
+                i32::from(opcode).try_into().unwrap(),
+                &mut opstatus,
+                &mut resp_buf,
+                &mut resp_buf_size,
+            )
+        };
+        if status != 0 || opstatus != 0 {
+            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            error!(
+                "Error on call invocation: status = {}, opstatus = {}",
+                status, opstatus as i32
+            );
+            Status::from(opstatus as i32).to_result()?;
+        }
+        let resp_buf = unsafe { slice::from_raw_parts_mut(resp_buf, resp_buf_size) };
+        resp.merge(&*resp_buf).map_err(|e| {
+            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            format_error!("Failed to serialize Protobuf request", e);
+            PsaError::CommunicationFailure
+        })?;
+        unsafe { rpc_caller_end(rpc_cl, call_handle) };
+
+        Ok(resp)
     }
 }
 

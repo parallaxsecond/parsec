@@ -110,7 +110,7 @@ impl ProviderConfig {
             ProviderConfig::CryptoAuthLib {
                 ref key_info_manager,
                 ..
-            } =
+            } => key_info_manager,
             ProviderConfig::TrustedService {
                 ref key_info_manager,
                 ..

@@ -81,12 +81,20 @@ fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
     Ok(new_key_id)
 }
 
-fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
+/// Remove the info for a key triple from the Key Info Manager
+pub fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
     // ID Counter not affected as overhead and extra complication deemed unnecessary
     match store_handle.remove(key_triple) {
         Ok(_) => Ok(()),
         Err(string) => Err(key_info_managers::to_response_status(string)),
     }
+}
+
+/// Check whether any key info exists for a given key triple in the Key Info Manager
+pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
+    store_handle
+        .exists(key_triple)
+        .map_err(key_info_managers::to_response_status)
 }
 
 impl Provider {

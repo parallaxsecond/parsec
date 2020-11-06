@@ -31,7 +31,7 @@ mod asym_sign;
 mod generate_random;
 mod hash;
 mod key_agreement;
-mod key_management;
+pub(super) mod key_management;
 
 const SUPPORTED_OPCODES: [Opcode; 15] = [
     Opcode::PsaGenerateKey,
