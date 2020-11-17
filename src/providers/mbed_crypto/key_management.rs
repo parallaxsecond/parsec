@@ -42,7 +42,7 @@ pub fn get_key_id(
 }
 
 /// Creates a new PSA Key ID and stores it in the Key Info Manager.
-fn create_key_id(
+pub fn create_key_id(
     key_triple: KeyTriple,
     key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
@@ -76,7 +76,8 @@ fn create_key_id(
     }
 }
 
-fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
+/// Remove the info for a key triple from the Key Info Manager
+pub fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
     // ID Counter not affected as overhead and extra complication deemed unnecessary
     match store_handle.remove(key_triple) {
         Ok(_) => Ok(()),
@@ -84,6 +85,7 @@ fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -
     }
 }
 
+/// Check whether any key info exists for a given key triple in the Key Info Manager
 pub fn key_info_exists(key_triple: &KeyTriple, store_handle: &dyn ManageKeyInfo) -> Result<bool> {
     store_handle
         .exists(key_triple)
