@@ -12,7 +12,9 @@ use context::Context;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
-use parsec_interface::operations::{psa_destroy_key, psa_generate_key};
+use parsec_interface::operations::{
+    psa_destroy_key, psa_generate_key, psa_sign_hash, psa_verify_hash,
+};
 use parsec_interface::requests::{Opcode, ProviderID, Result};
 use psa_crypto::types::key;
 use std::collections::HashSet;
@@ -22,6 +24,7 @@ use std::sync::{
 };
 use uuid::Uuid;
 
+mod asym_sign;
 mod context;
 mod key_management;
 
@@ -141,6 +144,24 @@ impl Provide for Provider {
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
         self.psa_destroy_key_internal(app_name, op)
+    }
+
+    fn psa_sign_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_sign_hash::Operation,
+    ) -> Result<psa_sign_hash::Result> {
+        trace!("psa_sign_hash ingress");
+        self.psa_sign_hash_internal(app_name, op)
+    }
+
+    fn psa_verify_hash(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_hash::Operation,
+    ) -> Result<psa_verify_hash::Result> {
+        trace!("psa_verify_hash ingress");
+        self.psa_verify_hash_internal(app_name, op)
     }
 }
 
