@@ -10,7 +10,7 @@ use std::ptr::null_mut;
 use std::slice;
 use std::sync::Mutex;
 use ts_binding::*;
-use ts_protobuf::Opcode;
+use ts_protobuf::{CloseKeyIn, GetOpcode, OpenKeyIn, OpenKeyOut, SetHandle};
 
 #[allow(
     non_snake_case,
@@ -30,6 +30,7 @@ pub mod ts_binding {
     include!(concat!(env!("OUT_DIR"), "/ts_bindings.rs"));
 }
 
+mod asym_sign;
 mod key_management;
 
 #[allow(
@@ -48,6 +49,59 @@ mod key_management;
 )]
 mod ts_protobuf {
     include!(concat!(env!("OUT_DIR"), "/ts_crypto.rs"));
+
+    pub trait GetOpcode {
+        fn opcode(&self) -> Opcode;
+    }
+
+    macro_rules! opcode_impl {
+        ($type:ty, $opcode:ident) => {
+            impl GetOpcode for $type {
+                fn opcode(&self) -> Opcode {
+                    Opcode::$opcode
+                }
+            }
+        };
+
+        ($type_in:ty, $type_out:ty, $opcode:ident) => {
+            impl GetOpcode for $type_in {
+                fn opcode(&self) -> Opcode {
+                    Opcode::$opcode
+                }
+            }
+
+            impl GetOpcode for $type_out {
+                fn opcode(&self) -> Opcode {
+                    Opcode::$opcode
+                }
+            }
+        };
+    }
+
+    opcode_impl!(OpenKeyIn, OpenKeyOut, OpenKey);
+    opcode_impl!(CloseKeyIn, CloseKey);
+    opcode_impl!(GenerateKeyIn, GenerateKeyOut, GenerateKey);
+    opcode_impl!(DestroyKeyIn, DestroyKeyOut, DestroyKey);
+    opcode_impl!(SignHashIn, SignHashOut, SignHash);
+    opcode_impl!(VerifyHashIn, VerifyHashOut, VerifyHash);
+
+    pub trait SetHandle {
+        fn set_handle(&mut self, handle: u32);
+    }
+
+    macro_rules! set_handle_impl {
+        ($type:ty) => {
+            impl SetHandle for $type {
+                fn set_handle(&mut self, handle: u32) {
+                    self.handle = handle;
+                }
+            }
+        };
+    }
+
+    set_handle_impl!(DestroyKeyIn);
+    set_handle_impl!(SignHashIn);
+    set_handle_impl!(VerifyHashIn);
 }
 
 // TODO:
@@ -65,15 +119,27 @@ pub struct Context {
 
 impl Context {
     pub fn connect() -> anyhow::Result<Self> {
-        info!("Querying for crypto Trusted Services");
+        // Initialise service locator. Can be called multiple times,
+        // but *must* be called at least once.
+        unsafe { service_locator_init() };
+
+        info!("Obtaining a crypto Trusted Service context.");
         let mut status = 0;
         let service_context = unsafe {
             service_locator_query(
-                CString::new("sn:tf.org:crypto:0").unwrap().into_raw(),
+                CString::new("sn:trustedfirmware.org:crypto:0")
+                    .unwrap()
+                    .into_raw(),
                 &mut status,
             )
         };
-        if service_context == null_mut() || status != 0 {
+        if service_context == null_mut() {
+            return Err(Error::new(
+                ErrorKind::Other,
+                "Failed to obtain a Trusted Service context",
+            )
+            .into());
+        } else if status != 0 {
             return Err(Error::new(
                 ErrorKind::Other,
                 format!(
@@ -104,15 +170,14 @@ impl Context {
 
     fn send_request<T: Message + Default>(
         &self,
-        req: &impl Message,
-        opcode: Opcode,
-        rpc_cl: *mut rpc_caller,
+        req: &(impl Message + GetOpcode),
     ) -> Result<T, PsaError> {
         let _mutex_guard = self.call_mutex.try_lock().expect("Call mutex poisoned");
         info!("Beginning call to Trusted Service");
 
         let mut buf_out = null_mut();
-        let call_handle = unsafe { rpc_caller_begin(rpc_cl, &mut buf_out, req.encoded_len()) };
+        let call_handle =
+            unsafe { rpc_caller_begin(self.rpc_caller, &mut buf_out, req.encoded_len()) };
         if call_handle == null_mut() {
             error!("Call handle was null");
             return Err(PsaError::CommunicationFailure);
@@ -122,7 +187,7 @@ impl Context {
         }
         let mut buf_out = unsafe { slice::from_raw_parts_mut(buf_out, req.encoded_len()) };
         req.encode(&mut buf_out).map_err(|e| {
-            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             format_error!("Failed to serialize Protobuf request", e);
             PsaError::CommunicationFailure
         })?;
@@ -134,31 +199,47 @@ impl Context {
         let mut resp_buf_size = 0;
         let status = unsafe {
             rpc_caller_invoke(
-                rpc_cl,
+                self.rpc_caller,
                 call_handle,
-                i32::from(opcode).try_into().unwrap(),
+                i32::from(req.opcode()).try_into().unwrap(),
                 &mut opstatus,
                 &mut resp_buf,
                 &mut resp_buf_size,
             )
         };
         if status != 0 || opstatus != 0 {
-            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             error!(
                 "Error on call invocation: status = {}, opstatus = {}",
-                status, opstatus as i32
+                status, opstatus
             );
-            Status::from(opstatus as i32).to_result()?;
+            Status::from(opstatus).to_result()?;
         }
         let resp_buf = unsafe { slice::from_raw_parts_mut(resp_buf, resp_buf_size) };
         resp.merge(&*resp_buf).map_err(|e| {
-            unsafe { rpc_caller_end(rpc_cl, call_handle) };
+            unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             format_error!("Failed to serialize Protobuf request", e);
             PsaError::CommunicationFailure
         })?;
-        unsafe { rpc_caller_end(rpc_cl, call_handle) };
+        unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
 
         Ok(resp)
+    }
+
+    fn send_request_with_key<T: Message + Default>(
+        &self,
+        mut req: impl Message + GetOpcode + SetHandle,
+        key_id: u32,
+    ) -> Result<T, PsaError> {
+        let proto_req = OpenKeyIn { id: key_id };
+        let OpenKeyOut { handle } = self.send_request(&proto_req)?;
+        req.set_handle(handle);
+        let res = self.send_request(&req);
+        let proto_req = CloseKeyIn { handle };
+        let res_close = self.send_request(&proto_req);
+        let res = res?;
+        res_close?;
+        Ok(res)
     }
 }
 
@@ -166,7 +247,7 @@ impl Drop for Context {
     fn drop(&mut self) {
         unsafe { service_context_close(self.service_context, self.rpc_session_handle) };
 
-        unsafe { service_locator_relinquish(self.service_context) };
+        unsafe { service_context_relinquish(self.service_context) };
     }
 }
 
