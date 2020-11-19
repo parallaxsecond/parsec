@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::ts_protobuf::{
     CloseKeyIn, DestroyKeyIn, DestroyKeyOut, GenerateKeyIn, GenerateKeyOut, KeyAttributes,
-    KeyLifetime, KeyPolicy, Opcode, OpenKeyIn, OpenKeyOut,
+    KeyLifetime, KeyPolicy, OpenKeyIn, OpenKeyOut,
 };
 use super::Context;
 use log::info;
@@ -26,37 +26,34 @@ impl Context {
                 }),
             }),
         };
-        let GenerateKeyOut { handle } =
-            self.send_request(&proto_req, Opcode::GenerateKey, self.rpc_caller)?;
+        let GenerateKeyOut { handle } = self.send_request(&proto_req)?;
 
         let proto_req = CloseKeyIn { handle };
-        self.send_request(&proto_req, Opcode::CloseKey, self.rpc_caller)?;
+        self.send_request(&proto_req)?;
 
         Ok(())
     }
 
-    pub fn destroy_key(&self, id: u32) -> Result<(), ResponseStatus> {
+    pub fn destroy_key(&self, key_id: u32) -> Result<(), ResponseStatus> {
         info!("Handling DestroyKey request");
-        if !self.check_key_exists(id)? {
+        if !self.check_key_exists(key_id)? {
             return Err(ResponseStatus::PsaErrorDoesNotExist);
         }
-        let proto_req = OpenKeyIn { id };
-        let OpenKeyOut { handle } =
-            self.send_request(&proto_req, Opcode::OpenKey, self.rpc_caller)?;
+        let proto_req = OpenKeyIn { id: key_id };
+        let OpenKeyOut { handle } = self.send_request(&proto_req)?;
 
         let proto_req = DestroyKeyIn { handle };
-        let _proto_resp: DestroyKeyOut =
-            self.send_request(&proto_req, Opcode::DestroyKey, self.rpc_caller)?;
+        let _proto_resp: DestroyKeyOut = self.send_request(&proto_req)?;
         Ok(())
     }
 
-    pub fn check_key_exists(&self, id: u32) -> Result<bool, Error> {
+    pub fn check_key_exists(&self, key_id: u32) -> Result<bool, Error> {
         info!("Handling CheckKey request");
-        let proto_req = OpenKeyIn { id };
-        match self.send_request(&proto_req, Opcode::OpenKey, self.rpc_caller) {
+        let proto_req = OpenKeyIn { id: key_id };
+        match self.send_request(&proto_req) {
             Ok(OpenKeyOut { handle }) => {
                 let proto_req = CloseKeyIn { handle };
-                self.send_request(&proto_req, Opcode::CloseKey, self.rpc_caller)?;
+                self.send_request(&proto_req)?;
                 Ok(true)
             }
             Err(e) => {

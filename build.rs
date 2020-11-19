@@ -5,12 +5,12 @@ use std::io::{Error, ErrorKind, Result};
 use std::path::{Path, PathBuf};
 
 fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
-    let header = ts_include_dir.clone() + "/service/locator/service_locator.h";
+    let header = ts_include_dir.clone() + "/service/locator/interface/service_locator.h";
 
     println!("cargo:rerun-if-changed={}", header);
 
     let bindings = bindgen::Builder::default()
-        .clang_arg(format!("-I{}", ts_include_dir))
+        .clang_arg(format!("-I{}", ts_include_dir + "/rpc/common/interface"))
         .rustfmt_bindings(true)
         .header(header)
         .generate_comments(false)
@@ -29,7 +29,7 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     println!("cargo:rustc-link-lib=dylib=c++");
 
     println!("cargo:rustc-link-search=native=/usr/local/lib");
-    println!("cargo:rustc-link-lib=static=ts-lib");
+    println!("cargo:rustc-link-lib=dylib=ts");
     // TODO: Remove once we can use the full TS stack and this isn't needed
     println!("cargo:rustc-link-lib=static=mbedcrypto");
     println!("cargo:rustc-link-lib=static=protobuf-nanopb");
