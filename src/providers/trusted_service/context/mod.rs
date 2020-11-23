@@ -84,6 +84,8 @@ mod ts_protobuf {
     opcode_impl!(DestroyKeyIn, DestroyKeyOut, DestroyKey);
     opcode_impl!(SignHashIn, SignHashOut, SignHash);
     opcode_impl!(VerifyHashIn, VerifyHashOut, VerifyHash);
+    opcode_impl!(ImportKeyIn, ImportKeyOut, ImportKey);
+    opcode_impl!(ExportPublicKeyIn, ExportPublicKeyOut, ExportPublicKey);
 
     pub trait SetHandle {
         fn set_handle(&mut self, handle: u32);
@@ -102,6 +104,7 @@ mod ts_protobuf {
     set_handle_impl!(DestroyKeyIn);
     set_handle_impl!(SignHashIn);
     set_handle_impl!(VerifyHashIn);
+    set_handle_impl!(ExportPublicKeyIn);
 }
 
 // TODO:
@@ -231,12 +234,12 @@ impl Context {
         mut req: impl Message + GetOpcode + SetHandle,
         key_id: u32,
     ) -> Result<T, PsaError> {
-        let proto_req = OpenKeyIn { id: key_id };
-        let OpenKeyOut { handle } = self.send_request(&proto_req)?;
+        let open_req = OpenKeyIn { id: key_id };
+        let OpenKeyOut { handle } = self.send_request(&open_req)?;
         req.set_handle(handle);
         let res = self.send_request(&req);
-        let proto_req = CloseKeyIn { handle };
-        let res_close = self.send_request(&proto_req);
+        let close_req = CloseKeyIn { handle };
+        let res_close = self.send_request(&close_req);
         let res = res?;
         res_close?;
         Ok(res)
