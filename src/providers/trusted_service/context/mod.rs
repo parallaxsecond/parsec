@@ -50,6 +50,8 @@ mod key_management;
 mod ts_protobuf {
     include!(concat!(env!("OUT_DIR"), "/ts_crypto.rs"));
 
+    /// Trait for associating an Opcode with each operation type
+    /// and obtaining it in a generic way.
     pub trait GetOpcode {
         fn opcode(&self) -> Opcode;
     }
@@ -87,6 +89,8 @@ mod ts_protobuf {
     opcode_impl!(ImportKeyIn, ImportKeyOut, ImportKey);
     opcode_impl!(ExportPublicKeyIn, ExportPublicKeyOut, ExportPublicKey);
 
+    /// Trait allowing the handle of opened-key-dependent operations
+    /// to be set in a generic way.
     pub trait SetHandle {
         fn set_handle(&mut self, handle: u32);
     }
@@ -110,8 +114,28 @@ mod ts_protobuf {
 // TODO:
 // * RPC caller error handling
 // * proper logging
-// * docs
 
+/// Context for interacting with the crypto Trusted Service (TS).
+///
+/// The context maintains the state necessary for calls to be made
+/// and acts as a bridge between the two encoding types: Rust native
+/// PSA Crypto and the IPC mechanism used by the Normal World userland
+/// TS endpoint.
+///
+/// `Context` does not surface the full operation sequence demanded by the
+/// TS. Keys need not be opened before use - only referenced by their creation
+/// ID - and therefore not closed either.
+///
+/// # Safety
+///
+/// `Sync` and `Send` are manually implemented on this type since it
+/// contains pointers to the structures that perform various tasks
+/// and which act as the underlying client of `Context`. The use of
+/// these pointers is not thread-safe, so in order to allow `Context`
+/// to be used across threads, a `Mutex` is used to lock down all calls.
+///
+/// Upon being dropped, all the resources are released and no prior cleanup
+/// is required from the caller.
 #[derive(Debug)]
 pub struct Context {
     rpc_caller: *mut rpc_caller,
@@ -121,6 +145,7 @@ pub struct Context {
 }
 
 impl Context {
+    /// Establish a connection to the Trusted Service to obtain a working context.
     pub fn connect() -> anyhow::Result<Self> {
         // Initialise service locator. Can be called multiple times,
         // but *must* be called at least once.
@@ -171,11 +196,14 @@ impl Context {
         Ok(ctx)
     }
 
+    // Serialize and send a request and deserialize the response back to
+    // the caller. The caller is responsible for explicitly declaring
+    // the response type if its contents are of interest.
     fn send_request<T: Message + Default>(
         &self,
         req: &(impl Message + GetOpcode),
     ) -> Result<T, PsaError> {
-        let _mutex_guard = self.call_mutex.try_lock().expect("Call mutex poisoned");
+        let _mutex_guard = self.call_mutex.lock().expect("Call mutex poisoned");
         info!("Beginning call to Trusted Service");
 
         let mut buf_out = null_mut();
@@ -229,6 +257,9 @@ impl Context {
         Ok(resp)
     }
 
+    // Send a request that requires a key, given the key's ID.
+    // This function is responsible for opening the key, for sending the
+    // request with `send_request` and for closing the key afterwards.
     fn send_request_with_key<T: Message + Default>(
         &self,
         mut req: impl Message + GetOpcode + SetHandle,
@@ -236,9 +267,11 @@ impl Context {
     ) -> Result<T, PsaError> {
         let open_req = OpenKeyIn { id: key_id };
         let OpenKeyOut { handle } = self.send_request(&open_req)?;
+
         req.set_handle(handle);
         let res = self.send_request(&req);
         let close_req = CloseKeyIn { handle };
+
         let res_close = self.send_request(&close_req);
         let res = res?;
         res_close?;
