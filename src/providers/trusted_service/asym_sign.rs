@@ -20,7 +20,7 @@ impl Provider {
         Ok(psa_sign_hash::Result {
             signature: self
                 .context
-                .asym_sign(key_id, op.hash.to_vec(), op.alg)?
+                .sign_hash(key_id, op.hash.to_vec(), op.alg)?
                 .into(),
         })
     }
@@ -35,7 +35,7 @@ impl Provider {
         let key_id = key_management::get_key_id(&key_triple, &*store_handle)?;
 
         self.context
-            .asym_verify(key_id, op.hash.to_vec(), op.signature.to_vec(), op.alg)?;
+            .verify_hash(key_id, op.hash.to_vec(), op.signature.to_vec(), op.alg)?;
 
         Ok(psa_verify_hash::Result {})
     }

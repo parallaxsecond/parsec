@@ -8,13 +8,14 @@ use parsec_interface::requests::ResponseStatus;
 use std::convert::TryInto;
 
 impl Context {
-    pub fn asym_sign(
+    /// Sign a hash with an asymmetric key given its ID and the signing algorithm.
+    pub fn sign_hash(
         &self,
         key_id: u32,
         hash: Vec<u8>,
         algorithm: AsymmetricSignature,
     ) -> Result<Vec<u8>, ResponseStatus> {
-        info!("Handling GenerateKey request");
+        info!("Handling SignHash request");
         let proto_req = SignHashIn {
             handle: 0,
             hash,
@@ -25,14 +26,15 @@ impl Context {
         Ok(signature)
     }
 
-    pub fn asym_verify(
+    /// Verify a signature on a hash with an asymmetric key given its ID and the signing algorithm.
+    pub fn verify_hash(
         &self,
         key_id: u32,
         hash: Vec<u8>,
         signature: Vec<u8>,
         algorithm: AsymmetricSignature,
     ) -> Result<(), ResponseStatus> {
-        info!("Handling GenerateKey request");
+        info!("Handling VerifyHash request");
         let proto_req = VerifyHashIn {
             handle: 0,
             hash,

@@ -13,6 +13,10 @@ use std::convert::{TryFrom, TryInto};
 use zeroize::Zeroize;
 
 impl Context {
+    /// Generate a key given its attributes and ID
+    ///
+    /// Lifetime flexibility is not supported: the `lifetime` parameter in the key
+    /// attributes is essentially ignored and replaced with `KeyLifetime::Persistent`.
     pub fn generate_key(&self, key_attrs: Attributes, id: u32) -> Result<(), ResponseStatus> {
         info!("Handling GenerateKey request");
         let generate_req = GenerateKeyIn {
@@ -35,27 +39,49 @@ impl Context {
         Ok(())
     }
 
+    /// Import a key given its attributes, ID, and key data.
+    ///
+    /// Lifetime flexibility is not supported: the `lifetime` parameter in the key
+    /// attributes is essentially ignored and replaced with `KeyLifetime::Persistent`.
+    ///
+    /// Key data must be in the format described by the PSA Crypto format.
     pub fn import_key(
         &self,
         key_attrs: Attributes,
         id: u32,
         key_data: &[u8],
     ) -> Result<(), ResponseStatus> {
+        info!("Handling ImportKey request");
+        let mut data = key_data.to_vec();
         let mut import_req = ImportKeyIn {
             attributes: Some(KeyAttributes {
-                r#type: u16::try_from(key_attrs.key_type)? as u32,
-                key_bits: key_attrs.bits.try_into()?,
+                r#type: u16::try_from(key_attrs.key_type).map_err(|e| {
+                    data.zeroize();
+                    e
+                })? as u32,
+                key_bits: key_attrs.bits.try_into().map_err(|e| {
+                    data.zeroize();
+                    e
+                })?,
                 lifetime: KeyLifetime::Persistent as u32,
                 id,
                 policy: Some(KeyPolicy {
-                    usage: key_attrs.policy.usage_flags.try_into()?,
-                    alg: key_attrs.policy.permitted_algorithms.try_into()?,
+                    usage: key_attrs.policy.usage_flags.into(),
+                    alg: key_attrs
+                        .policy
+                        .permitted_algorithms
+                        .try_into()
+                        .map_err(|e| {
+                            data.zeroize();
+                            e
+                        })?,
                 }),
             }),
-            data: key_data.to_vec(),
+            data,
         };
-        let ImportKeyOut { handle } = self.send_request(&import_req)?;
+        let res = self.send_request(&import_req);
         import_req.data.zeroize();
+        let ImportKeyOut { handle } = res?;
 
         let close_req = CloseKeyIn { handle };
         self.send_request(&close_req)?;
@@ -63,10 +89,16 @@ impl Context {
         Ok(())
     }
 
+    /// Export the public part of a key given its ID.
+    ///
+    /// The public key data is returned in the format specified by the PSA Crypto
+    /// format.
     pub fn export_public_key(&self, id: u32) -> Result<Vec<u8>, ResponseStatus> {
+        info!("Handling ExportPublicKey request");
         Ok(self.send_request_with_key(ExportPublicKeyIn::default(), id)?)
     }
 
+    /// Destroy a key given its ID.
     pub fn destroy_key(&self, key_id: u32) -> Result<(), ResponseStatus> {
         info!("Handling DestroyKey request");
         if !self.check_key_exists(key_id)? {
@@ -80,6 +112,7 @@ impl Context {
         Ok(())
     }
 
+    /// Verify if a key with a given ID exists.
     pub fn check_key_exists(&self, key_id: u32) -> Result<bool, Error> {
         info!("Handling CheckKey request");
         let open_req = OpenKeyIn { id: key_id };

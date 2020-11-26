@@ -5,20 +5,20 @@
 //! This provider is backed by a crypto Trusted Service deployed in TrustZone
 use super::mbed_crypto::key_management as mbed_crypto_key_management;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
-use crate::key_info_managers::ManageKeyInfo;
+use crate::key_info_managers::{self, KeyTriple, ManageKeyInfo};
 use crate::providers::Provide;
 use context::Context;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash,
-    psa_verify_hash,
+    list_keys, psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_sign_hash, psa_verify_hash,
 };
-use parsec_interface::requests::{Opcode, ProviderID, Result};
+use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::key;
 use std::collections::HashSet;
+use std::ops::Deref;
 use std::sync::{
     atomic::{AtomicU32, Ordering},
     Arc, RwLock,
@@ -29,13 +29,19 @@ mod asym_sign;
 mod context;
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 2] = [Opcode::PsaDestroyKey, Opcode::PsaGenerateKey];
+const SUPPORTED_OPCODES: [Opcode; 6] = [
+    Opcode::PsaDestroyKey,
+    Opcode::PsaGenerateKey,
+    Opcode::PsaSignHash,
+    Opcode::PsaVerifyHash,
+    Opcode::PsaImportKey,
+    Opcode::PsaExportPublicKey,
+];
 
 /// Trusted Service provider structure
 ///
-/// Currently the provider only supports volatile keys due to limitations in the stack
-/// underneath us. Therefore none of the key information is persisted, being kept instead
-/// in a map for fast access.
+/// Operations for this provider are serviced through an IPC interface that leads
+/// to a Secure World implementation of PSA Crypto.
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
@@ -53,7 +59,7 @@ pub struct Provider {
 }
 
 impl Provider {
-    /// Creates and initialise a new instance of Provider.
+    /// Creates and initialises a new instance of Provider.
     fn new(
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
     ) -> anyhow::Result<Provider> {
@@ -64,14 +70,14 @@ impl Provider {
         };
         let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
-            // The local scope allows to drop store_handle and local_ids_handle in order to return
+            // The local scope allows dropping store_handle and local_ids_handle in order to return
             // the ts_provider.
             let mut store_handle = ts_provider
                 .key_info_store
                 .write()
                 .expect("Key store lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
-            // Go through all TrustedServiceProvider key triple to key info mappings and check if they are still
+            // Go through all TrustedServiceProvider key triples to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match store_handle.get_all(ProviderID::TrustedService) {
@@ -127,6 +133,25 @@ impl Provide for Provider {
             version_rev: 0,
             id: ProviderID::TrustedService,
         }, SUPPORTED_OPCODES.iter().copied().collect()))
+    }
+
+    fn list_keys(
+        &self,
+        app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        Ok(list_keys::Result {
+            keys: key_info_managers::list_keys(
+                store_handle.deref(),
+                &app_name,
+                ProviderID::TrustedService,
+            )
+            .map_err(|e| {
+                format_error!("Error occurred when fetching key information", e);
+                ResponseStatus::KeyInfoManagerError
+            })?,
+        })
     }
 
     fn psa_generate_key(
