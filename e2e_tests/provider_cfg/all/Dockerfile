@@ -6,9 +6,7 @@ RUN apt-get update && \
 	apt-get install -y git make gcc python3 python curl wget cmake && \
 	apt-get install -y automake autoconf libtool pkg-config libssl-dev libgcc1 && \
 	# These libraries are needed for bindgen as it uses libclang.so
-	apt-get install -y clang libclang-dev libc6-dev-i386 && \
-	# Install cargo globally to not have to install it for each user for multitenancy tests
-	apt-get install -y cargo
+	apt-get install -y clang libclang-dev libc6-dev-i386
 
 WORKDIR /tmp
 RUN wget https://github.com/ARMmbed/mbed-crypto/archive/mbedcrypto-2.0.0.tar.gz
@@ -55,3 +53,17 @@ RUN softhsm2-util --init-token --slot 0 --label "Parsec Tests" --pin 123456 --so
 # Add users for multitenancy tests
 RUN useradd -m parsec-client-1
 RUN useradd -m parsec-client-2
+
+USER parsec-client-1
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+USER parsec-client-2
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Install Rust toolchain for root
+USER root
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Download the SPIRE server and agent
+RUN curl -s -N -L https://github.com/spiffe/spire/releases/download/v0.11.1/spire-0.11.1-linux-x86_64-glibc.tar.gz | tar xz

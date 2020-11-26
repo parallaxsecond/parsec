@@ -13,6 +13,8 @@ pub mod direct_authenticator;
 
 pub mod unix_peer_credentials_authenticator;
 
+pub mod jwt_svid_authenticator;
+
 use crate::front::listener::ConnectionMetadata;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
@@ -68,7 +70,7 @@ impl std::fmt::Display for ApplicationName {
 }
 
 /// Authenticator configuration structure
-#[derive(Copy, Clone, Deserialize, Debug, Zeroize)]
+#[derive(Deserialize, Debug, Zeroize)]
 #[zeroize(drop)]
 #[serde(tag = "auth_type")]
 pub enum AuthenticatorConfig {
@@ -76,4 +78,9 @@ pub enum AuthenticatorConfig {
     Direct,
     /// Unix Peer Credenditals authentication
     UnixPeerCredentials,
+    /// JWT-SVID
+    JwtSvid {
+        /// Path to the Workload API socket
+        workload_endpoint: String,
+    },
 }

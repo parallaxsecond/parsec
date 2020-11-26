@@ -6,6 +6,7 @@
 //! provided configuration.
 use super::global_config::GlobalConfigBuilder;
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
+use crate::authenticators::jwt_svid_authenticator::JwtSvidAuthenticator;
 use crate::authenticators::unix_peer_credentials_authenticator::UnixPeerCredentialsAuthenticator;
 use crate::authenticators::{Authenticate, AuthenticatorConfig};
 use crate::back::{
@@ -382,6 +383,10 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenti
         AuthenticatorConfig::UnixPeerCredentials => authenticators.push((
             AuthType::UnixPeerCredentials,
             Box::from(UnixPeerCredentialsAuthenticator {}),
+        )),
+        AuthenticatorConfig::JwtSvid { workload_endpoint } => authenticators.push((
+            AuthType::JwtSvid,
+            Box::from(JwtSvidAuthenticator::new(workload_endpoint.to_string())),
         )),
     };
 
