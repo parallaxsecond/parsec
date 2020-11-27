@@ -48,7 +48,7 @@ impl Context {
     pub fn import_key(&self, key_attrs: Attributes, id: u32, key_data: &[u8]) -> Result<(), Error> {
         info!("Handling ImportKey request");
         let mut data = key_data.to_vec();
-        let mut import_req = ImportKeyIn {
+        let import_req = ImportKeyIn {
             attributes: Some(KeyAttributes {
                 r#type: u16::try_from(key_attrs.key_type).map_err(|e| {
                     data.zeroize();
@@ -74,9 +74,7 @@ impl Context {
             }),
             data,
         };
-        let res = self.send_request(&import_req);
-        import_req.data.zeroize();
-        let ImportKeyOut { handle } = res?;
+        let ImportKeyOut { handle } = self.send_request(&import_req)?;
 
         let close_req = CloseKeyIn { handle };
         self.send_request(&close_req)?;
