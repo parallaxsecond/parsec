@@ -1,0 +1,4 @@
+[submodule "trusted-services-vendor"]
+	path = trusted-services-vendor
+	url = https://git.trustedfirmware.org/TS/trusted-services.git
+	branch = integration

@@ -60,7 +60,7 @@ while [ "$#" -gt 0 ]; do
         --no-stress-test )
             NO_STRESS_TEST="True"
         ;;
-        mbed-crypto | pkcs11 | tpm | all )
+        mbed-crypto | pkcs11 | tpm | trusted-service | all )
             if [ -n "$PROVIDER_NAME" ]; then
                 error_msg "Only one provider name must be given"
             fi
@@ -105,6 +105,10 @@ if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ]; then
     # Find all TOML files in the directory (except Cargo.toml) and replace the commented slot number with the valid one
     find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
     popd
+fi
+
+if [ "$PROVIDER_NAME" = "trusted-service" ]; then
+    git submodule update --init
 fi
 
 echo "Build test"

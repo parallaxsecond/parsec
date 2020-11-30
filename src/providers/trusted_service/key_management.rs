@@ -81,7 +81,6 @@ impl Provider {
             Ok(_) => Ok(psa_import_key::Result {}),
             Err(error) => {
                 remove_key_id(&key_triple, &mut *store_handle)?;
-                let error = ResponseStatus::from(error);
                 format_error!("Import key status: ", error);
                 Err(error)
             }
@@ -103,7 +102,6 @@ impl Provider {
                 data: pub_key.into(),
             }),
             Err(error) => {
-                let error = ResponseStatus::from(error);
                 format_error!("Export key status: ", error);
                 Err(error)
             }
@@ -129,7 +127,6 @@ impl Provider {
                 Ok(psa_destroy_key::Result {})
             }
             Err(error) => {
-                let error = ResponseStatus::from(error);
                 format_error!("Destroy key status: ", error);
                 Err(error)
             }

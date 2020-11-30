@@ -161,7 +161,7 @@ impl Context {
                 &mut status,
             )
         };
-        if service_context == null_mut() {
+        if service_context.is_null() {
             return Err(Error::new(
                 ErrorKind::Other,
                 "Failed to obtain a Trusted Service context",
@@ -181,7 +181,7 @@ impl Context {
         info!("Starting crypto Trusted Service context");
         let mut rpc_caller = null_mut();
         let rpc_session_handle = unsafe { service_context_open(service_context, &mut rpc_caller) };
-        if rpc_caller == null_mut() || rpc_session_handle == null_mut() {
+        if rpc_caller.is_null() || rpc_session_handle.is_null() {
             return Err(
                 Error::new(ErrorKind::Other, "Failed to start Trusted Service context").into(),
             );
@@ -209,10 +209,10 @@ impl Context {
         let mut buf_out = null_mut();
         let call_handle =
             unsafe { rpc_caller_begin(self.rpc_caller, &mut buf_out, req.encoded_len()) };
-        if call_handle == null_mut() {
+        if call_handle.is_null() {
             error!("Call handle was null");
             return Err(PsaError::CommunicationFailure);
-        } else if buf_out == null_mut() {
+        } else if buf_out.is_null() {
             error!("Call buffer was null");
             return Err(PsaError::CommunicationFailure);
         }
