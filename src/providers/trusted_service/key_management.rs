@@ -46,7 +46,7 @@ impl Provider {
             Err(error) => {
                 let error = ResponseStatus::from(error);
                 format_error!("Generate key error", error);
-                Err(error)
+                Err(error.into())
             }
         }
     }
@@ -82,7 +82,7 @@ impl Provider {
             Err(error) => {
                 remove_key_id(&key_triple, &mut *store_handle)?;
                 format_error!("Import key status: ", error);
-                Err(error)
+                Err(error.into())
             }
         }
     }
@@ -103,7 +103,7 @@ impl Provider {
             }),
             Err(error) => {
                 format_error!("Export key status: ", error);
-                Err(error)
+                Err(error.into())
             }
         }
     }
@@ -128,7 +128,7 @@ impl Provider {
             }
             Err(error) => {
                 format_error!("Destroy key status: ", error);
-                Err(error)
+                Err(error.into())
             }
         }
     }
