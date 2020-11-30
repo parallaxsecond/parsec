@@ -1,10 +1,10 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::error::Error;
 use super::ts_protobuf::{SignHashIn, SignHashOut, VerifyHashIn};
 use super::Context;
 use log::info;
-use parsec_interface::operations::psa_algorithm::AsymmetricSignature;
-use parsec_interface::requests::ResponseStatus;
+use psa_crypto::types::algorithm::AsymmetricSignature;
 use std::convert::TryInto;
 
 impl Context {
@@ -14,7 +14,7 @@ impl Context {
         key_id: u32,
         hash: Vec<u8>,
         algorithm: AsymmetricSignature,
-    ) -> Result<Vec<u8>, ResponseStatus> {
+    ) -> Result<Vec<u8>, Error> {
         info!("Handling SignHash request");
         let proto_req = SignHashIn {
             handle: 0,
@@ -33,7 +33,7 @@ impl Context {
         hash: Vec<u8>,
         signature: Vec<u8>,
         algorithm: AsymmetricSignature,
-    ) -> Result<(), ResponseStatus> {
+    ) -> Result<(), Error> {
         info!("Handling VerifyHash request");
         let proto_req = VerifyHashIn {
             handle: 0,
