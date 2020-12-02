@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::TestClient;
 use log::info;
-use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use rand::Rng;
 use rand::{
     distributions::{Alphanumeric, Distribution, Standard},
@@ -96,7 +96,7 @@ struct StressTestWorker {
     config: StressTestConfig,
     sign_key_name: String,
     ecc_key_name: Option<String>,
-    encrypt_key_name: String,
+    encrypt_key_name: Option<String>,
     client: TestClient,
 }
 
@@ -108,6 +108,7 @@ impl StressTestWorker {
         let auth = generate_string(10);
         info!("Worker with auth `{}` starting.", auth);
         client.set_default_auth(Some(auth));
+        let opcodes = client.list_opcodes(client.provider()).unwrap();
 
         // Create sign/verify key
         let sign_key_name = generate_string(10);
@@ -132,9 +133,22 @@ impl StressTestWorker {
 
         // Create asym encrypt/decrypt key
         let encrypt_key_name = generate_string(10);
-        client
-            .generate_rsa_encryption_keys_rsapkcs1v15crypt(encrypt_key_name.clone())
-            .expect("Failed to generate asym encr key");
+        let res = client.generate_rsa_encryption_keys_rsapkcs1v15crypt(encrypt_key_name.clone());
+
+        if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
+            panic!(
+                "Failed to create Asymmetric Encryption key with something different than NotSupported: {}",
+                res.unwrap_err()
+            );
+        }
+        let encrypt_key_name = if res.is_ok()
+            && opcodes.contains(&Opcode::PsaAsymmetricEncrypt)
+            && opcodes.contains(&Opcode::PsaAsymmetricDecrypt)
+        {
+            Some(encrypt_key_name)
+        } else {
+            None
+        };
 
         StressTestWorker {
             config,
@@ -162,8 +176,10 @@ impl StressTestWorker {
 
     fn execute_request(&mut self) {
         let mut op: Operation = rand::random();
-        while self.ecc_key_name.is_none()
-            && (op == Operation::SignEcc || op == Operation::VerifyEcc)
+        while (self.ecc_key_name.is_none()
+            && (op == Operation::SignEcc || op == Operation::VerifyEcc))
+            || (self.encrypt_key_name.is_none()
+                && (op == Operation::AsymEncrypt || op == Operation::AsymDecrypt))
         {
             op = rand::random();
         }
@@ -269,24 +285,20 @@ impl StressTestWorker {
                     .expect("Failed to export key");
             }
             Operation::AsymEncrypt => {
-                info!("Encrypting with key: {}", self.encrypt_key_name.clone());
+                let encrypt_key_name = self.encrypt_key_name.as_ref().unwrap().clone();
+                info!("Encrypting with key: {}", encrypt_key_name);
                 let _ = self
                     .client
-                    .asymmetric_encrypt_message_with_rsapkcs1v15(
-                        self.encrypt_key_name.clone(),
-                        vec![0xa5; 16],
-                    )
+                    .asymmetric_encrypt_message_with_rsapkcs1v15(encrypt_key_name, vec![0xa5; 16])
                     .expect("Failed to encrypt");
             }
             Operation::AsymDecrypt => {
-                info!("Decrypting with key: {}", self.encrypt_key_name.clone());
+                let encrypt_key_name = self.encrypt_key_name.as_ref().unwrap().clone();
+                info!("Decrypting with key: {}", encrypt_key_name);
                 // This will fail with a very generic error for PKCS11 at least
                 let _status = self
                     .client
-                    .asymmetric_decrypt_message_with_rsapkcs1v15(
-                        self.encrypt_key_name.clone(),
-                        vec![0xa5; 128],
-                    )
+                    .asymmetric_decrypt_message_with_rsapkcs1v15(encrypt_key_name, vec![0xa5; 128])
                     .expect_err("Should have failed to decrypt");
             }
         }
@@ -302,11 +314,16 @@ impl ServiceChecker {
         }
 
         let mut client = TestClient::new();
+        let opcodes = client.list_opcodes(client.provider()).unwrap();
 
         loop {
             info!("Verifying that the service is still operating correctly");
             ServiceChecker::check_sign(&mut client);
-            ServiceChecker::check_encrypt(&mut client);
+            if opcodes.contains(&Opcode::PsaAsymmetricDecrypt)
+                && opcodes.contains(&Opcode::PsaAsymmetricEncrypt)
+            {
+                ServiceChecker::check_encrypt(&mut client);
+            }
             thread::sleep(config.check_interval.unwrap());
             if recv.try_recv().is_ok() {
                 return;
