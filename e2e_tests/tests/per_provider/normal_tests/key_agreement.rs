@@ -70,11 +70,7 @@ fn simple_raw_key_agreement() {
         .generate_ecc_pair_secp_r1_key(key_name.clone())
         .unwrap();
     let _shared_secret = client
-        .raw_key_agreement(
-            RawKeyAgreement::Ecdh,
-            key_name.clone(),
-            &PEER_PUBLIC_KEY_SECPR1,
-        )
+        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name, &PEER_PUBLIC_KEY_SECPR1)
         .unwrap();
 }
 
@@ -91,11 +87,7 @@ fn raw_key_agreement_secpr1() {
         .import_ecc_pair_secp_r1_key(key_name.clone(), OUR_KEY_DATA_SECPR1.to_vec())
         .unwrap();
     let shared_secret = client
-        .raw_key_agreement(
-            RawKeyAgreement::Ecdh,
-            key_name.clone(),
-            &PEER_PUBLIC_KEY_SECPR1,
-        )
+        .raw_key_agreement(RawKeyAgreement::Ecdh, key_name, &PEER_PUBLIC_KEY_SECPR1)
         .unwrap();
 
     assert_eq!(&EXPECTED_OUTPUT_SECPR1, shared_secret.as_slice());

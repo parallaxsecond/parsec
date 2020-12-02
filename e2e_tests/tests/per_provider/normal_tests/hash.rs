@@ -27,16 +27,14 @@ fn hash_not_supported() {
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaHashCompute) {
         assert_eq!(
-            client.hash_compute(Hash::Sha256, &vec![],).unwrap_err(),
+            client.hash_compute(Hash::Sha256, &[],).unwrap_err(),
             ResponseStatus::PsaErrorNotSupported
         );
     }
 
     if !client.is_operation_supported(Opcode::PsaHashCompare) {
         assert_eq!(
-            client
-                .hash_compare(Hash::Sha256, &vec![], &vec![])
-                .unwrap_err(),
+            client.hash_compare(Hash::Sha256, &[], &[]).unwrap_err(),
             ResponseStatus::PsaErrorNotSupported
         );
     }
