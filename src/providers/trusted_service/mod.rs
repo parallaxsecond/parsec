@@ -27,6 +27,7 @@ use uuid::Uuid;
 
 mod asym_sign;
 mod context;
+mod error;
 mod key_management;
 
 const SUPPORTED_OPCODES: [Opcode; 6] = [

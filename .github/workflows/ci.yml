@@ -42,6 +42,16 @@ jobs:
         run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/ci.sh tpm
+  
+  trusted-service-provider:
+    name: Integration tests using Cypto Trusted Service provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the container
+        run: docker build -t trusted-service-provider e2e_tests/provider_cfg/trusted-service
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec trusted-service-provider /tmp/parsec/ci.sh trusted-service
 
   links:
     name: Check links

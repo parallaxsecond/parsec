@@ -1,14 +1,14 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::error::Error;
 use super::ts_protobuf::{
     CloseKeyIn, DestroyKeyIn, DestroyKeyOut, ExportPublicKeyIn, GenerateKeyIn, GenerateKeyOut,
     ImportKeyIn, ImportKeyOut, KeyAttributes, KeyLifetime, KeyPolicy, OpenKeyIn, OpenKeyOut,
 };
 use super::Context;
 use log::info;
-use parsec_interface::operations::psa_key_attributes::Attributes;
-use parsec_interface::requests::ResponseStatus;
-use psa_crypto::types::status::Error;
+use psa_crypto::types::key::Attributes;
+use psa_crypto::types::status::Error as PsaError;
 use std::convert::{TryFrom, TryInto};
 use zeroize::Zeroize;
 
@@ -17,7 +17,7 @@ impl Context {
     ///
     /// Lifetime flexibility is not supported: the `lifetime` parameter in the key
     /// attributes is essentially ignored and replaced with `KeyLifetime::Persistent`.
-    pub fn generate_key(&self, key_attrs: Attributes, id: u32) -> Result<(), ResponseStatus> {
+    pub fn generate_key(&self, key_attrs: Attributes, id: u32) -> Result<(), Error> {
         info!("Handling GenerateKey request");
         let generate_req = GenerateKeyIn {
             attributes: Some(KeyAttributes {
@@ -45,12 +45,7 @@ impl Context {
     /// attributes is essentially ignored and replaced with `KeyLifetime::Persistent`.
     ///
     /// Key data must be in the format described by the PSA Crypto format.
-    pub fn import_key(
-        &self,
-        key_attrs: Attributes,
-        id: u32,
-        key_data: &[u8],
-    ) -> Result<(), ResponseStatus> {
+    pub fn import_key(&self, key_attrs: Attributes, id: u32, key_data: &[u8]) -> Result<(), Error> {
         info!("Handling ImportKey request");
         let mut data = key_data.to_vec();
         let mut import_req = ImportKeyIn {
@@ -93,17 +88,14 @@ impl Context {
     ///
     /// The public key data is returned in the format specified by the PSA Crypto
     /// format.
-    pub fn export_public_key(&self, id: u32) -> Result<Vec<u8>, ResponseStatus> {
+    pub fn export_public_key(&self, id: u32) -> Result<Vec<u8>, Error> {
         info!("Handling ExportPublicKey request");
         Ok(self.send_request_with_key(ExportPublicKeyIn::default(), id)?)
     }
 
     /// Destroy a key given its ID.
-    pub fn destroy_key(&self, key_id: u32) -> Result<(), ResponseStatus> {
+    pub fn destroy_key(&self, key_id: u32) -> Result<(), Error> {
         info!("Handling DestroyKey request");
-        if !self.check_key_exists(key_id)? {
-            return Err(ResponseStatus::PsaErrorDoesNotExist);
-        }
         let open_req = OpenKeyIn { id: key_id };
         let OpenKeyOut { handle } = self.send_request(&open_req)?;
 
@@ -123,7 +115,7 @@ impl Context {
                 Ok(true)
             }
             Err(e) => {
-                if e == Error::DoesNotExist {
+                if e == Error::PsaCrypto(PsaError::DoesNotExist) {
                     Ok(false)
                 } else {
                     Err(e)

@@ -1,11 +1,11 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use error::{Error, WrapperError};
 use log::{error, info, trace};
 use prost::Message;
-use psa_crypto::types::status::{Error as PsaError, Status};
 use std::convert::TryInto;
 use std::ffi::{c_void, CString};
-use std::io::{Error, ErrorKind};
+use std::io::{self};
 use std::ptr::null_mut;
 use std::slice;
 use std::sync::Mutex;
@@ -31,6 +31,7 @@ pub mod ts_binding {
 }
 
 mod asym_sign;
+pub mod error;
 mod key_management;
 
 #[allow(
@@ -161,15 +162,15 @@ impl Context {
                 &mut status,
             )
         };
-        if service_context == null_mut() {
-            return Err(Error::new(
-                ErrorKind::Other,
+        if service_context.is_null() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
                 "Failed to obtain a Trusted Service context",
             )
             .into());
         } else if status != 0 {
-            return Err(Error::new(
-                ErrorKind::Other,
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
                 format!(
                     "Failed to connect to Trusted Service; status code: {}",
                     status
@@ -181,10 +182,12 @@ impl Context {
         info!("Starting crypto Trusted Service context");
         let mut rpc_caller = null_mut();
         let rpc_session_handle = unsafe { service_context_open(service_context, &mut rpc_caller) };
-        if rpc_caller == null_mut() || rpc_session_handle == null_mut() {
-            return Err(
-                Error::new(ErrorKind::Other, "Failed to start Trusted Service context").into(),
-            );
+        if rpc_caller.is_null() || rpc_session_handle.is_null() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Failed to start Trusted Service context",
+            )
+            .into());
         }
         let ctx = Context {
             rpc_caller,
@@ -202,25 +205,25 @@ impl Context {
     fn send_request<T: Message + Default>(
         &self,
         req: &(impl Message + GetOpcode),
-    ) -> Result<T, PsaError> {
+    ) -> Result<T, Error> {
         let _mutex_guard = self.call_mutex.lock().expect("Call mutex poisoned");
-        info!("Beginning call to Trusted Service");
+        trace!("Beginning call to Trusted Service");
 
         let mut buf_out = null_mut();
         let call_handle =
             unsafe { rpc_caller_begin(self.rpc_caller, &mut buf_out, req.encoded_len()) };
-        if call_handle == null_mut() {
+        if call_handle.is_null() {
             error!("Call handle was null");
-            return Err(PsaError::CommunicationFailure);
-        } else if buf_out == null_mut() {
+            return Err(WrapperError::CallHandleNull.into());
+        } else if buf_out.is_null() {
             error!("Call buffer was null");
-            return Err(PsaError::CommunicationFailure);
+            return Err(WrapperError::CallBufferNull.into());
         }
         let mut buf_out = unsafe { slice::from_raw_parts_mut(buf_out, req.encoded_len()) };
         req.encode(&mut buf_out).map_err(|e| {
             unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             format_error!("Failed to serialize Protobuf request", e);
-            PsaError::CommunicationFailure
+            WrapperError::FailedPbConversion
         })?;
 
         trace!("Invoking RPC call");
@@ -238,19 +241,15 @@ impl Context {
                 &mut resp_buf_size,
             )
         };
-        if status != 0 || opstatus != 0 {
+        Error::from_status_opstatus(status, opstatus).map_err(|e| {
             unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
-            error!(
-                "Error on call invocation: status = {}, opstatus = {}",
-                status, opstatus
-            );
-            Status::from(opstatus).to_result()?;
-        }
+            e
+        })?;
         let resp_buf = unsafe { slice::from_raw_parts_mut(resp_buf, resp_buf_size) };
         resp.merge(&*resp_buf).map_err(|e| {
             unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             format_error!("Failed to serialize Protobuf request", e);
-            PsaError::CommunicationFailure
+            WrapperError::FailedPbConversion
         })?;
         unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
 
@@ -264,7 +263,7 @@ impl Context {
         &self,
         mut req: impl Message + GetOpcode + SetHandle,
         key_id: u32,
-    ) -> Result<T, PsaError> {
+    ) -> Result<T, Error> {
         let open_req = OpenKeyIn { id: key_id };
         let OpenKeyOut { handle } = self.send_request(&open_req)?;
 

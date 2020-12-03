@@ -8,14 +8,19 @@ RUN apt-get update && \
 	apt-get install -y clang libclang-dev && \
 	# Needed for Open SSL
 	apt-get install -y pkg-config libssl-dev python3-distutils && \
-	apt-get install -y python3-distutils python3-protobuf nanopb
+	# Needed for Protobuf handling
+	apt-get install -y python3-distutils python3-protobuf nanopb && \
+	# Needed for the Trusted Services implementation
+	apt-get install -y libc++-dev libc++abi-dev 
 
 WORKDIR /tmp
-COPY trusted-services /tmp/trusted-services
-RUN cd trusted-services/deployments/ts-lib/posix-x86/ \
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
+RUN cd trusted-services/deployments/libts/linux-pc/ \
 	&& cmake . \
 	&& make \
-	&& cp libts-lib.a nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
+	&& cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
+
+ENV LD_LIBRARY_PATH="/usr/local/lib"
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
