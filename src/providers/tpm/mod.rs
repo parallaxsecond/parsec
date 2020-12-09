@@ -263,10 +263,11 @@ impl ProviderBuilder {
     /// The method is unsafe because it relies on creating a TSS Context which could cause
     /// undefined behaviour if multiple such contexts are opened concurrently.
     unsafe fn find_default_context_cipher(&self) -> std::io::Result<Cipher> {
+        info!("Checking for ciphers supported by the TPM.");
         let ciphers = [Cipher::aes_256_cfb(), Cipher::aes_128_cfb()];
         let mut ctx = tss_esapi::Context::new(
             Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+                std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
             })?)
             .map_err(|_| {
                 std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
@@ -286,7 +287,7 @@ impl ProviderBuilder {
         }
         Err(std::io::Error::new(
             ErrorKind::Other,
-            "desired ciphers not supported by TPM",
+            "desired ciphers not supported",
         ))
     }
 
@@ -300,7 +301,7 @@ impl ProviderBuilder {
         let hierarchy_auth = self.get_hierarchy_auth()?;
         let default_cipher = self.find_default_context_cipher()?;
         let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
-            std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+            std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
         })?)
         .map_err(|_| {
             std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
