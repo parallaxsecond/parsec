@@ -232,6 +232,9 @@ impl OnDiskKeyInfoManager {
                                 "Failed to convert the mapping path found to an UTF-8 string",
                                 string
                             );
+                            return Err(
+                                Error::new(ErrorKind::Other, "error parsing mapping path").into()
+                            );
                         }
                     }
                 }

@@ -126,7 +126,7 @@ impl ServiceBuilder {
         let providers = build_providers(
             config.provider.as_ref().unwrap_or(&Vec::new()),
             key_info_managers,
-        );
+        )?;
 
         if providers.is_empty() {
             error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
@@ -229,13 +229,17 @@ fn build_backend_handlers(
 fn build_providers(
     configs: &[ProviderConfig],
     key_info_managers: HashMap<String, KeyInfoManager>,
-) -> Vec<(ProviderID, Provider)> {
+) -> Result<Vec<(ProviderID, Provider)>> {
     let mut list = Vec::new();
     for config in configs {
         let provider_id = config.provider_id();
         if list.iter().any(|(id, _)| *id == provider_id) {
-            warn!("Parsec currently only supports one instance of each provider type. Ignoring {} and continuing...", provider_id);
-            continue;
+            error!("Parsec currently only supports one instance of each provider type, but {} was supplied twice. Please check your config.toml file.", provider_id);
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "only one provider per type is supported",
+            )
+            .into());
         }
 
         let key_info_manager = match key_info_managers.get(config.key_info_manager()) {
@@ -245,7 +249,9 @@ fn build_providers(
                     "Key info manager with specified name was not found",
                     config.key_info_manager()
                 );
-                continue;
+                return Err(
+                    Error::new(ErrorKind::InvalidData, "key info manager not found").into(),
+                );
             }
         };
         // The safety is checked by the fact that only one instance per provider type is enforced.
@@ -256,13 +262,13 @@ fn build_providers(
                     &format!("Provider with ID {} cannot be created", provider_id),
                     e
                 );
-                continue;
+                return Err(Error::new(ErrorKind::Other, "failed to create provider").into());
             }
         };
         let _ = list.push((provider_id, provider));
     }
 
-    list
+    Ok(list)
 }
 
 // This cfg_attr is used to allow the fact that key_info_manager is not used when there is no
