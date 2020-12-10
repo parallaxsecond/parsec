@@ -22,7 +22,7 @@ impl Provider {
             .key_handle_mutex
             .lock()
             .expect("Grabbing key handle mutex failed");
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
 
         op.validate(key_attributes)?;
@@ -65,7 +65,7 @@ impl Provider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
         op.validate(key_attributes)?;
         let buffer_size = key_attributes.aead_decrypt_output_size(op.alg, op.ciphertext.len())?;

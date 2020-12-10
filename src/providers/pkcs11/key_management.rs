@@ -1,8 +1,12 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{utils, KeyPairType, Provider, ReadWriteSession, Session};
+use super::utils::to_response_status;
+use super::{utils, KeyPairType, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
+use cryptoki::types::mechanism::{Mechanism, MechanismType};
+use cryptoki::types::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
+use cryptoki::types::session::Session;
 use log::{error, info, trace};
 use parsec_interface::operations::psa_key_attributes::{Id, Lifetime, Type};
 use parsec_interface::operations::{
@@ -12,54 +16,34 @@ use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RSAPublicKey;
-use pkcs11::types::{CKR_OK, CK_ATTRIBUTE, CK_OBJECT_HANDLE, CK_SESSION_HANDLE};
-use std::mem;
+use std::convert::{TryFrom, TryInto};
 
 impl Provider {
     /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public,
     /// private or any key type) given as parameters for the current session.
     pub(super) fn find_key(
         &self,
-        session: CK_SESSION_HANDLE,
-        key_id: [u8; 4],
+        session: &Session,
+        key_id: u32,
         key_type: KeyPairType,
-    ) -> Result<CK_OBJECT_HANDLE> {
-        let mut template = vec![CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(&key_id)];
+    ) -> Result<ObjectHandle> {
+        let mut template = vec![Attribute::Id(key_id.to_be_bytes().into())];
+
         match key_type {
-            KeyPairType::PublicKey => template.push(
-                CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
-                    .with_ck_ulong(&pkcs11::types::CKO_PUBLIC_KEY),
-            ),
-            KeyPairType::PrivateKey => template.push(
-                CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
-                    .with_ck_ulong(&pkcs11::types::CKO_PRIVATE_KEY),
-            ),
+            KeyPairType::PublicKey => template.push(Attribute::Class(ObjectClass::PUBLIC_KEY)),
+            KeyPairType::PrivateKey => template.push(Attribute::Class(ObjectClass::PRIVATE_KEY)),
             KeyPairType::Any => (),
         }
 
-        trace!("FindObjectsInit command");
-        if let Err(e) = self.backend.find_objects_init(session, &template) {
-            format_error!("Object enumeration init failed", e);
-            Err(utils::to_response_status(e))
+        trace!("FindObjects commands");
+        let objects = session
+            .find_objects(&template)
+            .map_err(to_response_status)?;
+
+        if objects.is_empty() {
+            Err(ResponseStatus::PsaErrorDoesNotExist)
         } else {
-            trace!("FindObjects command");
-            match self.backend.find_objects(session, 1) {
-                Ok(objects) => {
-                    trace!("FindObjectsFinal command");
-                    if let Err(e) = self.backend.find_objects_final(session) {
-                        format_error!("Object enumeration final failed", e);
-                        Err(utils::to_response_status(e))
-                    } else if objects.is_empty() {
-                        Err(ResponseStatus::PsaErrorDoesNotExist)
-                    } else {
-                        Ok(objects[0])
-                    }
-                }
-                Err(e) => {
-                    format_error!("Finding objects failed", e);
-                    Err(utils::to_response_status(e))
-                }
-            }
+            Ok(objects[0])
         }
     }
 
@@ -114,63 +98,60 @@ impl Provider {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
 
+        let session = self.new_session()?;
+
         let key_id = self.create_key_id();
 
-        let modulus_bits = key_attributes.bits as u64;
-        let (mech, mut pub_template, mut priv_template, mut allowed_mechanism) =
-            utils::parsec_to_pkcs11_params(key_attributes, &key_id, &modulus_bits)?;
+        let mut pub_template = vec![
+            Attribute::Id(key_id.to_be_bytes().into()),
+            Attribute::Token(true.into()),
+            Attribute::AllowedMechanisms(vec![Mechanism::try_from(
+                key_attributes.policy.permitted_algorithms,
+            )
+            .map_err(to_response_status)?
+            .mechanism_type()]),
+        ];
+        let mut priv_template = pub_template.clone();
 
-        pub_template.push(utils::mech_type_to_allowed_mech_attribute(
-            &mut allowed_mechanism,
-        ));
-        priv_template.push(utils::mech_type_to_allowed_mech_attribute(
-            &mut allowed_mechanism,
-        ));
+        utils::key_pair_usage_flags_to_pkcs11_attributes(
+            key_attributes.policy.usage_flags,
+            &mut pub_template,
+            &mut priv_template,
+        );
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
+        let mech = match key_attributes.key_type {
+            Type::RsaKeyPair => {
+                pub_template.push(Attribute::Private(false.into()));
+                pub_template.push(Attribute::PublicExponent(utils::PUBLIC_EXPONENT.into()));
+                pub_template.push(Attribute::ModulusBits(
+                    key_attributes.bits.try_into().map_err(to_response_status)?,
+                ));
+                Ok(Mechanism::RsaPkcsKeyPairGen)
+            }
+            _ => Err(ResponseStatus::PsaErrorNotSupported),
+        }?;
 
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!(
-                "Generating RSA key pair in session {}",
-                session.session_handle()
-            );
-        }
-
-        trace!("GenerateKeyPair command");
-        match self.backend.generate_key_pair(
-            session.session_handle(),
-            &mech,
-            &pub_template,
-            &priv_template,
-        ) {
-            Ok((first_key, second_key)) => {
+        match session.generate_key_pair(&mech, &pub_template, &priv_template) {
+            Ok((public, private)) => {
                 if let Err(e) =
                     self.key_info_store
                         .insert_key_info(key_triple, &key_id, key_attributes)
                 {
-                    // Destroy the generated key in a best effort way to avoid zombies 🧟
-                    if self
-                        .backend
-                        .destroy_object(session.session_handle(), first_key)
-                        .is_err()
-                    {
-                        error!("Failed to destroy first part of the key pair.");
+                    format_error!("Failed to insert the mappings, deleting the key.", e);
+                    if let Err(e) = session.destroy_object(public) {
+                        format_error!("Failed to destroy public part of the key: ", e);
                     }
-                    if self
-                        .backend
-                        .destroy_object(session.session_handle(), second_key)
-                        .is_err()
-                    {
-                        error!("Failed to destroy second part of the key pair.");
+                    if let Err(e) = session.destroy_object(private) {
+                        format_error!("Failed to destroy private part of the key: ", e);
                     }
                     Err(e)
                 } else {
                     Ok(psa_generate_key::Result {})
                 }
             }
-            Err(e) => {
-                format_error!("Generate Key Pair operation failed", e);
-                Err(utils::to_response_status(e))
+            Err(error) => {
+                format_error!("Generate key status: ", error);
+                Err(to_response_status(error))
             }
         }
     }
@@ -200,11 +181,14 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
+
         self.key_info_store.does_not_exist(&key_triple)?;
+
+        let session = self.new_session()?;
 
         let key_id = self.create_key_id();
 
-        let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
+        let mut template: Vec<Attribute> = Vec::new();
 
         let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
             .map_err(|e| {
@@ -217,8 +201,8 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        let modulus_object = &public_key.modulus.as_unsigned_bytes_be();
-        let exponent_object = &public_key.public_exponent.as_unsigned_bytes_be();
+        let modulus_object = public_key.modulus.as_unsigned_bytes_be();
+        let exponent_object = public_key.public_exponent.as_unsigned_bytes_be();
         let bits = key_attributes.bits;
         if bits != 0 && modulus_object.len() * 8 != bits {
             if crate::utils::GlobalConfig::log_error_details() {
@@ -234,74 +218,36 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_CLASS)
-                .with_ck_ulong(&pkcs11::types::CKO_PUBLIC_KEY),
-        );
-        template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_KEY_TYPE).with_ck_ulong(&pkcs11::types::CKK_RSA),
-        );
-        template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_TOKEN).with_bool(&pkcs11::types::CK_TRUE));
-        template.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_MODULUS).with_bytes(modulus_object));
-        template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_PUBLIC_EXPONENT).with_bytes(exponent_object),
-        );
-        template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_VERIFY).with_bool(&pkcs11::types::CK_TRUE));
-        template
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ENCRYPT).with_bool(&pkcs11::types::CK_TRUE));
-        template.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_ID).with_bytes(&key_id));
-        template.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_PRIVATE).with_bool(&pkcs11::types::CK_FALSE),
-        );
-
-        // Restrict to RSA.
-        let allowed_mechanisms = [pkcs11::types::CKM_RSA_PKCS];
-        // The attribute contains a pointer to the allowed_mechanism array and its size as
-        // ulValueLen.
-        let mut allowed_mechanisms_attribute =
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_ALLOWED_MECHANISMS);
-        allowed_mechanisms_attribute.ulValueLen = mem::size_of_val(&allowed_mechanisms) as u64;
-        allowed_mechanisms_attribute.pValue = &allowed_mechanisms
-            as *const pkcs11::types::CK_MECHANISM_TYPE
-            as pkcs11::types::CK_VOID_PTR;
-        template.push(allowed_mechanisms_attribute);
-
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!(
-                "Importing RSA public key in session {}",
-                session.session_handle()
-            );
-        }
+        template.push(Attribute::Class(ObjectClass::PUBLIC_KEY));
+        template.push(Attribute::KeyType(KeyType::RSA));
+        template.push(Attribute::Token(true.into()));
+        template.push(Attribute::Modulus(modulus_object.into()));
+        template.push(Attribute::PublicExponent(exponent_object.into()));
+        template.push(Attribute::Verify(true.into()));
+        template.push(Attribute::Encrypt(true.into()));
+        template.push(Attribute::Id(key_id.to_be_bytes().into()));
+        template.push(Attribute::Private(false.into()));
+        template.push(Attribute::AllowedMechanisms(vec![MechanismType::RSA_PKCS]));
 
         trace!("CreateObject command");
-        match self
-            .backend
-            .create_object(session.session_handle(), &template)
-        {
+        match session.create_object(&template) {
             Ok(key) => {
                 if let Err(e) =
                     self.key_info_store
                         .insert_key_info(key_triple, &key_id, key_attributes)
                 {
-                    if self
-                        .backend
-                        .destroy_object(session.session_handle(), key)
-                        .is_err()
-                    {
-                        error!("Failed to destroy public key.");
+                    format_error!("Failed to insert the mappings, deleting the key.", e);
+                    if let Err(e) = session.destroy_object(key) {
+                        format_error!("Failed to destroy public key: ", e);
                     }
                     Err(e)
                 } else {
                     Ok(psa_import_key::Result {})
                 }
             }
-            Err(e) => {
-                format_error!("Import operation failed", e);
-                Err(utils::to_response_status(e))
+            Err(error) => {
+                format_error!("Import key status: ", error);
+                Err(to_response_status(error))
             }
         }
     }
@@ -315,96 +261,45 @@ impl Provider {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadOnly)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!(
-                "Export RSA public key in session {}",
-                session.session_handle()
-            );
-        }
+        let session = self.new_session()?;
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
+        let key = self.find_key(&session, key_id, KeyPairType::PublicKey)?;
         info!("Located key for export.");
 
-        let mut size_attrs: Vec<CK_ATTRIBUTE> = Vec::new();
-        size_attrs.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_MODULUS));
-        size_attrs.push(CK_ATTRIBUTE::new(pkcs11::types::CKA_PUBLIC_EXPONENT));
+        let mut attributes = session
+            .get_attributes(
+                key,
+                &[AttributeType::Modulus, AttributeType::PublicExponent],
+            )
+            .map_err(to_response_status)?;
 
-        // Get the length of the attributes to retrieve.
-        trace!("GetAttributeValue command");
-        let (modulus_len, public_exponent_len) =
-            match self
-                .backend
-                .get_attribute_value(session.session_handle(), key, &mut size_attrs)
-            {
-                Ok((rv, attrs)) => {
-                    if rv != CKR_OK {
-                        format_error!("Error when extracting attribute", rv);
-                        Err(utils::rv_to_response_status(rv))
-                    } else {
-                        Ok((attrs[0].ulValueLen, attrs[1].ulValueLen))
-                    }
-                }
-                Err(e) => {
-                    format_error!("Failed to read attributes from public key", e);
-                    Err(utils::to_response_status(e))
-                }
-            }?;
-
-        let mut modulus: Vec<pkcs11::types::CK_BYTE> = Vec::new();
-        let mut public_exponent: Vec<pkcs11::types::CK_BYTE> = Vec::new();
-        modulus.resize(modulus_len as usize, 0);
-        public_exponent.resize(public_exponent_len as usize, 0);
-
-        let mut extract_attrs: Vec<CK_ATTRIBUTE> = Vec::new();
-        extract_attrs
-            .push(CK_ATTRIBUTE::new(pkcs11::types::CKA_MODULUS).with_bytes(modulus.as_mut_slice()));
-        extract_attrs.push(
-            CK_ATTRIBUTE::new(pkcs11::types::CKA_PUBLIC_EXPONENT)
-                .with_bytes(public_exponent.as_mut_slice()),
-        );
-
-        trace!("GetAttributeValue command");
-        match self
-            .backend
-            .get_attribute_value(session.session_handle(), key, &mut extract_attrs)
-        {
-            Ok(res) => {
-                let (rv, attrs) = res;
-                if rv != CKR_OK {
-                    format_error!("Error when extracting attribute", rv);
-                    Err(utils::rv_to_response_status(rv))
-                } else {
-                    let modulus = attrs[0].get_bytes().map_err(|err| {
-                        format_error!("Error getting bytes from modulus attribute", err);
-                        ResponseStatus::PsaErrorCommunicationFailure
-                    })?;
-                    let public_exponent = attrs[1].get_bytes().map_err(|err| {
-                        format_error!("Error getting bytes from public exponent attribute", err);
-                        ResponseStatus::PsaErrorCommunicationFailure
-                    })?;
-
-                    // To produce a valid ASN.1 RSAPublicKey structure, 0x00 is put in front of the positive
-                    // integer if highest significant bit is one, to differentiate it from a negative number.
-                    let modulus = IntegerAsn1::from_bytes_be_unsigned(modulus);
-                    let public_exponent = IntegerAsn1::from_bytes_be_unsigned(public_exponent);
-
-                    let key = RSAPublicKey {
-                        modulus,
-                        public_exponent,
-                    };
-                    let data = picky_asn1_der::to_vec(&key).map_err(|err| {
-                        format_error!("Could not serialise key elements", err);
-                        ResponseStatus::PsaErrorCommunicationFailure
-                    })?;
-                    Ok(psa_export_public_key::Result { data: data.into() })
-                }
-            }
-            Err(e) => {
-                format_error!("Failed to read attributes from public key", e);
-                Err(utils::to_response_status(e))
-            }
+        if attributes.len() != 2 {
+            error!("Expected to find modulus and public exponent attributes in public key.");
+            return Err(ResponseStatus::PsaErrorCommunicationFailure);
         }
+
+        let modulus = if let Attribute::Modulus(vec) = attributes.remove(0) {
+            IntegerAsn1::from_bytes_be_unsigned(vec)
+        } else {
+            error!("Expected to find modulus attribute.");
+            return Err(ResponseStatus::PsaErrorCommunicationFailure);
+        };
+        let public_exponent = if let Attribute::PublicExponent(vec) = attributes.remove(0) {
+            IntegerAsn1::from_bytes_be_unsigned(vec)
+        } else {
+            error!("Expected to find public exponent attribute.");
+            return Err(ResponseStatus::PsaErrorCommunicationFailure);
+        };
+
+        let key = RSAPublicKey {
+            modulus,
+            public_exponent,
+        };
+        let data = picky_asn1_der::to_vec(&key).map_err(|err| {
+            format_error!("Could not serialise key elements", err);
+            ResponseStatus::PsaErrorCommunicationFailure
+        })?;
+        Ok(psa_export_public_key::Result { data: data.into() })
     }
 
     pub(super) fn psa_destroy_key_internal(
@@ -418,48 +313,18 @@ impl Provider {
 
         let _ = self.key_info_store.remove_key_info(&key_triple)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!(
-                "Deleting RSA keypair in session {}",
-                session.session_handle()
-            );
-        }
+        let session = self.new_session()?;
 
-        let first_res = match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
-            Ok(key) => {
-                trace!("DestroyObject command");
-                match self.backend.destroy_object(session.session_handle(), key) {
-                    Ok(_) => {
-                        info!("Private part of the key destroyed successfully.");
-                        Ok(())
-                    }
-                    Err(e) => {
-                        format_error!("Failed to destroy private part of the key", e);
-                        Err(utils::to_response_status(e))
-                    }
-                }
-            }
-            Err(e) => {
-                format_error!("Error destroying key", e);
-                Err(e)
-            }
-        };
+        let first_key = self.find_key(&session, key_id, KeyPairType::Any)?;
+        session
+            .destroy_object(first_key)
+            .map_err(to_response_status)?;
 
         // Second key is optional.
-        let second_res = match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
+        match self.find_key(&session, key_id, KeyPairType::Any) {
             Ok(key) => {
                 trace!("DestroyObject command");
-                match self.backend.destroy_object(session.session_handle(), key) {
-                    Ok(_) => {
-                        info!("Private part of the key destroyed successfully.");
-                        Ok(())
-                    }
-                    Err(e) => {
-                        format_error!("Failed to destroy private part of the key", e);
-                        Err(utils::to_response_status(e))
-                    }
-                }
+                session.destroy_object(key).map_err(to_response_status)
             }
             // A second key is optional.
             Err(ResponseStatus::PsaErrorDoesNotExist) => Ok(()),
@@ -467,10 +332,8 @@ impl Provider {
                 format_error!("Error destroying key", e);
                 Err(e)
             }
-        };
+        }?;
 
-        first_res?;
-        second_res?;
         Ok(psa_destroy_key::Result {})
     }
 }

@@ -132,7 +132,7 @@ impl Provider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.export_public_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
@@ -159,7 +159,7 @@ impl Provider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.export_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
@@ -193,7 +193,7 @@ impl Provider {
         //   * at this point the provider has been instantiated so Mbed Crypto has been initialized
         //   * self.key_handle_mutex prevents concurrent accesses
         //   * self.key_slot_semaphore prevents overflowing key slots
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         unsafe {
             destroy_key_status = psa_crypto_key_management::destroy(id);
         }

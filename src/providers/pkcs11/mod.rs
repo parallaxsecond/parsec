@@ -7,6 +7,11 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use cryptoki::types::locking::CInitializeArgs;
+use cryptoki::types::session::{Session, UserType};
+use cryptoki::types::slot_token::Slot;
+use cryptoki::types::Flags;
+use cryptoki::Pkcs11;
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -15,18 +20,17 @@ use parsec_interface::operations::{
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
-use parsec_interface::secrecy::SecretString;
-use pkcs11::types::{CKF_OS_LOCKING_OK, CK_C_INITIALIZE_ARGS, CK_SLOT_ID};
-use pkcs11::Ctx;
+use parsec_interface::secrecy::{ExposeSecret, SecretString};
 use std::collections::HashSet;
+use std::convert::TryInto;
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
-use std::sync::{Mutex, RwLock};
-use utils::{KeyPairType, ReadWriteSession, Session};
+use std::sync::RwLock;
+use utils::{to_response_status, KeyPairType};
 use uuid::Uuid;
 use zeroize::Zeroize;
 
-type LocalIdStore = HashSet<[u8; 4]>;
+type LocalIdStore = HashSet<u32>;
 
 mod asym_encryption;
 mod asym_sign;
@@ -56,19 +60,9 @@ pub struct Provider {
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     local_ids: RwLock<LocalIdStore>,
-    // The authentication state is common to all sessions. A counter of logged in sessions is used
-    // to keep track of current logged in sessions, ignore logging in if the user is already
-    // logged in and only log out when no other session is.
-    // The mutex is both used to have interior mutability on the counter and to create a critical
-    // section inside login/logout functions. The clippy warning is ignored here to not have one
-    // Mutex<()> and an AtomicUsize which would make the code more complicated. Maybe a better
-    // way exists.
-    #[allow(clippy::mutex_atomic)]
-    logged_sessions_counter: Mutex<usize>,
-    backend: Ctx,
-    slot_number: CK_SLOT_ID,
-    // Some PKCS 11 devices do not need a pin, the None variant means that.
-    user_pin: Option<SecretString>,
+    #[derivative(Debug = "ignore")]
+    backend: Pkcs11,
+    slot_number: Slot,
     software_public_operations: bool,
 }
 
@@ -79,19 +73,21 @@ impl Provider {
     /// Returns `None` if the initialisation failed.
     fn new(
         key_info_store: KeyInfoManagerClient,
-        backend: Ctx,
-        slot_number: usize,
+        backend: Pkcs11,
+        slot_number: Slot,
         user_pin: Option<SecretString>,
         software_public_operations: bool,
     ) -> Option<Provider> {
+        if let Some(pin) = user_pin {
+            backend.set_pin(slot_number, pin.expose_secret()).ok()?;
+        }
+
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
-            logged_sessions_counter: Mutex::new(0),
             backend,
-            slot_number: slot_number as CK_SLOT_ID,
-            user_pin,
+            slot_number,
             software_public_operations,
         };
         {
@@ -105,14 +101,10 @@ impl Provider {
             // Delete those who are not present and add to the local_store the ones present.
             match pkcs11_provider.key_info_store.get_all() {
                 Ok(key_triples) => {
-                    let session =
-                        Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
+                    let session = pkcs11_provider.new_session().ok()?;
 
                     for key_triple in key_triples.iter().cloned() {
-                        let key_id: [u8; 4] = match pkcs11_provider
-                            .key_info_store
-                            .get_key_id(&key_triple)
-                        {
+                        let key_id = match pkcs11_provider.key_info_store.get_key_id(&key_triple) {
                             Ok(id) => id,
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
                                 error!("Stored key info missing for key triple {}.", key_triple);
@@ -132,11 +124,7 @@ impl Provider {
                             }
                         };
 
-                        match pkcs11_provider.find_key(
-                            session.session_handle(),
-                            key_id,
-                            KeyPairType::Any,
-                        ) {
+                        match pkcs11_provider.find_key(&session, key_id, KeyPairType::Any) {
                             Ok(_) => {
                                 if crate::utils::GlobalConfig::log_error_details() {
                                     warn!(
@@ -155,7 +143,7 @@ impl Provider {
                                         key_triple
                                     );
                                 } else {
-                                    warn!("Key not found in the PKCS 11 library, adding it.");
+                                    warn!("Key not found in the PKCS 11 library, deleting it.");
                                 }
                                 to_remove.push(key_triple.clone());
                             }
@@ -189,6 +177,26 @@ impl Provider {
         }
 
         Some(pkcs11_provider)
+    }
+
+    // Create a new session with the following properties:
+    // * without callback
+    // * read/write session
+    // * serial session
+    // * logged in if the pin is set
+    // * set on the slot in the provider
+    fn new_session(&self) -> Result<Session> {
+        let mut flags = Flags::new();
+        let _ = flags.set_rw_session(true).set_serial_session(true);
+
+        let session = self
+            .backend
+            .open_session_no_callback(self.slot_number, flags)
+            .map_err(to_response_status)?;
+
+        session.login(UserType::User).map_err(to_response_status)?;
+
+        Ok(session)
     }
 }
 
@@ -317,17 +325,6 @@ impl Provide for Provider {
     }
 }
 
-impl Drop for Provider {
-    fn drop(&mut self) {
-        trace!("Finalize command");
-        if let Err(e) = self.backend.finalize() {
-            format_error!("Error when dropping the PKCS 11 provider", e);
-        }
-        // The other fields containing confidential information should implement zeroizing on drop.
-        self.slot_number.zeroize();
-    }
-}
-
 /// Builder for Pkcs11Provider
 ///
 /// This builder contains some confidential information that is passed to the Pkcs11Provider. The
@@ -339,7 +336,7 @@ pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     pkcs11_library_path: Option<String>,
-    slot_number: Option<usize>,
+    slot_number: Option<u64>,
     user_pin: Option<SecretString>,
     software_public_operations: Option<bool>,
 }
@@ -371,7 +368,7 @@ impl ProviderBuilder {
     }
 
     /// Specify the slot number used
-    pub fn with_slot_number(mut self, slot_number: usize) -> ProviderBuilder {
+    pub fn with_slot_number(mut self, slot_number: u64) -> ProviderBuilder {
         self.slot_number = Some(slot_number);
 
         self
@@ -411,30 +408,30 @@ impl ProviderBuilder {
         let slot_number = self
             .slot_number
             .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing slot number"))?;
-        let mut backend = Ctx::new(library_path).map_err(|e| {
+        let slot = slot_number.try_into().or_else(|_| {
+            Err(Error::new(
+                ErrorKind::InvalidData,
+                "cannot convert slot value",
+            ))
+        })?;
+
+        let backend = Pkcs11::new(library_path).map_err(|e| {
             format_error!("Error creating a PKCS 11 context", e);
             Error::new(ErrorKind::InvalidData, "error creating PKCS 11 context")
         })?;
-        let mut args = CK_C_INITIALIZE_ARGS::new();
-        // Allow the PKCS 11 library to use OS native locking mechanism.
-        args.CreateMutex = None;
-        args.DestroyMutex = None;
-        args.LockMutex = None;
-        args.UnlockMutex = None;
-        args.flags = CKF_OS_LOCKING_OK;
         trace!("Initialize command");
-        backend.initialize(Some(args)).map_err(|e| {
-            format_error!("Error initializing the PKCS 11 backend", e);
-            Error::new(
-                ErrorKind::InvalidData,
-                "PKCS 11 backend initializing failed",
-            )
-        })?;
+        backend
+            .initialize(CInitializeArgs::OsThreads)
+            .map_err(|e| {
+                format_error!("Error initializing PKCS 11 context", e);
+                Error::new(ErrorKind::InvalidData, "error initializing PKCS 11 context")
+            })?;
+
         Ok(Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,
-            slot_number,
+            slot,
             self.user_pin,
             self.software_public_operations.unwrap_or(false),
         )
