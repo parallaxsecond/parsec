@@ -174,7 +174,7 @@ pub fn list_keys(
         };
 
         keys.push(KeyInfo {
-            provider_id: ProviderID::MbedCrypto,
+            provider_id: key_triple.provider_id,
             name: key_triple.key_name().to_string(),
             attributes: key_info.attributes,
         });

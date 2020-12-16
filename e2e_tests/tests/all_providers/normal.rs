@@ -133,15 +133,15 @@ fn list_keys() {
     client.set_provider(ProviderID::Tpm);
     client.generate_rsa_sign_key(key3.clone()).unwrap();
 
-    let key_names: Vec<String> = client
+    let key_names: Vec<(String, ProviderID)> = client
         .list_keys()
         .expect("list_keys failed")
         .into_iter()
-        .map(|k| k.name)
+        .map(|k| (k.name, k.provider_id))
         .collect();
 
     assert_eq!(key_names.len(), 3);
-    assert!(key_names.contains(&key1));
-    assert!(key_names.contains(&key2));
-    assert!(key_names.contains(&key3));
+    assert!(key_names.contains(&(key1.clone(),ProviderID::MbedCrypto)));
+    assert!(key_names.contains(&(key2.clone(),ProviderID::Pkcs11)));
+    assert!(key_names.contains(&(key3.clone(),ProviderID::Tpm)));
 }
