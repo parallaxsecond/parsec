@@ -33,3 +33,7 @@ provider_type = "Tpm"
 key_info_manager = "on-disk-manager"
 tcti = "mssim"
 owner_hierarchy_auth = "tpm_pass"
+
+[[provider]]
+provider_type = "CryptoAuthLib"
+key_info_manager = "on-disk-manager"

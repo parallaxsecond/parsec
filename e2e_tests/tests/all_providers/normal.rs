@@ -9,7 +9,7 @@ use std::collections::HashSet;
 fn list_providers() {
     let mut client = TestClient::new();
     let providers = client.list_providers().expect("list providers failed");
-    assert_eq!(providers.len(), 4);
+    assert_eq!(providers.len(), 5);
     let uuids: HashSet<Uuid> = providers.iter().map(|p| p.uuid).collect();
     // Core provider
     assert!(uuids.contains(&Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()));
@@ -19,6 +19,8 @@ fn list_providers() {
     assert!(uuids.contains(&Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()));
     // TPM provider
     assert!(uuids.contains(&Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()));
+    // CryptoAuthLib provider
+    assert!(uuids.contains(&Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()));
 }
 
 #[test]
@@ -38,6 +40,7 @@ fn list_opcodes() {
     let mut client = TestClient::new();
     let mut crypto_providers_hsm = HashSet::new();
     let mut core_provider_opcodes = HashSet::new();
+    let mut crypto_providers_cal = HashSet::new();
 
     let _ = crypto_providers_hsm.insert(Opcode::PsaGenerateKey);
     let _ = crypto_providers_hsm.insert(Opcode::PsaDestroyKey);
@@ -88,6 +91,12 @@ fn list_opcodes() {
             .list_opcodes(ProviderID::MbedCrypto)
             .expect("list providers failed"),
         crypto_providers_mbed_crypto
+    );
+    assert_eq!(
+        client
+            .list_opcodes(ProviderID::CryptoAuthLib)
+            .expect("list providers failed"),
+            crypto_providers_cal
     );
 }
 

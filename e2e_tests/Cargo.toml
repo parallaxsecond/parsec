@@ -33,4 +33,5 @@ sha2 = "0.9.1"
 mbed-crypto-provider = []
 tpm-provider = []
 pkcs11-provider = []
-all-providers = ["pkcs11-provider","tpm-provider","mbed-crypto-provider"]
+cryptoauthlib-provider = []
+all-providers = ["pkcs11-provider","tpm-provider","mbed-crypto-provider","cryptoauthlib-provider"]

@@ -18,7 +18,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.21.0"
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs.git"}
 rand = { version = "0.7.3", features = ["small_rng"], optional = true }
 base64 = "0.12.3"
 uuid = "0.8.1"
@@ -38,7 +38,7 @@ structopt = "0.3.17"
 derivative = "2.1.1"
 version = "3.0.0"
 hex = { version = "0.4.2", optional = true }
-psa-crypto = { version = "0.6.0", default-features = false, features = ["operations"], optional = true }
+psa-crypto = { git = "https://github.com/parallaxsecond/rust-psa-crypto", rev = "18dd4dda96d8b61d2e112b9e6ad83e90fe768d78", default-features = false, features = ["operations"], optional = true}
 zeroize = { version = "1.1.0", features = ["zeroize_derive"] }
 picky-asn1-x509 = { version = "0.3.2", optional = true }
 users = "0.10.0"
@@ -51,11 +51,12 @@ spiffe = { git = "https://github.com/hug-dev/rust-spiffe", branch = "refactor-jw
 rand = { version = "0.7.3", features = ["small_rng"] }
 
 [package.metadata.docs.rs]
-features = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider"]
+features = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider", "cryptoauthlib-provider"]
 
 [features]
 default = []
 mbed-crypto-provider = ["psa-crypto"]
 pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "psa-crypto", "rand"]
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "hex"]
-all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider"]
+cryptoauthlib-provider = []
+all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cryptoauthlib-provider"]

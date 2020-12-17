@@ -131,3 +131,7 @@ key_info_manager = "on-disk-manager"
 # e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
 # provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"
+
+[[provider]]
+provider_type = "CryptoAuthLib"
+key_info_manager = "on-disk-manager"

@@ -14,30 +14,11 @@ socket_path = "/tmp/parsec.sock"
 
 [authenticator]
 auth_type = "Direct"
-#workload_endpoint="unix:///tmp/agent.sock"
 
 [[key_manager]]
 name = "on-disk-manager"
 manager_type = "OnDisk"
 store_path = "./mappings"
-
-[[provider]]
-provider_type = "MbedCrypto"
-key_info_manager = "on-disk-manager"
-
-[[provider]]
-provider_type = "Tpm"
-key_info_manager = "on-disk-manager"
-tcti = "mssim"
-owner_hierarchy_auth = "tpm_pass"
-
-[[provider]]
-provider_type = "Pkcs11"
-key_info_manager = "on-disk-manager"
-library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
-user_pin = "123456"
-# The slot_number mandatory field is going to replace the following line with a valid number
-# slot_number
 
 [[provider]]
 provider_type = "CryptoAuthLib"
