@@ -18,7 +18,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs.git"}
+parsec-interface = "0.22.0"
 rand = { version = "0.7.3", features = ["small_rng"], optional = true }
 base64 = "0.12.3"
 uuid = "0.8.1"
@@ -38,7 +38,7 @@ structopt = "0.3.17"
 derivative = "2.1.1"
 version = "3.0.0"
 hex = { version = "0.4.2", optional = true }
-psa-crypto = { git = "https://github.com/parallaxsecond/rust-psa-crypto", rev = "18dd4dda96d8b61d2e112b9e6ad83e90fe768d78", default-features = false, features = ["operations"], optional = true}
+psa-crypto = { version = "0.6.1", default-features = false, features = ["operations"], optional = true }
 zeroize = { version = "1.1.0", features = ["zeroize_derive"] }
 picky-asn1-x509 = { version = "0.3.2", optional = true }
 users = "0.10.0"

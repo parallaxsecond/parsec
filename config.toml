@@ -132,6 +132,25 @@ key_info_manager = "on-disk-manager"
 # provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"
 
-[[provider]]
-provider_type = "CryptoAuthLib"
-key_info_manager = "on-disk-manager"
+# Example of a CryptoAuthLib provider configuration
+# All below parameters depend on what devices, interfaces or parameters are required or supported by 
+# "rust-cryptoauthlib" wrapper for cryptoauthlib and underlying hardware.
+#[[provider]]
+#provider_type = "CryptoAuthLib"
+#key_info_manager = "on-disk-manager"
+# (Required) ATCA device type.
+#   Supported values: "atecc508a", "atecc608a"
+#device_type = "atecc508a"
+# (Required) Interface for ATCA device
+#   Supported values: "i2c"
+#iface_type = "i2c"
+# (Required) Default wake delay for ATCA device
+#wake_delay = 1500
+# (Required) Default number of rx retries for ATCA device
+#rx_retries = 20
+# (Optional - required for i2c) i2c slave addres
+#slave_address = 0xc0
+# (Optional - required for i2c) i2c bus number
+#bus = 1
+# (Optional - required for i2c) i2c bus baud rate
+#baud = 400000
