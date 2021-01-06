@@ -13,11 +13,11 @@ impl Provider {
     // This function returns the `RWLocks` found on the `Pkcs11Provider`
     // in the order in which they should *always* be taken. Changing the order
     // of locking in one method can very easily result in deadlocking.
-    pub(super) fn get_ordered_locks<'a>(
-        &'a self,
+    pub(super) fn get_ordered_locks(
+        &'_ self,
     ) -> (
-        &'a RwLock<dyn ManageKeyInfo + Send + Sync>,
-        &'a RwLock<LocalIdStore>,
+        &'_ RwLock<dyn ManageKeyInfo + Send + Sync>,
+        &'_ RwLock<LocalIdStore>,
     ) {
         (&self.key_info_store, &self.local_ids)
     }
