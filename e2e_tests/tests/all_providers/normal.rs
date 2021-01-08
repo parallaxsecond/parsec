@@ -40,7 +40,6 @@ fn list_opcodes() {
     let mut client = TestClient::new();
     let mut crypto_providers_hsm = HashSet::new();
     let mut core_provider_opcodes = HashSet::new();
-    let mut crypto_providers_cal = HashSet::new();
 
     let _ = crypto_providers_hsm.insert(Opcode::PsaGenerateKey);
     let _ = crypto_providers_hsm.insert(Opcode::PsaDestroyKey);
@@ -91,12 +90,6 @@ fn list_opcodes() {
             .list_opcodes(ProviderID::MbedCrypto)
             .expect("list providers failed"),
         crypto_providers_mbed_crypto
-    );
-    assert_eq!(
-        client
-            .list_opcodes(ProviderID::CryptoAuthLib)
-            .expect("list providers failed"),
-            crypto_providers_cal
     );
 }
 
@@ -150,7 +143,7 @@ fn list_keys() {
         .collect();
 
     assert_eq!(key_names.len(), 3);
-    assert!(key_names.contains(&(key1.clone(),ProviderID::MbedCrypto)));
-    assert!(key_names.contains(&(key2.clone(),ProviderID::Pkcs11)));
-    assert!(key_names.contains(&(key3.clone(),ProviderID::Tpm)));
+    assert!(key_names.contains(&(key1.clone(), ProviderID::MbedCrypto)));
+    assert!(key_names.contains(&(key2.clone(), ProviderID::Pkcs11)));
+    assert!(key_names.contains(&(key3.clone(), ProviderID::Tpm)));
 }
