@@ -55,8 +55,8 @@ fn list_providers() {
             Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(), // Mbed crypto provider
             Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap(), // Tpm provider
             Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap(), // Pkcs11 provider
-            Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(), // Core provider
             Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap(), // CryptoAuthLib provider
+            Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(), // Core provider
         ]
     );
 
@@ -71,8 +71,8 @@ fn list_providers() {
             Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap(), // Pkcs11 provider
             Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(), // Mbed crypto provider
             Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap(), // Tpm provider
-            Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(), // Core provider
             Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap(), // CryptoAuthLib provider
+            Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(), // Core provider
         ]
     );
 }
