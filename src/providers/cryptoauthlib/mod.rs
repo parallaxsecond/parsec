@@ -4,16 +4,18 @@
 //!
 //! This provider is a hardware based implementation of PSA Crypto, Mbed Crypto.
 use super::Provide;
+use crate::authenticators::ApplicationName;
 use crate::key_info_managers::ManageKeyInfo;
 use derivative::Derivative;
 use log::trace;
+use parsec_interface::operations::list_keys;
+use parsec_interface::operations::list_keys::KeyInfo;
+use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
-
-use parsec_interface::operations::list_providers::ProviderInfo;
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 
 const SUPPORTED_OPCODES: [Opcode; 0] = [];
 
@@ -44,6 +46,17 @@ impl Provide for Provider {
             version_rev: 0,
             id: ProviderID::CryptoAuthLib,
         }, SUPPORTED_OPCODES.iter().copied().collect()))
+    }
+
+    fn list_keys(
+        &self,
+        _app_name: ApplicationName,
+        _op: list_keys::Operation,
+    ) -> Result<list_keys::Result> {
+        trace!("list_keys ingress");
+        let keys: Vec<KeyInfo> = Vec::new();
+
+        Ok(list_keys::Result { keys })
     }
 }
 
