@@ -1,8 +1,12 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use e2e_tests::RawRequestClient;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::list_providers::Uuid;
-use parsec_client::core::interface::requests::{AuthType, Opcode, ProviderID, Result};
+use parsec_client::core::interface::requests::request::RawHeader;
+use parsec_client::core::interface::requests::{
+    AuthType, Opcode, ProviderID, ResponseStatus, Result,
+};
 use std::collections::HashSet;
 
 #[test]
@@ -146,4 +150,20 @@ fn list_keys() {
     assert!(key_names.contains(&(key1.clone(), ProviderID::MbedCrypto)));
     assert!(key_names.contains(&(key2.clone(), ProviderID::Pkcs11)));
     assert!(key_names.contains(&(key3.clone(), ProviderID::Tpm)));
+}
+
+#[test]
+// See #310
+fn invalid_provider_list_keys() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    // Always targeting the Mbed Crypto provider
+    req_hdr.provider = 0x1;
+    req_hdr.opcode = Opcode::ListKeys as u32;
+
+    let resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+    assert_eq!(resp.header.status, ResponseStatus::PsaErrorNotSupported);
 }
