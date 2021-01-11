@@ -37,16 +37,20 @@ use std::sync::RwLock;
 use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 
+#[cfg(feature = "cryptoauthlib-provider")]
+use crate::providers::cryptoauthlib::ProviderBuilder as CryptoAuthLibProviderBuilder;
 #[cfg(feature = "mbed-crypto-provider")]
 use crate::providers::mbed_crypto::ProviderBuilder as MbedCryptoProviderBuilder;
 #[cfg(feature = "pkcs11-provider")]
 use crate::providers::pkcs11::ProviderBuilder as Pkcs11ProviderBuilder;
 #[cfg(feature = "tpm-provider")]
 use crate::providers::tpm::ProviderBuilder as TpmProviderBuilder;
+
 #[cfg(any(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",
-    feature = "tpm-provider"
+    feature = "tpm-provider",
+    feature = "cryptoauthlib-provider"
 ))]
 use log::info;
 
@@ -277,7 +281,8 @@ fn build_providers(
     not(all(
         feature = "mbed-crypto-provider",
         feature = "pkcs11-provider",
-        feature = "tpm-provider"
+        feature = "tpm-provider",
+        feature = "cryptoauthlib-provider"
     )),
     allow(unused_variables),
     allow(clippy::match_single_binding)
@@ -330,10 +335,20 @@ unsafe fn get_provider(
                     .build()?,
             ))
         }
+        #[cfg(feature = "cryptoauthlib-provider")]
+        ProviderConfig::CryptoAuthLib { .. } => {
+            info!("Creating a CryptoAuthentication Library Provider.");
+            Ok(Arc::new(
+                CryptoAuthLibProviderBuilder::new()
+                    .with_key_info_store(key_info_manager)
+                    .build()?,
+            ))
+        }
         #[cfg(not(all(
             feature = "mbed-crypto-provider",
             feature = "pkcs11-provider",
-            feature = "tpm-provider"
+            feature = "tpm-provider",
+            feature = "cryptoauthlib-provider"
         )))]
         _ => {
             error!(

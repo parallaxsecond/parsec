@@ -131,3 +131,10 @@ key_info_manager = "on-disk-manager"
 # e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
 # provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"
+
+# Example of a CryptoAuthLib provider configuration
+# All below parameters depend on what devices, interfaces or parameters are required or supported by 
+# "rust-cryptoauthlib" wrapper for cryptoauthlib and underlying hardware.
+#[[provider]]
+#provider_type = "CryptoAuthLib"
+#key_info_manager = "on-disk-manager"

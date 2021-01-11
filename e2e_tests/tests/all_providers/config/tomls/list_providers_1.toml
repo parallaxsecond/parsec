@@ -33,3 +33,7 @@ library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
 user_pin = "123456"
 # The slot_number mandatory field is going to replace the following line with a valid number
 # slot_number
+
+[[provider]]
+provider_type = "CryptoAuthLib"
+key_info_manager = "on-disk-manager"

@@ -23,6 +23,9 @@ pub mod mbed_crypto;
 #[cfg(feature = "tpm-provider")]
 pub mod tpm;
 
+#[cfg(feature = "cryptoauthlib-provider")]
+pub mod cryptoauthlib;
+
 /// Provider configuration structure
 /// For providers configs in Parsec config.toml we use a format similar
 /// to the one described in the Internally Tagged Enum representation
@@ -59,6 +62,11 @@ pub enum ProviderConfig {
         /// Owner Hierarchy Authentication
         owner_hierarchy_auth: String,
     },
+    /// Microchip CryptoAuthentication Library provider configuration
+    CryptoAuthLib {
+        /// Name of the Key Info Manager to use
+        key_info_manager: String,
+    },
 }
 
 impl ProviderConfig {
@@ -77,6 +85,10 @@ impl ProviderConfig {
                 ref key_info_manager,
                 ..
             } => key_info_manager,
+            ProviderConfig::CryptoAuthLib {
+                ref key_info_manager,
+                ..
+            } => key_info_manager,
         }
     }
     /// Get the Provider ID of the provider
@@ -85,6 +97,7 @@ impl ProviderConfig {
             ProviderConfig::MbedCrypto { .. } => ProviderID::MbedCrypto,
             ProviderConfig::Pkcs11 { .. } => ProviderID::Pkcs11,
             ProviderConfig::Tpm { .. } => ProviderID::Tpm,
+            ProviderConfig::CryptoAuthLib { .. } => ProviderID::CryptoAuthLib,
         }
     }
 }
