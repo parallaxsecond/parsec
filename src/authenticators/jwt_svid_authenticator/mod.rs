@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! JWT SVID authenticator
 
-use super::ApplicationName;
-use super::Authenticate;
+use super::{Admin, AdminList, ApplicationName, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::operations::list_authenticators;
@@ -19,13 +18,15 @@ use std::str;
 #[allow(missing_debug_implementations)]
 pub struct JwtSvidAuthenticator {
     jwt_client: JWTClient,
+    admins: AdminList,
 }
 
 impl JwtSvidAuthenticator {
     /// Create a new JWT-SVID authenticator with a specific path to the Workload API socket.
-    pub fn new(workload_endpoint: String) -> Self {
+    pub fn new(workload_endpoint: String, admins: Vec<Admin>) -> Self {
         JwtSvidAuthenticator {
             jwt_client: JWTClient::new(&workload_endpoint, None, None),
+            admins: admins.into(),
         }
     }
 }
@@ -65,7 +66,8 @@ impl Authenticate for JwtSvidAuthenticator {
             error!("The validation of the JWT-SVID failed ({}).", e);
             ResponseStatus::AuthenticationError
         })?;
-
-        Ok(ApplicationName(validate_response.spiffe_id().to_string()))
+        let app_name = validate_response.spiffe_id().to_string();
+        let is_admin = self.admins.is_admin(&app_name);
+        Ok(ApplicationName::new(app_name, is_admin))
     }
 }

@@ -64,6 +64,16 @@ timeout = 200 # in milliseconds
 # https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html
 auth_type = "UnixPeerCredentials"
 
+# List of admins to be identified by the authenticator.
+# The "name" field of each entry in the list must contain the application name (as required by the
+# identifier in `auth_type`). For example, for `UnixPeerCredentials`, the names should be UIDs of
+# the admin users.
+# WARNING: Admins have special privileges and access to operations that are not permitted for normal
+# users of the service. Only enable this feature with some list of admins if you are confident
+# about the need for those permissions.
+# Read more here: https://parallaxsecond.github.io/parsec-book/parsec_client/operations/index.html#core-operations
+#admins = [ { name = "admin_1" }, { name = "admin_2" } ]
+
 # (Required only for JwtSvid) Location of the Workload API endpoint
 # WARNING: only use this authenticator if the Workload API socket is TRUSTED. A malicious entity
 # owning that socket would have access to all the keys owned by clients using this authentication

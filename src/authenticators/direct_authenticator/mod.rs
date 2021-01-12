@@ -8,8 +8,7 @@
 //! This authenticator does not offer any security value and should only be used in environments
 //! where all the clients and the service are mutually trustworthy.
 
-use super::ApplicationName;
-use super::Authenticate;
+use super::{Admin, AdminList, ApplicationName, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::operations::list_authenticators;
@@ -20,8 +19,19 @@ use parsec_interface::secrecy::ExposeSecret;
 use std::str;
 
 /// Direct authentication authenticator implementation
-#[derive(Copy, Clone, Debug)]
-pub struct DirectAuthenticator;
+#[derive(Clone, Debug)]
+pub struct DirectAuthenticator {
+    admins: AdminList,
+}
+
+impl DirectAuthenticator {
+    /// Create new direct authenticator
+    pub fn new(admins: Vec<Admin>) -> Self {
+        DirectAuthenticator {
+            admins: admins.into(),
+        }
+    }
+}
 
 impl Authenticate for DirectAuthenticator {
     fn describe(&self) -> Result<list_authenticators::AuthenticatorInfo> {
@@ -47,7 +57,11 @@ impl Authenticate for DirectAuthenticator {
             Err(ResponseStatus::AuthenticationError)
         } else {
             match str::from_utf8(auth.buffer.expose_secret()) {
-                Ok(str) => Ok(ApplicationName(String::from(str))),
+                Ok(str) => {
+                    let app_name = String::from(str);
+                    let is_admin = self.admins.is_admin(&app_name);
+                    Ok(ApplicationName::new(app_name, is_admin))
+                }
                 Err(_) => {
                     error!("Error parsing the authentication value as a UTF-8 string.");
                     Err(ResponseStatus::AuthenticationError)
@@ -59,14 +73,16 @@ impl Authenticate for DirectAuthenticator {
 
 #[cfg(test)]
 mod test {
-    use super::super::Authenticate;
+    use super::super::{Admin, Authenticate};
     use super::DirectAuthenticator;
     use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
 
     #[test]
     fn successful_authentication() {
-        let authenticator = DirectAuthenticator {};
+        let authenticator = DirectAuthenticator {
+            admins: Default::default(),
+        };
 
         let app_name = "app_name".to_string();
         let req_auth = RequestAuth::new(app_name.clone().into_bytes());
@@ -77,11 +93,14 @@ mod test {
             .expect("Failed to authenticate");
 
         assert_eq!(auth_name.get_name(), app_name);
+        assert_eq!(auth_name.is_admin, false);
     }
 
     #[test]
     fn failed_authentication() {
-        let authenticator = DirectAuthenticator {};
+        let authenticator = DirectAuthenticator {
+            admins: Default::default(),
+        };
         let conn_metadata = None;
         let status = authenticator
             .authenticate(&RequestAuth::new(vec![0xff; 5]), conn_metadata)
@@ -92,12 +111,44 @@ mod test {
 
     #[test]
     fn empty_auth() {
-        let authenticator = DirectAuthenticator {};
+        let authenticator = DirectAuthenticator {
+            admins: Default::default(),
+        };
         let conn_metadata = None;
         let status = authenticator
             .authenticate(&RequestAuth::new(Vec::new()), conn_metadata)
             .expect_err("Empty auth should have failed");
 
         assert_eq!(status, ResponseStatus::AuthenticationError);
+    }
+
+    #[test]
+    fn admin_check() {
+        let admin_name = String::from("admin_name");
+        let authenticator = DirectAuthenticator {
+            admins: vec![Admin {
+                name: admin_name.clone(),
+            }]
+            .into(),
+        };
+
+        let app_name = "app_name".to_string();
+        let req_auth = RequestAuth::new(app_name.clone().into_bytes());
+        let conn_metadata = None;
+
+        let auth_name = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .expect("Failed to authenticate");
+
+        assert_eq!(auth_name.get_name(), app_name);
+        assert_eq!(auth_name.is_admin, false);
+
+        let req_auth = RequestAuth::new(admin_name.clone().into_bytes());
+        let auth_name = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .expect("Failed to authenticate");
+
+        assert_eq!(auth_name.get_name(), admin_name);
+        assert_eq!(auth_name.is_admin, true);
     }
 }

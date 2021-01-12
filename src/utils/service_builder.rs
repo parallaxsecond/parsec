@@ -398,16 +398,27 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenti
     let mut authenticators: Vec<(AuthType, Authenticator)> = Vec::new();
 
     match config {
-        AuthenticatorConfig::Direct => {
-            authenticators.push((AuthType::Direct, Box::from(DirectAuthenticator {})))
-        }
-        AuthenticatorConfig::UnixPeerCredentials => authenticators.push((
-            AuthType::UnixPeerCredentials,
-            Box::from(UnixPeerCredentialsAuthenticator {}),
+        AuthenticatorConfig::Direct { admins } => authenticators.push((
+            AuthType::Direct,
+            Box::from(DirectAuthenticator::new(
+                admins.as_ref().cloned().unwrap_or_default(),
+            )),
         )),
-        AuthenticatorConfig::JwtSvid { workload_endpoint } => authenticators.push((
+        AuthenticatorConfig::UnixPeerCredentials { admins } => authenticators.push((
+            AuthType::UnixPeerCredentials,
+            Box::from(UnixPeerCredentialsAuthenticator::new(
+                admins.as_ref().cloned().unwrap_or_default(),
+            )),
+        )),
+        AuthenticatorConfig::JwtSvid {
+            workload_endpoint,
+            admins,
+        } => authenticators.push((
             AuthType::JwtSvid,
-            Box::from(JwtSvidAuthenticator::new(workload_endpoint.to_string())),
+            Box::from(JwtSvidAuthenticator::new(
+                workload_endpoint.to_string(),
+                admins.as_ref().cloned().unwrap_or_default(),
+            )),
         )),
     };
 
