@@ -20,11 +20,15 @@ use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;
 use serde::Deserialize;
+use std::ops::Deref;
 use zeroize::Zeroize;
 
 /// String wrapper for app names
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ApplicationName(String);
+pub struct ApplicationName {
+    name: String,
+    is_admin: bool,
+}
 
 /// Authentication interface
 ///
@@ -52,20 +56,33 @@ pub trait Authenticate {
 }
 
 impl ApplicationName {
-    /// Create a new ApplicationName from a String
-    pub fn new(name: String) -> ApplicationName {
-        ApplicationName(name)
+    /// Create a new ApplicationName
+    fn new(name: String, is_admin: bool) -> ApplicationName {
+        ApplicationName { name, is_admin }
+    }
+
+    /// Create ApplicationName from name string only
+    pub fn from_name(name: String) -> ApplicationName {
+        ApplicationName {
+            name,
+            is_admin: false,
+        }
     }
 
     /// Get a reference to the inner string
     pub fn get_name(&self) -> &str {
-        &self.0
+        &self.name
+    }
+
+    /// Check whether the application is an admin
+    pub fn is_admin(&self) -> bool {
+        self.is_admin
     }
 }
 
 impl std::fmt::Display for ApplicationName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.name)
     }
 }
 
@@ -75,12 +92,56 @@ impl std::fmt::Display for ApplicationName {
 #[serde(tag = "auth_type")]
 pub enum AuthenticatorConfig {
     /// Direct authentication
-    Direct,
-    /// Unix Peer Credenditals authentication
-    UnixPeerCredentials,
+    Direct {
+        /// List of service admins
+        admins: Option<Vec<Admin>>,
+    },
+    /// Unix Peer Credentials authentication
+    UnixPeerCredentials {
+        /// List of service admins
+        admins: Option<Vec<Admin>>,
+    },
     /// JWT-SVID
     JwtSvid {
         /// Path to the Workload API socket
         workload_endpoint: String,
+        /// List of service admins
+        admins: Option<Vec<Admin>>,
     },
+}
+
+/// Structure defining the properties of a service admin
+#[derive(Deserialize, Debug, Zeroize, Clone)]
+#[zeroize(drop)]
+pub struct Admin {
+    name: String,
+}
+
+impl Admin {
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct AdminList(Vec<Admin>);
+
+impl AdminList {
+    fn is_admin(&self, app_name: &str) -> bool {
+        self.iter().any(|admin| admin.name() == app_name)
+    }
+}
+
+impl Deref for AdminList {
+    type Target = Vec<Admin>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Vec<Admin>> for AdminList {
+    fn from(admin_list: Vec<Admin>) -> Self {
+        AdminList(admin_list)
+    }
 }

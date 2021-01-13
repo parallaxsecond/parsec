@@ -75,7 +75,7 @@ fn base64_data_triple_to_key_triple(
     provider_id: ProviderID,
     key_name: &[u8],
 ) -> Result<KeyTriple, String> {
-    let app_name = ApplicationName::new(base64_data_to_string(app_name)?);
+    let app_name = ApplicationName::from_name(base64_data_to_string(app_name)?);
     let key_name = base64_data_to_string(key_name)?;
 
     Ok(KeyTriple {
@@ -531,7 +531,7 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_ascii_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
-        let big_app_name_ascii = ApplicationName::new("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
+        let big_app_name_ascii = ApplicationName::from_name("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
         let key_triple = KeyTriple::new(big_app_name_ascii, ProviderID::Core, big_key_name_ascii);
@@ -549,7 +549,7 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_emoticons_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
 
-        let big_app_name_emoticons = ApplicationName::new("😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string());
+        let big_app_name_emoticons = ApplicationName::from_name("😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string());
         let big_key_name_emoticons = "😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string();
 
         let key_triple = KeyTriple::new(
@@ -570,12 +570,12 @@ mod test {
     fn create_and_load() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/create_and_load_mappings");
 
-        let app_name1 = ApplicationName::new("😀 Application One 😀".to_string());
+        let app_name1 = ApplicationName::from_name("😀 Application One 😀".to_string());
         let key_name1 = "😀 Key One 😀".to_string();
         let key_triple1 = KeyTriple::new(app_name1, ProviderID::Core, key_name1);
         let key_info1 = test_key_info();
 
-        let app_name2 = ApplicationName::new("😇 Application Two 😇".to_string());
+        let app_name2 = ApplicationName::from_name("😇 Application Two 😇".to_string());
         let key_name2 = "😇 Key Two 😇".to_string();
         let key_triple2 = KeyTriple::new(app_name2, ProviderID::MbedCrypto, key_name2);
         let key_info2 = KeyInfo {
@@ -583,7 +583,7 @@ mod test {
             attributes: test_key_attributes(),
         };
 
-        let app_name3 = ApplicationName::new("😈 Application Three 😈".to_string());
+        let app_name3 = ApplicationName::from_name("😈 Application Three 😈".to_string());
         let key_name3 = "😈 Key Three 😈".to_string();
         let key_triple3 = KeyTriple::new(app_name3, ProviderID::Core, key_name3);
         let key_info3 = KeyInfo {
@@ -617,7 +617,7 @@ mod test {
 
     fn new_key_triple(key_name: String) -> KeyTriple {
         KeyTriple::new(
-            ApplicationName::new("Testing Application 😎".to_string()),
+            ApplicationName::from_name("Testing Application 😎".to_string()),
             ProviderID::MbedCrypto,
             key_name,
         )

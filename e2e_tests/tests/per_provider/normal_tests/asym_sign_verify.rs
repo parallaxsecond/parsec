@@ -289,7 +289,7 @@ fn fail_verify_hash() -> Result<()> {
 
     let mut signature = client.sign_with_rsa_sha256(key_name.clone(), hash.clone())?;
     // Modify signature
-    signature[4] += 1;
+    signature[4] ^= 1;
     let status = client
         .verify_with_rsa_sha256(key_name, hash, signature)
         .unwrap_err();

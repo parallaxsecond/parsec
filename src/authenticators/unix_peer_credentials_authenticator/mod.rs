@@ -9,8 +9,7 @@
 //!
 //! Currently, the stringified UID is used as the application name.
 
-use super::ApplicationName;
-use super::Authenticate;
+use super::{Admin, AdminList, ApplicationName, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::operations::list_authenticators;
@@ -21,8 +20,19 @@ use parsec_interface::secrecy::ExposeSecret;
 use std::convert::TryInto;
 
 /// Unix peer credentials authenticator.
-#[derive(Copy, Clone, Debug)]
-pub struct UnixPeerCredentialsAuthenticator;
+#[derive(Clone, Debug)]
+pub struct UnixPeerCredentialsAuthenticator {
+    admins: AdminList,
+}
+
+impl UnixPeerCredentialsAuthenticator {
+    /// Create new Unix peer credentials authenticator
+    pub fn new(admins: Vec<Admin>) -> Self {
+        UnixPeerCredentialsAuthenticator {
+            admins: admins.into(),
+        }
+    }
+}
 
 impl Authenticate for UnixPeerCredentialsAuthenticator {
     fn describe(&self) -> Result<list_authenticators::AuthenticatorInfo> {
@@ -76,7 +86,9 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
         // Authentication is successful if the _actual_ UID from the Unix peer credentials equals
         // the self-declared UID in the authentication request.
         if uid == expected_uid {
-            Ok(ApplicationName(uid.to_string()))
+            let app_name = uid.to_string();
+            let is_admin = self.admins.is_admin(&app_name);
+            Ok(ApplicationName::new(app_name, is_admin))
         } else {
             error!("Declared UID in authentication request does not match the process's UID.");
             Err(ResponseStatus::AuthenticationError)
@@ -86,7 +98,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
 
 #[cfg(test)]
 mod test {
-    use super::super::Authenticate;
+    use super::super::{Admin, Authenticate};
     use super::UnixPeerCredentialsAuthenticator;
     use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
@@ -108,7 +120,9 @@ mod test {
             peer_credentials::peer_cred(&_sock_b).unwrap(),
         );
 
-        let authenticator = UnixPeerCredentialsAuthenticator {};
+        let authenticator = UnixPeerCredentialsAuthenticator {
+            admins: Default::default(),
+        };
 
         let req_auth_data = cred_a.uid.to_le_bytes().to_vec();
         let req_auth = RequestAuth::new(req_auth_data);
@@ -123,6 +137,7 @@ mod test {
             .expect("Failed to authenticate");
 
         assert_eq!(auth_name.get_name(), get_current_uid().to_string());
+        assert_eq!(auth_name.is_admin, false);
     }
 
     #[test]
@@ -137,7 +152,9 @@ mod test {
             peer_credentials::peer_cred(&_sock_b).unwrap(),
         );
 
-        let authenticator = UnixPeerCredentialsAuthenticator {};
+        let authenticator = UnixPeerCredentialsAuthenticator {
+            admins: Default::default(),
+        };
 
         let wrong_uid = cred_a.uid + 1;
         let wrong_req_auth_data = wrong_uid.to_le_bytes().to_vec();
@@ -163,7 +180,9 @@ mod test {
             peer_credentials::peer_cred(&_sock_b).unwrap(),
         );
 
-        let authenticator = UnixPeerCredentialsAuthenticator {};
+        let authenticator = UnixPeerCredentialsAuthenticator {
+            admins: Default::default(),
+        };
 
         let garbage_data = rand::thread_rng().gen::<[u8; 32]>().to_vec();
         let req_auth = RequestAuth::new(garbage_data);
@@ -179,12 +198,46 @@ mod test {
 
     #[test]
     fn unsuccessful_authentication_no_metadata() {
-        let authenticator = UnixPeerCredentialsAuthenticator {};
+        let authenticator = UnixPeerCredentialsAuthenticator {
+            admins: Default::default(),
+        };
         let req_auth = RequestAuth::new("secret".into());
 
         let conn_metadata = None;
         let auth_result = authenticator.authenticate(&req_auth, conn_metadata);
         assert_eq!(auth_result, Err(ResponseStatus::AuthenticationError));
+    }
+
+    #[test]
+    fn admin_check() {
+        // Create two connected sockets.
+        let (sock_a, _sock_b) = UnixStream::pair().unwrap();
+        let (cred_a, _cred_b) = (
+            peer_credentials::peer_cred(&sock_a).unwrap(),
+            peer_credentials::peer_cred(&_sock_b).unwrap(),
+        );
+
+        let authenticator = UnixPeerCredentialsAuthenticator {
+            admins: vec![Admin {
+                name: get_current_uid().to_string(),
+            }]
+            .into(),
+        };
+
+        let req_auth_data = cred_a.uid.to_le_bytes().to_vec();
+        let req_auth = RequestAuth::new(req_auth_data);
+        let conn_metadata = Some(ConnectionMetadata::UnixPeerCredentials {
+            uid: cred_a.uid,
+            gid: cred_a.gid,
+            pid: None,
+        });
+
+        let auth_name = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .expect("Failed to authenticate");
+
+        assert_eq!(auth_name.get_name(), get_current_uid().to_string());
+        assert_eq!(auth_name.is_admin, true);
     }
 
     #[test]
