@@ -217,6 +217,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryptoauthlib-sys"
+version = "0.1.0"
+source = "git+https://github.com/RobertDrazkowskiGL/rust-cryptoauthlib.git#bda56f3651c13d6816e6446d1235ce08ee47a91b"
+dependencies = [
+ "cmake",
+]
+
+[[package]]
 name = "derivative"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1049,6 +1057,7 @@ dependencies = [
  "pkcs11",
  "psa-crypto",
  "rand 0.8.2",
+ "rust-cryptoauthlib",
  "sd-notify",
  "serde",
  "signal-hook",
@@ -1450,6 +1459,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-cryptoauthlib"
+version = "0.1.0"
+source = "git+https://github.com/RobertDrazkowskiGL/rust-cryptoauthlib.git#bda56f3651c13d6816e6446d1235ce08ee47a91b"
+dependencies = [
+ "cryptoauthlib-sys",
+ "strum_macros",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1641,6 +1659,18 @@ checksum = "5ba9cdfda491b814720b6b06e0cac513d922fc407582032e8706e9f137976f90"
 dependencies = [
  "heck",
  "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.19.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e61bb0be289045cb80bfce000512e32d09f8337e54c186725da381377ad1f8d5"
+dependencies = [
+ "heck",
  "proc-macro2",
  "quote",
  "syn",

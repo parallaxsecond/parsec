@@ -66,6 +66,20 @@ pub enum ProviderConfig {
     CryptoAuthLib {
         /// Name of the Key Info Manager to use
         key_info_manager: String,
+        /// ATECC Device type
+        device_type: String,
+        /// Interface type
+        iface_type: String,
+        /// Wake delay
+        wake_delay: u16,
+        /// Number of rx retries
+        rx_retries: i32,
+        /// I2C slave address
+        slave_address: Option<u8>,
+        /// I2C bus
+        bus: Option<u8>,
+        /// I2C baud rate
+        baud: Option<u32>,
     },
 }
 

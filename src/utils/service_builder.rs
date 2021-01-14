@@ -336,11 +336,27 @@ unsafe fn get_provider(
             ))
         }
         #[cfg(feature = "cryptoauthlib-provider")]
-        ProviderConfig::CryptoAuthLib { .. } => {
+        ProviderConfig::CryptoAuthLib {
+            device_type,
+            iface_type,
+            wake_delay,
+            rx_retries,
+            slave_address,
+            bus,
+            baud,
+            ..
+        } => {
             info!("Creating a CryptoAuthentication Library Provider.");
             Ok(Arc::new(
                 CryptoAuthLibProviderBuilder::new()
                     .with_key_info_store(key_info_manager)
+                    .with_device_type(device_type.to_string())
+                    .with_iface_type(iface_type.to_string())
+                    .with_wake_delay(*wake_delay)
+                    .with_rx_retries(*rx_retries)
+                    .with_slave_address(slave_address.unwrap())
+                    .with_bus(bus.unwrap())
+                    .with_baud(baud.unwrap())
                     .build()?,
             ))
         }
