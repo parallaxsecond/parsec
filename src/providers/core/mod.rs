@@ -10,7 +10,8 @@ use crate::authenticators::ApplicationName;
 use derivative::Derivative;
 use log::trace;
 use parsec_interface::operations::{
-    list_authenticators, list_keys, list_opcodes, list_providers, ping,
+    delete_client, list_authenticators, list_clients, list_keys, list_opcodes, list_providers,
+    ping, psa_destroy_key,
 };
 use parsec_interface::operations::{
     list_authenticators::AuthenticatorInfo, list_keys::KeyInfo, list_providers::ProviderInfo,
@@ -91,6 +92,45 @@ impl Provide for Provider {
         }
 
         Ok(list_keys::Result { keys })
+    }
+
+    fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
+        trace!("list_clients ingress");
+
+        let mut clients: Vec<String> = Vec::new();
+        for provider in &self.prov_list {
+            let mut result = provider.list_clients(_op)?;
+            clients.append(&mut result.clients);
+        }
+        clients.sort();
+        clients.dedup();
+
+        Ok(list_clients::Result { clients })
+    }
+
+    fn delete_client(&self, op: delete_client::Operation) -> Result<delete_client::Result> {
+        trace!("delete_client ingress");
+
+        let client = op.client;
+
+        for provider in &self.prov_list {
+            // Currently Parsec only stores keys, we delete all of them.
+            let keys = provider
+                .list_keys(
+                    ApplicationName::from_name(client.clone()),
+                    list_keys::Operation {},
+                )?
+                .keys;
+            for key in keys {
+                let key_name = key.name;
+                let _ = provider.psa_destroy_key(
+                    ApplicationName::from_name(client.clone()),
+                    psa_destroy_key::Operation { key_name },
+                )?;
+            }
+        }
+
+        Ok(delete_client::Result {})
     }
 
     fn ping(&self, _op: ping::Operation) -> Result<ping::Result> {

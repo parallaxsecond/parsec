@@ -9,6 +9,8 @@ use parsec_client::core::interface::requests::{ProviderID, ResponseStatus};
 // 3. client1_after is executed as parsec-client-1
 //
 // They are executed against all possible authenticators in Parsec.
+//
+// client1 will be configured as an admin.
 
 #[test]
 fn client1_before() {
@@ -23,11 +25,15 @@ fn client1_before() {
         client.set_provider(*provider);
         client.generate_rsa_sign_key(key.clone()).unwrap();
     }
+
+    let clients = client.list_clients().unwrap();
+    assert_eq!(clients.len(), 1);
 }
 
 #[test]
 fn client2() {
     let mut client = TestClient::new();
+    client.do_not_destroy_keys();
     client.set_default_auth(Some("client2".to_string()));
 
     let key = String::from("multitenant");
@@ -49,11 +55,24 @@ fn client2() {
         client.generate_rsa_sign_key(key.clone()).unwrap();
         client.destroy_key(key.clone()).unwrap();
     }
+
+    assert_eq!(
+        client.list_clients().unwrap_err(),
+        ResponseStatus::AdminOperation
+    );
+    assert_eq!(
+        client.delete_client("toto".to_string()).unwrap_err(),
+        ResponseStatus::AdminOperation
+    );
+    client
+        .generate_rsa_sign_key("client2-key".to_string())
+        .unwrap();
 }
 
 #[test]
 fn client1_after() {
     let mut client = TestClient::new();
+    client.do_not_destroy_keys();
     client.set_default_auth(Some("client1".to_string()));
 
     // Verify all keys are still there and can be used
@@ -66,4 +85,18 @@ fn client1_after() {
         client.set_provider(*provider);
         client.destroy_key(key.clone()).unwrap();
     }
+
+    client
+        .generate_rsa_sign_key("client1-key".to_string())
+        .unwrap();
+    let mut clients = client.list_clients().unwrap();
+    assert_eq!(clients.len(), 2);
+    client.delete_client(clients.remove(0)).unwrap();
+    let mut clients = client.list_clients().unwrap();
+    assert_eq!(clients.len(), 1);
+    client.delete_client(clients.remove(0)).unwrap();
+    let clients = client.list_clients().unwrap();
+    assert_eq!(clients.len(), 0);
+    let keys = client.list_keys().unwrap();
+    assert_eq!(keys.len(), 0);
 }

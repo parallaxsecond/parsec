@@ -8,9 +8,9 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers::ManageKeyInfo;
 use derivative::Derivative;
 use log::trace;
-use parsec_interface::operations::list_keys;
 use parsec_interface::operations::list_keys::KeyInfo;
 use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::{list_clients, list_keys};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
@@ -57,6 +57,13 @@ impl Provide for Provider {
         let keys: Vec<KeyInfo> = Vec::new();
 
         Ok(list_keys::Result { keys })
+    }
+
+    fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
+        trace!("list_clients ingress");
+        let clients: Vec<String> = Vec::new();
+
+        Ok(list_clients::Result { clients })
     }
 }
 

@@ -58,7 +58,7 @@ impl FrontEndHandler {
         };
 
         // Check if the request was sent without authentication
-        let (app_name, err_response) = if AuthType::NoAuth == request.header.auth_type {
+        let (app, err_response) = if AuthType::NoAuth == request.header.auth_type {
             (None, None)
         // Otherwise find an authenticator that is capable to authenticate the request
         } else if let Some(authenticator) = self.authenticators.get(&request.header.auth_type) {
@@ -66,7 +66,7 @@ impl FrontEndHandler {
             match authenticator.authenticate(&request.auth, connection.metadata) {
                 // Send the request to the dispatcher
                 // Get a response back
-                Ok(app_name) => (Some(app_name), None),
+                Ok(app) => (Some(app), None),
                 Err(status) => (
                     None,
                     Some(Response::from_request_header(request.header, status)),
@@ -86,16 +86,16 @@ impl FrontEndHandler {
             err_response
         } else {
             if crate::utils::GlobalConfig::log_error_details() {
-                if let Some(app_name_string) = app_name.clone() {
+                if let Some(app) = &app.as_ref() {
                     info!(
                         "New request received from application name \"{}\"",
-                        app_name_string
+                        app.get_name()
                     )
                 } else {
                     info!("New request received without authentication")
                 }
             };
-            let response = self.dispatcher.dispatch_request(request, app_name.clone());
+            let response = self.dispatcher.dispatch_request(request, app.clone());
             trace!("dispatch_request egress");
             response
         };
@@ -105,10 +105,10 @@ impl FrontEndHandler {
         match response.write_to_stream(&mut connection.stream) {
             Ok(_) => {
                 if crate::utils::GlobalConfig::log_error_details() {
-                    if let Some(app_name_string) = app_name {
+                    if let Some(app) = app {
                         info!(
                             "Response for application name \"{}\" sent back",
-                            app_name_string
+                            app.get_name()
                         );
                     } else {
                         info!("Response sent back from request without authentication");

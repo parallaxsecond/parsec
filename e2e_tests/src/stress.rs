@@ -330,7 +330,7 @@ impl ServiceChecker {
             .expect("Verification failed");
 
         client
-            .destroy_key(sign_key_name.clone())
+            .destroy_key(sign_key_name)
             .expect("Failed to destroy key");
     }
 
@@ -352,7 +352,7 @@ impl ServiceChecker {
         assert_eq!(plaintext, vec![0xa5; 16]);
 
         client
-            .destroy_key(encr_key_name.clone())
+            .destroy_key(encr_key_name)
             .expect("Failed to destroy key");
     }
 }

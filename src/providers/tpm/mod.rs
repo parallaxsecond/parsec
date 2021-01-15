@@ -9,7 +9,7 @@ use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{self, ManageKeyInfo};
 use derivative::Derivative;
 use log::{info, trace};
-use parsec_interface::operations::{list_keys, list_providers::ProviderInfo};
+use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
     psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
@@ -105,6 +105,20 @@ impl Provide for Provider {
                     format_error!("Error occurred when fetching key information", e);
                     ResponseStatus::KeyInfoManagerError
                 })?,
+        })
+    }
+
+    fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
+        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+        Ok(list_clients::Result {
+            clients: key_info_managers::list_clients(store_handle.deref(), ProviderID::Tpm)
+                .map_err(|e| {
+                    format_error!("Error occurred when fetching key information", e);
+                    ResponseStatus::KeyInfoManagerError
+                })?
+                .into_iter()
+                .map(|app_name| app_name.to_string())
+                .collect(),
         })
     }
 

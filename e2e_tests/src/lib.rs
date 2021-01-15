@@ -53,7 +53,10 @@ impl TestClient {
     /// Creates a TestClient instance.
     pub fn new() -> TestClient {
         // As this method is called in test, it will be called more than once per application.
-        if let Err(_) = env_logger::try_init() {};
+        #[allow(unused_must_use)]
+        {
+            env_logger::try_init();
+        }
 
         let mut basic_client = BasicClient::new_naked();
 
@@ -890,6 +893,18 @@ impl TestClient {
     /// Lists the keys created.
     pub fn list_keys(&mut self) -> Result<Vec<KeyInfo>> {
         self.basic_client.list_keys().map_err(convert_error)
+    }
+
+    /// Lists the clients.
+    pub fn list_clients(&mut self) -> Result<Vec<String>> {
+        self.basic_client.list_clients().map_err(convert_error)
+    }
+
+    /// Delete a client.
+    pub fn delete_client(&mut self, client: String) -> Result<()> {
+        self.basic_client
+            .delete_client(client)
+            .map_err(convert_error)
     }
 
     /// Executes a ping operation.
