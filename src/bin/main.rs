@@ -42,7 +42,7 @@
 use anyhow::Result;
 use log::{info, trace};
 use parsec_service::utils::{ServiceBuilder, ServiceConfig};
-use signal_hook::{flag, SIGHUP, SIGTERM};
+use signal_hook::{consts::SIGHUP, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
