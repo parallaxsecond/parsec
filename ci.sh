@@ -16,7 +16,7 @@ cleanup () {
     find e2e_tests -name "*toml" -not -name "Cargo.toml" -exec sed -i 's/^slot_number =.*/# slot_number/' {} \;
     # Remove fake mapping and temp files
     rm -rf "mappings"
-    rm -f "NVChip" 
+    rm -f "NVChip"
     rm -f "e2e_tests/provider_cfg/tmp_config.toml"
 
     if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
@@ -67,10 +67,10 @@ while [ "$#" -gt 0 ]; do
             PROVIDER_NAME=$1
             cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
             if [ "$PROVIDER_NAME" = "all" ]; then
-                FEATURES="--features=all-providers"
+                FEATURES="--features=all-providers,all-authenticators"
                 TEST_FEATURES="--features=all-providers"
             else
-                FEATURES="--features=$1-provider"
+                FEATURES="--features=$1-provider,direct-authenticator"
                 TEST_FEATURES="--features=$1-provider"
             fi
         ;;
