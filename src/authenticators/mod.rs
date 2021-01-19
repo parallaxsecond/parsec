@@ -27,6 +27,20 @@ use zeroize::Zeroize;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ApplicationName {
     name: String,
+}
+
+impl Deref for ApplicationName {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
+    }
+}
+
+/// Wrapper for a Parsec application
+#[derive(Debug, Clone)]
+pub struct Application {
+    name: ApplicationName,
     is_admin: bool,
 }
 
@@ -40,7 +54,7 @@ pub trait Authenticate {
     /// operation.
     fn describe(&self) -> Result<list_authenticators::AuthenticatorInfo>;
 
-    /// Authenticates a `RequestAuth` payload and returns the `ApplicationName` if successful. A
+    /// Authenticates a `RequestAuth` payload and returns the `Application` if successful. A
     /// optional `ConnectionMetadata` object is passed in too, since it is sometimes possible to
     /// perform authentication based on the connection's metadata (i.e. as is the case for UNIX
     /// domain sockets with Unix peer credentials).
@@ -52,31 +66,39 @@ pub trait Authenticate {
         &self,
         auth: &RequestAuth,
         meta: Option<ConnectionMetadata>,
-    ) -> Result<ApplicationName>;
+    ) -> Result<Application>;
 }
 
 impl ApplicationName {
-    /// Create a new ApplicationName
-    fn new(name: String, is_admin: bool) -> ApplicationName {
-        ApplicationName { name, is_admin }
-    }
-
     /// Create ApplicationName from name string only
     pub fn from_name(name: String) -> ApplicationName {
-        ApplicationName {
-            name,
-            is_admin: false,
-        }
+        ApplicationName { name }
     }
+}
 
-    /// Get a reference to the inner string
-    pub fn get_name(&self) -> &str {
-        &self.name
+impl Application {
+    /// Create a new Application structure
+    pub fn new(name: String, is_admin: bool) -> Application {
+        Application {
+            name: ApplicationName::from_name(name),
+            is_admin,
+        }
     }
 
     /// Check whether the application is an admin
     pub fn is_admin(&self) -> bool {
         self.is_admin
+    }
+
+    /// Get a reference to the inner ApplicationName string
+    pub fn get_name(&self) -> &ApplicationName {
+        &self.name
+    }
+}
+
+impl From<Application> for ApplicationName {
+    fn from(auth: Application) -> Self {
+        auth.name
     }
 }
 

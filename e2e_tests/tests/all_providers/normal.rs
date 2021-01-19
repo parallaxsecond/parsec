@@ -167,3 +167,49 @@ fn invalid_provider_list_keys() {
         .expect("Failed to read Response");
     assert_eq!(resp.header.status, ResponseStatus::PsaErrorNotSupported);
 }
+
+#[test]
+fn invalid_provider_list_clients() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    // Always targeting the Mbed Crypto provider
+    req_hdr.provider = 0x1;
+    req_hdr.opcode = Opcode::ListClients as u32;
+
+    let resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+    assert_eq!(resp.header.status, ResponseStatus::PsaErrorNotSupported);
+}
+
+#[test]
+fn list_and_delete_clients() {
+    let mut client = TestClient::new();
+    client.do_not_destroy_keys();
+    client.set_default_auth(Some("list_clients test".to_string()));
+
+    let clients = client.list_clients().expect("list_clients failed");
+    assert!(!clients.contains(&"list_clients test".to_string()));
+
+    let key1 = String::from("list_clients1");
+    let key2 = String::from("list_keys2");
+    let key3 = String::from("list_keys3");
+
+    client.set_provider(ProviderID::MbedCrypto);
+    client.generate_rsa_sign_key(key1.clone()).unwrap();
+    client.set_provider(ProviderID::Pkcs11);
+    client.generate_rsa_sign_key(key2.clone()).unwrap();
+    client.set_provider(ProviderID::Tpm);
+    client.generate_rsa_sign_key(key3.clone()).unwrap();
+
+    let clients = client.list_clients().expect("list_clients failed");
+    assert!(clients.contains(&"list_clients test".to_string()));
+    client
+        .delete_client("list_clients test".to_string())
+        .unwrap();
+
+    let keys = client.list_keys().expect("list_keys failed");
+
+    assert!(keys.is_empty());
+}

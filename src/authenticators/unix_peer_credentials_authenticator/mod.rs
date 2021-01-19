@@ -9,7 +9,7 @@
 //!
 //! Currently, the stringified UID is used as the application name.
 
-use super::{Admin, AdminList, ApplicationName, Authenticate};
+use super::{Admin, AdminList, Application, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::operations::list_authenticators;
@@ -53,7 +53,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
         &self,
         auth: &RequestAuth,
         meta: Option<ConnectionMetadata>,
-    ) -> Result<ApplicationName> {
+    ) -> Result<Application> {
         // Parse authentication request.
         let expected_uid_bytes = auth.buffer.expose_secret();
 
@@ -88,7 +88,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
         if uid == expected_uid {
             let app_name = uid.to_string();
             let is_admin = self.admins.is_admin(&app_name);
-            Ok(ApplicationName::new(app_name, is_admin))
+            Ok(Application::new(app_name, is_admin))
         } else {
             error!("Declared UID in authentication request does not match the process's UID.");
             Err(ResponseStatus::AuthenticationError)
@@ -100,6 +100,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
 mod test {
     use super::super::{Admin, Authenticate};
     use super::UnixPeerCredentialsAuthenticator;
+    use crate::authenticators::ApplicationName;
     use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
     use parsec_interface::requests::request::RequestAuth;
@@ -136,7 +137,10 @@ mod test {
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(auth_name.get_name(), get_current_uid().to_string());
+        assert_eq!(
+            auth_name.get_name(),
+            &ApplicationName::from_name(get_current_uid().to_string())
+        );
         assert_eq!(auth_name.is_admin, false);
     }
 
@@ -165,8 +169,10 @@ mod test {
             pid: cred_a.pid,
         });
 
-        let auth_result = authenticator.authenticate(&req_auth, conn_metadata);
-        assert_eq!(auth_result, Err(ResponseStatus::AuthenticationError));
+        let auth_result = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .unwrap_err();
+        assert_eq!(auth_result, ResponseStatus::AuthenticationError);
     }
 
     #[test]
@@ -192,8 +198,10 @@ mod test {
             pid: cred_a.pid,
         });
 
-        let auth_result = authenticator.authenticate(&req_auth, conn_metadata);
-        assert_eq!(auth_result, Err(ResponseStatus::AuthenticationError));
+        let auth_result = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .unwrap_err();
+        assert_eq!(auth_result, ResponseStatus::AuthenticationError);
     }
 
     #[test]
@@ -204,8 +212,10 @@ mod test {
         let req_auth = RequestAuth::new("secret".into());
 
         let conn_metadata = None;
-        let auth_result = authenticator.authenticate(&req_auth, conn_metadata);
-        assert_eq!(auth_result, Err(ResponseStatus::AuthenticationError));
+        let auth_result = authenticator
+            .authenticate(&req_auth, conn_metadata)
+            .unwrap_err();
+        assert_eq!(auth_result, ResponseStatus::AuthenticationError);
     }
 
     #[test]
@@ -236,7 +246,10 @@ mod test {
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(auth_name.get_name(), get_current_uid().to_string());
+        assert_eq!(
+            auth_name.get_name(),
+            &ApplicationName::from_name(get_current_uid().to_string())
+        );
         assert_eq!(auth_name.is_admin, true);
     }
 

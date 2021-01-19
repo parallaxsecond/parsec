@@ -43,7 +43,7 @@ pub struct OnDiskKeyInfoManager {
 /// being a number from 0 and 255.
 fn key_triple_to_base64_filenames(key_triple: &KeyTriple) -> (String, String, String) {
     (
-        base64::encode_config(key_triple.app_name.get_name().as_bytes(), base64::URL_SAFE),
+        base64::encode_config(key_triple.app_name.as_bytes(), base64::URL_SAFE),
         (key_triple.provider_id as u8).to_string(),
         base64::encode_config(key_triple.key_name.as_bytes(), base64::URL_SAFE),
     )

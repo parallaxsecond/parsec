@@ -5,7 +5,7 @@
 //! The dispatcher's role is to direct requests to the provider they specify, if
 //! said provider is available on the system, thus acting as a multiplexer.
 use super::backend_handler::BackEndHandler;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::Application;
 use log::trace;
 use parsec_interface::requests::request::Request;
 use parsec_interface::requests::ProviderID;
@@ -32,18 +32,14 @@ impl Dispatcher {
     /// Returns either the response coming from the backend handler, or a response
     /// containing a status code consistent with the error encountered during
     /// processing.
-    pub fn dispatch_request(
-        &self,
-        request: Request,
-        app_name: Option<ApplicationName>,
-    ) -> Response {
+    pub fn dispatch_request(&self, request: Request, app: Option<Application>) -> Response {
         trace!("dispatch_request ingress");
         if let Some(backend) = self.backends.get(&request.header.provider) {
             if let Err(status) = backend.is_capable(&request) {
                 Response::from_request_header(request.header, status)
             } else {
                 {
-                    let response = backend.execute_request(request, app_name);
+                    let response = backend.execute_request(request, app);
                     trace!("execute_request egress");
                     response
                 }
