@@ -4,7 +4,6 @@
 //!
 //! This provider implements Parsec operations using CryptoAuthentication
 //! Library backed by the ATECCx08 cryptochip.
-
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::ManageKeyInfo;
