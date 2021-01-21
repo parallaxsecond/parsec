@@ -6,7 +6,7 @@
 //! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{self, ManageKeyInfo};
+use crate::key_info_managers::ManageKeyInfo;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -17,7 +17,6 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::ErrorKind;
-use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, RwLock};
 use tss_esapi::constants::algorithm::{Cipher, HashingAlgorithm};
@@ -101,7 +100,8 @@ impl Provide for Provider {
     ) -> Result<list_keys::Result> {
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_keys::Result {
-            keys: key_info_managers::list_keys(store_handle.deref(), &app_name, ProviderID::Tpm)
+            keys: store_handle
+                .list_keys(&app_name, ProviderID::Tpm)
                 .map_err(|e| {
                     format_error!("Error occurred when fetching key information", e);
                     ResponseStatus::KeyInfoManagerError
@@ -112,7 +112,8 @@ impl Provide for Provider {
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_clients::Result {
-            clients: key_info_managers::list_clients(store_handle.deref(), ProviderID::Tpm)
+            clients: store_handle
+                .list_clients(ProviderID::Tpm)
                 .map_err(|e| {
                     format_error!("Error occurred when fetching key information", e);
                     ResponseStatus::KeyInfoManagerError

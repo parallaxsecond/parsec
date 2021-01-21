@@ -112,10 +112,9 @@ impl Provider {
         let key_attributes = op.attributes;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        if self.key_info_exists(&key_triple)? {
-            return Err(ResponseStatus::PsaErrorAlreadyExists);
-        }
-        let key_id = self.create_key_id(key_triple.clone(), key_attributes)?;
+        self.key_info_exists(&key_triple)?;
+
+        let key_id = self.create_key_id();
 
         let modulus_bits = key_attributes.bits as u64;
         let (mech, mut pub_template, mut priv_template, mut allowed_mechanism) =
@@ -128,11 +127,7 @@ impl Provider {
             &mut allowed_mechanism,
         ));
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
-            format_error!("Error creating a new session", err);
-            let _ = self.remove_key_id(&key_triple)?;
-            Err(err)
-        })?;
+        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
 
         if crate::utils::GlobalConfig::log_error_details() {
             info!(
@@ -148,10 +143,12 @@ impl Provider {
             &pub_template,
             &priv_template,
         ) {
-            Ok(_key) => Ok(psa_generate_key::Result {}),
+            Ok(_key) => {
+                self.insert_key_id(key_triple, key_attributes, key_id)?;
+                Ok(psa_generate_key::Result {})
+            }
             Err(e) => {
                 format_error!("Generate Key Pair operation failed", e);
-                let _ = self.remove_key_id(&key_triple)?;
                 Err(utils::to_response_status(e))
             }
         }
@@ -182,23 +179,20 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        if self.key_info_exists(&key_triple)? {
-            return Err(ResponseStatus::PsaErrorAlreadyExists);
-        }
-        let key_id = self.create_key_id(key_triple.clone(), key_attributes)?;
+        self.key_info_exists(&key_triple)?;
+
+        let key_id = self.create_key_id();
 
         let mut template: Vec<CK_ATTRIBUTE> = Vec::new();
 
         let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
-            .or_else(|e| {
+            .map_err(|e| {
                 format_error!("Failed to parse RsaPublicKey data", e);
-                let _ = self.remove_key_id(&key_triple)?;
-                Err(ResponseStatus::PsaErrorInvalidArgument)
+                ResponseStatus::PsaErrorInvalidArgument
             })?;
 
         if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
             error!("Only positive modulus and public exponent are supported.");
-            let _ = self.remove_key_id(&key_triple)?;
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -216,7 +210,6 @@ impl Provider {
                 error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
             }
 
-            let _ = self.remove_key_id(&key_triple)?;
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -254,11 +247,7 @@ impl Provider {
             as pkcs11::types::CK_VOID_PTR;
         template.push(allowed_mechanisms_attribute);
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite).or_else(|err| {
-            format_error!("Error creating a new session", err);
-            let _ = self.remove_key_id(&key_triple)?;
-            Err(err)
-        })?;
+        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
 
         if crate::utils::GlobalConfig::log_error_details() {
             info!(
@@ -272,10 +261,12 @@ impl Provider {
             .backend
             .create_object(session.session_handle(), &template)
         {
-            Ok(_key) => Ok(psa_import_key::Result {}),
+            Ok(_key) => {
+                self.insert_key_id(key_triple, key_attributes, key_id)?;
+                Ok(psa_import_key::Result {})
+            }
             Err(e) => {
                 format_error!("Import operation failed", e);
-                let _ = self.remove_key_id(&key_triple)?;
                 Err(utils::to_response_status(e))
             }
         }
@@ -391,6 +382,8 @@ impl Provider {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
         let (key_id, _) = self.get_key_info(&key_triple)?;
 
+        let _ = self.remove_key_id(&key_triple)?;
+
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         if crate::utils::GlobalConfig::log_error_details() {
             info!(
@@ -435,8 +428,6 @@ impl Provider {
                 return Err(e);
             }
         };
-
-        let _ = self.remove_key_id(&key_triple)?;
 
         Ok(psa_destroy_key::Result {})
     }

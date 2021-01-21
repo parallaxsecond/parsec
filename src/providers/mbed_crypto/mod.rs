@@ -5,7 +5,7 @@
 //! This provider is a software based implementation of PSA Crypto, Mbed Crypto.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{self, KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -19,7 +19,6 @@ use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
-use std::ops::Deref;
 use std::sync::{
     atomic::{AtomicU32, Ordering::Relaxed},
     Arc, Mutex, RwLock,
@@ -169,22 +168,20 @@ impl Provide for Provider {
     ) -> Result<list_keys::Result> {
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_keys::Result {
-            keys: key_info_managers::list_keys(
-                store_handle.deref(),
-                &app_name,
-                ProviderID::MbedCrypto,
-            )
-            .map_err(|e| {
-                format_error!("Error occurred when fetching key information", e);
-                ResponseStatus::KeyInfoManagerError
-            })?,
+            keys: store_handle
+                .list_keys(&app_name, ProviderID::MbedCrypto)
+                .map_err(|e| {
+                    format_error!("Error occurred when fetching key information", e);
+                    ResponseStatus::KeyInfoManagerError
+                })?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
         let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_clients::Result {
-            clients: key_info_managers::list_clients(store_handle.deref(), ProviderID::MbedCrypto)
+            clients: store_handle
+                .list_clients(ProviderID::MbedCrypto)
                 .map_err(|e| {
                     format_error!("Error occurred when fetching key information", e);
                     ResponseStatus::KeyInfoManagerError
