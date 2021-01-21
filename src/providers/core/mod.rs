@@ -142,6 +142,10 @@ impl Provide for Provider {
 
         Ok(result)
     }
+
+    fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        unreachable!()
+    }
 }
 
 /// Builder for CoreProvider

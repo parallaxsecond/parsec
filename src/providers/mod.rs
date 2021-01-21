@@ -130,14 +130,14 @@ use parsec_interface::requests::{ResponseStatus, Result};
 ///
 /// Definition of the interface that a provider must implement to
 /// be linked into the service through a backend handler.
+///
+/// The methods with no default are used on a service-level by the
+/// core provider and so must be supported by all providers.
 pub trait Provide {
     /// Return a description of the current provider.
     ///
     /// The descriptions are gathered in the Core Provider and returned for a ListProviders operation.
-    fn describe(&self) -> Result<(list_providers::ProviderInfo, HashSet<Opcode>)> {
-        trace!("describe ingress");
-        Err(ResponseStatus::PsaErrorNotSupported)
-    }
+    fn describe(&self) -> Result<(list_providers::ProviderInfo, HashSet<Opcode>)>;
 
     /// List the providers running in the service.
     fn list_providers(&self, _op: list_providers::Operation) -> Result<list_providers::Result> {
@@ -165,16 +165,10 @@ pub trait Provide {
         &self,
         _app_name: ApplicationName,
         _op: list_keys::Operation,
-    ) -> Result<list_keys::Result> {
-        trace!("list_keys ingress");
-        Err(ResponseStatus::PsaErrorNotSupported)
-    }
+    ) -> Result<list_keys::Result>;
 
     /// Lists all clients currently having data in the service.
-    fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
-        trace!("list_clients ingress");
-        Err(ResponseStatus::PsaErrorNotSupported)
-    }
+    fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result>;
 
     /// Delete all data a client has in the service..
     fn delete_client(&self, _op: delete_client::Operation) -> Result<delete_client::Result> {

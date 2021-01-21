@@ -138,16 +138,19 @@ fn list_keys() {
 
     assert!(keys.is_empty());
 
-    let key1 = String::from("list_keys1");
-    let key2 = String::from("list_keys2");
-    let key3 = String::from("list_keys3");
+    let providers = client.list_providers().expect("Failed to list providers");
+    let mut suitable_providers = vec![];
 
-    client.set_provider(ProviderID::MbedCrypto);
-    client.generate_rsa_sign_key(key1.clone()).unwrap();
-    client.set_provider(ProviderID::Pkcs11);
-    client.generate_rsa_sign_key(key2.clone()).unwrap();
-    client.set_provider(ProviderID::Tpm);
-    client.generate_rsa_sign_key(key3.clone()).unwrap();
+    for provider in providers.iter() {
+        client.set_provider(provider.id);
+        if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+            continue;
+        }
+        suitable_providers.push(provider.clone());
+        client
+            .generate_rsa_sign_key(format!("list_keys_{}", provider.id))
+            .unwrap();
+    }
 
     let key_names: Vec<(String, ProviderID)> = client
         .list_keys()
@@ -156,10 +159,11 @@ fn list_keys() {
         .map(|k| (k.name, k.provider_id))
         .collect();
 
-    assert_eq!(key_names.len(), 3);
-    assert!(key_names.contains(&(key1.clone(), ProviderID::MbedCrypto)));
-    assert!(key_names.contains(&(key2.clone(), ProviderID::Pkcs11)));
-    assert!(key_names.contains(&(key3.clone(), ProviderID::Tpm)));
+    assert_eq!(key_names.len(), suitable_providers.len());
+
+    for provider in suitable_providers.iter() {
+        assert!(key_names.contains(&(format!("list_keys_{}", provider.id), provider.id)));
+    }
 }
 
 #[test]
@@ -197,27 +201,46 @@ fn invalid_provider_list_clients() {
 fn list_and_delete_clients() {
     let mut client = TestClient::new();
     client.do_not_destroy_keys();
-    client.set_default_auth(Some("list_clients test".to_string()));
+
+    let all_providers_user = "list_clients test".to_string();
+    client.set_default_auth(Some(all_providers_user.clone()));
 
     let clients = client.list_clients().expect("list_clients failed");
-    assert!(!clients.contains(&"list_clients test".to_string()));
+    assert!(!clients.contains(&all_providers_user));
 
-    let key1 = String::from("list_clients1");
-    let key2 = String::from("list_keys2");
-    let key3 = String::from("list_keys3");
+    let providers = client.list_providers().expect("Failed to list providers");
+    let mut suitable_providers = vec![];
 
-    client.set_provider(ProviderID::MbedCrypto);
-    client.generate_rsa_sign_key(key1.clone()).unwrap();
-    client.set_provider(ProviderID::Pkcs11);
-    client.generate_rsa_sign_key(key2.clone()).unwrap();
-    client.set_provider(ProviderID::Tpm);
-    client.generate_rsa_sign_key(key3.clone()).unwrap();
+    for provider in providers.iter() {
+        client.set_provider(provider.id);
+        if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+            continue;
+        }
+        suitable_providers.push(provider.clone());
+
+        client.set_default_auth(Some(all_providers_user.clone()));
+        client
+            .generate_rsa_sign_key("all-providers-user-key".to_string())
+            .unwrap();
+
+        client.set_default_auth(Some(format!("user_{}", provider.id)));
+        client
+            .generate_rsa_sign_key(format!("user_{}-key", provider.id))
+            .unwrap();
+    }
+
+    client.set_default_auth(Some(all_providers_user.clone()));
 
     let clients = client.list_clients().expect("list_clients failed");
-    assert!(clients.contains(&"list_clients test".to_string()));
-    client
-        .delete_client("list_clients test".to_string())
-        .unwrap();
+
+    assert!(clients.contains(&all_providers_user));
+    client.delete_client(all_providers_user).unwrap();
+
+    for provider in suitable_providers.iter() {
+        let username = format!("user_{}", provider.id);
+        assert!(clients.contains(&username));
+        client.delete_client(username).unwrap();
+    }
 
     let keys = client.list_keys().expect("list_keys failed");
 
