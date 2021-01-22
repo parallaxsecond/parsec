@@ -46,7 +46,6 @@ libc = "0.2.77"
 anyhow = "1.0.32"
 # Using a fork until the JWT support is merged into the main rust-spiffe repository
 spiffe = { git = "https://github.com/hug-dev/rust-spiffe", branch = "refactor-jwt" }
-#rust-cryptoauthlib = { git = "https://github.com/RobertDrazkowskiGL/rust-cryptoauthlib.git", optional = true }
 rust-cryptoauthlib = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
