@@ -96,9 +96,9 @@ impl Provider {
         }
     }
 
-    pub(super) fn key_info_exists(&self, key_triple: &KeyTriple) -> Result<()> {
+    pub(super) fn key_info_does_not_exist(&self, key_triple: &KeyTriple) -> Result<()> {
         let locks = self.get_ordered_locks();
         let store_handle = locks.0.read().expect("Key store lock poisoned");
-        store_handle.already_exists(key_triple)
+        store_handle.does_not_exist(key_triple)
     }
 }

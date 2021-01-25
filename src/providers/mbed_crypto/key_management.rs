@@ -104,7 +104,7 @@ impl Provider {
             .write()
             .expect("Key store lock poisoned");
 
-        store_handle.already_exists(&key_triple)?;
+        store_handle.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -114,11 +114,18 @@ impl Provider {
             .expect("Grabbing key handle mutex failed");
 
         match psa_crypto_key_management::generate(key_attributes, Some(key_id)) {
-            Ok(_) => {
-                // If this fails, then we will have a zombie key in the Mbed Crypto backend. This
-                // is probably not a big problem apart from memory consumption.
-                insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)?;
-                Ok(psa_generate_key::Result {})
+            Ok(key) => {
+                if let Err(e) =
+                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                {
+                    // Safe as this thread should be the only one accessing this key yet.
+                    if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
+                        error!("Failed to destroy the previously generated key.");
+                    }
+                    Err(e)
+                } else {
+                    Ok(psa_generate_key::Result {})
+                }
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);
@@ -141,7 +148,7 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
-        store_handle.already_exists(&key_triple)?;
+        store_handle.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -155,9 +162,18 @@ impl Provider {
             Some(key_id),
             key_data.expose_secret(),
         ) {
-            Ok(_) => {
-                insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)?;
-                Ok(psa_import_key::Result {})
+            Ok(key) => {
+                if let Err(e) =
+                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                {
+                    // Safe as this thread should be the only one accessing this key yet.
+                    if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
+                        error!("Failed to destroy the previously imported key.");
+                    }
+                    Err(e)
+                } else {
+                    Ok(psa_import_key::Result {})
+                }
             }
             Err(error) => {
                 let error = ResponseStatus::from(error);

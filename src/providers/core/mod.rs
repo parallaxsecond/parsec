@@ -87,10 +87,15 @@ impl Provide for Provider {
 
         let mut keys: Vec<KeyInfo> = Vec::new();
         for provider in &self.prov_list {
+            let id = if let Ok((provider_info, _)) = provider.describe() {
+                provider_info.id.to_string()
+            } else {
+                "unknown".to_string()
+            };
             let mut result = provider
                 .list_keys(app_name.clone(), _op)
                 .unwrap_or_else(|e| {
-                    error!("list_keys failed on provider with {}", e);
+                    error!("list_keys failed on provider {} with {}", id, e);
                     list_keys::Result { keys: Vec::new() }
                 });
             keys.append(&mut result.keys);
@@ -105,7 +110,12 @@ impl Provide for Provider {
         let mut clients: Vec<String> = Vec::new();
         for provider in &self.prov_list {
             let mut result = provider.list_clients(_op).unwrap_or_else(|e| {
-                error!("list_clients failed on provider with {}", e);
+                let id = if let Ok((provider_info, _)) = provider.describe() {
+                    provider_info.id.to_string()
+                } else {
+                    "unknown".to_string()
+                };
+                error!("list_clients failed on provider {} with {}", id, e);
                 list_clients::Result {
                     clients: Vec::new(),
                 }
@@ -124,6 +134,11 @@ impl Provide for Provider {
         let client = op.client;
 
         for provider in &self.prov_list {
+            let id = if let Ok((provider_info, _)) = provider.describe() {
+                provider_info.id.to_string()
+            } else {
+                "unknown".to_string()
+            };
             // Currently Parsec only stores keys, we delete all of them.
             let keys = provider
                 .list_keys(
@@ -131,7 +146,7 @@ impl Provide for Provider {
                     list_keys::Operation {},
                 )
                 .unwrap_or_else(|e| {
-                    error!("list_keys failed on provider with {}", e);
+                    error!("list_keys failed on provider {} with {}", id, e);
                     list_keys::Result { keys: Vec::new() }
                 })
                 .keys;
@@ -143,7 +158,7 @@ impl Provide for Provider {
                         psa_destroy_key::Operation { key_name },
                     )
                     .unwrap_or_else(|e| {
-                        error!("psa_destroy_key failed on provider with {}", e);
+                        error!("psa_destroy_key failed on provider {} with {}", id, e);
                         psa_destroy_key::Result {}
                     });
             }

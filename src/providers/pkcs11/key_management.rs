@@ -112,7 +112,7 @@ impl Provider {
         let key_attributes = op.attributes;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        self.key_info_exists(&key_triple)?;
+        self.key_info_does_not_exist(&key_triple)?;
 
         let key_id = self.create_key_id();
 
@@ -143,9 +143,27 @@ impl Provider {
             &pub_template,
             &priv_template,
         ) {
-            Ok(_key) => {
-                self.insert_key_id(key_triple, key_attributes, key_id)?;
-                Ok(psa_generate_key::Result {})
+            Ok((first_key, second_key)) => {
+                if let Err(e) = self.insert_key_id(key_triple, key_attributes, key_id) {
+                    // Destroy the generated key in a best effort way to avoid zombies 🧟
+                    if self
+                        .backend
+                        .destroy_object(session.session_handle(), first_key)
+                        .is_err()
+                    {
+                        error!("Failed to destroy first part of the key pair.");
+                    }
+                    if self
+                        .backend
+                        .destroy_object(session.session_handle(), second_key)
+                        .is_err()
+                    {
+                        error!("Failed to destroy second part of the key pair.");
+                    }
+                    Err(e)
+                } else {
+                    Ok(psa_generate_key::Result {})
+                }
             }
             Err(e) => {
                 format_error!("Generate Key Pair operation failed", e);
@@ -179,7 +197,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        self.key_info_exists(&key_triple)?;
+        self.key_info_does_not_exist(&key_triple)?;
 
         let key_id = self.create_key_id();
 
@@ -261,9 +279,19 @@ impl Provider {
             .backend
             .create_object(session.session_handle(), &template)
         {
-            Ok(_key) => {
-                self.insert_key_id(key_triple, key_attributes, key_id)?;
-                Ok(psa_import_key::Result {})
+            Ok(key) => {
+                if let Err(e) = self.insert_key_id(key_triple, key_attributes, key_id) {
+                    if self
+                        .backend
+                        .destroy_object(session.session_handle(), key)
+                        .is_err()
+                    {
+                        error!("Failed to destroy public key.");
+                    }
+                    Err(e)
+                } else {
+                    Ok(psa_import_key::Result {})
+                }
             }
             Err(e) => {
                 format_error!("Import operation failed", e);
@@ -392,43 +420,55 @@ impl Provider {
             );
         }
 
-        match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
+        let first_res = match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
             Ok(key) => {
                 trace!("DestroyObject command");
                 match self.backend.destroy_object(session.session_handle(), key) {
-                    Ok(_) => info!("Private part of the key destroyed successfully."),
+                    Ok(_) => {
+                        info!("Private part of the key destroyed successfully.");
+                        Ok(())
+                    }
                     Err(e) => {
                         format_error!("Failed to destroy private part of the key", e);
-                        return Err(utils::to_response_status(e));
+                        Err(utils::to_response_status(e))
                     }
-                };
+                }
             }
             Err(e) => {
                 format_error!("Error destroying key", e);
-                return Err(e);
+                Err(e)
             }
         };
 
         // Second key is optional.
-        match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
+        let second_res = match self.find_key(session.session_handle(), key_id, KeyPairType::Any) {
             Ok(key) => {
                 trace!("DestroyObject command");
                 match self.backend.destroy_object(session.session_handle(), key) {
-                    Ok(_) => info!("Private part of the key destroyed successfully."),
+                    Ok(_) => {
+                        info!("Private part of the key destroyed successfully.");
+                        Ok(())
+                    }
                     Err(e) => {
                         format_error!("Failed to destroy private part of the key", e);
-                        return Err(utils::to_response_status(e));
+                        Err(utils::to_response_status(e))
                     }
-                };
+                }
             }
             // A second key is optional.
-            Err(ResponseStatus::PsaErrorDoesNotExist) => (),
+            Err(ResponseStatus::PsaErrorDoesNotExist) => Ok(()),
             Err(e) => {
                 format_error!("Error destroying key", e);
-                return Err(e);
+                Err(e)
             }
         };
 
-        Ok(psa_destroy_key::Result {})
+        if let Err(e) = first_res {
+            Err(e)
+        } else if let Err(e) = second_res {
+            Err(e)
+        } else {
+            Ok(psa_destroy_key::Result {})
+        }
     }
 }

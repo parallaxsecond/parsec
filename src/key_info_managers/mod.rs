@@ -217,7 +217,7 @@ impl dyn ManageKeyInfo + Send + Sync {
     ///
     /// Returns PsaErrorAlreadyExists if the key triple already exists or KeyInfoManagerError for
     /// another error.
-    pub fn already_exists(&self, key_triple: &KeyTriple) -> Result<(), ResponseStatus> {
+    pub fn does_not_exist(&self, key_triple: &KeyTriple) -> Result<(), ResponseStatus> {
         if self.exists(key_triple).map_err(to_response_status)? {
             Err(ResponseStatus::PsaErrorAlreadyExists)
         } else {
