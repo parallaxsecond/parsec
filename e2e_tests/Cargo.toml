@@ -1,4 +1,4 @@
-# This crate should NOT be upstreamed to crates.io; it is only intended for 
+# This crate should NOT be upstreamed to crates.io; it is only intended for
 # PARSEC testing purposes (both locally and on CI)
 [package]
 name = "e2e_tests"
@@ -14,7 +14,7 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.115", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", features = ["testing", "spiffe-auth"] }
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "75902d454c65e44bd8dfebb492683bc260283876", features = ["testing", "spiffe-auth"] }
 log = "0.4.11"
 rand = "0.7.3"
 env_logger = "0.7.1"

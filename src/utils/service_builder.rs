@@ -5,9 +5,6 @@
 //! The service builder is required to bootstrap all the components based on a
 //! provided configuration.
 use super::global_config::GlobalConfigBuilder;
-use crate::authenticators::direct_authenticator::DirectAuthenticator;
-use crate::authenticators::jwt_svid_authenticator::JwtSvidAuthenticator;
-use crate::authenticators::unix_peer_credentials_authenticator::UnixPeerCredentialsAuthenticator;
 use crate::authenticators::{Authenticate, AuthenticatorConfig};
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
@@ -36,6 +33,13 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
+
+#[cfg(feature = "direct-authenticator")]
+use crate::authenticators::direct_authenticator::DirectAuthenticator;
+#[cfg(feature = "jwt-svid-authenticator")]
+use crate::authenticators::jwt_svid_authenticator::JwtSvidAuthenticator;
+#[cfg(feature = "unix-peer-credentials-authenticator")]
+use crate::authenticators::unix_peer_credentials_authenticator::UnixPeerCredentialsAuthenticator;
 
 #[cfg(feature = "cryptoauthlib-provider")]
 use crate::providers::cryptoauthlib::ProviderBuilder as CryptoAuthLibProviderBuilder;
@@ -137,7 +141,7 @@ impl ServiceBuilder {
             return Err(Error::new(ErrorKind::InvalidData, "need one provider").into());
         }
 
-        let authenticators = build_authenticators(&config.authenticator);
+        let authenticators = build_authenticators(&config.authenticator)?;
 
         if authenticators[0].0 == AuthType::Direct {
             warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
@@ -405,7 +409,7 @@ fn get_key_info_manager(config: &KeyInfoManagerConfig) -> Result<KeyInfoManager>
     Ok(Arc::new(RwLock::new(manager)))
 }
 
-fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenticator)> {
+fn build_authenticators(config: &AuthenticatorConfig) -> Result<Vec<(AuthType, Authenticator)>> {
     // The authenticators supported by the Parsec service.
     // NOTE: order here is important. The order in which the elements are added here is the
     // order in which they will be returned to any client requesting them!
@@ -414,18 +418,21 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenti
     let mut authenticators: Vec<(AuthType, Authenticator)> = Vec::new();
 
     match config {
+        #[cfg(feature = "direct-authenticator")]
         AuthenticatorConfig::Direct { admins } => authenticators.push((
             AuthType::Direct,
             Box::from(DirectAuthenticator::new(
                 admins.as_ref().cloned().unwrap_or_default(),
             )),
         )),
+        #[cfg(feature = "unix-peer-credentials-authenticator")]
         AuthenticatorConfig::UnixPeerCredentials { admins } => authenticators.push((
             AuthType::UnixPeerCredentials,
             Box::from(UnixPeerCredentialsAuthenticator::new(
                 admins.as_ref().cloned().unwrap_or_default(),
             )),
         )),
+        #[cfg(feature = "jwt-svid-authenticator")]
         AuthenticatorConfig::JwtSvid {
             workload_endpoint,
             admins,
@@ -436,7 +443,19 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Vec<(AuthType, Authenti
                 admins.as_ref().cloned().unwrap_or_default(),
             )),
         )),
+        #[cfg(not(all(
+            feature = "direct-authenticator",
+            feature = "unix-peer-credentials-authenticator",
+            feature = "jwt-svid-authenticator",
+        )))]
+        _ => {
+            error!(
+                "Authenticator \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
+                config
+            );
+            return Err(Error::new(ErrorKind::InvalidData, "authenticator not compiled").into());
+        }
     };
 
-    authenticators
+    Ok(authenticators)
 }
