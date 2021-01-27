@@ -463,12 +463,8 @@ impl Provider {
             }
         };
 
-        if let Err(e) = first_res {
-            Err(e)
-        } else if let Err(e) = second_res {
-            Err(e)
-        } else {
-            Ok(psa_destroy_key::Result {})
-        }
+        first_res?;
+        second_res?;
+        Ok(psa_destroy_key::Result {})
     }
 }

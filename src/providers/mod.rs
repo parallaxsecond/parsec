@@ -187,7 +187,17 @@ pub trait Provide {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Execute a CreateKey operation.
+    /// Execute a GenerateKey operation.
+    ///
+    /// Providers should try, in a best-effort way, to handle failures in a way that it is possible
+    /// to create a key with the same name later on.
+    ///
+    /// For providers using a Key Info Manager to map a key name with a provider-specific key
+    /// identification, the following algorithm can be followed:
+    /// 1. generate unique key ID
+    /// 2. try key creation with it. If successfull go to 3 else return an error.
+    /// 3. store the mappings between key name and key ID. If successfull return success, else go to 4.
+    /// 4. try to delete the key created. If failed, log it and return the error from 3.
     fn psa_generate_key(
         &self,
         _app_name: ApplicationName,
@@ -198,6 +208,16 @@ pub trait Provide {
     }
 
     /// Execute an ImportKey operation.
+    ///
+    /// Providers should try, in a best-effort way, to handle failures in a way that it is possible
+    /// to import a key with the same name later on.
+    ///
+    /// For providers using a Key Info Manager to map a key name with a provider-specific key
+    /// identification, the following algorithm can be followed:
+    /// 1. generate unique key ID
+    /// 2. try key import with it. If successfull go to 3 else return an error.
+    /// 3. store the mappings between key name and key ID. If successfull return success, else go to 4.
+    /// 4. try to delete the key imported. If failed, log it and return the error from 3.
     fn psa_import_key(
         &self,
         _app_name: ApplicationName,
@@ -228,6 +248,15 @@ pub trait Provide {
     }
 
     /// Execute a DestroyKey operation.
+    ///
+    /// Providers should try, in a best-effort way, to handle failures in a way that it is possible
+    /// to generate or create a key with the same name than the one destroyed later on.
+    ///
+    /// For providers using a Key Info Manager to map a key name with a provider-specific key
+    /// identification, the following algorithm can be followed:
+    /// 1. get the key ID from the key name using the KIM
+    /// 2. destroy the key mappings
+    /// 3. try to destroy the key
     fn psa_destroy_key(
         &self,
         _app_name: ApplicationName,
