@@ -58,7 +58,7 @@ timeout = 200 # in milliseconds
 [authenticator]
 # (Required) Type of authenticator that will be used to authenticate clients' authentication
 # payloads.
-# Possible values: "Direct", "UnixPeerCredentials" and "JwtSvid".
+# Possible values: "Direct" and "UnixPeerCredentials".
 # WARNING: The "Direct" authenticator is only secure under specific requirements. Please make sure
 # to read the Recommendations on a Secure Parsec Deployment at
 # https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html
@@ -73,12 +73,6 @@ auth_type = "UnixPeerCredentials"
 # about the need for those permissions.
 # Read more here: https://parallaxsecond.github.io/parsec-book/parsec_client/operations/index.html#core-operations
 #admins = [ { name = "admin_1" }, { name = "admin_2" } ]
-
-# (Required only for JwtSvid) Location of the Workload API endpoint
-# WARNING: only use this authenticator if the Workload API socket is TRUSTED. A malicious entity
-# owning that socket would have access to all the keys owned by clients using this authentication
-# method. This path *must* be trusted for as long as Parsec is running.
-#workload_endpoint="unix:///tmp/agent.sock"
 
 # (Required) Configuration for the components managing key info for providers.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables

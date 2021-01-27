@@ -14,7 +14,7 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.115", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "75902d454c65e44bd8dfebb492683bc260283876", features = ["testing", "spiffe-auth"] }
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "06c52e2348ac55f46d240d2ab61a499effccffbd", features = ["testing"] }
 log = "0.4.11"
 rand = "0.7.3"
 env_logger = "0.7.1"
