@@ -14,8 +14,7 @@ socket_path = "/tmp/parsec.sock"
 
 [authenticator]
 auth_type = "Direct"
-admins = [ { name = "list_clients test" }, { name = "1000" }, { name = "client1" }, { name = "spiffe://example.org/parsec-client-1" } ]
-#workload_endpoint="unix:///tmp/agent.sock"
+admins = [ { name = "list_clients test" }, { name = "1000" }, { name = "client1" } ]
 
 [[key_manager]]
 name = "on-disk-manager"

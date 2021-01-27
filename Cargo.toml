@@ -44,8 +44,6 @@ picky-asn1-x509 = { version = "0.4.0", optional = true }
 users = "0.11.0"
 libc = "0.2.77"
 anyhow = "1.0.32"
-# Using a fork until the JWT support is merged into the main rust-spiffe repository
-spiffe = { git = "https://github.com/hug-dev/rust-spiffe", branch = "refactor-jwt", optional = true }
 rust-cryptoauthlib = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
@@ -67,5 +65,4 @@ all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cry
 # Authenticators
 direct-authenticator = []
 unix-peer-credentials-authenticator = []
-jwt-svid-authenticator = ["spiffe"]
-all-authenticators = ["direct-authenticator", "unix-peer-credentials-authenticator", "jwt-svid-authenticator"]
+all-authenticators = ["direct-authenticator", "unix-peer-credentials-authenticator"]

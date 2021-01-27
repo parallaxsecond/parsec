@@ -64,6 +64,3 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 USER root
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Download the SPIRE server and agent
-RUN curl -s -N -L https://github.com/spiffe/spire/releases/download/v0.11.1/spire-0.11.1-linux-x86_64-glibc.tar.gz | tar xz
