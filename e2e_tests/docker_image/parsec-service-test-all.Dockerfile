@@ -140,3 +140,7 @@ RUN ./generate-keys.sh
 # Import an old version of the e2e tests
 COPY import-old-e2e-tests.sh /tmp/
 RUN ./import-old-e2e-tests.sh
+
+# Download the SPIRE server and agent
+RUN curl -s -N -L https://github.com/spiffe/spire/releases/download/v0.11.1/spire-0.11.1-linux-x86_64-glibc.tar.gz | tar xz
+ENV SPIFFE_ENDPOINT_SOCKET="unix:///tmp/agent.sock"

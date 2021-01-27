@@ -42,6 +42,7 @@ users = "0.11.0"
 libc = "0.2.86"
 anyhow = "1.0.38"
 rust-cryptoauthlib = { version = "0.3.1", optional = true }
+spiffe = { version = "0.1.1", optional = true }
 prost = { version = "0.7.0", optional = true }
 
 [dev-dependencies]
@@ -71,4 +72,5 @@ all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cry
 # Authenticators
 direct-authenticator = []
 unix-peer-credentials-authenticator = []
-all-authenticators = ["direct-authenticator", "unix-peer-credentials-authenticator"]
+jwt-svid-authenticator = ["spiffe"]
+all-authenticators = ["direct-authenticator", "unix-peer-credentials-authenticator", "jwt-svid-authenticator"]

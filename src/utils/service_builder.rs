@@ -33,6 +33,8 @@ use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 
 #[cfg(feature = "direct-authenticator")]
 use crate::authenticators::direct_authenticator::DirectAuthenticator;
+#[cfg(feature = "jwt-svid-authenticator")]
+use crate::authenticators::jwt_svid_authenticator::JwtSvidAuthenticator;
 #[cfg(feature = "unix-peer-credentials-authenticator")]
 use crate::authenticators::unix_peer_credentials_authenticator::UnixPeerCredentialsAuthenticator;
 
@@ -399,9 +401,30 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Result<Vec<(AuthType, A
                 admins.as_ref().cloned().unwrap_or_default(),
             )),
         )),
+        #[cfg(feature = "jwt-svid-authenticator")]
+        AuthenticatorConfig::JwtSvid {
+            workload_endpoint,
+            admins,
+        } => {
+            let jwt_svid_authenticator = match JwtSvidAuthenticator::new(
+                workload_endpoint.to_string(),
+                admins.as_ref().cloned().unwrap_or_default(),
+            ) {
+                Some(authenticator) => authenticator,
+                None => {
+                    return Err(Error::new(
+                        ErrorKind::Other,
+                        "can not create a SPIFFE Workload API client",
+                    )
+                    .into())
+                }
+            };
+            authenticators.push((AuthType::JwtSvid, Box::from(jwt_svid_authenticator)))
+        }
         #[cfg(not(all(
             feature = "direct-authenticator",
             feature = "unix-peer-credentials-authenticator",
+            feature = "jwt-svid-authenticator",
         )))]
         _ => {
             error!(
