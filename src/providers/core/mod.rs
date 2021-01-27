@@ -8,7 +8,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use derivative::Derivative;
-use log::trace;
+use log::{error, trace};
 use parsec_interface::operations::{
     delete_client, list_authenticators, list_clients, list_keys, list_opcodes, list_providers,
     ping, psa_destroy_key,
@@ -87,7 +87,17 @@ impl Provide for Provider {
 
         let mut keys: Vec<KeyInfo> = Vec::new();
         for provider in &self.prov_list {
-            let mut result = provider.list_keys(app_name.clone(), _op)?;
+            let id = if let Ok((provider_info, _)) = provider.describe() {
+                provider_info.id.to_string()
+            } else {
+                "unknown".to_string()
+            };
+            let mut result = provider
+                .list_keys(app_name.clone(), _op)
+                .unwrap_or_else(|e| {
+                    error!("list_keys failed on provider {} with {}", id, e);
+                    list_keys::Result { keys: Vec::new() }
+                });
             keys.append(&mut result.keys);
         }
 
@@ -99,7 +109,17 @@ impl Provide for Provider {
 
         let mut clients: Vec<String> = Vec::new();
         for provider in &self.prov_list {
-            let mut result = provider.list_clients(_op)?;
+            let mut result = provider.list_clients(_op).unwrap_or_else(|e| {
+                let id = if let Ok((provider_info, _)) = provider.describe() {
+                    provider_info.id.to_string()
+                } else {
+                    "unknown".to_string()
+                };
+                error!("list_clients failed on provider {} with {}", id, e);
+                list_clients::Result {
+                    clients: Vec::new(),
+                }
+            });
             clients.append(&mut result.clients);
         }
         clients.sort();
@@ -114,19 +134,33 @@ impl Provide for Provider {
         let client = op.client;
 
         for provider in &self.prov_list {
+            let id = if let Ok((provider_info, _)) = provider.describe() {
+                provider_info.id.to_string()
+            } else {
+                "unknown".to_string()
+            };
             // Currently Parsec only stores keys, we delete all of them.
             let keys = provider
                 .list_keys(
                     ApplicationName::from_name(client.clone()),
                     list_keys::Operation {},
-                )?
+                )
+                .unwrap_or_else(|e| {
+                    error!("list_keys failed on provider {} with {}", id, e);
+                    list_keys::Result { keys: Vec::new() }
+                })
                 .keys;
             for key in keys {
                 let key_name = key.name;
-                let _ = provider.psa_destroy_key(
-                    ApplicationName::from_name(client.clone()),
-                    psa_destroy_key::Operation { key_name },
-                )?;
+                let _ = provider
+                    .psa_destroy_key(
+                        ApplicationName::from_name(client.clone()),
+                        psa_destroy_key::Operation { key_name },
+                    )
+                    .unwrap_or_else(|e| {
+                        error!("psa_destroy_key failed on provider {} with {}", id, e);
+                        psa_destroy_key::Result {}
+                    });
             }
         }
 

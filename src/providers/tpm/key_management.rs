@@ -86,6 +86,9 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
+
+        store_handle.does_not_exist(&key_triple)?;
+
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -155,6 +158,7 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
+        store_handle.does_not_exist(&key_triple)?;
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -212,6 +216,7 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
+        store_handle.does_not_exist(&key_triple)?;
         let mut esapi_context = self
             .esapi_context
             .lock()

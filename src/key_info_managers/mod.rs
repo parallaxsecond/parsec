@@ -146,60 +146,82 @@ pub trait ManageKeyInfo {
     fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String>;
 }
 
-/// Returns a Vec of the KeyInfo objects corresponding to the given application name and
-/// provider ID.
-///
-/// # Errors
-///
-/// Returns an error as a String if there was a problem accessing the Key Info Manager.
-pub fn list_keys(
-    manager: &dyn ManageKeyInfo,
-    app_name: &ApplicationName,
-    provider_id: ProviderID,
-) -> Result<Vec<parsec_interface::operations::list_keys::KeyInfo>, String> {
-    use parsec_interface::operations::list_keys::KeyInfo;
+// "+ Send + Sync" is needed for things like:
+// ```
+// let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
+// let _ = store_handle.list_keys(&app_name, ProviderID::Pkcs11)?;
+// ```
+// to work because `store_handle` is a RWLockReadGuard of (dyn ManageKeyInfo + Send + Sync +
+// 'static). Did not work with only `impl dyn ManageKeyInfo` below. Maybe there is a way to
+// implement automagically the same methods on (dyn ManageKeyInfo + Send + Sync + 'static)
+// if they are implemented on dyn ManageKeyInfo but not sure.
+impl dyn ManageKeyInfo + Send + Sync {
+    /// Returns a Vec of the KeyInfo objects corresponding to the given application name and
+    /// provider ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
+    pub fn list_keys(
+        &self,
+        app_name: &ApplicationName,
+        provider_id: ProviderID,
+    ) -> Result<Vec<parsec_interface::operations::list_keys::KeyInfo>, String> {
+        use parsec_interface::operations::list_keys::KeyInfo;
 
-    let mut keys: Vec<KeyInfo> = Vec::new();
-    let key_triples = manager.get_all(provider_id)?;
+        let mut keys: Vec<KeyInfo> = Vec::new();
+        let key_triples = self.get_all(provider_id)?;
 
-    for key_triple in key_triples {
-        if key_triple.app_name() != app_name {
-            continue;
+        for key_triple in key_triples {
+            if key_triple.app_name() != app_name {
+                continue;
+            }
+
+            let key_info = self.get(key_triple)?;
+            let key_info = match key_info {
+                Some(key_info) => key_info,
+                _ => continue,
+            };
+
+            keys.push(KeyInfo {
+                provider_id: key_triple.provider_id,
+                name: key_triple.key_name().to_string(),
+                attributes: key_info.attributes,
+            });
         }
 
-        let key_info = manager.get(key_triple)?;
-        let key_info = match key_info {
-            Some(key_info) => key_info,
-            _ => continue,
-        };
-
-        keys.push(KeyInfo {
-            provider_id: key_triple.provider_id,
-            name: key_triple.key_name().to_string(),
-            attributes: key_info.attributes,
-        });
+        Ok(keys)
     }
 
-    Ok(keys)
-}
+    /// Returns a Vec of ApplicationName of clients having keys in the provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
+    pub fn list_clients(&self, provider_id: ProviderID) -> Result<Vec<ApplicationName>, String> {
+        let key_triples = self.get_all(provider_id)?;
+        let mut clients = Vec::new();
 
-/// Returns a Vec of ApplicationName of clients having keys in the provider.
-///
-/// # Errors
-///
-/// Returns an error as a String if there was a problem accessing the Key Info Manager.
-pub fn list_clients(
-    manager: &dyn ManageKeyInfo,
-    provider_id: ProviderID,
-) -> Result<Vec<ApplicationName>, String> {
-    let key_triples = manager.get_all(provider_id)?;
-    let mut clients = Vec::new();
+        for key_triple in key_triples {
+            if !clients.contains(key_triple.app_name()) {
+                let _ = clients.push(key_triple.app_name().clone());
+            }
+        }
 
-    for key_triple in key_triples {
-        if !clients.contains(key_triple.app_name()) {
-            let _ = clients.push(key_triple.app_name().clone());
+        Ok(clients)
+    }
+
+    /// Check if a key triple exists in the Key Info Manager and return a ResponseStatus
+    ///
+    /// # Errors
+    ///
+    /// Returns PsaErrorAlreadyExists if the key triple already exists or KeyInfoManagerError for
+    /// another error.
+    pub fn does_not_exist(&self, key_triple: &KeyTriple) -> Result<(), ResponseStatus> {
+        if self.exists(key_triple).map_err(to_response_status)? {
+            Err(ResponseStatus::PsaErrorAlreadyExists)
+        } else {
+            Ok(())
         }
     }
-
-    Ok(clients)
 }

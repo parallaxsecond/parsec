@@ -42,22 +42,31 @@ impl Provider {
         }
     }
 
-    pub(super) fn create_key_id(
-        &self,
-        key_triple: KeyTriple,
-        key_attributes: Attributes,
-    ) -> Result<[u8; 4]> {
+    pub(super) fn create_key_id(&self) -> [u8; 4] {
         let locks = self.get_ordered_locks();
-        let mut store_handle = locks.0.write().expect("Key store lock poisoned");
         let mut local_ids_handle = locks.1.write().expect("Local ID lock poisoned");
         let mut key_id = rand::random::<[u8; 4]>();
         while local_ids_handle.contains(&key_id) {
             key_id = rand::random::<[u8; 4]>();
         }
+        let _ = local_ids_handle.insert(key_id);
+        key_id
+    }
+
+    pub(super) fn insert_key_id(
+        &self,
+        key_triple: KeyTriple,
+        key_attributes: Attributes,
+        key_id: [u8; 4],
+    ) -> Result<()> {
+        let locks = self.get_ordered_locks();
+        let mut store_handle = locks.0.write().expect("Key store lock poisoned");
+
         let key_info = KeyInfo {
             id: key_id.to_vec(),
             attributes: key_attributes,
         };
+
         match store_handle.insert(key_triple.clone(), key_info) {
             Ok(insert_option) => {
                 if insert_option.is_some() {
@@ -67,29 +76,18 @@ impl Provider {
                         warn!("Overwriting Key triple mapping");
                     }
                 }
-                let _ = local_ids_handle.insert(key_id);
-                Ok(key_id)
+                Ok(())
             }
             Err(string) => Err(key_info_managers::to_response_status(string)),
         }
     }
 
-    pub(super) fn remove_key_id(&self, key_triple: &KeyTriple) -> Result<[u8; 4]> {
+    pub(super) fn remove_key_id(&self, key_triple: &KeyTriple) -> Result<()> {
+        // We don't remove the key ID from the local IDs set as there are a lot of possible values.
         let locks = self.get_ordered_locks();
         let mut store_handle = locks.0.write().expect("Key store lock poisoned");
-        let mut local_ids_handle = locks.1.write().expect("Local ID lock poisoned");
         match store_handle.remove(key_triple) {
-            Ok(Some(key_info)) => {
-                let mut key_id = [0; 4];
-                if key_info.id.len() == 4 {
-                    key_id.copy_from_slice(&key_info.id);
-                } else {
-                    error!("Key info contained invalid key ID");
-                    return Err(ResponseStatus::PsaErrorDataCorrupt);
-                };
-                let _ = local_ids_handle.remove(&key_id);
-                Ok(key_id)
-            }
+            Ok(Some(_key_info)) => Ok(()),
             Ok(None) => {
                 error!("Did not find expected key info.");
                 Err(ResponseStatus::PsaErrorDoesNotExist)
@@ -98,12 +96,9 @@ impl Provider {
         }
     }
 
-    pub(super) fn key_info_exists(&self, key_triple: &KeyTriple) -> Result<bool> {
+    pub(super) fn key_info_does_not_exist(&self, key_triple: &KeyTriple) -> Result<()> {
         let locks = self.get_ordered_locks();
         let store_handle = locks.0.read().expect("Key store lock poisoned");
-        match store_handle.exists(key_triple) {
-            Ok(val) => Ok(val),
-            Err(string) => Err(key_info_managers::to_response_status(string)),
-        }
+        store_handle.does_not_exist(key_triple)
     }
 }
