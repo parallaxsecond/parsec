@@ -4,8 +4,9 @@ use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use crate::providers::mbed_crypto::key_management::{
-    create_key_id, get_key_id, insert_key_id, key_info_exists, remove_key_id,
+    create_key_id, get_key_id, insert_key_id, remove_key_id,
 };
+use log::error;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -25,9 +26,8 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
-        if key_info_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::PsaErrorAlreadyExists);
-        }
+        store_handle.does_not_exist(&key_triple)?;
+
         let key_id = create_key_id(&self.id_counter)?;
 
         match self.context.generate_key(key_attributes, key_id) {
@@ -46,7 +46,7 @@ impl Provider {
             Err(error) => {
                 let error = ResponseStatus::from(error);
                 format_error!("Generate key error", error);
-                Err(error.into())
+                Err(error)
             }
         }
     }
@@ -64,23 +64,27 @@ impl Provider {
             .key_info_store
             .write()
             .expect("Key store lock poisoned");
-        if key_info_exists(&key_triple, &*store_handle)? {
-            return Err(ResponseStatus::PsaErrorAlreadyExists);
-        }
-        let key_id = create_key_id(
-            key_triple.clone(),
-            key_attributes,
-            &mut *store_handle,
-            &self.id_counter,
-        )?;
+        store_handle.does_not_exist(&key_triple)?;
+
+        let key_id = create_key_id(&self.id_counter)?;
 
         match self
             .context
             .import_key(key_attributes, key_id, key_data.expose_secret())
         {
-            Ok(_) => Ok(psa_import_key::Result {}),
+            Ok(_) => {
+                if let Err(e) =
+                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                {
+                    if self.context.destroy_key(key_id).is_err() {
+                        error!("Failed to destroy the previously generated key.");
+                    }
+                    Err(e)
+                } else {
+                    Ok(psa_import_key::Result {})
+                }
+            }
             Err(error) => {
-                remove_key_id(&key_triple, &mut *store_handle)?;
                 format_error!("Import key status: ", error);
                 Err(error.into())
             }
@@ -120,12 +124,10 @@ impl Provider {
             .write()
             .expect("Key store lock poisoned");
         let key_id = get_key_id(&key_triple, &*store_handle)?;
+        remove_key_id(&key_triple, &mut *store_handle)?;
 
         match self.context.destroy_key(key_id) {
-            Ok(()) => {
-                remove_key_id(&key_triple, &mut *store_handle)?;
-                Ok(psa_destroy_key::Result {})
-            }
+            Ok(()) => Ok(psa_destroy_key::Result {}),
             Err(error) => {
                 format_error!("Destroy key status: ", error);
                 Err(error.into())

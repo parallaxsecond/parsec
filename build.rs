@@ -1,9 +1,10 @@
-#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::multiple_crate_versions, unused)]
 use std::env;
 use std::fs::read_dir;
 use std::io::{Error, ErrorKind, Result};
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "trusted-service-provider")]
 fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     let header = ts_include_dir.clone() + "/service/locator/interface/service_locator.h";
 
@@ -37,6 +38,7 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "trusted-service-provider")]
 fn generate_proto_sources(contract_dir: String) -> Result<()> {
     let crypto_pb_dir = contract_dir.clone() + "/service/crypto/protobuf";
     let dir_entries = read_dir(Path::new(&crypto_pb_dir))?;
@@ -65,7 +67,8 @@ fn generate_proto_sources(contract_dir: String) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    if cfg!(feature = "trusted-service-provider") {
+    #[cfg(feature = "trusted-service-provider")]
+    {
         generate_proto_sources(String::from("trusted-services-vendor/protocols"))?;
         generate_ts_bindings(String::from("trusted-services-vendor/components"))?;
     }
