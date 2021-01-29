@@ -42,7 +42,7 @@ pub fn get_key_id(
 }
 
 /// Stores a key ID it in the Key Info Manager.
-fn insert_key_id(
+pub fn insert_key_id(
     key_triple: KeyTriple,
     key_attributes: Attributes,
     store_handle: &mut dyn ManageKeyInfo,
@@ -64,7 +64,7 @@ fn insert_key_id(
 }
 
 /// Creates a new PSA Key ID
-fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
+pub fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
     // fetch_add adds 1 to the old value and returns the old value, so add 1 to local value for new ID
     let new_key_id = max_current_id.fetch_add(1, Relaxed) + 1;
     if new_key_id > key::PSA_KEY_ID_USER_MAX {
@@ -81,7 +81,8 @@ fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
     Ok(new_key_id)
 }
 
-fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
+/// Remove the info for a key triple from the Key Info Manager
+pub fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
     // ID Counter not affected as overhead and extra complication deemed unnecessary
     match store_handle.remove(key_triple) {
         Ok(_) => Ok(()),

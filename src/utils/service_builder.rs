@@ -47,12 +47,15 @@ use crate::providers::mbed_crypto::ProviderBuilder as MbedCryptoProviderBuilder;
 use crate::providers::pkcs11::ProviderBuilder as Pkcs11ProviderBuilder;
 #[cfg(feature = "tpm-provider")]
 use crate::providers::tpm::ProviderBuilder as TpmProviderBuilder;
+#[cfg(feature = "trusted-service-provider")]
+use crate::providers::trusted_service::ProviderBuilder as TrustedServiceProviderBuilder;
 
 #[cfg(any(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",
     feature = "tpm-provider",
-    feature = "cryptoauthlib-provider"
+    feature = "cryptoauthlib-provider",
+    feature = "trusted-service-provider"
 ))]
 use log::info;
 
@@ -284,7 +287,8 @@ fn build_providers(
         feature = "mbed-crypto-provider",
         feature = "pkcs11-provider",
         feature = "tpm-provider",
-        feature = "cryptoauthlib-provider"
+        feature = "cryptoauthlib-provider",
+        feature = "trusted-service-provider"
     )),
     allow(unused_variables),
     allow(clippy::match_single_binding)
@@ -362,11 +366,21 @@ unsafe fn get_provider(
                     .build()?,
             ))
         }
+        #[cfg(feature = "trusted-service-provider")]
+        ProviderConfig::TrustedService { .. } => {
+            info!("Creating a TPM Provider.");
+            Ok(Arc::new(
+                TrustedServiceProviderBuilder::new()
+                    .with_key_info_store(key_info_manager)
+                    .build()?,
+            ))
+        }
         #[cfg(not(all(
             feature = "mbed-crypto-provider",
             feature = "pkcs11-provider",
             feature = "tpm-provider",
-            feature = "cryptoauthlib-provider"
+            feature = "cryptoauthlib-provider",
+            feature = "trusted-service-provider"
         )))]
         _ => {
             error!(

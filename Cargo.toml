@@ -45,9 +45,14 @@ users = "0.11.0"
 libc = "0.2.77"
 anyhow = "1.0.32"
 rust-cryptoauthlib = { version = "0.1.0", optional = true }
+prost = { version = "0.6.1", optional = true }
 
 [dev-dependencies]
 rand = { version = "0.8.2", features = ["small_rng"] }
+
+[build-dependencies]
+bindgen = { version = "0.56.0", optional = true }
+prost-build = { version = "0.6.1", optional = true }
 
 [package.metadata.docs.rs]
 features = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider", "cryptoauthlib-provider"]
@@ -60,6 +65,7 @@ mbed-crypto-provider = ["psa-crypto"]
 pkcs11-provider = ["pkcs11", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "psa-crypto", "rand"]
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "hex"]
 cryptoauthlib-provider = ["rust-cryptoauthlib"]
+trusted-service-provider = ["mbed-crypto-provider", "bindgen", "prost-build", "prost"]
 all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cryptoauthlib-provider"]
 
 # Authenticators
