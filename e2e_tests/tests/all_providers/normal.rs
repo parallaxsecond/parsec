@@ -74,6 +74,7 @@ fn list_opcodes() {
 
     // Not that much to be tested ATM
     let _ = crypto_providers_cal.insert(Opcode::PsaHashCompute);
+    let _ = crypto_providers_cal.insert(Opcode::PsaHashCompare);
     let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
 
     assert_eq!(
