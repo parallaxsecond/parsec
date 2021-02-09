@@ -39,7 +39,6 @@ impl Provider {
         &self,
         op: psa_hash_compare::Operation,
     ) -> Result<psa_hash_compare::Result> {
-        let op_hash = op.hash.to_vec();
         let alg_len = op.alg.hash_length();
         // calculate input hash
         let op_compute = psa_hash_compute::Operation {
@@ -49,13 +48,13 @@ impl Provider {
         match self.psa_hash_compute_internal(op_compute) {
             Ok(psa_hash_compute::Result { hash }) => {
                 // compare hashes length
-                if op_hash.len() != alg_len || hash.as_slice().len() != alg_len {
+                if op.hash.len() != alg_len || hash.len() != alg_len {
                     let error = ResponseStatus::PsaErrorInvalidArgument;
                     format_error!("Hash length comparison failed: ", error);
                     return Err(error);
                 }
                 // compare hashes
-                if op_hash != hash.as_slice() {
+                if op.hash != hash {
                     let error = ResponseStatus::PsaErrorInvalidSignature;
                     format_error!("Hash comparison failed: ", error);
                     return Err(error);
@@ -63,11 +62,7 @@ impl Provider {
                 // return result
                 Ok(psa_hash_compare::Result)
             }
-            _ => {
-                let error = ResponseStatus::PsaErrorGenericError;
-                format_error!("Hash computation failed ", error);
-                Err(error)
-            }
+            Err(error) => Err(error),
         }
     }
 }
