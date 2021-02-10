@@ -1,6 +1,7 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::Provider;
+use log::error;
 use parsec_interface::operations::psa_algorithm::Hash;
 use parsec_interface::operations::psa_hash_compare;
 use parsec_interface::operations::psa_hash_compute;
@@ -45,18 +46,18 @@ impl Provider {
             alg: op.alg,
             input: op.input,
         };
+        // check hash length
+        if op.hash.len() != alg_len {
+            let error = ResponseStatus::PsaErrorInvalidArgument;
+            error!("Hash length comparison failed: {}", error);
+            return Err(error);
+        }
         match self.psa_hash_compute_internal(op_compute) {
             Ok(psa_hash_compute::Result { hash }) => {
-                // compare hashes length
-                if op.hash.len() != alg_len || hash.len() != alg_len {
-                    let error = ResponseStatus::PsaErrorInvalidArgument;
-                    format_error!("Hash length comparison failed: ", error);
-                    return Err(error);
-                }
                 // compare hashes
                 if op.hash != hash {
                     let error = ResponseStatus::PsaErrorInvalidSignature;
-                    format_error!("Hash comparison failed: ", error);
+                    error!("Hash comparison failed: {}", error);
                     return Err(error);
                 }
                 // return result
