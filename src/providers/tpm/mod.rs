@@ -6,7 +6,7 @@
 //! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::ManageKeyInfo;
+use crate::key_info_managers::KeyInfoManagerClient;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -18,7 +18,7 @@ use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Mutex;
 use tss_esapi::constants::algorithm::{Cipher, HashingAlgorithm};
 use tss_esapi::interface_types::resource_handles::Hierarchy;
 use tss_esapi::Tcti;
@@ -62,13 +62,13 @@ pub struct Provider {
     // The Key Info Manager stores the key context and its associated authValue (a PasswordContext
     // structure).
     #[derivative(Debug = "ignore")]
-    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+    key_info_store: KeyInfoManagerClient,
 }
 
 impl Provider {
     // Creates and initialise a new instance of TpmProvider.
     fn new(
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+        key_info_store: KeyInfoManagerClient,
         esapi_context: tss_esapi::TransientKeyContext,
     ) -> Provider {
         Provider {
@@ -98,26 +98,16 @@ impl Provide for Provider {
         app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_keys::Result {
-            keys: store_handle
-                .list_keys(&app_name, ProviderID::Tpm)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?,
+            keys: self.key_info_store.list_keys(&app_name)?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_clients::Result {
-            clients: store_handle
-                .list_clients(ProviderID::Tpm)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?
+            clients: self
+                .key_info_store
+                .list_clients()?
                 .into_iter()
                 .map(|app_name| app_name.to_string())
                 .collect(),
@@ -212,7 +202,7 @@ impl Drop for Provider {
 #[derivative(Debug)]
 pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
+    key_info_store: Option<KeyInfoManagerClient>,
     tcti: Option<String>,
     owner_hierarchy_auth: Option<String>,
 }
@@ -228,10 +218,7 @@ impl ProviderBuilder {
     }
 
     /// Add a KeyInfo manager
-    pub fn with_key_info_store(
-        mut self,
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> ProviderBuilder {
+    pub fn with_key_info_store(mut self, key_info_store: KeyInfoManagerClient) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self

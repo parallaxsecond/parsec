@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, Provider};
+use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
@@ -18,8 +18,7 @@ impl Provider {
         let hash = op.hash;
         let alg = op.alg;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let key_id = key_management::get_key_id(&key_triple, &*store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
             .key_handle_mutex
@@ -56,8 +55,7 @@ impl Provider {
         let alg = op.alg;
         let signature = op.signature;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let key_id = key_management::get_key_id(&key_triple, &*store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
             .key_handle_mutex

@@ -3,9 +3,8 @@
 //! Trusted Service provider
 //!
 //! This provider is backed by a crypto Trusted Service deployed in TrustZone
-use super::mbed_crypto::key_management as mbed_crypto_key_management;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
 use crate::providers::Provide;
 use context::Context;
 use derivative::Derivative;
@@ -15,13 +14,10 @@ use parsec_interface::operations::{
     list_clients, list_keys, psa_destroy_key, psa_export_public_key, psa_generate_key,
     psa_import_key, psa_sign_hash, psa_verify_hash,
 };
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ProviderID, Result};
 use psa_crypto::types::key;
 use std::collections::HashSet;
-use std::sync::{
-    atomic::{AtomicU32, Ordering},
-    Arc, RwLock,
-};
+use std::sync::atomic::{AtomicU32, Ordering};
 use uuid::Uuid;
 
 mod asym_sign;
@@ -51,7 +47,7 @@ pub struct Provider {
     // dereference operator (*) to access the inner type dyn ManageKeyInfo + Send + Sync and then
     // reference it to match with the method prototypes.
     #[derivative(Debug = "ignore")]
-    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+    key_info_store: KeyInfoManagerClient,
 
     // Holds the highest ID of all keys (including destroyed keys). New keys will receive an ID of
     // id_counter + 1. Once id_counter reaches the highest allowed ID, no more keys can be created.
@@ -60,9 +56,7 @@ pub struct Provider {
 
 impl Provider {
     /// Creates and initialises a new instance of Provider.
-    fn new(
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> anyhow::Result<Provider> {
+    fn new(key_info_store: KeyInfoManagerClient) -> anyhow::Result<Provider> {
         let ts_provider = Provider {
             key_info_store,
             context: Context::connect()?,
@@ -70,23 +64,14 @@ impl Provider {
         };
         let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
-            // The local scope allows dropping store_handle and local_ids_handle in order to return
-            // the ts_provider.
-            let mut store_handle = ts_provider
-                .key_info_store
-                .write()
-                .expect("Key store lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
             // Go through all TrustedServiceProvider key triples to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
-            match store_handle.get_all(ProviderID::TrustedService) {
+            match ts_provider.key_info_store.get_all() {
                 Ok(key_triples) => {
                     for key_triple in key_triples.iter().cloned() {
-                        let key_id = match mbed_crypto_key_management::get_key_id(
-                            &key_triple,
-                            &*store_handle,
-                        ) {
+                        let key_id = match ts_provider.key_info_store.get_key_id(&key_triple) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
                                 error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
@@ -110,8 +95,7 @@ impl Provider {
                 }
             };
             for key_triple in to_remove.iter() {
-                if let Err(string) = store_handle.remove(key_triple) {
-                    error!("Key Info Manager error when removing handles: {}", string);
+                if let Err(string) = ts_provider.key_info_store.remove_key_info(key_triple) {
                     return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
                 }
             }
@@ -140,26 +124,16 @@ impl Provide for Provider {
         app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_keys::Result {
-            keys: store_handle
-                .list_keys(&app_name, ProviderID::TrustedService)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?,
+            keys: self.key_info_store.list_keys(&app_name)?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_clients::Result {
-            clients: store_handle
-                .list_clients(ProviderID::TrustedService)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?
+            clients: self
+                .key_info_store
+                .list_clients()?
                 .into_iter()
                 .map(|app_name| app_name.to_string())
                 .collect(),
@@ -226,7 +200,7 @@ impl Provide for Provider {
 #[derivative(Debug)]
 pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
+    key_info_store: Option<KeyInfoManagerClient>,
 }
 
 impl ProviderBuilder {
@@ -238,10 +212,7 @@ impl ProviderBuilder {
     }
 
     /// Add a KeyInfo manager
-    pub fn with_key_info_store(
-        mut self,
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> ProviderBuilder {
+    pub fn with_key_info_store(mut self, key_info_store: KeyInfoManagerClient) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self
