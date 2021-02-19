@@ -9,7 +9,7 @@ set -e
 cleanup () {
     echo "Shutdown Parsec and clean up"
     # Stop Parsec if running
-    if [ -n "$PARSEC_PID" ]; then kill $PARSEC_PID || true ; fi
+    stop_service
     # Stop tpm_server if running
     if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
     # Remove the slot_number line added earlier
@@ -37,7 +37,9 @@ where PROVIDER_NAME can be one of:
     - mbed-crypto
     - pkcs11
     - tpm
+    - trusted-service
     - all
+    - coverage
 "
 }
 
@@ -45,6 +47,63 @@ error_msg () {
     echo "Error: $1"
     usage
     exit 1
+}
+
+wait_for_service() {
+    while [ -z "$(pgrep parsec)" ]; do
+        sleep 1
+    done
+
+    sleep 5
+}
+
+stop_service() {
+    pkill parsec || true
+
+    while [ -n "$(pgrep parsec)" ]; do
+        sleep 1
+    done
+}
+
+reload_service() {
+    echo "Trigger a configuration reload to load the new mappings or config file"
+    pkill -SIGHUP parsec
+    sleep 5
+}
+
+run_normal_tests() {
+    echo "Execute normal tests"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml normal_tests
+}
+
+run_persistence_before_tests() {
+    echo "Execute persistent test, before the reload"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_before
+
+    # Create a fake mapping file for the root application, the provider and a
+    # key name of "Test Key". It contains a valid KeyInfo structure.
+    # It is tested in test "should_have_been_deleted".
+    # This test does not make sense for the TPM provider.
+    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+        echo "Create a fake mapping file for Mbed Crypto Provider"
+        mkdir -p mappings/cm9vdA==/1
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
+        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
+    elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
+        echo "Create a fake mapping file for PKCS 11 Provider"
+        mkdir -p mappings/cm9vdA==/2
+        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
+        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
+    fi
+}
+
+run_persistence_after_tests() {
+    echo "Execute persistent test, after the reload"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_after
 }
 
 # Parse arguments
@@ -74,6 +133,9 @@ while [ "$#" -gt 0 ]; do
                 TEST_FEATURES="--features=$1-provider"
             fi
         ;;
+        coverage )
+            PROVIDER_NAME=$1
+        ;;
         *)
             error_msg "Unknown argument: $1"
         ;;
@@ -88,7 +150,7 @@ fi
 
 trap cleanup EXIT
 
-if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
     # Start and configure TPM server
     tpm_server &
     TPM_SRV_PID=$!
@@ -97,7 +159,7 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
     tpm2_changeauth -c owner tpm_pass 2>/dev/null
 fi
 
-if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
     pushd e2e_tests
     # This command suppose that the slot created by the container will be the first one that appears
     # when printing all the available slots.
@@ -109,6 +171,44 @@ fi
 
 if [ "$PROVIDER_NAME" = "trusted-service" ]; then
     git submodule update --init
+fi
+
+if [ "$PROVIDER_NAME" = "coverage" ]; then
+    PROVIDERS="mbed-crypto tpm pkcs11"
+    # Install tarpaulin and start Parsec with it
+    cargo install cargo-tarpaulin
+
+    mkdir -p reports
+
+    for provider in $PROVIDERS; do
+        PROVIDER_NAME=$provider
+        TEST_FEATURES="--features=$provider-provider"
+        cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
+        mkdir -p reports/$provider
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --output-dir $(pwd)/reports/$provider --features="all-providers,all-authenticators" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+        wait_for_service
+
+        run_normal_tests
+        run_persistence_before_tests
+        stop_service
+
+        mkdir -p reports/$provider-persistence
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --output-dir $(pwd)/reports/$provider-persistence --features="all-providers,all-authenticators" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+        wait_for_service
+        run_persistence_after_tests
+        stop_service
+
+        # Remove mappings between providers to allow persistence tests to succeed
+        rm -rf mappings/*
+    done
+
+    mkdir -p reports/unit
+    cargo tarpaulin --tests --out Xml --features="all-providers,all-authenticators" --output-dir $(pwd)/reports/unit
+
+    # Run the Codecov result gathering script
+    bash <(curl -s https://codecov.io/bash)
+
+    exit 0
 fi
 
 echo "Build test"
@@ -131,12 +231,12 @@ rm -rf mappings/
 
 echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-PARSEC_PID=$!
 # Sleep time needed to make sure Parsec is ready before launching the tests.
-sleep 5
+wait_for_service
 
 # Check that Parsec successfully started and is running
 pgrep -f target/debug/parsec >/dev/null
+
 
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers normal tests"
@@ -153,8 +253,7 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
     # Change the authentication method
     sed -i 's/^\(auth_type\s*=\s*\).*$/\1\"UnixPeerCredentials\"/' $CONFIG_PATH
-    pkill -SIGHUP parsec
-    sleep 5
+    reload_service
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
     su -c "PATH=\"/home/parsec-client-2/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
@@ -164,43 +263,14 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::config -- --test-threads=1
 else
     # Per provider tests
-    echo "Execute normal tests"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml normal_tests
-
-    echo "Execute persistent test, before the reload"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_before
-
-    # Create a fake mapping file for the root application, the provider and a
-    # key name of "Test Key". It contains a valid KeyInfo structure.
-    # It is tested in test "should_have_been_deleted".
-    # This test does not make sense for the TPM provider.
-    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-        echo "Create a fake mapping file for Mbed Crypto Provider"
-        mkdir -p mappings/cm9vdA==/1
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-    elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
-        echo "Create a fake mapping file for PKCS 11 Provider"
-        mkdir -p mappings/cm9vdA==/2
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-    fi
-
-    echo "Trigger a configuration reload to load the new mappings"
-    kill -s SIGHUP $PARSEC_PID
-    # Sleep time needed to make sure Parsec is ready before launching the tests.
-    sleep 5
-
-    echo "Execute persistent test, after the reload"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_after
+    run_normal_tests
+    run_persistence_before_tests
+    reload_service
+    run_persistence_after_tests
 
     if [ -z "$NO_STRESS_TEST" ]; then
         echo "Shutdown Parsec"
-        kill $PARSEC_PID
+        pkill parsec
         # Sleep time needed to make sure Parsec is killed.
         sleep 2
 
@@ -208,7 +278,6 @@ else
         # Change the log level for the stress tests because logging is limited on the
         # CI servers.
         RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-        PARSEC_PID=$!
         sleep 5
 
         echo "Execute stress tests"

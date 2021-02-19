@@ -3,7 +3,8 @@ name: Nightly Checks
 on:
   schedule:
     # Every night at midnight
-    - cron:  '0 0 * * *'
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   dependencies:
@@ -33,3 +34,13 @@ jobs:
         run: cargo install cargo-audit
       - name: Execute cargo audit
         run: cargo audit
+
+  coverage:
+    name: Gather coverage data and upload to Codecov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the container
+        run: docker build -t all-providers e2e_tests/provider_cfg/all
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined all-providers /tmp/parsec/ci.sh coverage
