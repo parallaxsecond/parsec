@@ -15,6 +15,8 @@ use zeroize::Zeroize;
 pub mod core;
 
 #[cfg(feature = "pkcs11-provider")]
+//TODO: To remove when #301 is merged
+#[allow(clippy::all)]
 pub mod pkcs11;
 
 #[cfg(feature = "mbed-crypto-provider")]

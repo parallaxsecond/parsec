@@ -421,6 +421,8 @@ fn get_key_info_manager(config: &KeyInfoManagerConfig) -> Result<KeyInfoManager>
     Ok(Arc::new(RwLock::new(manager)))
 }
 
+// Allowed to simplify the cfg blocks
+#[allow(clippy::unnecessary_wraps)]
 fn build_authenticators(config: &AuthenticatorConfig) -> Result<Vec<(AuthType, Authenticator)>> {
     // The authenticators supported by the Parsec service.
     // NOTE: order here is important. The order in which the elements are added here is the

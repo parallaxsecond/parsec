@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use listener::Listen;
 use listener::{Connection, ConnectionMetadata};
 use log::{error, warn};
+use std::convert::TryInto;
 use std::fs;
 use std::fs::Permissions;
 use std::io::{Error, ErrorKind};
@@ -74,7 +75,7 @@ impl DomainSocketListener {
                 let nfd = sd_notify::SD_LISTEN_FDS_START;
                 // Safe as listen_fds gives us the information that one file descriptor was
                 // received and its value starts from SD_LISTEN_FDS_START.
-                unsafe { UnixListener::from_raw_fd(nfd) }
+                unsafe { UnixListener::from_raw_fd(nfd.try_into()?) }
                 // Expect the socket created by systemd to be 666 on permissions.
             }
             n => {

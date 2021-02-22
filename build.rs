@@ -66,8 +66,8 @@ fn generate_proto_sources(contract_dir: String) -> Result<()> {
     prost_build::compile_protos(&files_slices, &[&contract_dir])
 }
 
+#[cfg(feature = "trusted-service-provider")]
 fn main() -> Result<()> {
-    #[cfg(feature = "trusted-service-provider")]
     {
         generate_proto_sources(String::from("trusted-services-vendor/protocols"))?;
         generate_ts_bindings(String::from("trusted-services-vendor/components"))?;
@@ -75,3 +75,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(not(feature = "trusted-service-provider"))]
+fn main() {}

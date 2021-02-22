@@ -14,7 +14,7 @@ const MAX_BODY_SIZE: usize = 1 << 31;
 pub struct RawRequestClient;
 
 static SOCKET_PATH: &str = "/tmp/parsec.sock";
-const TIMEOUT: Duration = Duration::from_secs(5);
+const TIMEOUT: Duration = Duration::from_secs(60);
 
 #[allow(clippy::new_without_default)]
 impl RawRequestClient {

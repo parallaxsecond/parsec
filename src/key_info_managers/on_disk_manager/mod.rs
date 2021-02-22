@@ -23,7 +23,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::{Error, ErrorKind, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Default path where the mapping files will be stored on disk
 pub const DEFAULT_MAPPINGS_PATH: &str = "/var/lib/parsec/mappings";
@@ -127,7 +127,7 @@ fn os_str_to_provider_id(os_str: &OsStr) -> std::io::Result<ProviderID> {
 }
 
 /// Lists all the directory paths in the given directory path.
-fn list_dirs(path: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
+fn list_dirs(path: &Path) -> std::io::Result<Vec<PathBuf>> {
     // read_dir returning an iterator over Result<DirEntry>, there is first a conversion to a path
     // and then a check if the path is a directory or not.
     let dir_entries: std::io::Result<Vec<DirEntry>> = path.read_dir()?.collect();
@@ -139,7 +139,7 @@ fn list_dirs(path: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
 }
 
 /// Lists all the file paths in the given directory path.
-fn list_files(path: &PathBuf) -> std::io::Result<Vec<PathBuf>> {
+fn list_files(path: &Path) -> std::io::Result<Vec<PathBuf>> {
     let dir_entries: std::io::Result<Vec<DirEntry>> = path.read_dir()?.collect();
     Ok(dir_entries?
         .iter()
