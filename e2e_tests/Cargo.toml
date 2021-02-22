@@ -13,21 +13,22 @@ edition = "2018"
 publish = false
 
 [dependencies]
-serde = { version = "1.0.115", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "06c52e2348ac55f46d240d2ab61a499effccffbd", features = ["testing"] }
-log = "0.4.11"
+serde = { version = "1.0.123", features = ["derive"] }
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "8c02c93b5a1d2017e24eb706002559ed160e611a", features = ["testing"] }
+log = "0.4.14"
+# Compatible version with crate rsa
 rand = "0.7.3"
-env_logger = "0.7.1"
+env_logger = "0.8.3"
 
 [dev-dependencies]
-ring = "0.16.15"
+ring = "0.16.20"
 rsa = "0.3.0"
-picky-asn1-x509 = "0.3.2"
-base64 = "0.12.3"
+picky-asn1-x509 = "0.4.0"
+base64 = "0.13.0"
 num_cpus = "1.13.0"
 picky-asn1-der = "0.2.4"
-picky-asn1 = "0.3.0"
-sha2 = "0.9.1"
+picky-asn1 = "0.3.1"
+sha2 = "0.9.3"
 
 [features]
 mbed-crypto-provider = []

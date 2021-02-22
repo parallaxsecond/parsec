@@ -70,11 +70,11 @@ impl Provider {
     fn new(
         key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
         esapi_context: tss_esapi::TransientKeyContext,
-    ) -> Option<Provider> {
-        Some(Provider {
+    ) -> Provider {
+        Provider {
             esapi_context: Mutex::new(esapi_context),
             key_info_store,
-        })
+        }
     }
 }
 
@@ -324,7 +324,7 @@ impl ProviderBuilder {
         })?;
         self.tcti.zeroize();
         self.owner_hierarchy_auth.zeroize();
-        Provider::new(
+        Ok(Provider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
@@ -341,9 +341,6 @@ impl ProviderBuilder {
                     format_error!("Error creating TSS Transient Object Context", e);
                     std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
                 })?,
-        )
-        .ok_or_else(|| {
-            std::io::Error::new(ErrorKind::InvalidData, "failed initializing TPM provider")
-        })
+        ))
     }
 }

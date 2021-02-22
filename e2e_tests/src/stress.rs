@@ -9,7 +9,6 @@ use rand::{
     thread_rng,
 };
 use std::convert::TryInto;
-use std::iter;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 use std::time::Duration;
@@ -39,10 +38,10 @@ pub struct StressTestConfig {
 }
 
 fn generate_string(size: usize) -> String {
-    let mut rng = thread_rng();
-    iter::repeat(())
-        .map(|()| rng.sample(Alphanumeric))
+    thread_rng()
+        .sample_iter(&Alphanumeric)
         .take(size)
+        .map(char::from)
         .collect()
 }
 

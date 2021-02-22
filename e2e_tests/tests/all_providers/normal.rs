@@ -105,7 +105,7 @@ fn list_opcodes() {
         client
             .list_opcodes(ProviderID::CryptoAuthLib)
             .expect("list providers failed"),
-            crypto_providers_cal
+        crypto_providers_cal
     );
 }
 

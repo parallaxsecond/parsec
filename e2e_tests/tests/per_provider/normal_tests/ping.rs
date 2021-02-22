@@ -23,10 +23,10 @@ fn test_ping() -> Result<()> {
 #[test]
 fn mangled_ping() {
     let client = RequestClient {
-        ipc_handler: Box::from(unix_socket::Handler::new(
-            "/tmp/parsec.sock".into(),
-            Some(Duration::from_secs(1)),
-        )),
+        ipc_handler: Box::from(
+            unix_socket::Handler::new("/tmp/parsec.sock".into(), Some(Duration::from_secs(1)))
+                .unwrap(),
+        ),
         ..Default::default()
     };
     let mut req = Request::new();

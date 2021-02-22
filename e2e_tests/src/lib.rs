@@ -29,7 +29,7 @@ use std::collections::HashSet;
 use std::time::Duration;
 
 const TEST_SOCKET_PATH: &str = "/tmp/parsec.sock";
-const TEST_TIMEOUT: Duration = Duration::from_secs(1);
+const TEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
@@ -60,7 +60,8 @@ impl TestClient {
 
         let mut basic_client = BasicClient::new_naked();
 
-        let ipc_handler = unix_socket::Handler::new(TEST_SOCKET_PATH.into(), Some(TEST_TIMEOUT));
+        let ipc_handler =
+            unix_socket::Handler::new(TEST_SOCKET_PATH.into(), Some(TEST_TIMEOUT)).unwrap();
         basic_client.set_ipc_handler(Box::from(ipc_handler));
         basic_client.set_timeout(Some(Duration::from_secs(10)));
 
