@@ -1,6 +1,9 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{key_management, utils, Provider};
+use super::{
+    utils::{self, PasswordContext},
+    Provider,
+};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::error;
@@ -18,14 +21,13 @@ impl Provider {
     ) -> Result<psa_sign_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
 
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let (password_context, key_attributes) =
-            key_management::get_password_context(&*store_handle, key_triple)?;
+        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
@@ -73,14 +75,13 @@ impl Provider {
     ) -> Result<psa_verify_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
 
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let (password_context, key_attributes) =
-            key_management::get_password_context(&*store_handle, key_triple)?;
+        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),

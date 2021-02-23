@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::Provider;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers;
-use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::KeyTriple;
 use log::error;
-use log::warn;
-use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -15,53 +12,6 @@ use parsec_interface::secrecy::{ExposeSecret, Secret};
 use psa_crypto::operations::key_management as psa_crypto_key_management;
 use psa_crypto::types::key;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-/// Gets a PSA Key ID from the Key Info Manager.
-/// Wrapper around the get method of the Key Info Manager to convert the key ID to the psa_key_id_t
-/// type.
-pub fn get_key_id(
-    key_triple: &KeyTriple,
-    store_handle: &dyn ManageKeyInfo,
-) -> Result<key::psa_key_id_t> {
-    match store_handle.get(key_triple) {
-        Ok(Some(key_info)) => {
-            if key_info.id.len() == 4 {
-                let mut dst = [0; 4];
-                dst.copy_from_slice(&key_info.id);
-                Ok(u32::from_ne_bytes(dst))
-            } else {
-                format_error!(
-                    "Stored Key ID is not valid.",
-                    ResponseStatus::KeyInfoManagerError
-                );
-                Err(ResponseStatus::KeyInfoManagerError)
-            }
-        }
-        Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
-
-/// Stores a key ID it in the Key Info Manager.
-pub fn insert_key_id(
-    key_triple: KeyTriple,
-    key_attributes: Attributes,
-    store_handle: &mut dyn ManageKeyInfo,
-    new_key_id: key::psa_key_id_t,
-) -> Result<()> {
-    let key_info = KeyInfo {
-        id: new_key_id.to_ne_bytes().to_vec(),
-        attributes: key_attributes,
-    };
-    match store_handle.insert(key_triple.clone(), key_info) {
-        Ok(insert_option) => {
-            if insert_option.is_some() {
-                warn!("Overwriting Key triple mapping ({})", key_triple);
-            }
-            Ok(())
-        }
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
 
 /// Creates a new PSA Key ID
 pub fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
@@ -81,15 +31,6 @@ pub fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
     Ok(new_key_id)
 }
 
-/// Remove the info for a key triple from the Key Info Manager
-pub fn remove_key_id(key_triple: &KeyTriple, store_handle: &mut dyn ManageKeyInfo) -> Result<()> {
-    // ID Counter not affected as overhead and extra complication deemed unnecessary
-    match store_handle.remove(key_triple) {
-        Ok(_) => Ok(()),
-        Err(string) => Err(key_info_managers::to_response_status(string)),
-    }
-}
-
 impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
@@ -100,12 +41,7 @@ impl Provider {
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
 
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-
-        store_handle.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -117,7 +53,8 @@ impl Provider {
         match psa_crypto_key_management::generate(key_attributes, Some(key_id)) {
             Ok(key) => {
                 if let Err(e) =
-                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
                 {
                     // Safe as this thread should be the only one accessing this key yet.
                     if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
@@ -145,11 +82,7 @@ impl Provider {
         let key_attributes = op.attributes;
         let key_data = op.data;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        store_handle.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -165,7 +98,8 @@ impl Provider {
         ) {
             Ok(key) => {
                 if let Err(e) =
-                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
                 {
                     // Safe as this thread should be the only one accessing this key yet.
                     if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
@@ -191,8 +125,7 @@ impl Provider {
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
             .key_handle_mutex
@@ -219,8 +152,7 @@ impl Provider {
     ) -> Result<psa_export_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
             .key_handle_mutex
@@ -247,13 +179,9 @@ impl Provider {
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
 
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
-        remove_key_id(&key_triple, &mut *store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let _ = self.key_info_store.remove_key_info(&key_triple)?;
 
         let _guard = self
             .key_handle_mutex

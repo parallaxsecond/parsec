@@ -18,7 +18,8 @@ impl Provider {
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
-        let (key_id, key_attributes) = self.get_key_info(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
 
@@ -68,7 +69,8 @@ impl Provider {
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
-        let (key_id, key_attributes) = self.get_key_info(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
 
@@ -115,7 +117,7 @@ impl Provider {
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
-        let (_, key_attributes) = self.get_key_info(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
 

@@ -6,7 +6,7 @@
 //! Library backed by the ATECCx08 cryptochip.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::ManageKeyInfo;
+use crate::key_info_managers::KeyInfoManagerClient;
 use derivative::Derivative;
 use log::trace;
 use parsec_interface::operations::list_keys::KeyInfo;
@@ -15,7 +15,6 @@ use parsec_interface::operations::{list_clients, list_keys};
 use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
-use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use parsec_interface::operations::{psa_generate_random, psa_hash_compare, psa_hash_compute};
@@ -39,7 +38,7 @@ pub struct Provider {
 impl Provider {
     /// Creates and initialise a new instance of CryptoAuthLibProvider
     fn new(
-        _key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+        _key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
     ) -> Option<Provider> {
         let device = match rust_cryptoauthlib::atcab_init(atca_iface) {
@@ -114,7 +113,7 @@ impl Provide for Provider {
 #[derivative(Debug)]
 pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
+    key_info_store: Option<KeyInfoManagerClient>,
     device_type: Option<String>,
     iface_type: Option<String>,
     wake_delay: Option<u16>,
@@ -140,10 +139,7 @@ impl ProviderBuilder {
     }
 
     /// Add a KeyInfo manager
-    pub fn with_key_info_store(
-        mut self,
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> ProviderBuilder {
+    pub fn with_key_info_store(mut self, key_info_store: KeyInfoManagerClient) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self

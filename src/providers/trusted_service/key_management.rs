@@ -3,9 +3,7 @@
 use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
-use crate::providers::mbed_crypto::key_management::{
-    create_key_id, get_key_id, insert_key_id, remove_key_id,
-};
+use crate::providers::mbed_crypto::key_management::create_key_id;
 use log::error;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
@@ -22,18 +20,15 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::TrustedService, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        store_handle.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
         match self.context.generate_key(key_attributes, key_id) {
             Ok(_) => {
                 if let Err(e) =
-                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
                 {
                     if self.context.destroy_key(key_id).is_err() {
                         error!("Failed to destroy the previously generated key.");
@@ -60,11 +55,7 @@ impl Provider {
         let key_attributes = op.attributes;
         let key_data = op.data;
         let key_triple = KeyTriple::new(app_name, ProviderID::TrustedService, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        store_handle.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -74,7 +65,8 @@ impl Provider {
         {
             Ok(_) => {
                 if let Err(e) =
-                    insert_key_id(key_triple, key_attributes, &mut *store_handle, key_id)
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
                 {
                     if self.context.destroy_key(key_id).is_err() {
                         error!("Failed to destroy the previously generated key.");
@@ -98,8 +90,7 @@ impl Provider {
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::TrustedService, key_name);
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         match self.context.export_public_key(key_id) {
             Ok(pub_key) => Ok(psa_export_public_key::Result {
@@ -119,12 +110,8 @@ impl Provider {
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::TrustedService, key_name);
-        let mut store_handle = self
-            .key_info_store
-            .write()
-            .expect("Key store lock poisoned");
-        let key_id = get_key_id(&key_triple, &*store_handle)?;
-        remove_key_id(&key_triple, &mut *store_handle)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let _ = self.key_info_store.remove_key_info(&key_triple)?;
 
         match self.context.destroy_key(key_id) {
             Ok(()) => Ok(psa_destroy_key::Result {}),

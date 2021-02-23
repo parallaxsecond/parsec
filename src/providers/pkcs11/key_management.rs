@@ -72,7 +72,7 @@ impl Provider {
             self.psa_export_public_key_internal(key_triple.app_name().clone(), export_operation)?;
 
         info!("Importing public key into PSA Crypto");
-        let (_, mut attributes) = self.get_key_info(key_triple)?;
+        let mut attributes = self.key_info_store.get_key_attributes(&key_triple)?;
         attributes.lifetime = Lifetime::Volatile;
         attributes.key_type = match attributes.key_type {
             Type::RsaKeyPair | Type::RsaPublicKey => Type::RsaPublicKey,
@@ -112,7 +112,7 @@ impl Provider {
         let key_attributes = op.attributes;
 
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        self.key_info_does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = self.create_key_id();
 
@@ -144,7 +144,10 @@ impl Provider {
             &priv_template,
         ) {
             Ok((first_key, second_key)) => {
-                if let Err(e) = self.insert_key_id(key_triple, key_attributes, key_id) {
+                if let Err(e) =
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
+                {
                     // Destroy the generated key in a best effort way to avoid zombies 🧟
                     if self
                         .backend
@@ -197,7 +200,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        self.key_info_does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = self.create_key_id();
 
@@ -280,7 +283,10 @@ impl Provider {
             .create_object(session.session_handle(), &template)
         {
             Ok(key) => {
-                if let Err(e) = self.insert_key_id(key_triple, key_attributes, key_id) {
+                if let Err(e) =
+                    self.key_info_store
+                        .insert_key_info(key_triple, &key_id, key_attributes)
+                {
                     if self
                         .backend
                         .destroy_object(session.session_handle(), key)
@@ -307,7 +313,7 @@ impl Provider {
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let (key_id, _key_attributes) = self.get_key_info(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let session = Session::new(self, ReadWriteSession::ReadOnly)?;
         if crate::utils::GlobalConfig::log_error_details() {
@@ -408,9 +414,9 @@ impl Provider {
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
-        let (key_id, _) = self.get_key_info(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
-        let _ = self.remove_key_id(&key_triple)?;
+        let _ = self.key_info_store.remove_key_info(&key_triple)?;
 
         let session = Session::new(self, ReadWriteSession::ReadWrite)?;
         if crate::utils::GlobalConfig::log_error_details() {

@@ -371,13 +371,10 @@ impl OnDiskKeyInfoManagerBuilder {
 
     /// Build into a OnDiskKeyInfoManager
     pub fn build(self) -> Result<OnDiskKeyInfoManager> {
-        OnDiskKeyInfoManager::new(self.mappings_dir_path.ok_or_else(|| {
-            error!("Mappings directory path was not provided");
-            Error::new(
-                ErrorKind::InvalidData,
-                "mappings directory path was not provided",
-            )
-        })?)
+        OnDiskKeyInfoManager::new(
+            self.mappings_dir_path
+                .unwrap_or_else(|| PathBuf::from(DEFAULT_MAPPINGS_PATH)),
+        )
     }
 }
 

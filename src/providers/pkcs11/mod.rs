@@ -6,7 +6,7 @@
 //! through the Parsec interface.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfo, KeyTriple, ManageKeyInfo};
+use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -21,7 +21,7 @@ use pkcs11::Ctx;
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use utils::{KeyPairType, ReadWriteSession, Session};
 use uuid::Uuid;
 use zeroize::Zeroize;
@@ -54,7 +54,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 #[derivative(Debug)]
 pub struct Provider {
     #[derivative(Debug = "ignore")]
-    key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+    key_info_store: KeyInfoManagerClient,
     local_ids: RwLock<LocalIdStore>,
     // The authentication state is common to all sessions. A counter of logged in sessions is used
     // to keep track of current logged in sessions, ignore logging in if the user is already
@@ -78,7 +78,7 @@ impl Provider {
     /// and if there are, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
     fn new(
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+        key_info_store: KeyInfoManagerClient,
         backend: Ctx,
         slot_number: usize,
         user_pin: Option<SecretString>,
@@ -95,41 +95,42 @@ impl Provider {
             software_public_operations,
         };
         {
-            // The local scope allows to drop store_handle and local_ids_handle in order to return
-            // the pkcs11_provider.
-            let locks = pkcs11_provider.get_ordered_locks();
-            let mut store_handle = locks.0.write().expect("Key store lock poisoned");
-            let mut local_ids_handle = locks.1.write().expect("Local ID lock poisoned");
+            let mut local_ids_handle = pkcs11_provider
+                .local_ids
+                .write()
+                .expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyTriple> = Vec::new();
             // Go through all PKCS 11 key triple to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
-            match store_handle.get_all(ProviderID::Pkcs11) {
+            match pkcs11_provider.key_info_store.get_all() {
                 Ok(key_triples) => {
                     let session =
                         Session::new(&pkcs11_provider, ReadWriteSession::ReadOnly).ok()?;
 
                     for key_triple in key_triples.iter().cloned() {
-                        let key_info = if let Ok(Some(info)) = store_handle.get(key_triple) {
-                            info
-                        } else {
-                            error!("Key triple unexpectedly missing from store.");
-                            continue;
-                        };
-                        let mut key_id = [0; 4];
-                        if key_info.id.len() == 4 {
-                            key_id.copy_from_slice(&key_info.id);
-                        } else {
-                            if crate::utils::GlobalConfig::log_error_details() {
-                                error!(
-                                    "Invalid key ID (value: {:?}) for triple:\n{}\n, continuing...",
-                                    key_info.id, key_triple
-                                );
-                            } else {
-                                error!("Found invalid key ID, continuing...");
+                        let key_id: [u8; 4] = match pkcs11_provider
+                            .key_info_store
+                            .get_key_id(&key_triple)
+                        {
+                            Ok(id) => id,
+                            Err(ResponseStatus::PsaErrorDoesNotExist) => {
+                                error!("Stored key info missing for key triple {}.", key_triple);
+                                continue;
                             }
-                            continue;
-                        }
+                            Err(e) => {
+                                format_error!(
+                                    format!(
+                                        "Stored key info invalid for key triple {}.",
+                                        key_triple
+                                    ),
+                                    e
+                                );
+
+                                to_remove.push(key_triple.clone());
+                                continue;
+                            }
+                        };
 
                         match pkcs11_provider.find_key(
                             session.session_handle(),
@@ -171,8 +172,11 @@ impl Provider {
                 }
             };
             for key_triple in to_remove.iter() {
-                if let Err(string) = store_handle.remove(key_triple) {
-                    format_error!("Key Info Manager error", string);
+                if pkcs11_provider
+                    .key_info_store
+                    .remove_key_info(&key_triple)
+                    .is_err()
+                {
                     return None;
                 }
             }
@@ -214,26 +218,16 @@ impl Provide for Provider {
         app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_keys::Result {
-            keys: store_handle
-                .list_keys(&app_name, ProviderID::Pkcs11)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?,
+            keys: self.key_info_store.list_keys(&app_name)?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
-        let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
         Ok(list_clients::Result {
-            clients: store_handle
-                .list_clients(ProviderID::Pkcs11)
-                .map_err(|e| {
-                    format_error!("Error occurred when fetching key information", e);
-                    ResponseStatus::KeyInfoManagerError
-                })?
+            clients: self
+                .key_info_store
+                .list_clients()?
                 .into_iter()
                 .map(|app_name| app_name.to_string())
                 .collect(),
@@ -343,7 +337,7 @@ impl Drop for Provider {
 #[derivative(Debug)]
 pub struct ProviderBuilder {
     #[derivative(Debug = "ignore")]
-    key_info_store: Option<Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>>,
+    key_info_store: Option<KeyInfoManagerClient>,
     pkcs11_library_path: Option<String>,
     slot_number: Option<usize>,
     user_pin: Option<SecretString>,
@@ -363,10 +357,7 @@ impl ProviderBuilder {
     }
 
     /// Add a KeyInfo manager
-    pub fn with_key_info_store(
-        mut self,
-        key_info_store: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
-    ) -> ProviderBuilder {
+    pub fn with_key_info_store(mut self, key_info_store: KeyInfoManagerClient) -> ProviderBuilder {
         self.key_info_store = Some(key_info_store);
 
         self

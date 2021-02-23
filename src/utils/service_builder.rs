@@ -15,10 +15,7 @@ use crate::front::{
     domain_socket::DomainSocketListenerBuilder, front_end::FrontEndHandler,
     front_end::FrontEndHandlerBuilder, listener::Listen,
 };
-use crate::key_info_managers::on_disk_manager::{
-    OnDiskKeyInfoManagerBuilder, DEFAULT_MAPPINGS_PATH,
-};
-use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerType, ManageKeyInfo};
+use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerFactory};
 use crate::providers::{core::ProviderBuilder as CoreProviderBuilder, Provide, ProviderConfig};
 use anyhow::Result;
 use log::{error, warn, LevelFilter};
@@ -28,9 +25,7 @@ use parsec_interface::requests::{BodyType, ProviderID};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
-use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::time::Duration;
 use threadpool::{Builder as ThreadPoolBuilder, ThreadPool};
 
@@ -68,7 +63,6 @@ const DEFAULT_BODY_LEN_LIMIT: usize = 1 << 20;
 /// Default value for the limit on the buffer size for response (in bytes) - equal to 1MB
 pub const DEFAULT_BUFFER_SIZE_LIMIT: usize = 1 << 20;
 
-type KeyInfoManager = Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>;
 type Provider = Arc<dyn Provide + Send + Sync>;
 type Authenticator = Box<dyn Authenticate + Send + Sync>;
 
@@ -129,12 +123,12 @@ impl ServiceBuilder {
             )
             .build();
 
-        let key_info_managers =
-            build_key_info_managers(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
+        let key_info_manager_builders =
+            gey_key_info_manager_builders(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
 
         let providers = build_providers(
             config.provider.as_ref().unwrap_or(&Vec::new()),
-            key_info_managers,
+            key_info_manager_builders,
         )?;
 
         if providers.is_empty() {
@@ -237,7 +231,7 @@ fn build_backend_handlers(
 
 fn build_providers(
     configs: &[ProviderConfig],
-    key_info_managers: HashMap<String, KeyInfoManager>,
+    kim_factorys: HashMap<String, KeyInfoManagerFactory>,
 ) -> Result<Vec<(ProviderID, Provider)>> {
     let mut list = Vec::new();
     for config in configs {
@@ -251,20 +245,22 @@ fn build_providers(
             .into());
         }
 
-        let key_info_manager = match key_info_managers.get(config.key_info_manager()) {
-            Some(key_info_manager) => key_info_manager,
+        let kim_factory = match kim_factorys.get(config.key_info_manager()) {
+            Some(kim_factory) => kim_factory,
             None => {
                 format_error!(
-                    "Key info manager with specified name was not found",
+                    "Key info manager builder with specified name was not found",
                     config.key_info_manager()
                 );
-                return Err(
-                    Error::new(ErrorKind::InvalidData, "key info manager not found").into(),
-                );
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "key info manager builder not found",
+                )
+                .into());
             }
         };
         // The safety is checked by the fact that only one instance per provider type is enforced.
-        let provider = match unsafe { get_provider(config, key_info_manager.clone()) } {
+        let provider = match unsafe { get_provider(config, kim_factory) } {
             Ok(provider) => provider,
             Err(e) => {
                 format_error!(
@@ -295,7 +291,7 @@ fn build_providers(
 )]
 unsafe fn get_provider(
     config: &ProviderConfig,
-    key_info_manager: KeyInfoManager,
+    kim_factory: &KeyInfoManagerFactory,
 ) -> Result<Provider> {
     match config {
         #[cfg(feature = "mbed-crypto-provider")]
@@ -303,7 +299,7 @@ unsafe fn get_provider(
             info!("Creating a Mbed Crypto Provider.");
             Ok(Arc::new(
                 MbedCryptoProviderBuilder::new()
-                    .with_key_info_store(key_info_manager)
+                    .with_key_info_store(kim_factory.build_client(ProviderID::MbedCrypto))
                     .build()?,
             ))
         }
@@ -318,7 +314,7 @@ unsafe fn get_provider(
             info!("Creating a PKCS 11 Provider.");
             Ok(Arc::new(
                 Pkcs11ProviderBuilder::new()
-                    .with_key_info_store(key_info_manager)
+                    .with_key_info_store(kim_factory.build_client(ProviderID::Pkcs11))
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
                     .with_user_pin(user_pin.clone())
@@ -335,7 +331,7 @@ unsafe fn get_provider(
             info!("Creating a TPM Provider.");
             Ok(Arc::new(
                 TpmProviderBuilder::new()
-                    .with_key_info_store(key_info_manager)
+                    .with_key_info_store(kim_factory.build_client(ProviderID::Tpm))
                     .with_tcti(tcti)
                     .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
                     .build()?,
@@ -355,7 +351,7 @@ unsafe fn get_provider(
             info!("Creating a CryptoAuthentication Library Provider.");
             Ok(Arc::new(
                 CryptoAuthLibProviderBuilder::new()
-                    .with_key_info_store(key_info_manager)
+                    .with_key_info_store(kim_factory.build_client(ProviderID::CryptoAuthLib))
                     .with_device_type(device_type.to_string())
                     .with_iface_type(iface_type.to_string())
                     .with_wake_delay(*wake_delay)
@@ -371,7 +367,7 @@ unsafe fn get_provider(
             info!("Creating a TPM Provider.");
             Ok(Arc::new(
                 TrustedServiceProviderBuilder::new()
-                    .with_key_info_store(key_info_manager)
+                    .with_key_info_store(kim_factory.build_client(ProviderID::TrustedService))
                     .build()?,
             ))
         }
@@ -392,33 +388,15 @@ unsafe fn get_provider(
     }
 }
 
-fn build_key_info_managers(
+fn gey_key_info_manager_builders(
     configs: &[KeyInfoManagerConfig],
-) -> Result<HashMap<String, KeyInfoManager>> {
+) -> Result<HashMap<String, KeyInfoManagerFactory>> {
     let mut map = HashMap::new();
     for config in configs {
-        let _ = map.insert(config.name.clone(), get_key_info_manager(config)?);
+        let _ = map.insert(config.name.clone(), KeyInfoManagerFactory::new(config)?);
     }
 
     Ok(map)
-}
-
-fn get_key_info_manager(config: &KeyInfoManagerConfig) -> Result<KeyInfoManager> {
-    let manager = match config.manager_type {
-        KeyInfoManagerType::OnDisk => {
-            let store_path = if let Some(store_path) = &config.store_path {
-                store_path.to_owned()
-            } else {
-                DEFAULT_MAPPINGS_PATH.to_string()
-            };
-
-            OnDiskKeyInfoManagerBuilder::new()
-                .with_mappings_dir_path(PathBuf::from(store_path))
-                .build()?
-        }
-    };
-
-    Ok(Arc::new(RwLock::new(manager)))
 }
 
 // Allowed to simplify the cfg blocks

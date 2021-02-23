@@ -16,7 +16,7 @@ use tss_esapi::utils::{
     AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext, RSA_KEY_SIZES,
 };
 use tss_esapi::Error;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 pub const PUBLIC_EXPONENT: u32 = 0x10001;
 const PUBLIC_EXPONENT_BYTES: [u8; 3] = [0x01, 0x00, 0x01];
 
@@ -90,7 +90,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
 }
 
 // The PasswordContext is what is stored by the Key Info Manager.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Zeroize)]
 pub struct PasswordContext {
     pub context: TpmsContext,
     /// This value is confidential and needs to be zeroized by its new owner.

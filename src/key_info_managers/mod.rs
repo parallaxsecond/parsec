@@ -8,10 +8,14 @@
 //! means but it has to be persistent.
 
 use crate::authenticators::ApplicationName;
+use anyhow::Result;
+use derivative::Derivative;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::{ProviderID, ResponseStatus};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::sync::{Arc, RwLock};
 use zeroize::Zeroize;
 
 pub mod on_disk_manager;
@@ -102,7 +106,7 @@ pub fn to_response_status(error_string: String) -> ResponseStatus {
 /// Management interface for key name to key info mapping
 ///
 /// Interface to be implemented for persistent storage of key name -> key info mappings.
-pub trait ManageKeyInfo {
+trait ManageKeyInfo {
     /// Returns a reference to the key info corresponding to this key triple or `None` if it does not
     /// exist.
     ///
@@ -146,16 +150,158 @@ pub trait ManageKeyInfo {
     fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String>;
 }
 
-// "+ Send + Sync" is needed for things like:
-// ```
-// let store_handle = self.key_info_store.read().expect("Key store lock poisoned");
-// let _ = store_handle.list_keys(&app_name, ProviderID::Pkcs11)?;
-// ```
-// to work because `store_handle` is a RWLockReadGuard of (dyn ManageKeyInfo + Send + Sync +
-// 'static). Did not work with only `impl dyn ManageKeyInfo` below. Maybe there is a way to
-// implement automagically the same methods on (dyn ManageKeyInfo + Send + Sync + 'static)
-// if they are implemented on dyn ManageKeyInfo but not sure.
-impl dyn ManageKeyInfo + Send + Sync {
+/// KeyInfoManager client structure that bridges between the KIM and the providers that need
+/// to use it.
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct KeyInfoManagerClient {
+    provider_id: ProviderID,
+    #[derivative(Debug = "ignore")]
+    key_info_manager_impl: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+}
+
+impl KeyInfoManagerClient {
+    /// Get the KeyTriple representing a key.
+    pub fn get_key_triple(&self, app_name: ApplicationName, key_name: String) -> KeyTriple {
+        KeyTriple::new(app_name, self.provider_id, key_name)
+    }
+
+    /// Get the key ID for a given key triple
+    ///
+    /// The ID does not have to be a specific type. Rather, it must implement the `serde::Deserialize`
+    /// trait. Before returning, an instance of that type is created from the bytes stored by the KIM.
+    ///
+    /// # Errors
+    ///
+    /// If the key does not exist, PsaErrorDoesNotExist is returned.  If any error occurs while fetching
+    /// the key info, KeyInfoManagerError is returned. If deserializing the stored key ID to the desired
+    /// type fails, InvalidEncoding is returned.
+    pub fn get_key_id<T: DeserializeOwned>(
+        &self,
+        key_triple: &KeyTriple,
+    ) -> parsec_interface::requests::Result<T> {
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
+        let key_info = match key_info_manager_impl.get(key_triple) {
+            Ok(Some(key_info)) => key_info,
+            Ok(None) => return Err(ResponseStatus::PsaErrorDoesNotExist),
+            Err(string) => return Err(to_response_status(string)),
+        };
+        // The `deserialize` call below creates a new instance of T decoupled from the
+        // scope of the lock acquired above.
+        Ok(bincode::deserialize(&key_info.id)?)
+    }
+
+    /// Get the `Attributes` for a given key triple
+    ///
+    /// # Errors
+    ///
+    /// If the key does not exist, PsaErrorDoesNotExist is returned. If any other error occurs,
+    /// KeyInfoManagerError is returned.
+    pub fn get_key_attributes(
+        &self,
+        key_triple: &KeyTriple,
+    ) -> parsec_interface::requests::Result<Attributes> {
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
+        let key_info = match key_info_manager_impl.get(key_triple) {
+            Ok(Some(key_info)) => key_info,
+            Ok(None) => return Err(ResponseStatus::PsaErrorDoesNotExist),
+            Err(string) => return Err(to_response_status(string)),
+        };
+        Ok(key_info.attributes)
+    }
+
+    /// Get all the key triples for the current provider
+    pub fn get_all(&self) -> parsec_interface::requests::Result<Vec<KeyTriple>> {
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
+
+        key_info_manager_impl
+            .get_all(self.provider_id)
+            .map(|vec| vec.into_iter().cloned().collect())
+            .map_err(to_response_status)
+    }
+
+    /// Remove the key represented by a key triple and return the stored info.
+    ///
+    /// # Errors
+    ///
+    /// If the key does not exist, PsaErrorDoesNotExist is returned. If any other error occurs,
+    /// KeyInfoManagerError is returned.
+    pub fn remove_key_info(
+        &self,
+        key_triple: &KeyTriple,
+    ) -> parsec_interface::requests::Result<KeyInfo> {
+        let mut key_info_manager_impl = self
+            .key_info_manager_impl
+            .write()
+            .expect("Key Info Manager lock poisoned");
+        match key_info_manager_impl.remove(key_triple) {
+            Ok(Some(key_info)) => Ok(key_info),
+            Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
+            Err(string) => Err(to_response_status(string)),
+        }
+    }
+
+    /// Insert key info for a given triple.
+    ///
+    /// # Errors
+    ///
+    /// If the key triple already existed in the KIM, PsaErrorAlreadyExists is returned. For
+    /// any other error occurring in the KIM, KeyInfoManagerError is returned.
+    pub fn insert_key_info<T: Serialize>(
+        &self,
+        key_triple: KeyTriple,
+        key_id: &T,
+        attributes: Attributes,
+    ) -> parsec_interface::requests::Result<()> {
+        let mut key_info_manager_impl = self
+            .key_info_manager_impl
+            .write()
+            .expect("Key Info Manager lock poisoned");
+        let key_info = KeyInfo {
+            id: bincode::serialize(key_id)?,
+            attributes,
+        };
+
+        match key_info_manager_impl.insert(key_triple, key_info) {
+            Ok(None) => Ok(()),
+            Ok(Some(_)) => Err(ResponseStatus::PsaErrorAlreadyExists),
+            Err(string) => Err(to_response_status(string)),
+        }
+    }
+
+    /// Returns a Vec of ApplicationName of clients having keys in the provider.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
+    pub fn list_clients(&self) -> parsec_interface::requests::Result<Vec<ApplicationName>> {
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
+        let key_triples = key_info_manager_impl
+            .get_all(self.provider_id)
+            .map_err(to_response_status)?;
+        let mut clients = Vec::new();
+
+        for key_triple in key_triples {
+            if !clients.contains(key_triple.app_name()) {
+                let _ = clients.push(key_triple.app_name().clone());
+            }
+        }
+
+        Ok(clients)
+    }
+
     /// Returns a Vec of the KeyInfo objects corresponding to the given application name and
     /// provider ID.
     ///
@@ -165,19 +311,27 @@ impl dyn ManageKeyInfo + Send + Sync {
     pub fn list_keys(
         &self,
         app_name: &ApplicationName,
-        provider_id: ProviderID,
-    ) -> Result<Vec<parsec_interface::operations::list_keys::KeyInfo>, String> {
+    ) -> parsec_interface::requests::Result<Vec<parsec_interface::operations::list_keys::KeyInfo>>
+    {
         use parsec_interface::operations::list_keys::KeyInfo;
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
 
         let mut keys: Vec<KeyInfo> = Vec::new();
-        let key_triples = self.get_all(provider_id)?;
+        let key_triples = key_info_manager_impl
+            .get_all(self.provider_id)
+            .map_err(to_response_status)?;
 
         for key_triple in key_triples {
             if key_triple.app_name() != app_name {
                 continue;
             }
 
-            let key_info = self.get(key_triple)?;
+            let key_info = key_info_manager_impl
+                .get(key_triple)
+                .map_err(to_response_status)?;
             let key_info = match key_info {
                 Some(key_info) => key_info,
                 _ => continue,
@@ -193,24 +347,6 @@ impl dyn ManageKeyInfo + Send + Sync {
         Ok(keys)
     }
 
-    /// Returns a Vec of ApplicationName of clients having keys in the provider.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error as a String if there was a problem accessing the Key Info Manager.
-    pub fn list_clients(&self, provider_id: ProviderID) -> Result<Vec<ApplicationName>, String> {
-        let key_triples = self.get_all(provider_id)?;
-        let mut clients = Vec::new();
-
-        for key_triple in key_triples {
-            if !clients.contains(key_triple.app_name()) {
-                let _ = clients.push(key_triple.app_name().clone());
-            }
-        }
-
-        Ok(clients)
-    }
-
     /// Check if a key triple exists in the Key Info Manager and return a ResponseStatus
     ///
     /// # Errors
@@ -218,10 +354,53 @@ impl dyn ManageKeyInfo + Send + Sync {
     /// Returns PsaErrorAlreadyExists if the key triple already exists or KeyInfoManagerError for
     /// another error.
     pub fn does_not_exist(&self, key_triple: &KeyTriple) -> Result<(), ResponseStatus> {
-        if self.exists(key_triple).map_err(to_response_status)? {
+        let key_info_manager_impl = self
+            .key_info_manager_impl
+            .read()
+            .expect("Key Info Manager lock poisoned");
+
+        if key_info_manager_impl
+            .exists(key_triple)
+            .map_err(to_response_status)?
+        {
             Err(ResponseStatus::PsaErrorAlreadyExists)
         } else {
             Ok(())
+        }
+    }
+}
+
+/// Builder for KeyInfoManager clients
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct KeyInfoManagerFactory {
+    #[derivative(Debug = "ignore")]
+    key_info_manager_impl: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
+}
+
+impl KeyInfoManagerFactory {
+    /// Create a KeyInfoManagerFactory
+    pub fn new(config: &KeyInfoManagerConfig) -> Result<Self> {
+        let manager = match config.manager_type {
+            KeyInfoManagerType::OnDisk => {
+                let mut builder = on_disk_manager::OnDiskKeyInfoManagerBuilder::new();
+                if let Some(store_path) = &config.store_path {
+                    builder = builder.with_mappings_dir_path(store_path.into());
+                }
+                builder.build()?
+            }
+        };
+
+        Ok(KeyInfoManagerFactory {
+            key_info_manager_impl: Arc::new(RwLock::new(manager)),
+        })
+    }
+
+    /// Build a KeyInfoManagerClient
+    pub fn build_client(&self, provider: ProviderID) -> KeyInfoManagerClient {
+        KeyInfoManagerClient {
+            key_info_manager_impl: self.key_info_manager_impl.clone(),
+            provider_id: provider,
         }
     }
 }
