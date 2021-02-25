@@ -174,26 +174,32 @@ if [ "$PROVIDER_NAME" = "trusted-service" ]; then
 fi
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    PROVIDERS="mbed-crypto tpm pkcs11"
-    # Install tarpaulin and start Parsec with it
+    PROVIDERS="mbed-crypto tpm" # pkcs11 not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/pkcs11/*,src/providers/trusted_service/*"
+    # Install tarpaulin
     cargo install cargo-tarpaulin
 
     mkdir -p reports
 
     for provider in $PROVIDERS; do
+        # Set up run
         PROVIDER_NAME=$provider
         TEST_FEATURES="--features=$provider-provider"
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
-        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --output-dir $(pwd)/reports/$provider --features="all-providers,all-authenticators" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+
+        # Start service
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
 
+        # Run tests
         run_normal_tests
         run_persistence_before_tests
         stop_service
 
+        # Setup for persistence-after tests
         mkdir -p reports/$provider-persistence
-        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --output-dir $(pwd)/reports/$provider-persistence --features="all-providers,all-authenticators" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/$provider-persistence --features="$provider-provider,direct-authenticator" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
         run_persistence_after_tests
         stop_service
@@ -202,8 +208,9 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         rm -rf mappings/*
     done
 
+    # Run unit tests
     mkdir -p reports/unit
-    cargo tarpaulin --tests --out Xml --features="all-providers,all-authenticators" --output-dir $(pwd)/reports/unit
+    cargo tarpaulin --tests --out Xml --features="all-providers,all-authenticators" --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
     # Run the Codecov result gathering script
     bash <(curl -s https://codecov.io/bash)
