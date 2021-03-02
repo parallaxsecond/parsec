@@ -212,9 +212,6 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     mkdir -p reports/unit
     cargo tarpaulin --tests --out Xml --features="all-providers,all-authenticators" --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
-    # Run the Codecov result gathering script
-    bash <(curl -s https://codecov.io/bash)
-
     exit 0
 fi
 
