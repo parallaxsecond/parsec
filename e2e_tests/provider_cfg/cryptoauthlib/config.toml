@@ -13,7 +13,7 @@ timeout = 200 # in milliseconds
 socket_path = "/tmp/parsec.sock"
 
 [authenticator]
-auth_type = "Direct"
+auth_type = "UnixPeerCredentials"
 
 [[key_manager]]
 name = "on-disk-manager"

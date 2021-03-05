@@ -76,6 +76,8 @@ fn list_opcodes() {
     let _ = crypto_providers_cal.insert(Opcode::PsaHashCompute);
     let _ = crypto_providers_cal.insert(Opcode::PsaHashCompare);
     let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
+    let _ = crypto_providers_cal.insert(Opcode::PsaGenerateKey);
+    let _ = crypto_providers_cal.insert(Opcode::PsaDestroyKey);
 
     assert_eq!(
         client
