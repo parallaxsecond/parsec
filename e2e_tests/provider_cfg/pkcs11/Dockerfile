@@ -9,6 +9,10 @@ RUN apt-get update && \
 	# Needed for Open SSL
 	apt-get install -y pkg-config libssl-dev
 
+RUN apt -y install gcc-multilib
+RUN apt -y install gcc-arm-linux-gnueabihf
+RUN apt -y install gcc-aarch64-linux-gnu
+
 WORKDIR /tmp
 RUN git clone https://github.com/opendnssec/SoftHSMv2.git \
 	&& cd SoftHSMv2 \
@@ -27,6 +31,10 @@ RUN cd SoftHSMv2 \
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Adding the targets for the cross-compilation test
+RUN rustup target add armv7-unknown-linux-gnueabihf
+RUN rustup target add aarch64-unknown-linux-gnu
 
 # Create a new token in a new slot. The slot number assigned will be random
 # and is found with the find_slot_number script.
