@@ -1,0 +1,7 @@
+# Cargo seems to expect the -gcc variant instead of -ld
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
