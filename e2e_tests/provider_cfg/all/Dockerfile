@@ -1,4 +1,4 @@
-FROM tpm2software/tpm2-tss:ubuntu-18.04
+FROM ghcr.io/tpm2-software/ubuntu-18.04:latest
 
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
