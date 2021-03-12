@@ -1,7 +1,7 @@
 use super::key_slot::KeySlotStatus;
 use super::Provider;
 use crate::authenticators::ApplicationName;
-use log::error;
+use log::{error, warn};
 use parsec_interface::operations::{psa_destroy_key, psa_generate_key};
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -73,7 +73,18 @@ impl Provider {
         let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
 
         match self.key_info_store.remove_key_info(&key_triple) {
-            Ok(_) => Ok(psa_destroy_key::Result {}),
+            Ok(key_info) => {
+                match self.set_slot_status(key_info.id[0] as usize, KeySlotStatus::Free) {
+                    Ok(()) => (),
+                    Err(error) => {
+                        warn!(
+                            "Key Info and Key Triple pairing removed but slot failed to set status to free. {}", 
+                            error
+                        );
+                    }
+                }
+                Ok(psa_destroy_key::Result {})
+            }
             Err(error) => {
                 error!("Key removal failed. {}", error);
                 Err(error)
