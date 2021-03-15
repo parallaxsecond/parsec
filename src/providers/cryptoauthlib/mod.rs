@@ -55,10 +55,7 @@ impl Provider {
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
     ) -> Option<Provider> {
         // First get the device, initialise it and communication channel with it
-        let device = match rust_cryptoauthlib::AteccDevice::new(atca_iface) {
-            Ok(x) => x,
-            _ => return None,
-        };
+        let device = match rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
         let provider_id = ProviderID::CryptoAuthLib;
         // ATECC is useful for non-trivial usage only when its configuration is locked
         let mut is_locked = false;

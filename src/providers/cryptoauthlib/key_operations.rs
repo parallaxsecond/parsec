@@ -14,22 +14,13 @@ impl Provider {
         let key_name = op.key_name;
         let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
 
-        match self.key_info_store.does_not_exist(&key_triple) {
-            Ok(()) => (),
-            Err(error) => {
-                error!("Key triple already exists in storage. {}", error);
-                return Err(error);
-            }
-        };
+        self.key_info_store.does_not_exist(&key_triple)?;
         let key_attributes = op.attributes;
         let key_type = Provider::get_calib_key_type(&key_attributes);
-        let slot_id = match self.find_suitable_slot(&key_attributes) {
-            Ok(slot) => slot,
-            Err(error) => {
-                error!("Failed to find suitable storage slot for key. {}", error);
-                return Err(error);
-            }
-        };
+        let slot_id = self.find_suitable_slot(&key_attributes).map_err(|e| {
+            error!("Failed to find suitable storage slot for key. {}", e);
+            e
+        })?;
         // generate key
         match self.device.gen_key(key_type, slot_id) {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
