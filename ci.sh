@@ -3,7 +3,7 @@
 # Copyright 2019 Contributors to the Parsec project.
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+set -ex
 
 # The clean up procedure is called when the script finished or is interrupted
 cleanup () {
@@ -155,8 +155,8 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_
     tpm_server &
     TPM_SRV_PID=$!
     sleep 5
-    tpm2_startup -c -T mssim 2>/dev/null
-    tpm2_changeauth -c owner tpm_pass 2>/dev/null
+    tpm2_startup -c 2>/dev/null
+    tpm2_takeownership -o tpm_pass 2>/dev/null
 fi
 
 if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
@@ -169,13 +169,14 @@ if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVID
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "trusted-service" ]; then
+if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
     git submodule update --init
 fi
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    PROVIDERS="mbed-crypto tpm" # pkcs11 not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
-    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/pkcs11/*,src/providers/trusted_service/*"
+    PROVIDERS="mbed-crypto tpm trusted-service" # pkcs11 not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/pkcs11/*"
+
     # Install tarpaulin
     cargo install cargo-tarpaulin
 
@@ -257,6 +258,7 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     # Needed because parsec-client-1 and 2 write to those locations owned by root
     chmod 777 /tmp/parsec/e2e_tests
     chmod 777 /tmp/
+    chmod -R 777 /opt/rust/registry
 
     # PATH is defined before each command for user to use their own version of the Rust toolchain
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
