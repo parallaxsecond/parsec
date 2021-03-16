@@ -40,9 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t all-providers e2e_tests/provider_cfg/all
-      - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined all-providers /tmp/parsec/ci.sh coverage
+      - name: Run the container to execute the coverage script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh coverage
       - name: Collect coverage results
         run: bash <(curl -s https://codecov.io/bash)

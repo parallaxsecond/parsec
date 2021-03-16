@@ -8,59 +8,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t all-providers e2e_tests/provider_cfg/all
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec all-providers /tmp/parsec/ci.sh all
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh all
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t mbed-crypto-provider e2e_tests/provider_cfg/mbed-crypto
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec mbed-crypto-provider /tmp/parsec/ci.sh mbed-crypto
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t pkcs11-provider e2e_tests/provider_cfg/pkcs11
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec pkcs11-provider /tmp/parsec/ci.sh pkcs11
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh pkcs11
 
   tpm-provider:
     name: Integration tests using TPM provider
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t tpm-provider e2e_tests/provider_cfg/tpm
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec tpm-provider /tmp/parsec/ci.sh tpm
-  
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
+
   trusted-service-provider:
     name: Integration tests using Cypto Trusted Service provider
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build the container
-        run: docker build -t trusted-service-provider e2e_tests/provider_cfg/trusted-service
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec trusted-service-provider /tmp/parsec/ci.sh trusted-service
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
 
   links:
     name: Check links
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Link Checker
-      uses: peter-evans/link-checker@v1
-      with:
-        args: -v -r *.md
-    - name: Fail if there were link errors
-      run: exit ${{ steps.lc.outputs.exit_code }}
+      - uses: actions/checkout@v2
+      - name: Link Checker
+        uses: peter-evans/link-checker@v1
+        with:
+          args: -v -r *.md
+      - name: Fail if there were link errors
+        run: exit ${{ steps.lc.outputs.exit_code }}
