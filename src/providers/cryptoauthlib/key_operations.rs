@@ -16,7 +16,10 @@ impl Provider {
 
         self.key_info_store.does_not_exist(&key_triple)?;
         let key_attributes = op.attributes;
-        let key_type = Provider::get_calib_key_type(&key_attributes);
+        let key_type = Provider::get_calib_key_type(&key_attributes).map_err(|e| {
+            error!("Failed to get type for key. {}", e);
+            e
+        })?;
         let slot_id = self.find_suitable_slot(&key_attributes).map_err(|e| {
             error!("Failed to find suitable storage slot for key. {}", e);
             e
@@ -31,27 +34,24 @@ impl Provider {
                     Ok(()) => Ok(psa_generate_key::Result {}),
                     Err(error) => {
                         error!("Insert key triple to KeyInfoManager failed. {}", error);
+                        self.set_slot_status(slot_id as usize, KeySlotStatus::Free)
+                            .ok()
+                            .ok_or(error)?;
                         Err(error)
                     }
                 }
             }
-            _ => match self.set_slot_status(slot_id as usize, KeySlotStatus::Free) {
-                Ok(()) => {
-                    let error = ResponseStatus::PsaErrorInvalidArgument;
-                    error!(
-                        "Key generation failed. Storage slot status updated. {}",
-                        error
-                    );
-                    Err(error)
-                }
-                Err(error) => {
-                    error!(
-                        "Key generation failed. Storage slot status failed to update. {}",
-                        error
-                    );
-                    Err(error)
-                }
-            },
+            _ => {
+                let error = ResponseStatus::PsaErrorInvalidArgument;
+                error!(
+                    "Key generation failed. Trying to update slot status. {}",
+                    error
+                );
+                self.set_slot_status(slot_id as usize, KeySlotStatus::Free)
+                    .ok()
+                    .ok_or(error)?;
+                Err(error)
+            }
         }
     }
 

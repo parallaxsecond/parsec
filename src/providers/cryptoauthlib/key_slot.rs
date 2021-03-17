@@ -10,8 +10,6 @@ use parsec_interface::requests::ResponseStatus;
 pub enum KeySlotStatus {
     /// Slot is free
     Free,
-    // InProgress,
-    #[allow(dead_code)]
     /// Slot is busy but can be released
     Busy,
     /// Slot is busy and cannot be released, because of hardware protection
@@ -62,28 +60,20 @@ impl AteccKeySlot {
             KeySlotStatus::Free => {
                 if self.status == KeySlotStatus::Busy {
                     self.status = status;
-                    Ok(())
-                } else {
-                    Err(ResponseStatus::PsaErrorStorageFailure)
                 }
             }
             KeySlotStatus::Busy => {
                 if self.status == KeySlotStatus::Free {
                     self.status = status;
-                    Ok(())
-                } else {
-                    Err(ResponseStatus::PsaErrorStorageFailure)
                 }
             }
             KeySlotStatus::Locked => {
                 if self.status == KeySlotStatus::Free || self.status == KeySlotStatus::Busy {
                     self.status = status;
-                    Ok(())
-                } else {
-                    Err(ResponseStatus::PsaErrorStorageFailure)
                 }
             }
         }
+        Ok(())
     }
 
     fn is_key_type_ok(&self, key_attr: &Attributes) -> bool {

@@ -55,22 +55,12 @@ impl Provider {
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
     ) -> Option<Provider> {
         // First get the device, initialise it and communication channel with it
-        let device = match rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
+        let device = rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
         let provider_id = ProviderID::CryptoAuthLib;
         // ATECC is useful for non-trivial usage only when its configuration is locked
-        let mut is_locked = false;
-        let err = device.configuration_is_locked(&mut is_locked);
-        match err {
-            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
-                if !is_locked {
-                    error!("Error, configuration is not locked.");
-                    return None;
-                }
-            }
-            _ => {
-                error!("Configuration error: {}", err);
-                return None;
-            }
+        if !device.configuration_is_locked().ok()? {
+            error!("Error, configuration is not locked.");
+            return None;
         }
 
         // This will be returned when everything succeedes
@@ -107,7 +97,10 @@ impl Provider {
         match cryptoauthlib_provider.key_info_store.get_all() {
             Ok(key_triples) => {
                 for key_triple in key_triples.iter().cloned() {
-                    let key_info = match cryptoauthlib_provider.get_key_info(&key_triple) {
+                    let key_id = match cryptoauthlib_provider
+                        .key_info_store
+                        .get_key_id(&key_triple)
+                    {
                         Ok(x) => x,
                         Err(err) => {
                             error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
@@ -118,9 +111,13 @@ impl Provider {
                             continue;
                         }
                     };
+                    let key_attr = cryptoauthlib_provider
+                        .key_info_store
+                        .get_key_attributes(&key_triple)
+                        .ok()?;
                     match cryptoauthlib_provider
                         .key_slots
-                        .key_validate_and_mark_busy(&key_info)
+                        .key_validate_and_mark_busy(key_id, &key_attr)
                     {
                         Ok(None) => (),
                         Ok(Some(warning)) => warn!("{} for key triple {:?}", warning, key_triple),
