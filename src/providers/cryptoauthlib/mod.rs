@@ -58,9 +58,19 @@ impl Provider {
         let device = rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
         let provider_id = ProviderID::CryptoAuthLib;
         // ATECC is useful for non-trivial usage only when its configuration is locked
-        if !device.configuration_is_locked().ok()? {
-            error!("Error, configuration is not locked.");
-            return None;
+        let mut is_locked = false;
+        let err = device.configuration_is_locked(&mut is_locked);
+        match err {
+            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
+                if !is_locked {
+                    error!("Error, configuration is not locked.");
+                    return None;
+                }
+            }
+            _ => {
+                error!("Configuration error: {}", err);
+                return None;
+            }
         }
 
         // This will be returned when everything succeedes

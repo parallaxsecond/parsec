@@ -32,7 +32,9 @@ impl Provider {
     // }
 
     /// Get CryptoAuthLib's key type based on PARSEC's KeyInfoManager type.
-    pub fn get_calib_key_type(attributes: &Attributes) -> Result<rust_cryptoauthlib::KeyType, ResponseStatus> {
+    pub fn get_calib_key_type(
+        attributes: &Attributes,
+    ) -> Result<rust_cryptoauthlib::KeyType, ResponseStatus> {
         match attributes.key_type {
             Type::RawData => Ok(rust_cryptoauthlib::KeyType::ShaOrText),
             Type::Aes => Ok(rust_cryptoauthlib::KeyType::Aes),
@@ -48,7 +50,7 @@ impl Provider {
                     Err(ResponseStatus::PsaErrorInvalidArgument)
                 }
             }
-            _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
+            _ => Err(ResponseStatus::PsaErrorInvalidArgument),
         }
     }
 }
