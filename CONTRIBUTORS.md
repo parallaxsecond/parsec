@@ -14,3 +14,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Jesper Brynolf (@Superhepper)
 * Samuel Bailey (@sbailey-arm)
 * Patrick Uiterwijk (@puiterwijk)
+* Nicolas Stalder (@nickray)
