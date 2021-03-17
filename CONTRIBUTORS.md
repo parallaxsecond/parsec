@@ -15,3 +15,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Samuel Bailey (@sbailey-arm)
 * Patrick Uiterwijk (@puiterwijk)
 * Nicolas Stalder (@nickray)
+* Edmund Grimley Evans (@egrimley-arm)
