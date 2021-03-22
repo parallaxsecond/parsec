@@ -10,8 +10,9 @@ use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use tss_esapi::abstraction::transient::KeyParams;
-use tss_esapi::constants::algorithm::{EllipticCurve, HashingAlgorithm};
 use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
+use tss_esapi::interface_types::algorithm::HashingAlgorithm;
+use tss_esapi::interface_types::ecc::EccCurve;
 use tss_esapi::utils::{
     AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext, RSA_KEY_SIZES,
 };
@@ -159,7 +160,7 @@ fn convert_hash_to_tpm(hash: Hash) -> Result<HashingAlgorithm> {
     }
 }
 
-fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EllipticCurve> {
+fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
     match key_attributes.key_type {
         Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
@@ -167,11 +168,11 @@ fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EllipticCurve> {
         | Type::EccPublicKey {
             curve_family: EccFamily::SecpR1,
         } => match key_attributes.bits {
-            192 => Ok(EllipticCurve::NistP192),
-            224 => Ok(EllipticCurve::NistP224),
-            256 => Ok(EllipticCurve::NistP256),
-            384 => Ok(EllipticCurve::NistP384),
-            512 => Ok(EllipticCurve::NistP521),
+            192 => Ok(EccCurve::NistP192),
+            224 => Ok(EccCurve::NistP224),
+            256 => Ok(EccCurve::NistP256),
+            384 => Ok(EccCurve::NistP384),
+            512 => Ok(EccCurve::NistP521),
             _ => Err(ResponseStatus::PsaErrorNotSupported),
         },
         _ => Err(ResponseStatus::PsaErrorNotSupported),
