@@ -25,7 +25,7 @@ impl Provider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.sign_output_size(alg)?;
         let mut signature = vec![0u8; buffer_size];
@@ -62,7 +62,7 @@ impl Provider {
             .lock()
             .expect("Grabbing key handle mutex failed");
 
-        let id = key::Id::from_persistent_key_id(key_id);
+        let id = key::Id::from_persistent_key_id(key_id)?;
         match asym_signature::verify_hash(id, alg, &hash, &signature) {
             Ok(()) => Ok(psa_verify_hash::Result {}),
             Err(error) => {

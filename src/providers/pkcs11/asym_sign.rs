@@ -1,15 +1,16 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::utils::to_response_status;
 use super::Provider;
-use super::{utils, KeyPairType, ReadWriteSession, Session};
+use super::{utils, KeyPairType};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
+use cryptoki::types::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
-use utils::CkMechanism;
 
 impl Provider {
     pub(super) fn psa_sign_hash_internal(
@@ -24,41 +25,20 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mut mech = CkMechanism::try_from(Algorithm::from(op.alg))?;
-        let (mech, _params) = mech.as_c_type();
+        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric sign in session {}", session.session_handle());
-        }
+        let session = self.new_session()?;
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
+        let key = self.find_key(&session, key_id, KeyPairType::PrivateKey)?;
         info!("Located signing key.");
 
-        trace!("SignInit command");
-        match self.backend.sign_init(session.session_handle(), &mech, key) {
-            Ok(_) => {
-                info!("Signing operation initialized.");
-
-                trace!("Sign command");
-                match self.backend.sign(
-                    session.session_handle(),
-                    &utils::digest_info(op.alg, op.hash.to_vec())?,
-                ) {
-                    Ok(signature) => Ok(psa_sign_hash::Result {
-                        signature: signature.into(),
-                    }),
-                    Err(e) => {
-                        format_error!("Failed to execute signing operation", e);
-                        Err(utils::to_response_status(e))
-                    }
-                }
-            }
-            Err(e) => {
-                format_error!("Failed to initialize signing operation", e);
-                Err(utils::to_response_status(e))
-            }
-        }
+        trace!("Sign* command");
+        Ok(psa_sign_hash::Result {
+            signature: session
+                .sign(&mech, key, &utils::digest_info(op.alg, op.hash.to_vec())?)
+                .map_err(to_response_status)?
+                .into(),
+        })
     }
 
     pub(super) fn psa_verify_hash_internal(
@@ -72,40 +52,23 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mut mech = CkMechanism::try_from(Algorithm::from(op.alg))?;
-        let (mech, _params) = mech.as_c_type();
+        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric verify in session {}", session.session_handle());
-        }
+        let session = self.new_session()?;
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
+        let key = self.find_key(&session, key_id, KeyPairType::PublicKey)?;
         info!("Located public key.");
 
-        trace!("VerifyInit command");
-        match self
-            .backend
-            .verify_init(session.session_handle(), &mech, key)
-        {
-            Ok(_) => {
-                info!("Verify operation initialized.");
-
-                trace!("Verify command");
-                match self.backend.verify(
-                    session.session_handle(),
-                    &utils::digest_info(op.alg, op.hash.to_vec())?,
-                    &op.signature,
-                ) {
-                    Ok(_) => Ok(psa_verify_hash::Result {}),
-                    Err(e) => Err(utils::to_response_status(e)),
-                }
-            }
-            Err(e) => {
-                format_error!("Failed to initialize verifying operation", e);
-                Err(utils::to_response_status(e))
-            }
-        }
+        trace!("Verify* command");
+        session
+            .verify(
+                &mech,
+                key,
+                &utils::digest_info(op.alg, op.hash.to_vec())?,
+                &op.signature,
+            )
+            .map_err(to_response_status)?;
+        Ok(psa_verify_hash::Result {})
     }
 
     pub(super) fn software_psa_verify_hash_internal(

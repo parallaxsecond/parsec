@@ -111,8 +111,7 @@ impl Provider {
                             }
                         };
 
-                        let pc_key_id = key::Id::from_persistent_key_id(key_id);
-                        match key::Attributes::from_key_id(pc_key_id) {
+                        match key::Id::from_persistent_key_id(key_id) {
                             Ok(_) => {
                                 if key_id > max_key_id {
                                     max_key_id = key_id;

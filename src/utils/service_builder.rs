@@ -311,12 +311,14 @@ unsafe fn get_provider(
             software_public_operations,
             ..
         } => {
+            use std::convert::TryInto;
+
             info!("Creating a PKCS 11 Provider.");
             Ok(Arc::new(
                 Pkcs11ProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderID::Pkcs11))
                     .with_pkcs11_library_path(library_path.clone())
-                    .with_slot_number(*slot_number)
+                    .with_slot_number((*slot_number).try_into()?)
                     .with_user_pin(user_pin.clone())
                     .with_software_public_operations(*software_public_operations)
                     .build()?,

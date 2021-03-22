@@ -1,15 +1,16 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::utils::to_response_status;
+use super::KeyPairType;
 use super::Provider;
-use super::{utils, KeyPairType, ReadWriteSession, Session};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
+use cryptoki::types::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
 use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
 use std::convert::TryFrom;
-use utils::CkMechanism;
 
 impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
@@ -23,44 +24,20 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mut mech = CkMechanism::try_from(Algorithm::from(op.alg))?;
-        let (mech, _params) = mech.as_c_type();
+        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric encrypt in session {}", session.session_handle());
-        }
+        let session = self.new_session()?;
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PublicKey)?;
+        let key = self.find_key(&session, key_id, KeyPairType::PublicKey)?;
         info!("Located encrypting key.");
 
-        trace!("EncryptInit command");
-        match self
-            .backend
-            .encrypt_init(session.session_handle(), &mech, key)
-        {
-            Ok(_) => {
-                info!("Encrypting operation initialized.");
-
-                trace!("Encrypt command");
-                match self
-                    .backend
-                    .encrypt(session.session_handle(), &op.plaintext)
-                {
-                    Ok(ciphertext) => Ok(psa_asymmetric_encrypt::Result {
-                        ciphertext: ciphertext.into(),
-                    }),
-                    Err(e) => {
-                        format_error!("Failed to execute encrypting operation", e);
-                        Err(utils::to_response_status(e))
-                    }
-                }
-            }
-            Err(e) => {
-                format_error!("Failed to initialize encrypting operation", e);
-                Err(utils::to_response_status(e))
-            }
-        }
+        trace!("Encrypt* commands");
+        Ok(psa_asymmetric_encrypt::Result {
+            ciphertext: session
+                .encrypt(&mech, key, &op.plaintext)
+                .map_err(to_response_status)?
+                .into(),
+        })
     }
 
     pub(super) fn psa_asymmetric_decrypt_internal(
@@ -74,41 +51,20 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mut mech = CkMechanism::try_from(Algorithm::from(op.alg))?;
-        let (mech, _params) = mech.as_c_type();
+        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
-        let session = Session::new(self, ReadWriteSession::ReadWrite)?;
-        if crate::utils::GlobalConfig::log_error_details() {
-            info!("Asymmetric decrypt in session {}", session.session_handle());
-        }
+        let session = self.new_session()?;
 
-        let key = self.find_key(session.session_handle(), key_id, KeyPairType::PrivateKey)?;
+        let key = self.find_key(&session, key_id, KeyPairType::PrivateKey)?;
         info!("Located decrypting key.");
 
-        trace!("DecryptInit command");
-        match self
-            .backend
-            .decrypt_init(session.session_handle(), &mech, key)
-        {
-            Ok(_) => {
-                info!("Decrypt operation initialized.");
-
-                trace!("Decrypt command");
-                match self
-                    .backend
-                    .decrypt(session.session_handle(), &op.ciphertext)
-                {
-                    Ok(plaintext) => Ok(psa_asymmetric_decrypt::Result {
-                        plaintext: plaintext.into(),
-                    }),
-                    Err(e) => Err(utils::to_response_status(e)),
-                }
-            }
-            Err(e) => {
-                format_error!("Failed to initialize decrypting operation", e);
-                Err(utils::to_response_status(e))
-            }
-        }
+        trace!("Decrypt* command");
+        Ok(psa_asymmetric_decrypt::Result {
+            plaintext: session
+                .decrypt(&mech, key, &op.ciphertext)
+                .map_err(to_response_status)?
+                .into(),
+        })
     }
 
     pub(super) fn software_psa_asymmetric_encrypt_internal(
