@@ -1,5 +1,91 @@
 # Changelog
 
+## [0.7.0](https://github.com/parallaxsecond/parsec/tree/0.7.0) (2021-03-23)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.6.0...0.7.0)
+
+**Implemented enhancements:**
+
+- Stop the duplication of key ID conversions [\#331](https://github.com/parallaxsecond/parsec/issues/331)
+- Add key management operations support [\#267](https://github.com/parallaxsecond/parsec/issues/267)
+- Enable TS context initialization  [\#266](https://github.com/parallaxsecond/parsec/issues/266)
+- Create the Trusted Service bindings [\#265](https://github.com/parallaxsecond/parsec/issues/265)
+- Improve import key support in TPM provider [\#251](https://github.com/parallaxsecond/parsec/issues/251)
+- Investigate and define the work required for SPIFFE-based client identity management [\#232](https://github.com/parallaxsecond/parsec/issues/232)
+- Make existence of key info consistent with existence of key [\#149](https://github.com/parallaxsecond/parsec/issues/149)
+- Extract Docker images into own repo [\#124](https://github.com/parallaxsecond/parsec/issues/124)
+- Add version structures for better handling of versions [\#43](https://github.com/parallaxsecond/parsec/issues/43)
+- Rearrange modules for a more structured feel [\#32](https://github.com/parallaxsecond/parsec/issues/32)
+- Change CI to use published Docker image [\#357](https://github.com/parallaxsecond/parsec/pull/357) ([ionut-arm](https://github.com/ionut-arm))
+- Improve coverage script [\#348](https://github.com/parallaxsecond/parsec/pull/348) ([ionut-arm](https://github.com/ionut-arm))
+- Add coverage checking in nightly run [\#347](https://github.com/parallaxsecond/parsec/pull/347) ([ionut-arm](https://github.com/ionut-arm))
+- Trusted service provider [\#330](https://github.com/parallaxsecond/parsec/pull/330) ([ionut-arm](https://github.com/ionut-arm))
+- Add admin configuration [\#316](https://github.com/parallaxsecond/parsec/pull/316) ([ionut-arm](https://github.com/ionut-arm))
+- Add new parsec provider using ATECCx08 cryptochip via CryptoAuthentication Library [\#303](https://github.com/parallaxsecond/parsec/pull/303) ([RobertDrazkowskiGL](https://github.com/RobertDrazkowskiGL))
+- Improve error handling in builder [\#298](https://github.com/parallaxsecond/parsec/pull/298) ([ionut-arm](https://github.com/ionut-arm))
+- Add Changelog file \(\#278\)  [\#280](https://github.com/parallaxsecond/parsec/pull/280) ([ionut-arm](https://github.com/ionut-arm))
+- Remove PKCS11 single thread lock \(\#264\) [\#277](https://github.com/parallaxsecond/parsec/pull/277) ([ionut-arm](https://github.com/ionut-arm))
+
+**Fixed bugs:**
+
+- Move the spiffe related features in its own branch [\#327](https://github.com/parallaxsecond/parsec/issues/327)
+- Resolve default implementation issue for `list\_keys` in `Provide` [\#312](https://github.com/parallaxsecond/parsec/issues/312)
+- ListKeys should only be callable on the Core provider [\#310](https://github.com/parallaxsecond/parsec/issues/310)
+- Service should not start if some components weren't built successfully [\#297](https://github.com/parallaxsecond/parsec/issues/297)
+- No changelog for the releases [\#278](https://github.com/parallaxsecond/parsec/issues/278)
+- PKCS11 multi-threading [\#264](https://github.com/parallaxsecond/parsec/issues/264)
+- Fix ImportKey to allow importing private key [\#126](https://github.com/parallaxsecond/parsec/issues/126)
+- PKCS 11 provider stress tests sometimes fail [\#116](https://github.com/parallaxsecond/parsec/issues/116)
+- Update docker registry for TPM2 images [\#356](https://github.com/parallaxsecond/parsec/pull/356) ([ionut-arm](https://github.com/ionut-arm))
+- Run the Codecov script outside container [\#353](https://github.com/parallaxsecond/parsec/pull/353) ([ionut-arm](https://github.com/ionut-arm))
+- Fix code coverage docker command [\#352](https://github.com/parallaxsecond/parsec/pull/352) ([ionut-arm](https://github.com/ionut-arm))
+- Remove the spiffe-based authenticator [\#328](https://github.com/parallaxsecond/parsec/pull/328) ([hug-dev](https://github.com/hug-dev))
+
+**Security fixes:**
+
+- Add a test for admin operations [\#309](https://github.com/parallaxsecond/parsec/issues/309)
+- Implement admin logic [\#308](https://github.com/parallaxsecond/parsec/issues/308)
+- Investigate admin role and admin-level operations [\#292](https://github.com/parallaxsecond/parsec/issues/292)
+- Add failure-counter mechanism [\#176](https://github.com/parallaxsecond/parsec/issues/176)
+
+**Closed issues:**
+
+- Implement ListClients and DeleteClient in the core provider [\#311](https://github.com/parallaxsecond/parsec/issues/311)
+- Correct lint issues found after the toolchain upgrade to version 1.49.0 [\#305](https://github.com/parallaxsecond/parsec/issues/305)
+- Investigate cross-compilation to Linux on Aarch64 [\#300](https://github.com/parallaxsecond/parsec/issues/300)
+- Investigate adding ListClients and DeleteClient operations [\#293](https://github.com/parallaxsecond/parsec/issues/293)
+- Consume the new, safer Rust PKCS\#11 interface into Parsec when it is available [\#272](https://github.com/parallaxsecond/parsec/issues/272)
+- Add a SPIFFE JWT-SVID multitenancy test [\#269](https://github.com/parallaxsecond/parsec/issues/269)
+- Add a JWT-SVID Authenticator [\#268](https://github.com/parallaxsecond/parsec/issues/268)
+- Investigate and define the work required for compatibility with Arm Firmware Framework for Armv8-A \(FF-A\) [\#247](https://github.com/parallaxsecond/parsec/issues/247)
+
+**Merged pull requests:**
+
+- Prepare for 0.7.0 release [\#363](https://github.com/parallaxsecond/parsec/pull/363) ([hug-dev](https://github.com/hug-dev))
+- Update to latest TSS crate version [\#362](https://github.com/parallaxsecond/parsec/pull/362) ([ionut-arm](https://github.com/ionut-arm))
+- Enable code coverage for PKCS11, disable for TS [\#361](https://github.com/parallaxsecond/parsec/pull/361) ([ionut-arm](https://github.com/ionut-arm))
+- Add Edmund to Contributors list [\#359](https://github.com/parallaxsecond/parsec/pull/359) ([ionut-arm](https://github.com/ionut-arm))
+- Add myself to contributors, re. rust-cryptoki [\#358](https://github.com/parallaxsecond/parsec/pull/358) ([nickray](https://github.com/nickray))
+- Add some cross-compilation tests [\#355](https://github.com/parallaxsecond/parsec/pull/355) ([hug-dev](https://github.com/hug-dev))
+- Upgrade all dependencies to their latest version [\#345](https://github.com/parallaxsecond/parsec/pull/345) ([hug-dev](https://github.com/hug-dev))
+- Create KeyInfoManagerClient [\#343](https://github.com/parallaxsecond/parsec/pull/343) ([ionut-arm](https://github.com/ionut-arm))
+- Parsec PsaHashCompare operation implementation for CryptoAuthLib provider [\#333](https://github.com/parallaxsecond/parsec/pull/333) ([akazimierskigl](https://github.com/akazimierskigl))
+- Parsec PsaGenerateRandom operation implementation for CryptoAuthLib provider [\#325](https://github.com/parallaxsecond/parsec/pull/325) ([RobertDrazkowskiGL](https://github.com/RobertDrazkowskiGL))
+- Add consistency in key creation/deletion [\#324](https://github.com/parallaxsecond/parsec/pull/324) ([hug-dev](https://github.com/hug-dev))
+- Make the authenticators their own features [\#322](https://github.com/parallaxsecond/parsec/pull/322) ([puiterwijk](https://github.com/puiterwijk))
+- Improve mandatory Provide methods [\#321](https://github.com/parallaxsecond/parsec/pull/321) ([ionut-arm](https://github.com/ionut-arm))
+- Use newest TSS crate [\#320](https://github.com/parallaxsecond/parsec/pull/320) ([ionut-arm](https://github.com/ionut-arm))
+- Add ListClients and DeleteClient operations [\#318](https://github.com/parallaxsecond/parsec/pull/318) ([hug-dev](https://github.com/hug-dev))
+- Added support for PsaHashCompute to CryptoAuthLib provider. [\#317](https://github.com/parallaxsecond/parsec/pull/317) ([RobertDrazkowskiGL](https://github.com/RobertDrazkowskiGL))
+- Update service dependencies [\#314](https://github.com/parallaxsecond/parsec/pull/314) ([ionut-arm](https://github.com/ionut-arm))
+- Add a test checking ListKeys provider target [\#313](https://github.com/parallaxsecond/parsec/pull/313) ([hug-dev](https://github.com/hug-dev))
+- Fix lint warning [\#306](https://github.com/parallaxsecond/parsec/pull/306) ([ionut-arm](https://github.com/ionut-arm))
+- Return correct key provider id in list\_keys [\#302](https://github.com/parallaxsecond/parsec/pull/302) ([jn9e9](https://github.com/jn9e9))
+- Use the new abstraction on the PKCS11 interface [\#301](https://github.com/parallaxsecond/parsec/pull/301) ([hug-dev](https://github.com/hug-dev))
+- Switch Travis CI build to cron-only [\#299](https://github.com/parallaxsecond/parsec/pull/299) ([ionut-arm](https://github.com/ionut-arm))
+- Add a JWT-SVID authenticator [\#283](https://github.com/parallaxsecond/parsec/pull/283) ([hug-dev](https://github.com/hug-dev))
+- Add Patrick to the contributor list [\#281](https://github.com/parallaxsecond/parsec/pull/281) ([puiterwijk](https://github.com/puiterwijk))
+
 ## [0.6.0](https://github.com/parallaxsecond/parsec/tree/0.6.0) (2020-10-20)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.5.0...0.6.0)
@@ -26,7 +112,7 @@
 - Put config tests in all\_providers [\#275](https://github.com/parallaxsecond/parsec/pull/275) ([hug-dev](https://github.com/hug-dev))
 - Remove warnings about parsec and parsec-clients [\#274](https://github.com/parallaxsecond/parsec/pull/274) ([hug-dev](https://github.com/hug-dev))
 - Add authentication configuration [\#273](https://github.com/parallaxsecond/parsec/pull/273) ([hug-dev](https://github.com/hug-dev))
-- Refactored provider names [\#263](https://github.com/parallaxsecond/parsec/pull/263) ([samwell61](https://github.com/samwell61))
+- Refactored provider names [\#263](https://github.com/parallaxsecond/parsec/pull/263) ([Swell61](https://github.com/Swell61))
 - Add list keys [\#261](https://github.com/parallaxsecond/parsec/pull/261) ([joechrisellis](https://github.com/joechrisellis))
 
 ## [0.5.0](https://github.com/parallaxsecond/parsec/tree/0.5.0) (2020-10-02)
