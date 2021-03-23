@@ -3,10 +3,7 @@
 [package]
 name = "e2e_tests"
 version = "0.1.0"
-authors = ["Anton Antonov <anton.antonov@arm.com>",
-           "Paul Howard <paul.howard@arm.com>",
-           "Ionut Mihalcea <ionut.mihalcea@arm.com>",
-           "Hugues de Valon <hugues.devalon@arm.com>"]
+authors = ["Parsec Project Contributors"]
 description = "End to end testing framework for PARSEC"
 license = "Apache-2.0"
 edition = "2018"
@@ -14,7 +11,7 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.123", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "8c02c93b5a1d2017e24eb706002559ed160e611a", features = ["testing"] }
+parsec-client = { version = "0.12.0", features = ["testing"] }
 log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
