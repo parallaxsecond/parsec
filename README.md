@@ -48,7 +48,9 @@ PARSEC is a collaborative project. The current list of the individuals and organ
 
 See who is [**using and contributing to PARSEC**](./PARTNERS.md).
 
-# Example
+# Getting Started
+
+If you are running on x86 Linux, check out [this guide](https://parallaxsecond.github.io/parsec-book/getting_started/linux_x86.html) to get started with Parsec quickly!
 
 For examples of how to access PARSEC as a client application, check [this Rust client documentation](https://docs.rs/parsec-client/*/parsec_client/core/basic_client/struct.BasicClient.html).
 
