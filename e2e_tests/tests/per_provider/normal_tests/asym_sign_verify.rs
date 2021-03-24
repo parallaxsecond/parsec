@@ -3,8 +3,7 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
-use parsec_client::core::interface::requests::ResponseStatus;
-use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::{ Opcode, ResponseStatus, Result};
 #[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
 use ring::signature::{self, UnparsedPublicKey};
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
@@ -19,6 +18,9 @@ const HASH: [u8; 32] = [
 fn asym_sign_no_key() {
     let key_name = String::from("asym_sign_no_key");
     let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return;
+    }
     let status = client
         .sign_with_rsa_sha256(key_name, HASH.to_vec())
         .expect_err("Key should not exist.");
@@ -30,6 +32,9 @@ fn asym_verify_no_key() {
     let key_name = String::from("asym_verify_no_key");
     let signature = vec![0xDE, 0xAD, 0xBE, 0xEF];
     let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return;
+    }
     let status = client
         .verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
         .expect_err("Verification should have failed");
@@ -42,6 +47,12 @@ fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
     let mut client = TestClient::new();
 
     client.generate_rsa_sign_key(key_name.clone())?;
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
 
     let signature = client.sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())?;
 
@@ -53,6 +64,12 @@ fn asym_verify_fail() -> Result<()> {
     let key_name = String::from("asym_verify_fail");
     let signature = vec![0xff; 128];
     let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -72,6 +89,12 @@ fn asym_verify_fail() -> Result<()> {
 fn only_verify_from_internet() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("only_verify");
+    if !client.is_operation_supported(Opcode::PsaImportKey) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
 
     // "Les carottes sont cuites." hashed with SHA256
     let digest = vec![
@@ -121,6 +144,12 @@ fn simple_sign_hash() -> Result<()> {
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -136,6 +165,13 @@ fn sign_hash_not_permitted() -> Result<()> {
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
 
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -178,6 +214,13 @@ fn sign_hash_bad_format() -> Result<()> {
     let hash1 = vec![0xEE; 31];
     let hash2 = vec![0xBB; 33];
 
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+
     client.generate_rsa_sign_key(key_name.clone())?;
 
     let status1 = client
@@ -194,6 +237,12 @@ fn sign_hash_bad_format() -> Result<()> {
 fn simple_verify_hash() -> Result<()> {
     let key_name = String::from("simple_verify_hash");
     let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
 
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
@@ -211,6 +260,14 @@ fn simple_verify_hash() -> Result<()> {
 fn verify_hash_not_permitted() -> Result<()> {
     let key_name = String::from("verify_hash_not_permitted");
     let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
@@ -255,6 +312,14 @@ fn verify_hash_not_permitted() -> Result<()> {
 fn verify_hash_bad_format() -> Result<()> {
     let key_name = String::from("verify_hash_bad_format");
     let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let good_hash = hasher.finalize().to_vec();
@@ -281,6 +346,13 @@ fn fail_verify_hash() -> Result<()> {
     let key_name = String::from("fail_verify_hash");
     let mut client = TestClient::new();
 
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
@@ -302,6 +374,13 @@ fn fail_verify_hash2() -> Result<()> {
     let key_name = String::from("fail_verify_hash2");
     let mut client = TestClient::new();
 
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
     let mut hash = hasher.finalize().to_vec();
@@ -322,6 +401,13 @@ fn fail_verify_hash2() -> Result<()> {
 fn asym_verify_with_rsa_crate() {
     let key_name = String::from("asym_verify_with_rsa_crate");
     let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return;
+    }
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return;
+    }
 
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
     let pub_key = client.export_public_key(key_name.clone()).unwrap();

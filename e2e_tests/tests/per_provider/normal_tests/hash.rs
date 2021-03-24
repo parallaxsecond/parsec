@@ -11,10 +11,12 @@ const SHA_256: [u8; 32] = [
     0x0d, 0xc4, 0xbc, 0x13, 0xfd, 0x91, 0x74, 0x52, 0x92, 0x24, 0xc3, 0x8e, 0x0e, 0xe0, 0x75, 0xfa,
     0x9e, 0xd8, 0x0b, 0x78, 0x47, 0xe6, 0xae, 0xa7, 0x6a, 0xe9, 0x8c, 0xf9, 0xdd, 0xd9, 0x26, 0x69,
 ];
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const RIPE_MD160: [u8; 20] = [
     0xa6, 0xf1, 0xa8, 0xf5, 0x26, 0x04, 0x69, 0xb3, 0x67, 0xa3, 0xae, 0xc6, 0x9f, 0x73, 0x47, 0x9b,
     0xb7, 0xbd, 0x02, 0xb8,
 ];
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const SHA_512: [u8; 64] = [
     0x54, 0x1f, 0x9e, 0x85, 0xd4, 0xe6, 0xc2, 0x36, 0xf9, 0xb5, 0xef, 0x2e, 0x6d, 0x27, 0xd4, 0x97,
     0x56, 0xda, 0x00, 0xb2, 0x6e, 0xe2, 0x6f, 0xc8, 0x6a, 0x30, 0x47, 0xd3, 0x7f, 0x09, 0xbd, 0xe9,
@@ -51,6 +53,7 @@ fn hash_compute_sha256() {
     assert_eq!(&SHA_256[..], hash.as_slice())
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn hash_compute_ripe_md160() {
     let mut client = TestClient::new();
@@ -62,6 +65,7 @@ fn hash_compute_ripe_md160() {
     assert_eq!(&RIPE_MD160[..], hash.as_slice());
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn hash_compute_sha512() {
     let mut client = TestClient::new();
@@ -83,6 +87,7 @@ fn hash_compare_sha256() -> Result<()> {
     client.hash_compare(Hash::Sha256, &MESSAGE, &SHA_256)
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn hash_compare_ripe_md160() -> Result<()> {
     let mut client = TestClient::new();
@@ -93,6 +98,7 @@ fn hash_compare_ripe_md160() -> Result<()> {
     client.hash_compare(Hash::Ripemd160, &MESSAGE, &RIPE_MD160)
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn hash_compare_sha512() -> Result<()> {
     let mut client = TestClient::new();

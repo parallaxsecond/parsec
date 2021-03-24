@@ -105,6 +105,6 @@ impl KeySlotStorage {
                 Err(_) => continue,
             }
         }
-        Err(ResponseStatus::PsaErrorStorageFailure)
+        Err(ResponseStatus::PsaErrorInsufficientStorage)
     }
 }

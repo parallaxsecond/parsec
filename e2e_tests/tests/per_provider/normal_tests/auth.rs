@@ -12,10 +12,16 @@ fn two_auths_same_key_name() -> Result<()> {
     let auth2 = String::from("second_client");
 
     client.set_default_auth(Some(auth1));
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone())?;
 
     client.set_default_auth(Some(auth2));
-    client.generate_rsa_sign_key(key_name)
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    let result = client.generate_rsa_sign_key(key_name.clone());
+    #[cfg(feature = "cryptoauthlib-provider")]
+    let result = client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone());
+
+    result
 }
 
 #[test]
@@ -25,8 +31,11 @@ fn delete_wrong_key() -> Result<()> {
     let auth1 = String::from("first_client");
     let auth2 = String::from("second_client");
 
-    client.set_default_auth(Some(auth1));
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone())?;
+    #[cfg(feature = "cryptoauthlib-provider")]
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
+
 
     client.set_default_auth(Some(auth2));
     let status = client

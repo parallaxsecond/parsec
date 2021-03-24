@@ -21,7 +21,7 @@ impl Provider {
             e
         })?;
         let slot_id = self.find_suitable_slot(&key_attributes).map_err(|e| {
-            error!("Failed to find suitable storage slot for key. {}", e);
+            warn!("Failed to find suitable storage slot for key. {}", e);
             e
         })?;
         // generate key
@@ -69,15 +69,15 @@ impl Provider {
                     Ok(()) => (),
                     Err(error) => {
                         warn!(
-                            "Key Info and Key Triple pairing removed but slot failed to set status to free. {}", 
-                            error
+                            "Could not set slot {:?} as free because {}",
+                            key_info.id[0], error,
                         );
                     }
                 }
                 Ok(psa_destroy_key::Result {})
             }
             Err(error) => {
-                error!("Key removal failed. {}", error);
+                warn!("Key {} removal reported an error: - {}", key_triple, error);
                 Err(error)
             }
         }
