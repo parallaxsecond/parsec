@@ -28,7 +28,7 @@ fn export_without_create() {
     let mut client = TestClient::new();
     let key_name = String::from("export_without_create");
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
-        return Ok(());
+        return;
     }
     let status = client
         .export_public_key(key_name)
