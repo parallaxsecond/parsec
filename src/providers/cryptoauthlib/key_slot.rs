@@ -16,7 +16,7 @@ pub enum KeySlotStatus {
     Locked,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 /// Hardware slot information
 pub struct AteccKeySlot {
     /// Diagnostic field. Number of key triples pointing at this slot
@@ -25,12 +25,6 @@ pub struct AteccKeySlot {
     pub status: KeySlotStatus,
     /// Hardware configuration of a slot
     pub config: rust_cryptoauthlib::SlotConfig,
-}
-
-impl Default for AteccKeySlot {
-    fn default() -> AteccKeySlot {
-        unsafe { std::mem::zeroed() }
-    }
 }
 
 impl AteccKeySlot {
