@@ -7,7 +7,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
 };
-parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
+use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
 
 // Ignored as only RSA key types are supported for now.
 #[ignore]
