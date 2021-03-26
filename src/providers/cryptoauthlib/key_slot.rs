@@ -1,3 +1,4 @@
+use log::warn;
 use parsec_interface::operations::psa_algorithm::{
     Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricSignature, Cipher, FullLengthMac, Hash,
     KeyAgreement, Mac, RawKeyAgreement, SignHash,
@@ -58,21 +59,18 @@ impl AteccKeySlot {
         }
         match status {
             KeySlotStatus::Free => {
-                if self.status == KeySlotStatus::Busy {
-                    self.status = status;
+                if self.status != KeySlotStatus::Busy {
+                    warn!("Setting a non-busy slot status as Free");
                 }
             }
             KeySlotStatus::Busy => {
-                if self.status == KeySlotStatus::Free {
-                    self.status = status;
+                if self.status != KeySlotStatus::Free {
+                    warn!("Setting a non-free slot status as Busy");
                 }
             }
-            KeySlotStatus::Locked => {
-                if self.status == KeySlotStatus::Free || self.status == KeySlotStatus::Busy {
-                    self.status = status;
-                }
-            }
-        }
+            KeySlotStatus::Locked => warn!("Setting a slot status as Locked"),
+        };
+        self.status = status;
         Ok(())
     }
 

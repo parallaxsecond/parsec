@@ -47,10 +47,10 @@ impl Provider {
                 if attributes.bits == 256 {
                     Ok(rust_cryptoauthlib::KeyType::P256EccKey)
                 } else {
-                    Err(ResponseStatus::PsaErrorInvalidArgument)
+                    Err(ResponseStatus::PsaErrorNotSupported)
                 }
             }
-            _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+            _ => Err(ResponseStatus::PsaErrorNotSupported),
         }
     }
 }
