@@ -1,6 +1,6 @@
 [package]
 name = "parsec-service"
-version = "0.7.0"
+version = "0.7.2"
 authors = ["Parsec Project Contributors"]
 description = "A language-agnostic API to secure services in a platform-agnostic way"
 license = "Apache-2.0"
@@ -53,7 +53,7 @@ bindgen = { version = "0.57.0", optional = true }
 prost-build = { version = "0.7.0", optional = true }
 
 [package.metadata.docs.rs]
-features = ["pkcs11-provider", "tpm-provider", "tss-esapi/docs", "mbed-crypto-provider", "cryptoauthlib-provider"]
+features = ["pkcs11-provider", "tpm-provider", "mbed-crypto-provider", "cryptoauthlib-provider", "direct-authenticator"]
 
 [features]
 default = ["unix-peer-credentials-authenticator"]

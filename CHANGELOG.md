@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.7.2](https://github.com/parallaxsecond/parsec/tree/0.7.2) (2021-03-25)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.7.1...0.7.2)
+
+**Merged pull requests:**
+
+- Prepare for 0.7.2 [\#368](https://github.com/parallaxsecond/parsec/pull/368) ([hug-dev](https://github.com/hug-dev))
+
+## [0.7.1](https://github.com/parallaxsecond/parsec/tree/0.7.1) (2021-03-25)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.7.0...0.7.1)
+
+**Closed issues:**
+
+- Investigate calculating test coverage [\#342](https://github.com/parallaxsecond/parsec/issues/342)
+
+**Merged pull requests:**
+
+- Update tss-esapi dependency [\#366](https://github.com/parallaxsecond/parsec/pull/366) ([hug-dev](https://github.com/hug-dev))
+- Add quickstart reference [\#365](https://github.com/parallaxsecond/parsec/pull/365) ([hug-dev](https://github.com/hug-dev))
+- Update CHANGELOG [\#364](https://github.com/parallaxsecond/parsec/pull/364) ([hug-dev](https://github.com/hug-dev))
+
 ## [0.7.0](https://github.com/parallaxsecond/parsec/tree/0.7.0) (2021-03-23)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.6.0...0.7.0)
