@@ -88,7 +88,7 @@ impl Context {
     /// format.
     pub fn export_public_key(&self, id: u32) -> Result<Vec<u8>, Error> {
         info!("Handling ExportPublicKey request");
-        Ok(self.send_request_with_key(ExportPublicKeyIn::default(), id)?)
+        self.send_request_with_key(ExportPublicKeyIn::default(), id)
     }
 
     /// Destroy a key given its ID.

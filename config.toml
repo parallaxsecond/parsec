@@ -88,14 +88,22 @@ manager_type = "OnDisk"
 
 # (Required) Provider configurations.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
-# The order in which providers below are declared matters: providers should be listed in terms
-# of priority, the highest priority provider being declared first in this file.
-# The first provider will be used as default provider by the Parsec clients.
+# IMPORTANT: The order in which providers below are declared matters: providers should be listed 
+# in terms of priority, the highest priority provider being declared first in this file.
+# The first provider will be used as default provider by the Parsec clients. See below example
+# configurations for the different providers supported by the Parsec service.
+
+# Example of an Mbed Crypto provider configuration.
 [[provider]]
 # (Required) Type of provider.
 provider_type = "MbedCrypto"
 
 # (Required) Name of key info manager that will support this provider.
+# NOTE: The key info manager only holds mappings between Parsec key name and Mbed Crypto ID, along
+# with other metadata associated with the key. The keys themselves, however, are stored by the Mbed
+# Crypto library by default within the working directory of the service, NOT in the same location
+# as the mappings mentioned previously. If you want the keys to be persisted across reboots, ensure
+# that the working directory is not temporary.
 key_info_manager = "on-disk-manager"
 
 # Example of a PKCS 11 provider configuration
@@ -158,3 +166,11 @@ key_info_manager = "on-disk-manager"
 #bus = 1
 # (Optional - required for i2c) i2c bus baud rate
 #baud = 400000
+
+# Example of a Trusted Service provider configuration.
+#[[provider]]
+# (Required) Type of provider.
+#provider_type = "TrustedService"
+
+# (Required) Name of key info manager that will support this provider.
+#key_info_manager = "on-disk-manager"

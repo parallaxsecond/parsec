@@ -44,7 +44,7 @@ RUN rm -rf $ibmtpm_name/src $ibmtpm_name.tar.gz
 WORKDIR /tmp
 RUN git clone https://github.com/opendnssec/SoftHSMv2.git \
 	&& cd SoftHSMv2 \
-	&& git reset --hard 20a53bd083a6134ce2230f80edda5dc8be0366bd
+	&& git reset --hard 35938595f83923504751b40535570342f706a634
 
 RUN cd SoftHSMv2 \
 	&& sh autogen.sh \
@@ -74,10 +74,11 @@ RUN cd nanopb-0.4.4-linux-x86 \
 RUN rm -rf nanopb-0.4.4-linux-x86 nanopb-0.4.4-linux-x86.tar.gz
 
 # Install mock Trusted Services
-RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
+	&& cd trusted-services \
+	&& git reset --hard 840696b9ac1ba6aa9ccd024ca9dc3b4be12bf837
 # Install correct python dependencies
 RUN pip3 install -r trusted-services/requirements.txt
-RUN pip3 uninstall -y python3-protobuf protobuf && pip3 install protobuf && pip3 install --upgrade protobuf
 RUN cd trusted-services/deployments/libts/linux-pc/ \
 	&& cmake . \
 	&& make \
