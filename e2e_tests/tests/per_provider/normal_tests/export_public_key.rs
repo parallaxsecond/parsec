@@ -5,12 +5,16 @@ use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::Opcode;
 use picky_asn1_x509::RSAPublicKey;
 
 #[test]
 fn export_public_key() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("export_public_key");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
 
     client.generate_rsa_sign_key(key_name.clone())?;
 
@@ -23,6 +27,9 @@ fn export_public_key() -> Result<()> {
 fn export_without_create() {
     let mut client = TestClient::new();
     let key_name = String::from("export_without_create");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return;
+    }
     let status = client
         .export_public_key(key_name)
         .expect_err("Key should not exist.");
@@ -33,6 +40,9 @@ fn export_without_create() {
 fn import_and_export_public_key() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("import_and_export_public_key");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
     let key_data = vec![
         48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20,
         102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81,
@@ -54,6 +64,9 @@ fn import_and_export_public_key() -> Result<()> {
 fn check_public_rsa_export_format() -> Result<()> {
     let mut client = TestClient::new();
     let key_name = String::from("check_public_rsa_export_format");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
     client.generate_rsa_sign_key(key_name.clone())?;
     let public_key = client.export_public_key(key_name)?;
 
@@ -67,6 +80,9 @@ fn check_export_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
     let mut client = TestClient::new();
     let key_name = String::from("check_export_public_possible");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,

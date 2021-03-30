@@ -6,9 +6,10 @@
 //! Library backed by the ATECCx08 cryptochip.
 use super::Provide;
 use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyInfoManagerClient;
+use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
 use derivative::Derivative;
-use log::trace;
+use log::{error, trace, warn};
 use parsec_interface::operations::list_keys::KeyInfo;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_clients, list_keys};
@@ -17,12 +18,20 @@ use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
-use parsec_interface::operations::{psa_generate_random, psa_hash_compare, psa_hash_compute};
+use parsec_interface::operations::{
+    psa_destroy_key, psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute,
+};
 
 mod generate_random;
 mod hash;
+mod key_management;
+mod key_operations;
+mod key_slot;
+mod key_slot_storage;
 
-const SUPPORTED_OPCODES: [Opcode; 3] = [
+const SUPPORTED_OPCODES: [Opcode; 5] = [
+    Opcode::PsaGenerateKey,
+    Opcode::PsaDestroyKey,
     Opcode::PsaHashCompute,
     Opcode::PsaHashCompare,
     Opcode::PsaGenerateRandom,
@@ -30,22 +39,121 @@ const SUPPORTED_OPCODES: [Opcode; 3] = [
 
 /// CryptoAuthLib provider structure
 #[derive(Derivative)]
-#[derivative(Debug, Clone)]
+#[derivative(Debug)]
 pub struct Provider {
-    device: rust_cryptoauthlib::AtcaDevice,
+    device: rust_cryptoauthlib::AteccDevice,
+    provider_id: ProviderID,
+    #[derivative(Debug = "ignore")]
+    key_info_store: KeyInfoManagerClient,
+    key_slots: KeySlotStorage,
 }
 
 impl Provider {
-    /// Creates and initialise a new instance of CryptoAuthLibProvider
+    /// Creates and initialises an instance of CryptoAuthLibProvider
     fn new(
-        _key_info_store: KeyInfoManagerClient,
+        key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
     ) -> Option<Provider> {
-        let device = match rust_cryptoauthlib::atcab_init(atca_iface) {
-            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => rust_cryptoauthlib::atcab_get_device(),
-            _ => return None,
+        // First get the device, initialise it and communication channel with it
+        let device = rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
+        let provider_id = ProviderID::CryptoAuthLib;
+        // ATECC is useful for non-trivial usage only when its configuration is locked
+        let mut is_locked = false;
+        let err = device.configuration_is_locked(&mut is_locked);
+        match err {
+            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
+                if !is_locked {
+                    error!("Error, configuration is not locked.");
+                    return None;
+                }
+            }
+            _ => {
+                error!("Configuration error: {}", err);
+                return None;
+            }
+        }
+
+        // This will be returned when everything succeedes
+        let cryptoauthlib_provider = Provider {
+            device,
+            provider_id,
+            key_info_store,
+            key_slots: KeySlotStorage::new(),
         };
-        let cryptoauthlib_provider = Provider { device };
+
+        // Get the configuration from ATECC...
+        let mut atecc_config_vec = Vec::<rust_cryptoauthlib::AtcaSlot>::new();
+        let err = cryptoauthlib_provider
+            .device
+            .get_config(&mut atecc_config_vec);
+        if rust_cryptoauthlib::AtcaStatus::AtcaSuccess != err {
+            error!("atecc_get_config failed: {}", err);
+            return None;
+        }
+
+        // ... and set the key slots configuration as read from hardware
+        if let Err(err) = cryptoauthlib_provider
+            .key_slots
+            .set_hw_config(&atecc_config_vec)
+        {
+            error!("Applying hardware configuration failed: {}", err);
+            return None;
+        }
+
+        // Validate KeyInfo data store against hardware configuration.
+        // Delete invalid entries or invalid mappings.
+        // Mark the slots free/busy appropriately.
+        let mut to_remove: Vec<KeyTriple> = Vec::new();
+        match cryptoauthlib_provider.key_info_store.get_all() {
+            Ok(key_triples) => {
+                for key_triple in key_triples.iter().cloned() {
+                    let key_id = match cryptoauthlib_provider
+                        .key_info_store
+                        .get_key_id(&key_triple)
+                    {
+                        Ok(x) => x,
+                        Err(err) => {
+                            error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
+                                key_triple,
+                                err
+                            );
+                            to_remove.push(key_triple.clone());
+                            continue;
+                        }
+                    };
+                    let key_attr = cryptoauthlib_provider
+                        .key_info_store
+                        .get_key_attributes(&key_triple)
+                        .ok()?;
+                    match cryptoauthlib_provider
+                        .key_slots
+                        .key_validate_and_mark_busy(key_id, &key_attr)
+                    {
+                        Ok(None) => (),
+                        Ok(Some(warning)) => warn!("{} for key triple {:?}", warning, key_triple),
+                        Err(err) => {
+                            error!("{} for key triple {:?}", err, key_triple);
+                            to_remove.push(key_triple.clone());
+                            continue;
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                error!("Key Info Manager error: {}", err);
+                return None;
+            }
+        };
+        for key_triple in to_remove.iter() {
+            if let Err(err) = cryptoauthlib_provider
+                .key_info_store
+                .remove_key_info(key_triple)
+            {
+                error!("Key Info Manager error: {}", err);
+                return None;
+            }
+        }
+
         Some(cryptoauthlib_provider)
     }
 }
@@ -105,6 +213,24 @@ impl Provide for Provider {
     ) -> Result<psa_generate_random::Result> {
         trace!("psa_generate_random ingress");
         self.psa_generate_random_internal(op)
+    }
+
+    fn psa_generate_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_generate_key::Operation,
+    ) -> Result<psa_generate_key::Result> {
+        trace!("psa_generate_key ingress");
+        self.psa_generate_key_internal(app_name, op)
+    }
+
+    fn psa_destroy_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_destroy_key::Operation,
+    ) -> Result<psa_destroy_key::Result> {
+        trace!("psa_destroy_key ingress");
+        self.psa_destroy_key_internal(app_name, op)
     }
 }
 

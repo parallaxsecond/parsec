@@ -1,7 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::RSAPublicKey;
 
 #[test]
@@ -10,7 +11,10 @@ fn create_and_destroy() {
     client.do_not_destroy_keys();
     let key_name = String::from("create_and_destroy");
 
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
     client.destroy_key(key_name).unwrap();
 }
 
@@ -18,12 +22,22 @@ fn create_and_destroy() {
 fn create_twice() {
     let mut client = TestClient::new();
     let key_name = String::from("create_twice");
-
-    client.generate_rsa_sign_key(key_name.clone()).unwrap();
-    let status = client
-        .generate_rsa_sign_key(key_name)
-        .expect_err("A key with the same name can not be created twice.");
-    assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    {
+        client.generate_rsa_sign_key(key_name.clone()).unwrap();
+        let status = client
+            .generate_rsa_sign_key(key_name)
+            .expect_err("A key with the same name can not be created twice.");
+        assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
+    }
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+        let status = client
+            .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name)
+            .expect_err("A key with the same name can not be created twice.");
+        assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
+    }
 }
 
 #[test]
@@ -42,8 +56,13 @@ fn create_destroy_and_operation() {
     let mut client = TestClient::new();
     let hash = vec![0xDE; 32];
     let key_name = String::from("create_destroy_and_operation");
-
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return;
+    }
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
 
     client.destroy_key(key_name.clone()).unwrap();
 
@@ -59,20 +78,38 @@ fn create_destroy_twice() {
     let key_name = String::from("create_destroy_twice_1");
     let key_name_2 = String::from("create_destroy_twice_2");
 
-    client.generate_rsa_sign_key(key_name.clone()).unwrap();
-    client.generate_rsa_sign_key(key_name_2.clone()).unwrap();
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    {
+        client.generate_rsa_sign_key(key_name.clone()).unwrap();
+        client.generate_rsa_sign_key(key_name_2.clone()).unwrap();
+    }
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name_2.clone()).unwrap();
+    }
 
     client.destroy_key(key_name).unwrap();
     client.destroy_key(key_name_2).unwrap();
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn generate_public_rsa_check_modulus() {
     // As stated in the operation page, the public exponent of RSA key pair should be 65537
     // (0x010001).
     let mut client = TestClient::new();
     let key_name = String::from("generate_public_rsa_check_modulus");
+
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return;
+    }
+
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+
     let public_key = client.export_public_key(key_name).unwrap();
 
     let public_key: RSAPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
@@ -82,12 +119,15 @@ fn generate_public_rsa_check_modulus() {
     );
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn failed_created_key_should_be_removed() {
     let mut client = TestClient::new();
     let key_name = String::from("failed_created_key_should_be_removed");
     const GARBAGE_IMPORT_DATA: [u8; 1] = [48];
-
+    if !client.is_operation_supported(Opcode::PsaImportKey) {
+        return;
+    }
     // The data being imported is garbage, should fail
     let _ = client
         .import_rsa_public_key(key_name.clone(), GARBAGE_IMPORT_DATA.to_vec())

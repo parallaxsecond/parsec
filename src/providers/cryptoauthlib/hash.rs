@@ -16,7 +16,8 @@ impl Provider {
         match op.alg {
             Hash::Sha256 => {
                 let message = op.input.to_vec();
-                let err = rust_cryptoauthlib::atcab_sha(message, &mut hash);
+
+                let err = self.device.sha(message, &mut hash);
                 match err {
                     rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
                         Ok(psa_hash_compute::Result { hash: hash.into() })
