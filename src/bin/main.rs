@@ -42,7 +42,7 @@
 use anyhow::Result;
 use log::{info, trace};
 use parsec_service::utils::{ServiceBuilder, ServiceConfig};
-use signal_hook::{consts::SIGHUP, consts::SIGTERM, flag};
+use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -79,6 +79,7 @@ fn main() -> Result<()> {
     // Register a boolean set to true when the SIGHUP signal is received.
     let reload_signal = Arc::new(AtomicBool::new(false));
     let _ = flag::register(SIGTERM, kill_signal.clone())?;
+    let _ = flag::register(SIGINT, kill_signal.clone())?;
     let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
     let mut config_file = ::std::fs::read_to_string(opts.config.clone()).map_err(|e| {
@@ -174,7 +175,7 @@ fn main() -> Result<()> {
     }
 
     let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Stopping]);
-    info!("SIGTERM signal received. Shutting down Parsec, waiting for all threads to finish...");
+    info!("SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish...");
     threadpool.join();
     info!("Parsec is now terminated.");
 
