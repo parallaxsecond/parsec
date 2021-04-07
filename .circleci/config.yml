@@ -1,0 +1,11 @@
+version: 2.1
+jobs:
+  build:
+    working_directory: ~/repo
+    docker:
+      - image: ghcr.io/parallaxsecond/parsec-service-test-all
+    machine: true
+    resource_class: medium
+    steps:
+      - checkout
+      - run: cargo build --features=all-providers,all-authenticators
