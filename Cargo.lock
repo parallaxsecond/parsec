@@ -206,9 +206,8 @@ dependencies = [
 
 [[package]]
 name = "cryptoki"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ee26477a11a3a0af4c733799495a2399c9fd864f454b4c37f58c7b4d2842d87"
+version = "0.1.1"
+source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=850b826b631df354553bf62757f35cd394b3dfff#850b826b631df354553bf62757f35cd394b3dfff"
 dependencies = [
  "cryptoki-sys",
  "derivative",
@@ -220,11 +219,11 @@ dependencies = [
 
 [[package]]
 name = "cryptoki-sys"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e712c566c87e4c7ef3af69411026dd107f931787c2d3f790b7e6c1f981d6e916"
+version = "0.1.1"
+source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=850b826b631df354553bf62757f35cd394b3dfff#850b826b631df354553bf62757f35cd394b3dfff"
 dependencies = [
  "libloading",
+ "target-lexicon",
 ]
 
 [[package]]
@@ -1102,6 +1101,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "target-lexicon"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64ae3b39281e4b14b8123bdbaddd472b7dfe215e444181f2f9d2443c2444f834"
+
+[[package]]
 name = "tempfile"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1174,8 +1179,7 @@ dependencies = [
 [[package]]
 name = "tss-esapi"
 version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60838db8f40fb2e4f99dd6cfe5b3176c75b08dcbb169b2e51b8282be99e7e56a"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=2e0ba0aa2c5aa928d960b26458778acde448981a#2e0ba0aa2c5aa928d960b26458778acde448981a"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1193,10 +1197,10 @@ dependencies = [
 [[package]]
 name = "tss-esapi-sys"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a8797d73bf711621fbf42432a67088b4d4eb5630bfb374b0a3611f4e2437279"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=2e0ba0aa2c5aa928d960b26458778acde448981a#2e0ba0aa2c5aa928d960b26458778acde448981a"
 dependencies = [
  "pkg-config",
+ "target-lexicon",
 ]
 
 [[package]]

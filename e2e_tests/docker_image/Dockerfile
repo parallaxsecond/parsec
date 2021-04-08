@@ -6,9 +6,6 @@ RUN apt update
 RUN apt install -y autoconf-archive libcmocka0 libcmocka-dev procps
 RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake libssl-dev uthash-dev doxygen libjson-c-dev
 RUN apt install -y --fix-missing wget python3 cmake clang
-RUN apt install -y gcc-multilib
-RUN apt install -y gcc-arm-linux-gnueabihf
-RUN apt install -y gcc-aarch64-linux-gnu
 RUN apt install -y libini-config-dev libcurl4-openssl-dev tpm2-tools curl libgcc1
 RUN apt install -y python3-distutils libclang-dev protobuf-compiler python3-pip
 
@@ -101,10 +98,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install the wrappers for the Rust binaries installed earlier
 COPY _exec_wrapper /usr/local/bin/
 RUN ls /opt/rust/bin | xargs -n1 -I% ln -s /usr/local/bin/_exec_wrapper /usr/local/bin/$(basename %)
-
-# Adding the targets for the cross-compilation tests
-RUN rustup target add armv7-unknown-linux-gnueabihf
-RUN rustup target add aarch64-unknown-linux-gnu
 
 # Add users for multitenancy tests
 RUN useradd -m parsec-client-1
