@@ -23,7 +23,7 @@ impl Provider {
                         Ok(psa_hash_compute::Result { hash: hash.into() })
                     }
                     _ => {
-                        let error = ResponseStatus::PsaErrorGenericError;
+                        let error = ResponseStatus::PsaErrorNotSupported;
                         format_error!("Hash computation failed ", err);
                         Err(error)
                     }

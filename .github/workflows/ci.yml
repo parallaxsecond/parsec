@@ -44,6 +44,15 @@ jobs:
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
 
+  cryptoauthlib-provider:
+    name: Integration tests using CryptoAuthentication Library provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run the container to execute the test script
+        # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
+
   cross-compilation:
     # Currently only the Mbed Crypto and PKCS 11 providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets

@@ -45,14 +45,14 @@ fn asym_verify_no_key() {
 fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
     let key_name = String::from("asym_sign_and_verify_rsa_pkcs");
     let mut client = TestClient::new();
-
-    client.generate_rsa_sign_key(key_name.clone())?;
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return Ok(());
     }
     if !client.is_operation_supported(Opcode::PsaVerifyHash) {
         return Ok(());
     }
+
+    client.generate_rsa_sign_key(key_name.clone())?;
 
     let signature = client.sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())?;
 

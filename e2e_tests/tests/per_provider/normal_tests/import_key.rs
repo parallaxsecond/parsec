@@ -81,7 +81,6 @@ fn import_key() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
-
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
 
@@ -94,7 +93,6 @@ fn create_and_import_key() -> Result<()> {
     }
 
     client.generate_rsa_sign_key(key_name.clone())?;
-
     let status = client
         .import_rsa_public_key(key_name, KEY_DATA.to_vec())
         .expect_err("Key should have already existed");

@@ -29,23 +29,17 @@ mod key_operations;
 mod key_slot;
 mod key_slot_storage;
 
-const SUPPORTED_OPCODES: [Opcode; 5] = [
-    Opcode::PsaGenerateKey,
-    Opcode::PsaDestroyKey,
-    Opcode::PsaHashCompute,
-    Opcode::PsaHashCompare,
-    Opcode::PsaGenerateRandom,
-];
-
 /// CryptoAuthLib provider structure
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    #[derivative(Debug = "ignore")]
     device: rust_cryptoauthlib::AteccDevice,
     provider_id: ProviderID,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     key_slots: KeySlotStorage,
+    supported_opcodes: Vec<Opcode>,
 }
 
 impl Provider {
@@ -54,31 +48,30 @@ impl Provider {
         key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
     ) -> Option<Provider> {
-        // First get the device, initialise it and communication channel with it
-        let device = rust_cryptoauthlib::AteccDevice::new(atca_iface).ok()?;
-        let provider_id = ProviderID::CryptoAuthLib;
-        // ATECC is useful for non-trivial usage only when its configuration is locked
-        let mut is_locked = false;
-        let err = device.configuration_is_locked(&mut is_locked);
-        match err {
-            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
-                if !is_locked {
-                    error!("Error, configuration is not locked.");
-                    return None;
-                }
-            }
-            _ => {
-                error!("Configuration error: {}", err);
+        // This will be returned when everything succeedes
+        let mut cryptoauthlib_provider: Provider;
+
+        // First define communication channel with the device then set it up
+        let device = match rust_cryptoauthlib::setup_atecc_device(atca_iface) {
+            Ok(dev) => dev,
+            Err(err) => {
+                error!("ATECC device initialization failed: {}", err);
                 return None;
             }
+        };
+
+        // ATECC is useful for non-trivial usage only when its configuration is locked
+        if !device.configuration_is_locked() {
+            error!("Error: configuration is not locked.");
+            return None;
         }
 
-        // This will be returned when everything succeedes
-        let cryptoauthlib_provider = Provider {
+        cryptoauthlib_provider = Provider {
             device,
-            provider_id,
+            provider_id: ProviderID::CryptoAuthLib,
             key_info_store,
             key_slots: KeySlotStorage::new(),
+            supported_opcodes: Vec::new(),
         };
 
         // Get the configuration from ATECC...
@@ -100,20 +93,20 @@ impl Provider {
             return None;
         }
 
-        // Validate KeyInfo data store against hardware configuration.
+        // Validate key info store against hardware configuration.
         // Delete invalid entries or invalid mappings.
         // Mark the slots free/busy appropriately.
         let mut to_remove: Vec<KeyTriple> = Vec::new();
         match cryptoauthlib_provider.key_info_store.get_all() {
             Ok(key_triples) => {
                 for key_triple in key_triples.iter().cloned() {
-                    let key_id = match cryptoauthlib_provider
+                    match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_id(&key_triple)
+                        .does_not_exist(&key_triple)
                     {
                         Ok(x) => x,
                         Err(err) => {
-                            error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
+                            warn!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
                                 key_triple,
                                 err
                             );
@@ -121,18 +114,42 @@ impl Provider {
                             continue;
                         }
                     };
-                    let key_attr = cryptoauthlib_provider
+                    let key_info_id = match cryptoauthlib_provider
+                        .key_info_store
+                        .get_key_id::<u8>(&key_triple)
+                    {
+                        Ok(x) => x,
+                        Err(err) => {
+                            warn!(
+                                "Could not get key info id for key triple {:?} because {}",
+                                key_triple, err
+                            );
+                            to_remove.push(key_triple.clone());
+                            continue;
+                        }
+                    };
+                    let key_info_attributes = match cryptoauthlib_provider
                         .key_info_store
                         .get_key_attributes(&key_triple)
-                        .ok()?;
+                    {
+                        Ok(x) => x,
+                        Err(err) => {
+                            warn!(
+                                "Could not get key attributes for key triple {:?} because {}",
+                                key_triple, err
+                            );
+                            to_remove.push(key_triple.clone());
+                            continue;
+                        }
+                    };
                     match cryptoauthlib_provider
                         .key_slots
-                        .key_validate_and_mark_busy(key_id, &key_attr)
+                        .key_validate_and_mark_busy(key_info_id, &key_info_attributes)
                     {
                         Ok(None) => (),
                         Ok(Some(warning)) => warn!("{} for key triple {:?}", warning, key_triple),
                         Err(err) => {
-                            error!("{} for key triple {:?}", err, key_triple);
+                            warn!("{} for key triple {:?}", err, key_triple);
                             to_remove.push(key_triple.clone());
                             continue;
                         }
@@ -154,7 +171,33 @@ impl Provider {
             }
         }
 
+        if None == cryptoauthlib_provider.set_opcodes() {
+            warn!("Failed to setup opcodes for cryptoauthlib_provider");
+        }
+
         Some(cryptoauthlib_provider)
+    }
+
+    fn set_opcodes(&mut self) -> Option<()> {
+        match self.device.get_device_type() {
+            rust_cryptoauthlib::AtcaDeviceType::ATECC508A
+            | rust_cryptoauthlib::AtcaDeviceType::ATECC608A
+            | rust_cryptoauthlib::AtcaDeviceType::ATECC108A => {
+                self.supported_opcodes.push(Opcode::PsaGenerateKey);
+                self.supported_opcodes.push(Opcode::PsaDestroyKey);
+                self.supported_opcodes.push(Opcode::PsaHashCompute);
+                self.supported_opcodes.push(Opcode::PsaHashCompare);
+                self.supported_opcodes.push(Opcode::PsaGenerateRandom);
+                Some(())
+            }
+            rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevSuccess
+            | rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevFail
+            | rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevFailUnimplemented => {
+                self.supported_opcodes.push(Opcode::PsaGenerateRandom);
+                Some(())
+            }
+            _ => None,
+        }
     }
 }
 
@@ -170,7 +213,7 @@ impl Provide for Provider {
             version_min: 1,
             version_rev: 0,
             id: ProviderID::CryptoAuthLib,
-        }, SUPPORTED_OPCODES.iter().copied().collect()))
+        }, self.supported_opcodes.iter().copied().collect()))
     }
 
     fn list_keys(
@@ -273,87 +316,97 @@ impl ProviderBuilder {
 
     /// Specify the ATECC device to be used
     pub fn with_device_type(mut self, device_type: String) -> ProviderBuilder {
-        self.device_type = match device_type.as_str() {
-            "atecc508a" | "atecc608a" => Some(device_type),
-            _ => None,
-        };
+        self.device_type = Some(device_type);
 
         self
     }
 
     /// Specify an interface type (expected: "i2c")
     pub fn with_iface_type(mut self, iface_type: String) -> ProviderBuilder {
-        self.iface_type = match iface_type.as_str() {
-            "i2c" => Some(iface_type),
-            _ => None,
-        };
+        self.iface_type = Some(iface_type);
 
         self
     }
 
     /// Specify a wake delay
-    pub fn with_wake_delay(mut self, wake_delay: u16) -> ProviderBuilder {
-        self.wake_delay = Some(wake_delay);
+    pub fn with_wake_delay(mut self, wake_delay: Option<u16>) -> ProviderBuilder {
+        self.wake_delay = wake_delay;
 
         self
     }
 
     /// Specify number of rx retries
-    pub fn with_rx_retries(mut self, rx_retries: i32) -> ProviderBuilder {
-        self.rx_retries = Some(rx_retries);
+    pub fn with_rx_retries(mut self, rx_retries: Option<i32>) -> ProviderBuilder {
+        self.rx_retries = rx_retries;
 
         self
     }
 
     /// Specify i2c slave address of ATECC device
-    pub fn with_slave_address(mut self, slave_address: u8) -> ProviderBuilder {
-        self.slave_address = Some(slave_address);
+    pub fn with_slave_address(mut self, slave_address: Option<u8>) -> ProviderBuilder {
+        self.slave_address = slave_address;
 
         self
     }
 
     /// Specify i2c bus for ATECC device
-    pub fn with_bus(mut self, bus: u8) -> ProviderBuilder {
-        self.bus = Some(bus);
+    pub fn with_bus(mut self, bus: Option<u8>) -> ProviderBuilder {
+        self.bus = bus;
 
         self
     }
 
     /// Specify i2c baudrate
-    pub fn with_baud(mut self, baud: u32) -> ProviderBuilder {
-        self.baud = Some(baud);
+    pub fn with_baud(mut self, baud: Option<u32>) -> ProviderBuilder {
+        self.baud = baud;
 
         self
     }
 
     /// Attempt to build CryptoAuthLib Provider
     pub fn build(self) -> std::io::Result<Provider> {
-        let iface_type = match self.iface_type {
+        let iface_cfg = match self.iface_type {
             Some(x) => match x.as_str() {
-                "i2c" => rust_cryptoauthlib::atca_iface_setup_i2c(
-                    self.device_type.ok_or_else(|| {
-                        Error::new(ErrorKind::InvalidData, "missing atecc device type")
-                    })?,
-                    self.wake_delay.ok_or_else(|| {
-                        Error::new(ErrorKind::InvalidData, "missing atecc wake delay")
-                    })?,
-                    self.rx_retries.ok_or_else(|| {
-                        Error::new(
-                            ErrorKind::InvalidData,
-                            "missing rx retries number for atecc",
+                "i2c" => {
+                    let atcai2c_iface_cfg = rust_cryptoauthlib::AtcaIfaceI2c::default()
+                        .set_slave_address(self.slave_address.ok_or_else(|| {
+                            Error::new(ErrorKind::InvalidData, "missing atecc i2c slave address")
+                        })?)
+                        .set_bus(self.bus.ok_or_else(|| {
+                            Error::new(ErrorKind::InvalidData, "missing atecc i2c bus")
+                        })?)
+                        .set_baud(self.baud.ok_or_else(|| {
+                            Error::new(ErrorKind::InvalidData, "missing atecc i2c baud rate")
+                        })?);
+                    rust_cryptoauthlib::AtcaIfaceCfg::default()
+                        .set_iface_type("i2c".to_owned())
+                        .set_devtype(self.device_type.ok_or_else(|| {
+                            Error::new(ErrorKind::InvalidData, "missing atecc device type")
+                        })?)
+                        .set_wake_delay(self.wake_delay.ok_or_else(|| {
+                            Error::new(ErrorKind::InvalidData, "missing atecc wake delay")
+                        })?)
+                        .set_rx_retries(self.rx_retries.ok_or_else(|| {
+                            Error::new(
+                                ErrorKind::InvalidData,
+                                "missing rx retries number for atecc",
+                            )
+                        })?)
+                        .set_iface(
+                            rust_cryptoauthlib::AtcaIface::default().set_atcai2c(atcai2c_iface_cfg),
                         )
-                    })?,
-                    Some(self.slave_address.ok_or_else(|| {
-                        Error::new(ErrorKind::InvalidData, "missing atecc i2c slave address")
+                }
+                "test-interface" => rust_cryptoauthlib::AtcaIfaceCfg::default()
+                    .set_iface_type("test-interface".to_owned())
+                    .set_devtype(self.device_type.ok_or_else(|| {
+                        Error::new(ErrorKind::InvalidData, "missing atecc device type")
                     })?),
-                    Some(self.bus.ok_or_else(|| {
-                        Error::new(ErrorKind::InvalidData, "missing atecc i2c bus")
-                    })?),
-                    Some(self.baud.ok_or_else(|| {
-                        Error::new(ErrorKind::InvalidData, "missing atecc i2c baud rate")
-                    })?),
-                ),
-                _ => return Err(Error::new(ErrorKind::InvalidData, "Unknown inteface type")),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "Unsupported inteface type",
+                    ))
+                }
             },
             None => return Err(Error::new(ErrorKind::InvalidData, "Missing inteface type")),
         };
@@ -361,15 +414,7 @@ impl ProviderBuilder {
         Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
-            match iface_type {
-                Ok(x) => x,
-                Err(_x) => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidData,
-                        "CryptoAuthLib inteface setup failed",
-                    ))
-                }
-            },
+            iface_cfg,
         )
         .ok_or_else(|| {
             Error::new(

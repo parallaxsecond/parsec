@@ -76,9 +76,9 @@ pub enum ProviderConfig {
         /// Interface type
         iface_type: String,
         /// Wake delay
-        wake_delay: u16,
+        wake_delay: Option<u16>,
         /// Number of rx retries
-        rx_retries: i32,
+        rx_retries: Option<i32>,
         /// I2C slave address
         slave_address: Option<u8>,
         /// I2C bus

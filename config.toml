@@ -151,14 +151,14 @@ key_info_manager = "on-disk-manager"
 #provider_type = "CryptoAuthLib"
 #key_info_manager = "on-disk-manager"
 # (Required) ATCA device type.
-#   Supported values: "atecc508a", "atecc608a"
+#   Supported values: "atecc508a", "atecc608a", "always-fail", "always-success", "fail-unimplemented"
 #device_type = "atecc508a"
 # (Required) Interface for ATCA device
-#   Supported values: "i2c"
+#   Supported values: "i2c", "test-interface"
 #iface_type = "i2c"
-# (Required) Default wake delay for ATCA device
+# (Optional) Default wake delay for ATCA device
 #wake_delay = 1500
-# (Required) Default number of rx retries for ATCA device
+# (Optional) Default number of rx retries for ATCA device
 #rx_retries = 20
 # (Optional - required for i2c) i2c slave addres
 #slave_address = 0xc0

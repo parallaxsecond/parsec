@@ -15,7 +15,6 @@ fn export_public_key() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
-
     client.generate_rsa_sign_key(key_name.clone())?;
 
     let _ = client.export_public_key(key_name)?;
@@ -83,7 +82,6 @@ fn check_export_public_possible() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
-
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,

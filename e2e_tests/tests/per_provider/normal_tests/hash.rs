@@ -35,9 +35,16 @@ fn hash_not_supported() {
     }
 
     if !client.is_operation_supported(Opcode::PsaHashCompare) {
+        #[cfg(not(feature = "cryptoauthlib-provider"))]
         assert_eq!(
             client.hash_compare(Hash::Sha256, &[], &[]).unwrap_err(),
             ResponseStatus::PsaErrorNotSupported
+        );
+        // CryptoAuthlib Provider checks arguments first and finds the hash to be too short.
+        #[cfg(feature = "cryptoauthlib-provider")]
+        assert_eq!(
+            client.hash_compare(Hash::Sha256, &[], &[]).unwrap_err(),
+            ResponseStatus::PsaErrorInvalidArgument
         );
     }
 }

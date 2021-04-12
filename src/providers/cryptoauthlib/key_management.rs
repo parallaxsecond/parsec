@@ -21,16 +21,6 @@ impl Provider {
         self.key_slots.set_slot_status(slot_id, status)
     }
 
-    /// Get KeyInfo struct from ManageKeyInfo data store handle matching given KeyTriple
-    // pub fn get_key_info(&self, key_triple: &KeyTriple) -> Result<KeyInfo, ResponseStatus> {
-    //     let key_info_id = self.key_info_store.get_key_id(key_triple)?;
-    //     let key_info_attributes = self.key_info_store.get_key_attributes(key_triple)?;
-    //     Ok(KeyInfo {
-    //         id: key_info_id,
-    //         attributes: key_info_attributes,
-    //     })
-    // }
-
     /// Get CryptoAuthLib's key type based on PARSEC's KeyInfoManager type.
     pub fn get_calib_key_type(
         attributes: &Attributes,

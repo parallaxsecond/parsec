@@ -1,7 +1,7 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::ResponseStatus;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use parsec_client::core::interface::requests::Result;
 
 #[test]
@@ -10,6 +10,10 @@ fn two_auths_same_key_name() -> Result<()> {
     let mut client = TestClient::new();
     let auth1 = String::from("first_client");
     let auth2 = String::from("second_client");
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return Ok(());
+    }
 
     client.set_default_auth(Some(auth1));
     #[cfg(not(feature = "cryptoauthlib-provider"))]
@@ -32,6 +36,10 @@ fn delete_wrong_key() -> Result<()> {
     let mut client = TestClient::new();
     let auth1 = String::from("first_client");
     let auth2 = String::from("second_client");
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return Ok(());
+    }
 
     client.set_default_auth(Some(auth1));
     #[cfg(not(feature = "cryptoauthlib-provider"))]

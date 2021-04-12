@@ -34,14 +34,14 @@ key_info_manager = "on-disk-manager"
 tcti = "mssim"
 owner_hierarchy_auth = "tpm_pass"
 
-#[[provider]]
-#provider_type = "CryptoAuthLib"
-#key_info_manager = "on-disk-manager"
-#device_type = "atecc508a"
-#iface_type = "i2c"
-#wake_delay = 1500
-#rx_retries = 20
-## i2c parameters for i2c-pseudo proxy
-#slave_address = 0xc0
-#bus = 1
-#baud = 400000
+[[provider]]
+provider_type = "CryptoAuthLib"
+key_info_manager = "on-disk-manager"
+device_type = "always-success"
+iface_type = "test-interface"
+wake_delay = 1500
+rx_retries = 20
+# i2c parameters for i2c-pseudo proxy
+slave_address = 0xc0
+bus = 1
+baud = 400000
