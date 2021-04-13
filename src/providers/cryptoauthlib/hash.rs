@@ -22,18 +22,20 @@ impl Provider {
                     rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
                         Ok(psa_hash_compute::Result { hash: hash.into() })
                     }
-                    _ => {
-                        let error = ResponseStatus::PsaErrorNotSupported;
-                        format_error!("Hash computation failed ", err);
-                        Err(error)
+                    rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
+                        Err(ResponseStatus::PsaErrorInvalidArgument)
                     }
+                    rust_cryptoauthlib::AtcaStatus::AtcaSmallBuffer => {
+                        Err(ResponseStatus::PsaErrorBufferTooSmall)
+                    }
+                    rust_cryptoauthlib::AtcaStatus::AtcaRxNoResponse
+                    | rust_cryptoauthlib::AtcaStatus::AtcaRxFail => {
+                        Err(ResponseStatus::PsaErrorCommunicationFailure)
+                    }
+                    _ => Err(ResponseStatus::PsaErrorGenericError),
                 }
             }
-            _ => {
-                let error = ResponseStatus::PsaErrorNotSupported;
-                format_error!("Unsupported hash algorithm ", error);
-                Err(error)
-            }
+            _ => Err(ResponseStatus::PsaErrorNotSupported),
         }
     }
 

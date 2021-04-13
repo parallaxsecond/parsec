@@ -15,7 +15,7 @@ const HASH: [u8; 32] = [
 fn create_and_verify() -> Result<()> {
     let mut client = TestClient::new();
 
-    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
         return Ok(());
     }
 

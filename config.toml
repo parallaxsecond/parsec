@@ -150,22 +150,48 @@ key_info_manager = "on-disk-manager"
 #[[provider]]
 #provider_type = "CryptoAuthLib"
 #key_info_manager = "on-disk-manager"
-# (Required) ATCA device type.
-#   Supported values: "atecc508a", "atecc608a", "always-fail", "always-success", "fail-unimplemented"
-#device_type = "atecc508a"
+##########
 # (Required) Interface for ATCA device
 #   Supported values: "i2c", "test-interface"
 #iface_type = "i2c"
+##########
+# (Required) ATCA device type.
+#   Supported values: "atecc508a", "atecc608a", "always-fail", "always-success", "fail-unimplemented"
+#device_type = "atecc508a"
+##########
 # (Optional) Default wake delay for ATCA device
+# - required for hardware interfaces (e.g. i2c)
 #wake_delay = 1500
+##########
 # (Optional) Default number of rx retries for ATCA device
+#  - required for hardware interfaces (e.g. i2c)
 #rx_retries = 20
-# (Optional - required for i2c) i2c slave addres
+##########
+# (Optional) i2c slave addres
+# - required for i2c
 #slave_address = 0xc0
-# (Optional - required for i2c) i2c bus number
+##########
+# (Optional) i2c bus number
+# - required for i2c
 #bus = 1
-# (Optional - required for i2c) i2c bus baud rate
+##########
+# (Optional) i2c bus baud rate
+# - required for i2c
 #baud = 400000
+###########
+# Tree:
+# iface_type = ["test-interface", "i2c"]
+#
+# iface_type = "test-interface"
+#   device_type = ["always-fail", "always-success", "fail-unimplemented"]
+# iface_type = "i2c"
+#   device_type = ["atecc508a", "atecc608a"]
+#   wake_delay = <number>
+#   rx_retries = <number>
+#   slave_address = <number>
+#   bus = <number>
+#   baud = <number>
+
 
 # Example of a Trusted Service provider configuration.
 #[[provider]]
