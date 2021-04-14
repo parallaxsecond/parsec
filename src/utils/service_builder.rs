@@ -358,9 +358,9 @@ unsafe fn get_provider(
                     .with_iface_type(iface_type.to_string())
                     .with_wake_delay(*wake_delay)
                     .with_rx_retries(*rx_retries)
-                    .with_slave_address(slave_address.unwrap())
-                    .with_bus(bus.unwrap())
-                    .with_baud(baud.unwrap())
+                    .with_slave_address(*slave_address)
+                    .with_bus(*bus)
+                    .with_baud(*baud)
                     .build()?,
             ))
         }

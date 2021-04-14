@@ -1,3 +1,5 @@
+// Copyright 2021 Contributors to the Parsec project.
+// SPDX-License-Identifier: Apache-2.0
 use crate::providers::cryptoauthlib::key_slot::{AteccKeySlot, KeySlotStatus};
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::ResponseStatus;
@@ -59,21 +61,19 @@ impl KeySlotStorage {
     pub fn set_hw_config(&self, hw_config: &[rust_cryptoauthlib::AtcaSlot]) -> Result<(), String> {
         // RwLock protection
         let mut key_slots = self.storage.write().unwrap();
-        for slot in 0..rust_cryptoauthlib::ATCA_ATECC_SLOTS_COUNT {
-            if hw_config[slot as usize].id != slot {
-                return Err(
-                    "configuration mismatch: vector index does not match its id.".to_string(),
-                );
-            }
-            key_slots[slot as usize] = AteccKeySlot {
-                ref_count: 0u8,
-                status: {
-                    match hw_config[slot as usize].is_locked {
-                        true => KeySlotStatus::Locked,
-                        _ => KeySlotStatus::Free,
-                    }
-                },
-                config: hw_config[slot as usize].config,
+
+        for slot in hw_config.iter().cloned() {
+            if slot.is_valid() {
+                key_slots[slot.id as usize] = AteccKeySlot {
+                    ref_count: 0u8,
+                    status: {
+                        match slot.is_locked {
+                            true => KeySlotStatus::Locked,
+                            _ => KeySlotStatus::Free,
+                        }
+                    },
+                    config: slot.config,
+                };
             }
         }
         Ok(())

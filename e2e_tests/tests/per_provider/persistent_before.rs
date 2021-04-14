@@ -4,7 +4,7 @@
 // These functions test for the service persistency to shutdown. They will be executed before the
 // service is shutdown and before the persistent_after tests are executed.
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::{Opcode, Result};
 
 const HASH: [u8; 32] = [
     0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84, 0xA2,
@@ -14,6 +14,11 @@ const HASH: [u8; 32] = [
 #[test]
 fn create_and_verify() -> Result<()> {
     let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
     client.do_not_destroy_keys();
 
     let key_name = String::from("🤡 Clown's Master Key 🤡");

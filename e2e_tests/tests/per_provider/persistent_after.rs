@@ -4,7 +4,7 @@
 // These functions test for the service persistency to shutdown. They will be executed after the
 // service is shutdown, after the persistent_before tests are executed.
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::{Opcode, Result};
 use parsec_client::core::interface::requests::{ProviderID, ResponseStatus};
 
 const HASH: [u8; 32] = [
@@ -18,6 +18,10 @@ fn reuse_to_sign() -> Result<()> {
 
     let key_name = String::from("🤡 Clown's Master Key 🤡");
 
+    if !client.is_operation_supported(Opcode::PsaSignHash) {
+        return Ok(());
+    }
+
     let signature = client.sign_with_rsa_sha256(key_name.clone(), HASH.to_vec())?;
 
     client.verify_with_rsa_sha256(key_name.clone(), HASH.to_vec(), signature)?;
@@ -30,6 +34,10 @@ fn should_have_been_deleted() {
 
     if client.provider() == ProviderID::Tpm {
         // This test does not make sense for the TPM Provider.
+        return;
+    }
+
+    if !client.is_operation_supported(Opcode::PsaDestroyKey) {
         return;
     }
 

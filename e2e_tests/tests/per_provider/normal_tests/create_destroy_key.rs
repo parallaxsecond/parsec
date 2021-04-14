@@ -11,6 +11,10 @@ fn create_and_destroy() {
     client.do_not_destroy_keys();
     let key_name = String::from("create_and_destroy");
 
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return;
+    }
+
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
     #[cfg(feature = "cryptoauthlib-provider")]
@@ -22,6 +26,11 @@ fn create_and_destroy() {
 fn create_twice() {
     let mut client = TestClient::new();
     let key_name = String::from("create_twice");
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return;
+    }
+
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     {
         client.generate_rsa_sign_key(key_name.clone()).unwrap();
@@ -44,6 +53,10 @@ fn create_twice() {
 fn destroy_without_create() {
     let mut client = TestClient::new();
     let key_name = String::from("destroy_without_create");
+
+    if !client.is_operation_supported(Opcode::PsaDestroyKey) {
+        return;
+    }
 
     let status = client
         .destroy_key(key_name)
@@ -77,6 +90,10 @@ fn create_destroy_twice() {
     let mut client = TestClient::new();
     let key_name = String::from("create_destroy_twice_1");
     let key_name_2 = String::from("create_destroy_twice_2");
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return;
+    }
 
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     {
