@@ -3,9 +3,9 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
+use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
-use parsec_client::core::interface::requests::Opcode;
 use picky_asn1_x509::RSAPublicKey;
 
 #[test]

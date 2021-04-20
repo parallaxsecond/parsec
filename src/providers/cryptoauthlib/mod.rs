@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use parsec_interface::operations::{
     psa_destroy_key, psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute,
+    psa_import_key,
 };
 
 mod generate_random;
@@ -175,6 +176,13 @@ impl Provider {
             warn!("Failed to setup opcodes for cryptoauthlib_provider");
         }
 
+        let err = cryptoauthlib_provider
+            .device
+            .set_write_encryption_key(&cryptoauthlib_provider.get_write_encrypt_key());
+        if rust_cryptoauthlib::AtcaStatus::AtcaSuccess != err {
+            warn!("Failed to setup write encryption key. Using ECC keys may not be possible.");
+        }
+
         Some(cryptoauthlib_provider)
     }
 
@@ -188,6 +196,7 @@ impl Provider {
                 self.supported_opcodes.push(Opcode::PsaHashCompute);
                 self.supported_opcodes.push(Opcode::PsaHashCompare);
                 self.supported_opcodes.push(Opcode::PsaGenerateRandom);
+                self.supported_opcodes.push(Opcode::PsaImportKey);
                 Some(())
             }
             rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevSuccess
@@ -198,6 +207,16 @@ impl Provider {
             }
             _ => None,
         }
+    }
+
+    // Get the deployment specific write key. With this the keys can be stored encrypted in their slots.
+    // For ECC private keys it is obligatory, for Aes it is an option.
+    fn get_write_encrypt_key(&self) -> [u8; rust_cryptoauthlib::ATCA_KEY_SIZE] {
+        [
+            0x4D, 0x50, 0x72, 0x6F, 0x20, 0x49, 0x4F, 0x20, 0x4B, 0x65, 0x79, 0x20, 0x9E, 0x31,
+            0xBD, 0x05, 0x82, 0x58, 0x76, 0xCE, 0x37, 0x90, 0xEA, 0x77, 0x42, 0x32, 0xBB, 0x51,
+            0x81, 0x49, 0x66, 0x45,
+        ]
     }
 }
 
@@ -293,6 +312,19 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_destroy_key_internal(app_name, op)
+        }
+    }
+
+    fn psa_import_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_import_key::Operation,
+    ) -> Result<psa_import_key::Result> {
+        trace!("psa_import_key ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaImportKey) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_import_key_internal(app_name, op)
         }
     }
 }
@@ -430,7 +462,6 @@ impl ProviderBuilder {
             },
             None => return Err(Error::new(ErrorKind::InvalidData, "Missing inteface type")),
         };
-
         Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,

@@ -18,7 +18,9 @@ fn create_and_destroy() {
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
     #[cfg(feature = "cryptoauthlib-provider")]
-    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
     client.destroy_key(key_name).unwrap();
 }
 
@@ -41,7 +43,9 @@ fn create_twice() {
     }
     #[cfg(feature = "cryptoauthlib-provider")]
     {
-        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+        client
+            .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+            .unwrap();
         let status = client
             .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name)
             .expect_err("A key with the same name can not be created twice.");
@@ -75,7 +79,9 @@ fn create_destroy_and_operation() {
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
     #[cfg(feature = "cryptoauthlib-provider")]
-    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
 
     client.destroy_key(key_name.clone()).unwrap();
 
@@ -102,8 +108,12 @@ fn create_destroy_twice() {
     }
     #[cfg(feature = "cryptoauthlib-provider")]
     {
-        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
-        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name_2.clone()).unwrap();
+        client
+            .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+            .unwrap();
+        client
+            .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name_2.clone())
+            .unwrap();
     }
 
     client.destroy_key(key_name).unwrap();
@@ -125,7 +135,9 @@ fn generate_public_rsa_check_modulus() {
     #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
     #[cfg(feature = "cryptoauthlib-provider")]
-    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone()).unwrap();
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
 
     let public_key = client.export_public_key(key_name).unwrap();
 

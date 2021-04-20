@@ -33,7 +33,7 @@ impl KeySlotStorage {
         // (2) if there are no two key triples mapping to a single ATECC slot - warning only ATM
 
         // check (1)
-        match key_slots[key_id as usize].key_attr_vs_config(&key_attr) {
+        match key_slots[key_id as usize].key_attr_vs_config(key_id, &key_attr) {
             Ok(_) => (),
             Err(err) => {
                 let error = std::format!("ATECC slot configuration mismatch: {}", err);
@@ -48,6 +48,7 @@ impl KeySlotStorage {
                 return Ok(Some(warning));
             }
         };
+        // Slot 'key_id' validated - trying to mark it busy
         match key_slots[key_id as usize].set_slot_status(KeySlotStatus::Busy) {
             Ok(()) => Ok(None),
             Err(err) => {
@@ -97,11 +98,13 @@ impl KeySlotStorage {
             if !key_slots[slot as usize].is_free() {
                 continue;
             }
-            match key_slots[slot as usize].key_attr_vs_config(key_attr) {
-                Ok(_) => match key_slots[slot as usize].set_slot_status(KeySlotStatus::Busy) {
-                    Ok(()) => return Ok(slot),
-                    Err(err) => return Err(err),
-                },
+            match key_slots[slot as usize].key_attr_vs_config(slot, key_attr) {
+                Ok(_) => {
+                    match key_slots[slot as usize].set_slot_status(KeySlotStatus::Busy) {
+                        Ok(()) => return Ok(slot),
+                        Err(err) => return Err(err),
+                    };
+                }
                 Err(_) => continue,
             }
         }

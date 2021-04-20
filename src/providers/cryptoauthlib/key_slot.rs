@@ -41,12 +41,16 @@ impl Default for AteccKeySlot {
 
 impl AteccKeySlot {
     // Check if software key attributes are compatible with hardware slot configuration
-    pub fn key_attr_vs_config(&self, key_attr: &Attributes) -> Result<(), ResponseStatus> {
+    pub fn key_attr_vs_config(
+        &self,
+        slot: u8,
+        key_attr: &Attributes,
+    ) -> Result<(), ResponseStatus> {
         // (1) Check attributes.key_type
-        if !self.is_key_type_ok(key_attr) {
+        if !self.is_key_type_ok(slot, key_attr) {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
-        // (2) Check attributes.policy.usage_flags
+        // (2) Check attributes.policy.usage_flags and slot number
         if !self.is_usage_flags_ok(key_attr) {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
@@ -54,7 +58,6 @@ impl AteccKeySlot {
         if !self.is_permitted_algorithms_ok(key_attr) {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
-
         Ok(())
     }
 
@@ -70,21 +73,32 @@ impl AteccKeySlot {
         Ok(())
     }
 
-    fn is_key_type_ok(&self, key_attr: &Attributes) -> bool {
+    fn is_key_type_ok(&self, slot: u8, key_attr: &Attributes) -> bool {
         match key_attr.key_type {
             Type::RawData => self.config.key_type == rust_cryptoauthlib::KeyType::ShaOrText,
             Type::Hmac => !self.config.no_mac,
             Type::Aes => self.config.key_type == rust_cryptoauthlib::KeyType::Aes,
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
-            }
-            | Type::EccPublicKey {
-                curve_family: EccFamily::SecpR1,
             } => {
-                // There may be a problem here: P256 private key has 256 bits (32 bytes),
-                // but the uncompressed public key is 512 bits (64 bytes)
+                // P256 private key has 256 bits (32 bytes).
+                // Only private key is stored - public one can be computed when needed.
+                // The private key can onlly be stored encrypted and the encryption key must be set,
+                // see set_write_encryption_key() call in new().
                 key_attr.bits == 256
                     && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
+                    && self.config.write_config == rust_cryptoauthlib::WriteConfig::Encrypt
+                    && self.config.ecc_key_attr.is_private
+                    && self.config.is_secret
+            }
+            Type::EccPublicKey {
+                curve_family: EccFamily::SecpR1,
+            } => {
+                // The uncompressed public key is 512 bits (64 bytes).
+                // First few (7) slots are too short for ECC public key.
+                key_attr.bits == 512
+                    && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
+                    && slot >= rust_cryptoauthlib::ATCA_ATECC_MIN_SLOT_IDX_FOR_PUB_KEY
             }
             Type::Derive | Type::DhKeyPair { .. } | Type::DhPublicKey { .. } => {
                 // This may change...
@@ -173,9 +187,7 @@ impl AteccKeySlot {
             Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             }) => {
-                self.config.is_secret
-                    && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
-                    && self.config.ecc_key_attr.is_private
+                self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
                 // TODO: what is external or internal hashing?
             }
             Algorithm::AsymmetricSignature(AsymmetricSignature::DeterministicEcdsa {
@@ -186,7 +198,8 @@ impl AteccKeySlot {
             }
             // AsymmetricEncryption
             Algorithm::AsymmetricEncryption(..) => {
-                // why only RSA? it could work with ECC...
+                // Why only RSA? it could work with ECC...
+                // It could not - no suuport for ECC encryption in ATECC.
                 false
             }
             // KeyAgreement
@@ -287,14 +300,20 @@ mod tests {
             },
         };
         // KeyType::P256EccKey
-        // Type::EccKeyPair => OK
-        assert_eq!(key_slot.is_key_type_ok(&attributes), true);
+        // Type::EccKeyPair => NOK
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        // private key attrs => OK
+        key_slot.config.key_type = rust_cryptoauthlib::KeyType::P256EccKey;
+        key_slot.config.write_config = rust_cryptoauthlib::WriteConfig::Encrypt;
+        key_slot.config.is_secret = true;
+        key_slot.config.ecc_key_attr.is_private = true;
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
         // Type::Aes => NOK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
         // Type::RawData => NOK
         attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
 
         // KeyType::Aes
         // Type::EccKeyPair => NOK
@@ -302,13 +321,13 @@ mod tests {
         attributes.key_type = Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         };
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
         // Type::Aes => OK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), true);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
         // Type::RawData => NOK
         attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
 
         // KeyType::ShaOrText
         // Type::EccKeyPair => NOK
@@ -316,13 +335,13 @@ mod tests {
         attributes.key_type = Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         };
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
         // Type::Aes => NOK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), false);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
         // Type::RawData => OK
         attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(&attributes), true);
+        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
     }
 
     #[test]

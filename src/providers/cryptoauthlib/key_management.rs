@@ -30,11 +30,17 @@ impl Provider {
             Type::Aes => Ok(rust_cryptoauthlib::KeyType::Aes),
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
-            }
-            | Type::EccPublicKey {
-                curve_family: EccFamily::SecpR1,
             } => {
                 if attributes.bits == 256 {
+                    Ok(rust_cryptoauthlib::KeyType::P256EccKey)
+                } else {
+                    Err(ResponseStatus::PsaErrorNotSupported)
+                }
+            }
+            Type::EccPublicKey {
+                curve_family: EccFamily::SecpR1,
+            } => {
+                if attributes.bits == 512 {
                     Ok(rust_cryptoauthlib::KeyType::P256EccKey)
                 } else {
                     Err(ResponseStatus::PsaErrorNotSupported)
