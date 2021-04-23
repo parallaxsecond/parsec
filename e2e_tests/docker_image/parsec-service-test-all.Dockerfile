@@ -1,3 +1,5 @@
+# Copyright 2021 Contributors to the Parsec project.
+# SPDX-License-Identifier: Apache-2.0
 FROM ubuntu:18.04
 
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
