@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh all
 
@@ -16,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
 
@@ -24,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         # Not running stress tests because they fail, presumably because of the same issue as #264
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
@@ -33,6 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
 
@@ -41,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
 
@@ -49,37 +64,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
 
   cross-compilation:
-    # Currently only the Mbed Crypto and PKCS 11 providers are tested as the other ones need to cross-compile other libraries.
+    # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: armv7-unknown-linux-gnueabihf
-        run: |
-          rustup target add armv7-unknown-linux-gnueabihf
-          sudo apt install -y gcc-multilib
-          sudo apt install -y gcc-arm-linux-gnueabihf
-          cargo build --features "pkcs11-provider, mbed-crypto-provider, all-authenticators" --target armv7-unknown-linux-gnueabihf
-      - name: aarch64-unknown-linux-gnu
-        run: |
-          rustup target add aarch64-unknown-linux-gnu
-          sudo apt install -y gcc-aarch64-linux-gnu
-          cargo build --features "pkcs11-provider, mbed-crypto-provider, all-authenticators" --target aarch64-unknown-linux-gnu
-      - name: i686-unknown-linux-gnu
-        run: |
-          sudo apt install -y gcc-multilib libc6-dev-i386
-          rustup target add i686-unknown-linux-gnu
-          cargo build --features "pkcs11-provider, mbed-crypto-provider, all-authenticators" --target i686-unknown-linux-gnu
+      # Use the following step when updating the `parsec-service-test-cross-compile` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links
