@@ -1,3 +1,9 @@
+#########################################################################
+# The example config file for atecc508a cryptochip.
+# There must be an I2C bus with a cryptochip soldered, otherwise provider 
+# instantiation fails.
+# Not to be used by github CI.
+#########################################################################
 [core_settings]
 # The CI already timestamps the logs
 log_timestamp = false

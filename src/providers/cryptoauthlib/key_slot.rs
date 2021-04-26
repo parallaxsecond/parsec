@@ -81,11 +81,11 @@ impl AteccKeySlot {
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
             } => {
-                // P256 private key has 256 bits (32 bytes).
+                // P256 private key has 256 bits (32 bytes). 0 means - do not care.
                 // Only private key is stored - public one can be computed when needed.
                 // The private key can onlly be stored encrypted and the encryption key must be set,
                 // see set_write_encryption_key() call in new().
-                key_attr.bits == 256
+                (key_attr.bits == 0 || key_attr.bits == 256)
                     && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
                     && self.config.write_config == rust_cryptoauthlib::WriteConfig::Encrypt
                     && self.config.ecc_key_attr.is_private
@@ -94,9 +94,9 @@ impl AteccKeySlot {
             Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => {
-                // The uncompressed public key is 512 bits (64 bytes).
+                // The uncompressed public key is 512 bits (64 bytes). 0 means - do not care.
                 // First few (7) slots are too short for ECC public key.
-                key_attr.bits == 512
+                (key_attr.bits == 0 || key_attr.bits == 512)
                     && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
                     && slot >= rust_cryptoauthlib::ATCA_ATECC_MIN_SLOT_IDX_FOR_PUB_KEY
             }
