@@ -94,9 +94,10 @@ impl AteccKeySlot {
             Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => {
-                // The uncompressed public key is 512 bits (64 bytes). 0 means - do not care.
+                // The uncompressed public key is 512 bits (64 bytes).
+                // But this is a length of a private key.
                 // First few (7) slots are too short for ECC public key.
-                (key_attr.bits == 0 || key_attr.bits == 512)
+                (key_attr.bits == 0 || key_attr.bits == 256)
                     && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
                     && slot >= rust_cryptoauthlib::ATCA_ATECC_MIN_SLOT_IDX_FOR_PUB_KEY
             }

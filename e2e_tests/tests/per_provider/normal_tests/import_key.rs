@@ -1,5 +1,5 @@
 // Copyright 2019 Contributors to the Parsec project.
-// SPDX-License-Identifier: Apache-2.
+// SPDX-License-Identifier: Apache-2.0
 #![allow(unused_imports)]
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
@@ -64,8 +64,8 @@ const KEY_PAIR_DATA: [u8; 609] = [
     0x27,
 ];
 
-#[cfg(feature = "cryptoauthlib-provider")]
-const KEY_PAIR_ECC: [u8; 121] = [
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+const ECC_KEY_PAIR: [u8; 121] = [
     0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0x26, 0xc8, 0x82, 0x9e, 0x22, 0xe3, 0x0c, 0xa6, 0x3d,
     0x29, 0xf5, 0xf7, 0x27, 0x39, 0x58, 0x47, 0x41, 0x81, 0xf6, 0x57, 0x4f, 0xdb, 0xcb, 0x4d, 0xbb,
     0xdd, 0x52, 0xff, 0x3a, 0xc0, 0xf6, 0x0d, 0xa0, 0x0a, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,
@@ -75,6 +75,16 @@ const KEY_PAIR_ECC: [u8; 121] = [
     0xf4, 0xf2, 0x3c, 0xef, 0xfa, 0x08, 0xa7, 0xb4, 0xc6, 0xe0, 0xce, 0x73, 0xac, 0xd0, 0x69, 0xd4,
     0xcc, 0xa8, 0xd0, 0x55, 0xee, 0x6c, 0x65, 0xb5, 0x71,
 ];
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+const ECC_PUBLIC_KEY: [u8; 65] = [
+        0x04,
+        0x01, 0xf7, 0x69, 0xe2, 0x40, 0x3a, 0xeb, 0x0d, 0x64, 0x3e, 0x81, 0xb8, 0xda, 0x95, 0xb0,
+        0x1c, 0x25, 0x80, 0xfe, 0xa3, 0xd3, 0xd0, 0x5b, 0x2f, 0xef, 0x6a, 0x31, 0x9c, 0xa9, 0xca,
+        0x5d, 0xe5, 0x2b, 0x4b, 0x49, 0x2c, 0x24, 0x2c, 0xef, 0xf4, 0xf2, 0x3c, 0xef, 0xfa, 0x08,
+        0xa7, 0xb4, 0xc6, 0xe0, 0xce, 0x73, 0xac, 0xd0, 0x69, 0xd4, 0xcc, 0xa8, 0xd0, 0x55, 0xee,
+        0x6c, 0x65, 0xb5, 0x71,
+    ];
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 fn example_modulus_1024() -> Vec<u8> {
@@ -101,7 +111,7 @@ fn import_rsa_key() -> Result<()> {
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
 fn import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -110,14 +120,14 @@ fn import_ecc_key() -> Result<()> {
         return Ok(());
     }
 
-    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, KEY_PAIR_ECC.to_vec())
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_PUBLIC_KEY.to_vec())
 }
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn create_and_import_rsa_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("create_and_import_key");
+    let key_name = String::from("create_and_import_rsa_key");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -131,18 +141,18 @@ fn create_and_import_rsa_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
 fn create_and_import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("create_and_import_key");
+    let key_name = String::from("create_and_import_ecc_key");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
 
     client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
     let status = client
-        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, KEY_PAIR_ECC.to_vec())
+        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_KEY_PAIR.to_vec())
         .expect_err("Key should have already existed");
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
@@ -177,9 +187,9 @@ fn import_ecc_key_twice() -> Result<()> {
         return Ok(());
     }
 
-    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), KEY_PAIR_ECC.to_vec())?;
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), ECC_PUBLIC_KEY.to_vec())?;
     let status = client
-        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, KEY_PAIR_ECC.to_vec())
+        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_PUBLIC_KEY.to_vec())
         .expect_err("The key with the same name has already been created.");
     
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
@@ -406,5 +416,5 @@ fn import_ecc_private_key() {
         return;
     }
 
-    client.import_ecc_pair_secp_r1_key(key_name, KEY_PAIR_ECC.to_vec()).unwrap();
+    client.import_ecc_pair_secp_r1_key(key_name, ECC_KEY_PAIR.to_vec()).unwrap();
 }

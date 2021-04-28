@@ -610,7 +610,7 @@ impl TestClient {
                 key_type: Type::EccPublicKey {
                     curve_family: EccFamily::SecpR1,
                 },
-                bits: 512,
+                bits: 256,
                 policy: Policy {
                     usage_flags: UsageFlags {
                         sign_hash: false,
