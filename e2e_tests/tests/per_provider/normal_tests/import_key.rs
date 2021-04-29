@@ -315,7 +315,6 @@ fn check_format_import3() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn failed_imported_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
@@ -323,7 +322,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
-
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     let public_key = RSAPublicKey {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
@@ -359,7 +358,10 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         .import_key(key_name.clone(), attributes, Vec::new())
         .unwrap_err();
     // Should succeed because key would have been destroyed.
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.import_rsa_public_key(key_name, picky_asn1_der::to_vec(&public_key).unwrap())?;
+    #[cfg(feature = "cryptoauthlib-provider")]
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_PUBLIC_KEY.to_vec())?;
 
     Ok(())
 }
