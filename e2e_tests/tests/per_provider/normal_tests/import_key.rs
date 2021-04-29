@@ -318,7 +318,7 @@ fn check_format_import3() -> Result<()> {
 #[test]
 fn failed_imported_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("failed_imported_key_should_be_removed");
+    let key_name = String::from("failed_imported_key_should_be_removed_notpm");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
