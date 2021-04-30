@@ -27,7 +27,7 @@ impl Provider {
         key_id: u32,
         key_type: KeyPairType,
     ) -> Result<ObjectHandle> {
-        let mut template = vec![Attribute::Id(key_id.to_be_bytes().into())];
+        let mut template = vec![Attribute::Id(key_id.to_be_bytes().to_vec())];
 
         match key_type {
             KeyPairType::PublicKey => template.push(Attribute::Class(ObjectClass::PUBLIC_KEY)),
@@ -103,7 +103,7 @@ impl Provider {
         let key_id = self.create_key_id();
 
         let mut pub_template = vec![
-            Attribute::Id(key_id.to_be_bytes().into()),
+            Attribute::Id(key_id.to_be_bytes().to_vec()),
             Attribute::Token(true.into()),
             Attribute::AllowedMechanisms(vec![Mechanism::try_from(
                 key_attributes.policy.permitted_algorithms,
@@ -122,7 +122,7 @@ impl Provider {
         let mech = match key_attributes.key_type {
             Type::RsaKeyPair => {
                 pub_template.push(Attribute::Private(false.into()));
-                pub_template.push(Attribute::PublicExponent(utils::PUBLIC_EXPONENT.into()));
+                pub_template.push(Attribute::PublicExponent(utils::PUBLIC_EXPONENT.to_vec()));
                 pub_template.push(Attribute::ModulusBits(
                     key_attributes.bits.try_into().map_err(to_response_status)?,
                 ));
@@ -225,7 +225,7 @@ impl Provider {
         template.push(Attribute::PublicExponent(exponent_object.into()));
         template.push(Attribute::Verify(true.into()));
         template.push(Attribute::Encrypt(true.into()));
-        template.push(Attribute::Id(key_id.to_be_bytes().into()));
+        template.push(Attribute::Id(key_id.to_be_bytes().to_vec()));
         template.push(Attribute::Private(false.into()));
         template.push(Attribute::AllowedMechanisms(vec![MechanismType::RSA_PKCS]));
 
