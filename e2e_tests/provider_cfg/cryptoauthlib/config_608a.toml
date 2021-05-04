@@ -1,5 +1,5 @@
 #########################################################################
-# The example config file for atecc508a cryptochip.
+# The example config file for atecc608a cryptochip.
 # There must be an I2C bus with a cryptochip soldered, otherwise provider 
 # instantiation fails.
 # Not to be used by github CI.
@@ -29,9 +29,9 @@ store_path = "./mappings"
 [[provider]]
 provider_type = "CryptoAuthLib"
 key_info_manager = "on-disk-manager"
-device_type = "atecc508a"
+device_type = "atecc608a"
 iface_type = "i2c"
-wake_delay = 1500
+wake_delay = 1600
 rx_retries = 20
 # i2c parameters for i2c-pseudo proxy
 slave_address = 0xc0

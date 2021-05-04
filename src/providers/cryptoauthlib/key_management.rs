@@ -34,7 +34,7 @@ impl Provider {
             | Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => {
-                if attributes.bits == 256 {
+                if attributes.bits == 256 || attributes.bits == 0 {
                     Ok(rust_cryptoauthlib::KeyType::P256EccKey)
                 } else {
                     Err(ResponseStatus::PsaErrorNotSupported)
