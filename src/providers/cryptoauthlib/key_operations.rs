@@ -6,7 +6,7 @@ use crate::authenticators::ApplicationName;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{EccFamily, Type};
 use parsec_interface::operations::{psa_destroy_key, psa_generate_key, psa_import_key};
-use parsec_interface::requests::{ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, Secret};
 
 impl Provider {
@@ -24,10 +24,12 @@ impl Provider {
             error!("Failed to get type for key. {}", e);
             e
         })?;
-        let slot_id = self.find_suitable_slot(&key_attributes).map_err(|e| {
-            warn!("Failed to find suitable storage slot for key. {}", e);
-            e
-        })?;
+        let slot_id = self
+            .find_suitable_slot(&key_attributes, Some(Opcode::PsaGenerateKey))
+            .map_err(|e| {
+                warn!("Failed to find suitable storage slot for key. {}", e);
+                e
+            })?;
         // generate key
         match self.device.gen_key(key_type, slot_id) {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
@@ -79,7 +81,7 @@ impl Provider {
                 Ok(psa_destroy_key::Result {})
             }
             Err(error) => {
-                warn!("Key {} removal reported an error: - {}", key_triple, error);
+                warn!("Key {} removal reported : - {}", key_triple, error);
                 Err(error)
             }
         }
@@ -99,8 +101,7 @@ impl Provider {
             Ok(x) => x,
             Err(error) => return Err(error),
         };
-
-        let slot_id = match self.find_suitable_slot(&key_attributes) {
+        let slot_id = match self.find_suitable_slot(&key_attributes, Some(Opcode::PsaImportKey)) {
             Ok(slot) => slot,
             Err(error) => {
                 warn!("Failed to find suitable storage slot for key. {}", error);

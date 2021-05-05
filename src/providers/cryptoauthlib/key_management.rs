@@ -3,13 +3,17 @@
 use super::Provider;
 use crate::providers::cryptoauthlib::key_slot::KeySlotStatus;
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
-use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::{Opcode, ResponseStatus};
 
 impl Provider {
     /// Iterate through key_slots and find a free one with configuration matching attributes.
     /// If found, the slot is marked Busy.
-    pub fn find_suitable_slot(&self, key_attr: &Attributes) -> Result<u8, ResponseStatus> {
-        self.key_slots.find_suitable_slot(key_attr)
+    pub fn find_suitable_slot(
+        &self,
+        key_attr: &Attributes,
+        op: Option<Opcode>,
+    ) -> Result<u8, ResponseStatus> {
+        self.key_slots.find_suitable_slot(key_attr, op)
     }
 
     /// Set status of AteccKeySlot
@@ -30,8 +34,14 @@ impl Provider {
             Type::Aes => Ok(rust_cryptoauthlib::KeyType::Aes),
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
+            } => {
+                if attributes.bits == 256 || attributes.bits == 0 {
+                    Ok(rust_cryptoauthlib::KeyType::P256EccKey)
+                } else {
+                    Err(ResponseStatus::PsaErrorNotSupported)
+                }
             }
-            | Type::EccPublicKey {
+            Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => {
                 if attributes.bits == 256 || attributes.bits == 0 {

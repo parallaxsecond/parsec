@@ -382,7 +382,7 @@ impl TestClient {
         )
     }
 
-    /// Import ECC key pair with secp R1 curve family.
+    /// Generate ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn generate_ecc_pair_secp_r1_key(&mut self, key_name: String) -> Result<()> {
         let attributes = Attributes {
@@ -631,6 +631,42 @@ impl TestClient {
                 },
             },
             data,
+        )
+    }
+
+    pub fn import_ecc_key_pair_secpr1_ecdsa_sha256(
+        &mut self,
+        key_name: String,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        self.import_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: true,
+                        verify_hash: true,
+                        sign_message: true,
+                        verify_message: true,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricSignature::Ecdsa {
+                        hash_alg: Hash::Sha256.into(),
+                    }
+                    .into(),
+                },
+            },
+            data
         )
     }
 
