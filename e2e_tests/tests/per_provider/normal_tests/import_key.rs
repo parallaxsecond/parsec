@@ -65,14 +65,14 @@ const KEY_PAIR_DATA: [u8; 609] = [
 ];
 
 #[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
-const ECC_PRIVATE_KEY: [u8; 32] = [
+pub const ECC_PRIVATE_KEY: [u8; 32] = [
     0x26, 0xc8, 0x82, 0x9e, 0x22, 0xe3, 0x0c, 0xa6, 0x3d, 0x29, 0xf5, 0xf7, 0x27, 0x39, 0x58,
     0x47, 0x41, 0x81, 0xf6, 0x57, 0x4f, 0xdb, 0xcb, 0x4d, 0xbb, 0xdd, 0x52, 0xff, 0x3a, 0xc0,
     0xf6, 0x0d,
 ];
 
 #[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
-const ECC_PUBLIC_KEY: [u8; 65] = [
+pub const ECC_PUBLIC_KEY: [u8; 65] = [
     0x04,
     0x01, 0xf7, 0x69, 0xe2, 0x40, 0x3a, 0xeb, 0x0d, 0x64, 0x3e, 0x81, 0xb8, 0xda, 0x95, 0xb0,
     0x1c, 0x25, 0x80, 0xfe, 0xa3, 0xd3, 0xd0, 0x5b, 0x2f, 0xef, 0x6a, 0x31, 0x9c, 0xa9, 0xca,
@@ -127,10 +127,21 @@ fn create_and_import_rsa_key() -> Result<()> {
         return Ok(());
     }
 
-    client.generate_rsa_sign_key(key_name.clone())?;
-    let status = client
-        .import_rsa_public_key(key_name, KEY_DATA.to_vec())
-        .expect_err("Key should have already existed");
+    let status;
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    {
+        client.generate_rsa_sign_key(key_name.clone())?;
+        status = client
+            .import_rsa_public_key(key_name, KEY_DATA.to_vec())
+            .expect_err("Key should have already existed");
+    }
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
+        status = client
+            .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, PUB_KEY_ECC.to_vec())
+            .expect_err("Key should have already existed");
+    }
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
     Ok(())
@@ -315,6 +326,7 @@ fn check_format_import3() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn failed_imported_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
@@ -413,5 +425,5 @@ fn import_ecc_private_key() {
         return;
     }
 
-    client.import_ecc_pair_secp_r1_key(key_name, ECC_PRIVATE_KEY.to_vec()).unwrap();
+    client.import_ecc_key_pair_secpr1_ecdsa_sha256(key_name, ECC_PRIVATE_KEY.to_vec()).unwrap();
 }

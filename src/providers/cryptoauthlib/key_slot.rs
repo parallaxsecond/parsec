@@ -5,7 +5,7 @@ use parsec_interface::operations::psa_algorithm::{
     KeyAgreement, Mac, RawKeyAgreement, SignHash,
 };
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
-use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::{Opcode, ResponseStatus};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 /// Software status of a ATECC slot
@@ -45,6 +45,7 @@ impl AteccKeySlot {
         &self,
         slot: u8,
         key_attr: &Attributes,
+        op: Option<Opcode>,
     ) -> Result<(), ResponseStatus> {
         // (1) Check attributes.key_type
         if !self.is_key_type_ok(slot, key_attr) {
@@ -55,7 +56,7 @@ impl AteccKeySlot {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
         // (3) Check attributes.policy.permitted_algorithms
-        if !self.is_permitted_algorithms_ok(key_attr) {
+        if !self.is_permitted_algorithms_ok(key_attr, op) {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
         Ok(())
@@ -87,7 +88,6 @@ impl AteccKeySlot {
                 // see set_write_encryption_key() call in new().
                 (key_attr.bits == 0 || key_attr.bits == 256)
                     && self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
-                    && self.config.write_config == rust_cryptoauthlib::WriteConfig::Encrypt
                     && self.config.ecc_key_attr.is_private
                     && self.config.is_secret
             }
@@ -134,7 +134,7 @@ impl AteccKeySlot {
         result
     }
 
-    fn is_permitted_algorithms_ok(&self, key_attr: &Attributes) -> bool {
+    fn is_permitted_algorithms_ok(&self, key_attr: &Attributes, op: Option<Opcode>) -> bool {
         match key_attr.policy.permitted_algorithms {
             // Hash algorithm
             Algorithm::Hash(Hash::Sha256) => true,
@@ -188,8 +188,48 @@ impl AteccKeySlot {
             Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             }) => {
+                // Only ECC
                 self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
-                // TODO: what is external or internal hashing?
+                    && match key_attr.key_type {
+                        Type::EccKeyPair {
+                            curve_family: EccFamily::SecpR1,
+                        } => {
+                            // CryptoAuthLib supports using pair of keys for both signing and verifying.
+                            // Up to two WriteConfig values, depending on operation
+                            self.config.ecc_key_attr.ext_sign
+                                && match op {
+                                    Some(opcode) => match opcode {
+                                        Opcode::PsaImportKey => {
+                                            self.config.write_config
+                                                == rust_cryptoauthlib::WriteConfig::Encrypt
+                                        }
+                                        Opcode::PsaGenerateKey => {
+                                            self.config.write_config
+                                                == rust_cryptoauthlib::WriteConfig::Encrypt
+                                                || self.config.write_config
+                                                    == rust_cryptoauthlib::WriteConfig::Never
+                                        }
+                                        _ => false,
+                                    },
+                                    None => true,
+                                }
+                        }
+                        Type::EccPublicKey {
+                            curve_family: EccFamily::SecpR1,
+                        } => {
+                            // CryptoAuthLib supports using public key for verifying only.
+                            // Using Always is considred unsafe (the key can be read from chip),
+                            // but using PubInvalid is not supported by rust-cryptoauthlib 0.3.0
+                            self.config.ecc_key_attr.ext_sign
+                                && matches!(
+                                    self.config.write_config,
+                                    rust_cryptoauthlib::WriteConfig::Encrypt
+                                        | rust_cryptoauthlib::WriteConfig::Never
+                                        | rust_cryptoauthlib::WriteConfig::Always //| rust_cryptoauthlib::WriteConfig::PubInvalid
+                                )
+                        }
+                        _ => false,
+                    }
             }
             Algorithm::AsymmetricSignature(AsymmetricSignature::DeterministicEcdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
@@ -200,7 +240,7 @@ impl AteccKeySlot {
             // AsymmetricEncryption
             Algorithm::AsymmetricEncryption(..) => {
                 // Why only RSA? it could work with ECC...
-                // It could not - no suuport for ECC encryption in ATECC.
+                // It could not - no support for ECC encryption in ATECC.
                 false
             }
             // KeyAgreement
@@ -444,7 +484,7 @@ mod tests {
     fn test_is_permitted_algorithms_ok() {
         // SlotConfig init
         let slot_config = SlotConfig {
-            write_config: rust_cryptoauthlib::WriteConfig::Always,
+            write_config: rust_cryptoauthlib::WriteConfig::Encrypt,
             key_type: rust_cryptoauthlib::KeyType::P256EccKey,
             read_key: ReadKey {
                 encrypt_read: false,
@@ -452,7 +492,7 @@ mod tests {
             },
             ecc_key_attr: EccKeyAttr {
                 is_private: true,
-                ext_sign: false,
+                ext_sign: true,
                 int_sign: false,
                 ecdh_operation: false,
                 ecdh_secret_out: false,
@@ -505,31 +545,37 @@ mod tests {
 
         // KeyType::P256EccKey
         // && AsymmetricSignature::Ecdsa => OK
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), true);
+        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
         // && FullLengthMac::Hmac => NOK
         attributes.policy.permitted_algorithms = Mac::FullLength(FullLengthMac::Hmac {
             hash_alg: Hash::Sha256,
         })
         .into();
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), false);
+        assert_eq!(
+            key_slot.is_permitted_algorithms_ok(&attributes, None),
+            false
+        );
         // && AsymmetricSignature::DeterministicEcdsa => NOK
         attributes.policy.permitted_algorithms = AsymmetricSignature::DeterministicEcdsa {
             hash_alg: Hash::Sha256.into(),
         }
         .into();
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), false);
+        assert_eq!(
+            key_slot.is_permitted_algorithms_ok(&attributes, None),
+            false
+        );
         // && RawKeyAgreement::Ecdh => OK
         attributes.policy.permitted_algorithms = KeyAgreement::Raw(RawKeyAgreement::Ecdh).into();
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), true);
+        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
 
         // KeyType::Aes
         // && Aead::AeadWithDefaultLengthTag => OK
         attributes.policy.permitted_algorithms =
             Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm).into();
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::Aes;
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), true);
+        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
         // && Cipher(Cipher::CbcPkcs7) => OK
         attributes.policy.permitted_algorithms = Algorithm::Cipher(Cipher::CbcPkcs7);
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes), true);
+        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
     }
 }

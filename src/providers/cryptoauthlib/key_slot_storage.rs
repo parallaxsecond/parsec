@@ -1,8 +1,9 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use crate::providers::cryptoauthlib::key_slot::{AteccKeySlot, KeySlotStatus};
+use log::warn;
 use parsec_interface::operations::psa_key_attributes::Attributes;
-use parsec_interface::requests::ResponseStatus;
+use parsec_interface::requests::{Opcode, ResponseStatus};
 use std::sync::RwLock;
 
 #[derive(Debug)]
@@ -19,8 +20,9 @@ impl KeySlotStorage {
         }
     }
 
-    /// Validate KeyInfo data store entry against hardware
-    /// Mark slot busy when all checks pass
+    /// Validate KeyInfo data store entry against hardware.
+    /// Mark slot busy when all checks pass.
+    /// Expected to be called from Provider::new() only.
     pub fn key_validate_and_mark_busy(
         &self,
         key_id: u8,
@@ -33,7 +35,7 @@ impl KeySlotStorage {
         // (2) if there are no two key triples mapping to a single ATECC slot - warning only ATM
 
         // check (1)
-        match key_slots[key_id as usize].key_attr_vs_config(key_id, &key_attr) {
+        match key_slots[key_id as usize].key_attr_vs_config(key_id, &key_attr, None) {
             Ok(_) => (),
             Err(err) => {
                 let error = std::format!("ATECC slot configuration mismatch: {}", err);
@@ -92,17 +94,27 @@ impl KeySlotStorage {
 
     /// Iterate through key_slots and find a free one with configuration matching attributes.
     /// If found, the slot is marked Busy.
-    pub fn find_suitable_slot(&self, key_attr: &Attributes) -> Result<u8, ResponseStatus> {
+    pub fn find_suitable_slot(
+        &self,
+        key_attr: &Attributes,
+        op: Option<Opcode>,
+    ) -> Result<u8, ResponseStatus> {
         let mut key_slots = self.storage.write().unwrap();
         for slot in 0..rust_cryptoauthlib::ATCA_ATECC_SLOTS_COUNT {
             if !key_slots[slot as usize].is_free() {
                 continue;
             }
-            match key_slots[slot as usize].key_attr_vs_config(slot, key_attr) {
+            match key_slots[slot as usize].key_attr_vs_config(slot, key_attr, op) {
                 Ok(_) => {
                     match key_slots[slot as usize].set_slot_status(KeySlotStatus::Busy) {
                         Ok(()) => return Ok(slot),
-                        Err(err) => return Err(err),
+                        Err(err) => {
+                            warn!(
+                                "find_suitable_slot() - slot {} cannot be marked as busy",
+                                slot
+                            );
+                            return Err(err);
+                        }
                     };
                 }
                 Err(_) => continue,
