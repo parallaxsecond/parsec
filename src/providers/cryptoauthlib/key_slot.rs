@@ -112,24 +112,48 @@ impl AteccKeySlot {
     fn is_usage_flags_ok(&self, key_attr: &Attributes) -> bool {
         let mut result = true;
         if key_attr.policy.usage_flags.export || key_attr.policy.usage_flags.copy {
-            result &= match self.config.key_type {
-                rust_cryptoauthlib::KeyType::Aes => true,
-                rust_cryptoauthlib::KeyType::P256EccKey => {
-                    self.config.pub_info
-                        && matches!(
-                            key_attr.key_type,
-                            Type::EccPublicKey { .. } | Type::DhPublicKey { .. }
-                        )
+            result &= match key_attr.key_type {
+                Type::EccKeyPair { .. } | Type::DhKeyPair { .. } => {
+                    self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
+                        && if self.config.ecc_key_attr.is_private {
+                            self.config.pub_info
+                        } else {
+                            true
+                        }
                 }
                 _ => true,
             }
         }
         if !result {
-            return false;
+            return result;
         }
+
         if key_attr.policy.usage_flags.sign_hash || key_attr.policy.usage_flags.sign_message {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= self.config.ecc_key_attr.is_private;
+            result &= self.config.ecc_key_attr.ext_sign; // The only supported mode
+            result &= matches!(
+                key_attr.key_type,
+                Type::EccKeyPair { .. } | Type::DhKeyPair { .. }
+            );
+        }
+        if !result {
+            return result;
+        }
+
+        if key_attr.policy.usage_flags.verify_hash || key_attr.policy.usage_flags.verify_message {
+            result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
+            result &= match key_attr.key_type {
+                Type::EccKeyPair { .. } | Type::DhKeyPair { .. } => {
+                    // `pub_info == true` is relevant when `is_private == true`
+                    if self.config.ecc_key_attr.is_private {
+                        self.config.pub_info
+                    } else {
+                        true
+                    }
+                }
+                _ => true,
+            };
         }
         result
     }
@@ -194,9 +218,11 @@ impl AteccKeySlot {
                         Type::EccKeyPair {
                             curve_family: EccFamily::SecpR1,
                         } => {
-                            // CryptoAuthLib supports using pair of keys for both signing and verifying.
-                            // Up to two WriteConfig values, depending on operation
-                            self.config.ecc_key_attr.ext_sign
+                            // CryptoAuthLib supports using private key (here: pair of keys) for
+                            // both signing (directly) and verifying (indirectly).
+                            // Up to two WriteConfig values are allowed, depending on operation.
+                            self.config.ecc_key_attr.is_private
+                                && self.config.ecc_key_attr.ext_sign
                                 && match op {
                                     Some(opcode) => match opcode {
                                         Opcode::PsaImportKey => {
@@ -204,10 +230,11 @@ impl AteccKeySlot {
                                                 == rust_cryptoauthlib::WriteConfig::Encrypt
                                         }
                                         Opcode::PsaGenerateKey => {
-                                            self.config.write_config
-                                                == rust_cryptoauthlib::WriteConfig::Encrypt
-                                                || self.config.write_config
-                                                    == rust_cryptoauthlib::WriteConfig::Never
+                                            matches!(
+                                                self.config.write_config,
+                                                rust_cryptoauthlib::WriteConfig::Encrypt
+                                                    | rust_cryptoauthlib::WriteConfig::Never
+                                            )
                                         }
                                         _ => false,
                                     },
@@ -220,13 +247,12 @@ impl AteccKeySlot {
                             // CryptoAuthLib supports using public key for verifying only.
                             // Using Always is considred unsafe (the key can be read from chip),
                             // but using PubInvalid is not supported by rust-cryptoauthlib 0.3.0
-                            self.config.ecc_key_attr.ext_sign
-                                && matches!(
-                                    self.config.write_config,
-                                    rust_cryptoauthlib::WriteConfig::Encrypt
-                                        | rust_cryptoauthlib::WriteConfig::Never
-                                        | rust_cryptoauthlib::WriteConfig::Always //| rust_cryptoauthlib::WriteConfig::PubInvalid
-                                )
+                            matches!(
+                                self.config.write_config,
+                                rust_cryptoauthlib::WriteConfig::Encrypt
+                                    | rust_cryptoauthlib::WriteConfig::Never
+                                    | rust_cryptoauthlib::WriteConfig::Always
+                            )
                         }
                         _ => false,
                     }
@@ -380,9 +406,6 @@ mod tests {
         // Type::Aes => NOK
         attributes.key_type = Type::Aes;
         assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
-        // Type::RawData => OK
-        attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
     }
 
     #[test]
@@ -397,7 +420,7 @@ mod tests {
             },
             ecc_key_attr: EccKeyAttr {
                 is_private: true,
-                ext_sign: false,
+                ext_sign: true,
                 int_sign: false,
                 ecdh_operation: false,
                 ecdh_secret_out: false,
@@ -423,15 +446,15 @@ mod tests {
         // ECC Key Attributes
         let mut attributes = Attributes {
             lifetime: Lifetime::Persistent,
-            key_type: Type::EccPublicKey {
+            key_type: Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
             },
             bits: 256,
             policy: Policy {
                 usage_flags: UsageFlags {
-                    sign_hash: true,
+                    sign_hash: false,
                     verify_hash: true,
-                    sign_message: true,
+                    sign_message: false,
                     verify_message: false,
                     export: true,
                     encrypt: false,
@@ -446,38 +469,32 @@ mod tests {
                 .into(),
             },
         };
-        // Type::EccPublicKey
-        // && is_private == true
+        // Type::EccKeyPair
         // && export && copy == true => OK
         assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
-        // && is_private == false => NOK
-        key_slot.config.ecc_key_attr.is_private = false;
+        // && pub_info == false => OK
+        key_slot.config.pub_info = false;
         assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
-        key_slot.config.ecc_key_attr.is_private = true;
         // && pub_info == false => NOK
         key_slot.config.pub_info = false;
         assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
-        key_slot.config.pub_info = true;
-
-        // Type::EccKeyPair => NOK
-        attributes.key_type = Type::EccKeyPair {
-            curve_family: EccFamily::SecpR1,
-        };
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
+        // && is_private == false => NOK
+        key_slot.config.ecc_key_attr.is_private = false;
+        assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
         // && export && copy == false => OK
         attributes.policy.usage_flags.export = false;
         attributes.policy.usage_flags.copy = false;
         assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
-        attributes.policy.usage_flags.export = true;
-        attributes.policy.usage_flags.copy = true;
 
         // KeyType::Aes => NOK
+        attributes.policy.usage_flags.export = true;
+        attributes.policy.usage_flags.copy = true;
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::Aes;
         assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
         // && sign_hash && sign_message == false => OK
         attributes.policy.usage_flags.sign_hash = false;
         attributes.policy.usage_flags.sign_message = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
+        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
     }
 
     #[test]
