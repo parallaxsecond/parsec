@@ -64,7 +64,7 @@ See the [Community](https://github.com/parallaxsecond/community) repository for 
 # Contributing
 
 We would be happy for you to contribute to Parsec!
-Please check the [**Contribution Guidelines**](https://parallaxsecond.github.io/parsec-book/contributing.html)
+Please check the [**Contribution Guidelines**](https://parallaxsecond.github.io/parsec-book/contributing/index.html)
 to know more about the contribution process.
 Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
