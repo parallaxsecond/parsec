@@ -62,10 +62,7 @@ impl Provider {
         let id = key::Id::from_persistent_key_id(key_id)?;
         let key_attributes = key::Attributes::from_key_id(id)?;
         op.validate(key_attributes)?;
-        let salt_buff = match &op.salt {
-            Some(salt) => Some(salt.as_slice()),
-            None => None,
-        };
+        let salt_buff = op.salt.as_ref().map(|salt| salt.as_slice());
         let buffer_size = key_attributes.asymmetric_decrypt_output_size(op.alg)?;
         let mut plaintext = vec![0u8; buffer_size];
 

@@ -17,11 +17,11 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
         .generate_comments(false)
         .size_t_is_usize(true)
         .generate()
-        .or_else(|_| {
-            Err(Error::new(
+        .map_err(|_| {
+            Error::new(
                 ErrorKind::Other,
                 "Unable to generate bindings to trusted services locator",
-            ))
+            )
         })?;
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings.write_to_file(out_path.join("ts_bindings.rs"))?;
@@ -49,11 +49,11 @@ fn generate_proto_sources(contract_dir: String) -> Result<()> {
                 .path()
                 .into_os_string()
                 .into_string()
-                .or_else(|_| {
-                    Err(Error::new(
+                .map_err(|_| {
+                    Error::new(
                         ErrorKind::InvalidData,
                         "conversion from OsString to String failed",
-                    ))
+                    )
                 })
         })
         // Fail the entire operation if there was an error.
