@@ -8,7 +8,7 @@ RUN apt update
 RUN apt install -y autoconf-archive libcmocka0 libcmocka-dev procps
 RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake libssl-dev uthash-dev doxygen libjson-c-dev
 RUN apt install -y --fix-missing wget python3 cmake clang
-RUN apt install -y libini-config-dev libcurl4-openssl-dev tpm2-tools curl libgcc1
+RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
 RUN apt install -y python3-distutils libclang-dev protobuf-compiler python3-pip
 
 WORKDIR /tmp
@@ -22,6 +22,15 @@ RUN cd tpm2-tss \
 	&& make install \
 	&& ldconfig
 RUN rm -rf tpm2-tss
+
+# Download and install TPM 2.0 Tools verison 4.1.1
+RUN git clone https://github.com/tpm2-software/tpm2-tools.git --branch 4.1.1
+RUN cd tpm2-tools \
+    && ./bootstrap \
+    && ./configure --prefix=/usr \
+    && make -j$(nproc) \
+    && make install
+RUN rm -rf tpm2-tools
 
 # Download and install software TPM
 ARG ibmtpm_name=ibmtpm1637
@@ -93,7 +102,7 @@ RUN softhsm2-util --init-token --slot 0 --label "Parsec Tests" --pin 123456 --so
 ENV RUSTUP_HOME /opt/rust
 ENV CARGO_HOME /opt/rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:/opt/rust/bin:${PATH}"
 
 # Install the wrappers for the Rust binaries installed earlier
 COPY _exec_wrapper /usr/local/bin/
@@ -105,3 +114,7 @@ RUN useradd -m parsec-client-2
 
 # Add `/usr/local/lib` to library path for Trusted service provider
 ENV LD_LIBRARY_PATH="/usr/local/lib"
+
+# Generate keys for the key mappings test
+COPY generate-keys.sh /tmp/
+RUN ./generate-keys.sh

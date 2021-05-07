@@ -27,7 +27,8 @@ fn client1_before() {
     }
 
     let clients = client.list_clients().unwrap();
-    assert_eq!(clients.len(), 1);
+    // One client already exists from the key mappings test.
+    assert_eq!(clients.len(), 2);
 }
 
 #[test]
@@ -90,13 +91,13 @@ fn client1_after() {
         .generate_rsa_sign_key("client1-key".to_string())
         .unwrap();
     let mut clients = client.list_clients().unwrap();
-    assert_eq!(clients.len(), 2);
+    assert_eq!(clients.len(), 3);
     client.delete_client(clients.remove(0)).unwrap();
     let mut clients = client.list_clients().unwrap();
-    assert_eq!(clients.len(), 1);
+    assert_eq!(clients.len(), 2);
     client.delete_client(clients.remove(0)).unwrap();
     let clients = client.list_clients().unwrap();
-    assert_eq!(clients.len(), 0);
+    assert_eq!(clients.len(), 1);
     let keys = client.list_keys().unwrap();
     assert_eq!(keys.len(), 0);
 }

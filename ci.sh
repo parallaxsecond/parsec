@@ -77,34 +77,9 @@ run_normal_tests() {
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml normal_tests
 }
 
-run_persistence_before_tests() {
-    echo "Execute persistent test, before the reload"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_before
-
-    # Create a fake mapping file for the root application, the provider and a
-    # key name of "Test Key". It contains a valid KeyInfo structure.
-    # It is tested in test "should_have_been_deleted".
-    # This test does not make sense for the TPM provider.
-    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-        echo "Create a fake mapping file for Mbed Crypto Provider"
-        mkdir -p mappings/cm9vdA==/1
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/1/VGVzdCBLZXk\=
-    elif [ "$PROVIDER_NAME" = "pkcs11" ]; then
-        echo "Create a fake mapping file for PKCS 11 Provider"
-        mkdir -p mappings/cm9vdA==/2
-        printf '\x04\x00\x00\x00\x00\x00\x00\x00\xd8\x9e\xa3\x05\x01\x00\x00\x00' > mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x09\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x01\x01\x01\x01\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-        printf '\x00\x00\x06\x00\x00\x00' >> mappings/cm9vdA==/2/VGVzdCBLZXk\=
-    fi
-}
-
-run_persistence_after_tests() {
-    echo "Execute persistent test, after the reload"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml persistent_after
+run_key_mappings_tests() {
+    echo "Execute key mappings tests"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
 }
 
 # Parse arguments
@@ -152,12 +127,15 @@ fi
 trap cleanup EXIT
 
 if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
+    cp /tmp/NVChip .
     # Start and configure TPM server
     tpm_server &
     TPM_SRV_PID=$!
     sleep 5
-    tpm2_startup -c 2>/dev/null
-    tpm2_takeownership -o tpm_pass 2>/dev/null
+    # The -c flag is not used because some keys were created in the TPM via the generate-keys.sh
+    # script. Ownership has already been taken with "tpm_pass".
+    tpm2_startup -T mssim
 fi
 
 if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
@@ -189,24 +167,20 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
+        cp -r /tmp/mappings/ .
+        cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
+        if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+            cp /tmp/*.psa_its .
+        fi
+
         # Start service
         RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
 
         # Run tests
         run_normal_tests
-        run_persistence_before_tests
+        run_key_mappings_tests
         stop_service
-
-        # Setup for persistence-after tests
-        mkdir -p reports/$provider-persistence
-        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/$provider-persistence --features="$provider-provider,direct-authenticator" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
-        wait_for_service
-        run_persistence_after_tests
-        stop_service
-
-        # Remove mappings between providers to allow persistence tests to succeed
-        rm -rf mappings/*
     done
 
     # Run unit tests
@@ -233,6 +207,21 @@ RUST_BACKTRACE=1 cargo test $FEATURES
 
 # Removing any mappings left over from integration tests
 rm -rf mappings/
+
+# Add the Docker image's mappings in this Parsec service for the key mappings
+# test.
+# The key mappings test in e2e_tests/tests/per_provider/key_mappings.rs will try
+# to use the key generated via the generate-keys.sh script in the test image.
+cp -r /tmp/mappings/ .
+# Add the fake mappings for the key mappings test as well. The test will check that
+# those keys have successfully been deleted.
+# TODO: add fake mappings for the Trusted Service and CryptoAuthLib providers.
+cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
+# As Mbed Crypto saves its keys on the current directory we need to move them
+# as well.
+if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+    cp /tmp/*.psa_its .
+fi
 
 echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
@@ -270,9 +259,7 @@ if [ "$PROVIDER_NAME" = "all" ]; then
 else
     # Per provider tests
     run_normal_tests
-    run_persistence_before_tests
-    reload_service
-    run_persistence_after_tests
+    run_key_mappings_tests
 
     if [ -z "$NO_STRESS_TEST" ]; then
         echo "Shutdown Parsec"
