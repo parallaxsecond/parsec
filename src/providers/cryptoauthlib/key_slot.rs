@@ -113,7 +113,7 @@ impl AteccKeySlot {
         let mut result = true;
         if key_attr.policy.usage_flags.export || key_attr.policy.usage_flags.copy {
             result &= match key_attr.key_type {
-                Type::EccKeyPair { .. } | Type::DhKeyPair { .. } => {
+                Type::EccKeyPair { .. } => {
                     self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
                         && if self.config.ecc_key_attr.is_private {
                             self.config.pub_info
@@ -132,10 +132,7 @@ impl AteccKeySlot {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= self.config.ecc_key_attr.is_private;
             result &= self.config.ecc_key_attr.ext_sign; // The only supported mode
-            result &= matches!(
-                key_attr.key_type,
-                Type::EccKeyPair { .. } | Type::DhKeyPair { .. }
-            );
+            result &= matches!(key_attr.key_type, Type::EccKeyPair { .. });
         }
         if !result {
             return result;
@@ -144,7 +141,7 @@ impl AteccKeySlot {
         if key_attr.policy.usage_flags.verify_hash || key_attr.policy.usage_flags.verify_message {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= match key_attr.key_type {
-                Type::EccKeyPair { .. } | Type::DhKeyPair { .. } => {
+                Type::EccKeyPair { .. } => {
                     // `pub_info == true` is relevant when `is_private == true`
                     if self.config.ecc_key_attr.is_private {
                         self.config.pub_info
