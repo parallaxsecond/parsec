@@ -50,7 +50,7 @@ impl Provider {
         op.validate(key_attributes)?;
 
         let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
-        info!("psa_sign_hash_internal - using slot {}", key_id);
+        info!("psa_verify_hash_internal - using slot {}", key_id);
         let verify_mode = match key_attributes.key_type {
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
