@@ -8,6 +8,8 @@
   <br><br>
   <a href="https://crates.io/crates/parsec-service"><img alt="Crates.io" src="https://img.shields.io/crates/v/parsec-service"></a>
   <a href="https://docs.rs/parsec-service"><img src="https://docs.rs/parsec-service/badge.svg" alt="Code documentation"/></a>
+  <a href="https://bestpractices.coreinfrastructure.org/projects/4856"><img src="https://bestpractices.coreinfrastructure.org/projects/4856/badge"></a>
+  <a href="https://codecov.io/gh/parallaxsecond/parsec"><img src="https://codecov.io/gh/parallaxsecond/parsec/branch/master/graph/badge.svg?token=FbpUGoN331"/></a>
 </p>
 
 # Welcome To PARSEC
