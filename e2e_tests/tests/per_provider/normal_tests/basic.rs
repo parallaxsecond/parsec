@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::RawRequestClient;
 use parsec_client::core::interface::requests::request::RawHeader;
-use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
+use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatus};
 
 #[test]
 fn invalid_provider() {
@@ -25,7 +25,7 @@ fn provider_not_registered() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::MbedCrypto as u8;
+    req_hdr.provider = ProviderId::MbedCrypto as u8;
     req_hdr.opcode = Opcode::Ping as u32;
 
     let resp = client
@@ -40,7 +40,7 @@ fn invalid_content_type() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
     req_hdr.content_type = 0xff;
 
@@ -56,7 +56,7 @@ fn invalid_accept_type() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.accept_type = 0xff;
@@ -73,7 +73,7 @@ fn invalid_body_len() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.body_len = 0xff_ff;
@@ -89,7 +89,7 @@ fn invalid_auth_len() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
 
     req_hdr.auth_len = 0xff_ff;
@@ -105,7 +105,7 @@ fn invalid_opcode() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = 0xff_ff;
 
     let resp = client
@@ -119,7 +119,7 @@ fn invalid_authenticator() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
     req_hdr.auth_type = 0xff;
 
@@ -137,7 +137,7 @@ fn authenticator_not_registered() {
     let mut client = RawRequestClient {};
     let mut req_hdr = RawHeader::new();
 
-    req_hdr.provider = ProviderID::Core as u8;
+    req_hdr.provider = ProviderId::Core as u8;
     req_hdr.opcode = Opcode::Ping as u32;
     req_hdr.auth_type = 0x02;
 

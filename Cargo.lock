@@ -207,7 +207,7 @@ dependencies = [
 [[package]]
 name = "cryptoki"
 version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=850b826b631df354553bf62757f35cd394b3dfff#850b826b631df354553bf62757f35cd394b3dfff"
+source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=0345c8caa40fd9a64012f053721aa3de52ad3e3e#0345c8caa40fd9a64012f053721aa3de52ad3e3e"
 dependencies = [
  "cryptoki-sys",
  "derivative",
@@ -220,7 +220,7 @@ dependencies = [
 [[package]]
 name = "cryptoki-sys"
 version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=850b826b631df354553bf62757f35cd394b3dfff#850b826b631df354553bf62757f35cd394b3dfff"
+source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=0345c8caa40fd9a64012f053721aa3de52ad3e3e#0345c8caa40fd9a64012f053721aa3de52ad3e3e"
 dependencies = [
  "libloading",
  "target-lexicon",
@@ -549,8 +549,7 @@ dependencies = [
 [[package]]
 name = "parsec-interface"
 version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0b984c92cd329e3579dcf4c30b30436c01364594643246c0df8a9ec44abd960"
+source = "git+https://github.com/parallaxsecond/parsec-interface-rs.git?rev=a7f3c7e246a64b9474ca3a0a1365b6deee74e7a4#a7f3c7e246a64b9474ca3a0a1365b6deee74e7a4"
 dependencies = [
  "bincode",
  "derivative",
@@ -804,8 +803,7 @@ dependencies = [
 [[package]]
 name = "psa-crypto"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d880c4d870942edbd742807b9158395ba324e86716cab5dde05d0fe9b2b6d43"
+source = "git+https://github.com/parallaxsecond/rust-psa-crypto.git?rev=15ba7cd048923ae7193b268df51c004e8ceff48e#15ba7cd048923ae7193b268df51c004e8ceff48e"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -816,8 +814,7 @@ dependencies = [
 [[package]]
 name = "psa-crypto-sys"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "173c2b23e16669b7749c9dbbcb97a2d5e0bcf235ce008b8aab4f94babe993bc7"
+source = "git+https://github.com/parallaxsecond/rust-psa-crypto.git?rev=15ba7cd048923ae7193b268df51c004e8ceff48e#15ba7cd048923ae7193b268df51c004e8ceff48e"
 dependencies = [
  "bindgen 0.56.0",
  "cc",

@@ -22,7 +22,7 @@ use parsec_client::core::interface::operations::psa_algorithm::{
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
 };
-use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_client::core::ipc_handler::unix_socket;
 use parsec_client::error::Error;
 use std::collections::HashSet;
@@ -35,7 +35,7 @@ const TEST_TIMEOUT: Duration = Duration::from_secs(60);
 #[derive(Debug)]
 pub struct TestClient {
     basic_client: BasicClient,
-    created_keys: Option<HashSet<(String, Option<String>, ProviderID)>>,
+    created_keys: Option<HashSet<(String, Option<String>, ProviderId)>>,
 }
 
 fn convert_error(err: Error) -> ResponseStatus {
@@ -81,12 +81,12 @@ impl TestClient {
     }
 
     /// Manually set the provider to execute the requests.
-    pub fn set_provider(&mut self, provider: ProviderID) {
+    pub fn set_provider(&mut self, provider: ProviderId) {
         self.basic_client.set_implicit_provider(provider);
     }
 
     /// Get client provider
-    pub fn provider(&self) -> ProviderID {
+    pub fn provider(&self) -> ProviderId {
         self.basic_client.implicit_provider()
     }
 
@@ -666,7 +666,7 @@ impl TestClient {
                     .into(),
                 },
             },
-            data
+            data,
         )
     }
 
@@ -734,7 +734,7 @@ impl TestClient {
         )
     }
 
-    /// Verifies a signature.
+    /// Verifies a hash signature.
     pub fn verify(
         &mut self,
         key_name: String,
@@ -747,7 +747,7 @@ impl TestClient {
             .map_err(convert_error)
     }
 
-    /// Verifies a signature made with an RSA key.
+    /// Verifies a hash signature made with an RSA key.
     pub fn verify_with_rsa_sha256(
         &mut self,
         key_name: String,
@@ -764,7 +764,7 @@ impl TestClient {
         )
     }
 
-    /// Verifies a signature made with an ECDSA key.
+    /// Verifies a hash signature made with an ECDSA key.
     pub fn verify_with_ecdsa_sha256(
         &mut self,
         key_name: String,
@@ -777,6 +777,63 @@ impl TestClient {
                 hash_alg: Hash::Sha256.into(),
             },
             hash,
+            signature,
+        )
+    }
+
+    /// Signs a message with a key.
+    pub fn sign_msg(
+        &mut self,
+        key_name: String,
+        alg: AsymmetricSignature,
+        msg: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_sign_message(key_name, &msg, alg)
+            .map_err(convert_error)
+    }
+
+    /// Signs a message with an ECDSA key.
+    pub fn sign_msg_with_ecdsa_sha256(
+        &mut self,
+        key_name: String,
+        msg: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.sign_msg(
+            key_name,
+            AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            },
+            msg,
+        )
+    }
+
+    /// Verifies a message signature.
+    pub fn verify_msg(
+        &mut self,
+        key_name: String,
+        alg: AsymmetricSignature,
+        msg: Vec<u8>,
+        signature: Vec<u8>,
+    ) -> Result<()> {
+        self.basic_client
+            .psa_verify_message(key_name, &msg, alg, &signature)
+            .map_err(convert_error)
+    }
+
+    /// Verifies a message signature made with an ECDSA key and SHA256 hash.
+    pub fn verify_msg_with_ecdsa_sha256(
+        &mut self,
+        key_name: String,
+        msg: Vec<u8>,
+        signature: Vec<u8>,
+    ) -> Result<()> {
+        self.verify_msg(
+            key_name,
+            AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            },
+            msg,
             signature,
         )
     }
@@ -959,7 +1016,7 @@ impl TestClient {
     }
 
     /// Lists the opcodes available for one provider to execute.
-    pub fn list_opcodes(&mut self, provider_id: ProviderID) -> Result<HashSet<Opcode>> {
+    pub fn list_opcodes(&mut self, provider_id: ProviderId) -> Result<HashSet<Opcode>> {
         self.basic_client
             .list_opcodes(provider_id)
             .map_err(convert_error)

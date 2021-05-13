@@ -19,7 +19,7 @@ use parsec_interface::operations::{
     psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
     psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, SecretString};
 use std::collections::HashSet;
 use std::convert::TryInto;
@@ -215,7 +215,7 @@ impl Provide for Provider {
                 version_maj: 0,
                 version_min: 1,
                 version_rev: 0,
-                id: ProviderID::Pkcs11,
+                id: ProviderId::Pkcs11,
             },
             SUPPORTED_OPCODES.iter().copied().collect(),
         ))

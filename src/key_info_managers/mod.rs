@@ -11,7 +11,7 @@ use crate::authenticators::ApplicationName;
 use anyhow::Result;
 use derivative::Derivative;
 use parsec_interface::operations::psa_key_attributes::Attributes;
-use parsec_interface::requests::{ProviderID, ResponseStatus};
+use parsec_interface::requests::{ProviderId, ResponseStatus};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -43,7 +43,7 @@ pub struct KeyInfoManagerConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KeyTriple {
     app_name: ApplicationName,
-    provider_id: ProviderID,
+    provider_id: ProviderId,
     key_name: String,
 }
 
@@ -69,7 +69,7 @@ pub struct KeyInfo {
 
 impl KeyTriple {
     /// Creates a new instance of KeyTriple.
-    pub fn new(app_name: ApplicationName, provider_id: ProviderID, key_name: String) -> KeyTriple {
+    pub fn new(app_name: ApplicationName, provider_id: ProviderId, key_name: String) -> KeyTriple {
         KeyTriple {
             app_name,
             provider_id,
@@ -78,7 +78,7 @@ impl KeyTriple {
     }
 
     /// Checks if this key belongs to a specific provider.
-    pub fn belongs_to_provider(&self, provider_id: ProviderID) -> bool {
+    pub fn belongs_to_provider(&self, provider_id: ProviderId) -> bool {
         self.provider_id == provider_id
     }
 
@@ -120,7 +120,7 @@ trait ManageKeyInfo {
     /// # Errors
     ///
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
-    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String>;
+    fn get_all(&self, provider_id: ProviderId) -> Result<Vec<&KeyTriple>, String>;
 
     /// Inserts a new mapping between the key triple and the key info. If the triple already exists,
     /// overwrite the existing mapping and returns the old `KeyInfo`. Otherwise returns `None`.
@@ -155,7 +155,7 @@ trait ManageKeyInfo {
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct KeyInfoManagerClient {
-    provider_id: ProviderID,
+    provider_id: ProviderId,
     #[derivative(Debug = "ignore")]
     key_info_manager_impl: Arc<RwLock<dyn ManageKeyInfo + Send + Sync>>,
 }
@@ -397,7 +397,7 @@ impl KeyInfoManagerFactory {
     }
 
     /// Build a KeyInfoManagerClient
-    pub fn build_client(&self, provider: ProviderID) -> KeyInfoManagerClient {
+    pub fn build_client(&self, provider: ProviderId) -> KeyInfoManagerClient {
         KeyInfoManagerClient {
             key_info_manager_impl: self.key_info_manager_impl.clone(),
             provider_id: provider,

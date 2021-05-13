@@ -4,7 +4,7 @@ use e2e_tests::RequestClient;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::requests::request::{Request, RequestAuth, RequestBody};
 use parsec_client::core::interface::requests::Opcode;
-use parsec_client::core::interface::requests::ProviderID;
+use parsec_client::core::interface::requests::ProviderId;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::ipc_handler::unix_socket;
@@ -30,7 +30,7 @@ fn mangled_ping() {
         ..Default::default()
     };
     let mut req = Request::new();
-    req.header.provider = ProviderID::Core;
+    req.header.provider = ProviderId::Core;
     req.header.opcode = Opcode::Ping;
     req.auth = RequestAuth::new(Vec::from("root"));
 

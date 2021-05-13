@@ -8,33 +8,34 @@ use parsec_interface::operations::psa_hash_compute;
 use parsec_interface::requests::{ResponseStatus, Result};
 
 impl Provider {
+    /// Calculate SHA2-256 digest for a given message using CALib.
+    /// Ensure proper return value type.
+    pub fn sha256(&self, msg: &[u8]) -> Result<psa_hash_compute::Result> {
+        let mut hash = vec![0u8; rust_cryptoauthlib::ATCA_SHA2_256_DIGEST_SIZE];
+        match self.device.sha(msg.to_vec(), &mut hash) {
+            rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
+                Ok(psa_hash_compute::Result { hash: hash.into() })
+            }
+            rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
+                Err(ResponseStatus::PsaErrorInvalidArgument)
+            }
+            rust_cryptoauthlib::AtcaStatus::AtcaSmallBuffer => {
+                Err(ResponseStatus::PsaErrorBufferTooSmall)
+            }
+            rust_cryptoauthlib::AtcaStatus::AtcaRxNoResponse
+            | rust_cryptoauthlib::AtcaStatus::AtcaRxFail => {
+                Err(ResponseStatus::PsaErrorCommunicationFailure)
+            }
+            _ => Err(ResponseStatus::PsaErrorGenericError),
+        }
+    }
+
     pub(super) fn psa_hash_compute_internal(
         &self,
         op: psa_hash_compute::Operation,
     ) -> Result<psa_hash_compute::Result> {
-        let mut hash = vec![0u8; op.alg.hash_length()];
         match op.alg {
-            Hash::Sha256 => {
-                let message = op.input.to_vec();
-
-                let err = self.device.sha(message, &mut hash);
-                match err {
-                    rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
-                        Ok(psa_hash_compute::Result { hash: hash.into() })
-                    }
-                    rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
-                        Err(ResponseStatus::PsaErrorInvalidArgument)
-                    }
-                    rust_cryptoauthlib::AtcaStatus::AtcaSmallBuffer => {
-                        Err(ResponseStatus::PsaErrorBufferTooSmall)
-                    }
-                    rust_cryptoauthlib::AtcaStatus::AtcaRxNoResponse
-                    | rust_cryptoauthlib::AtcaStatus::AtcaRxFail => {
-                        Err(ResponseStatus::PsaErrorCommunicationFailure)
-                    }
-                    _ => Err(ResponseStatus::PsaErrorGenericError),
-                }
-            }
+            Hash::Sha256 => self.sha256(&op.input),
             _ => Err(ResponseStatus::PsaErrorNotSupported),
         }
     }
@@ -43,30 +44,26 @@ impl Provider {
         &self,
         op: psa_hash_compare::Operation,
     ) -> Result<psa_hash_compare::Result> {
-        let alg_len = op.alg.hash_length();
-        // calculate input hash
-        let op_compute = psa_hash_compute::Operation {
-            alg: op.alg,
-            input: op.input,
-        };
         // check hash length
-        if op.hash.len() != alg_len {
+        if op.hash.len() != op.alg.hash_length() {
             let error = ResponseStatus::PsaErrorInvalidArgument;
-            error!("Hash length comparison failed: {}", error);
+            error!("Invalid input hash length: {}", error);
             return Err(error);
         }
-        match self.psa_hash_compute_internal(op_compute) {
-            Ok(psa_hash_compute::Result { hash }) => {
-                // compare hashes
+        match op.alg {
+            Hash::Sha256 => {
+                // compute hash
+                let hash = self.sha256(&op.input)?.hash;
+                // compare input vs. computed hash
                 if op.hash != hash {
                     let error = ResponseStatus::PsaErrorInvalidSignature;
                     error!("Hash comparison failed: {}", error);
-                    return Err(error);
+                    Err(error)
+                } else {
+                    Ok(psa_hash_compare::Result)
                 }
-                // return result
-                Ok(psa_hash_compare::Result)
             }
-            Err(error) => Err(error),
+            _ => Err(ResponseStatus::PsaErrorNotSupported),
         }
     }
 }

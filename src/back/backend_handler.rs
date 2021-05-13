@@ -14,7 +14,7 @@ use parsec_interface::operations::{NativeOperation, NativeResult};
 use parsec_interface::requests::{
     request::RequestHeader, Request, Response, ResponseStatus, Result,
 };
-use parsec_interface::requests::{BodyType, ProviderID};
+use parsec_interface::requests::{BodyType, ProviderId};
 use std::io::{Error, ErrorKind};
 use std::sync::Arc;
 
@@ -33,7 +33,7 @@ pub struct BackEndHandler {
     provider: Arc<dyn Provide + Send + Sync>,
     #[derivative(Debug = "ignore")]
     converter: Box<dyn Convert + Send + Sync>,
-    provider_id: ProviderID,
+    provider_id: ProviderId,
     content_type: BodyType,
     accept_type: BodyType,
 }
@@ -55,19 +55,19 @@ impl BackEndHandler {
     /// # Errors
     /// - if the provider ID can not perform the type of operation, returns
     /// `ResponseStatus::PsaErrorNotSupported`
-    /// - if the provider ID does not match, returns `ResponseStatus::WrongProviderID`
+    /// - if the provider ID does not match, returns `ResponseStatus::WrongProviderId`
     /// - if the content type does not match, returns `ResponseStatus::ContentTypeNotSupported`
     /// - if the accept type does not match, returns `ResponseStatus::AcceptTypeNotSupported`
     pub fn is_capable(&self, request: &Request) -> Result<()> {
         let header = &request.header;
 
-        if (self.provider_id == ProviderID::Core) != header.opcode.is_core() {
+        if (self.provider_id == ProviderId::Core) != header.opcode.is_core() {
             error!("The request's operation is not compatible with the provider targeted.");
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         if header.provider != self.provider_id {
-            Err(ResponseStatus::WrongProviderID)
+            Err(ResponseStatus::WrongProviderId)
         } else if header.content_type != self.content_type {
             Err(ResponseStatus::ContentTypeNotSupported)
         } else if header.accept_type != self.accept_type {
@@ -262,6 +262,22 @@ impl BackEndHandler {
                 trace!("psa_generate_random_egress");
                 self.result_to_response(NativeResult::PsaGenerateRandom(result), header)
             }
+            NativeOperation::PsaSignMessage(op_sign_message) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_sign_message(app.into(), op_sign_message));
+                trace!("psa_sign_message egress");
+                self.result_to_response(NativeResult::PsaSignMessage(result), header)
+            }
+            NativeOperation::PsaVerifyMessage(op_verify_message) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_verify_message(app.into(), op_verify_message));
+                trace!("psa_verify_message egress");
+                self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
+            }
         }
     }
 }
@@ -274,7 +290,7 @@ pub struct BackEndHandlerBuilder {
     provider: Option<Arc<dyn Provide + Send + Sync>>,
     #[derivative(Debug = "ignore")]
     converter: Option<Box<dyn Convert + Send + Sync>>,
-    provider_id: Option<ProviderID>,
+    provider_id: Option<ProviderId>,
     content_type: Option<BodyType>,
     accept_type: Option<BodyType>,
 }
@@ -304,7 +320,7 @@ impl BackEndHandlerBuilder {
     }
 
     /// Set the ID of the BackEndHandler
-    pub fn with_provider_id(mut self, provider_id: ProviderID) -> Self {
+    pub fn with_provider_id(mut self, provider_id: ProviderId) -> Self {
         self.provider_id = Some(provider_id);
         self
     }

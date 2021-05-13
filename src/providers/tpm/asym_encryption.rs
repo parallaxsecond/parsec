@@ -7,7 +7,7 @@ use super::{
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
-use parsec_interface::requests::{ProviderID, Result};
+use parsec_interface::requests::{ProviderId, Result};
 use std::convert::TryInto;
 use std::ops::Deref;
 
@@ -17,7 +17,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
         let mut esapi_context = self
             .esapi_context
@@ -69,7 +69,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
         let mut esapi_context = self
             .esapi_context

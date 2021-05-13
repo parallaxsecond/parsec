@@ -8,7 +8,7 @@ use super::backend_handler::BackEndHandler;
 use crate::authenticators::Application;
 use log::trace;
 use parsec_interface::requests::request::Request;
-use parsec_interface::requests::ProviderID;
+use parsec_interface::requests::ProviderId;
 use parsec_interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Result};
@@ -22,7 +22,7 @@ use std::io::{Error, ErrorKind, Result};
 /// the fields in the request header to the properties of the handlers.
 #[derive(Debug)]
 pub struct Dispatcher {
-    backends: HashMap<ProviderID, BackEndHandler>,
+    backends: HashMap<ProviderId, BackEndHandler>,
 }
 
 impl Dispatcher {
@@ -53,7 +53,7 @@ impl Dispatcher {
 /// `Dispatcher` builder
 #[derive(Debug, Default)]
 pub struct DispatcherBuilder {
-    backends: Option<HashMap<ProviderID, BackEndHandler>>,
+    backends: Option<HashMap<ProviderId, BackEndHandler>>,
 }
 
 impl DispatcherBuilder {
@@ -65,7 +65,7 @@ impl DispatcherBuilder {
     /// Add a BackEndHandler with a specific Provider ID to the dispatcher
     pub fn with_backend(
         mut self,
-        provider_id: ProviderID,
+        provider_id: ProviderId,
         backend_handler: BackEndHandler,
     ) -> Self {
         let mut backends = self.backends.unwrap_or_default();
@@ -76,7 +76,7 @@ impl DispatcherBuilder {
     }
 
     /// Add multiple BackEndHandler to the dispatcher in one call
-    pub fn with_backends(mut self, new_backends: HashMap<ProviderID, BackEndHandler>) -> Self {
+    pub fn with_backends(mut self, new_backends: HashMap<ProviderId, BackEndHandler>) -> Self {
         let mut backends = self.backends.unwrap_or_default();
         backends.extend(new_backends);
         self.backends = Some(backends);

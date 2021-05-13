@@ -15,7 +15,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.24.0"
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs.git", rev = "a7f3c7e246a64b9474ca3a0a1365b6deee74e7a4"}
 rand = { version = "0.8.3", features = ["small_rng"], optional = true }
 base64 = "0.13.0"
 uuid = "0.8.2"
@@ -26,7 +26,7 @@ toml = "0.5.8"
 serde = { version = "1.0.123", features = ["derive"] }
 env_logger = "0.8.3"
 log = { version = "0.4.14", features = ["serde"] }
-cryptoki = { git = "https://github.com/parallaxsecond/rust-cryptoki", rev = "850b826b631df354553bf62757f35cd394b3dfff", optional = true, features = ["psa-crypto-conversions"] }
+cryptoki = { git = "https://github.com/parallaxsecond/rust-cryptoki", rev = "0345c8caa40fd9a64012f053721aa3de52ad3e3e", optional = true, features = ["psa-crypto-conversions"] }
 picky-asn1-der = { version = "0.2.4", optional = true }
 picky-asn1 = { version = "0.3.1", optional = true }
 tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi", rev = "56c487a101dc85e17560416d71f0fc2eb81739a6", optional = true }
@@ -35,7 +35,7 @@ structopt = "0.3.21"
 derivative = "2.2.0"
 version = "3.0.0"
 hex = { version = "0.4.2", optional = true }
-psa-crypto = { version = "0.8.0", default-features = false, features = ["operations"], optional = true }
+psa-crypto = { git = "https://github.com/parallaxsecond/rust-psa-crypto.git", rev = "15ba7cd048923ae7193b268df51c004e8ceff48e", default-features = false, features = ["operations"], optional = true }
 zeroize = { version = "1.2.0", features = ["zeroize_derive"] }
 picky-asn1-x509 = { version = "0.4.0", optional = true }
 users = "0.11.0"

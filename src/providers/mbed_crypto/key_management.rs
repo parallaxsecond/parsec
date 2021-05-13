@@ -7,7 +7,7 @@ use log::error;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, Secret};
 use psa_crypto::operations::key_management as psa_crypto_key_management;
 use psa_crypto::types::key;
@@ -39,7 +39,7 @@ impl Provider {
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
@@ -81,7 +81,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_data = op.data;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_id = create_key_id(&self.id_counter)?;
@@ -124,7 +124,7 @@ impl Provider {
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
@@ -151,7 +151,7 @@ impl Provider {
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self
@@ -178,7 +178,7 @@ impl Provider {
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
 
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let _ = self.key_info_store.remove_key_info(&key_triple)?;

@@ -21,7 +21,7 @@ use anyhow::Result;
 use log::{error, warn, LevelFilter};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
-use parsec_interface::requests::{BodyType, ProviderID};
+use parsec_interface::requests::{BodyType, ProviderId};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
@@ -188,9 +188,9 @@ impl ServiceBuilder {
 }
 
 fn build_backend_handlers(
-    mut providers: Vec<(ProviderID, Provider)>,
+    mut providers: Vec<(ProviderId, Provider)>,
     authenticators: &[(AuthType, Authenticator)],
-) -> Result<HashMap<ProviderID, BackEndHandler>> {
+) -> Result<HashMap<ProviderId, BackEndHandler>> {
     let mut map = HashMap::new();
 
     let mut core_provider_builder = CoreProviderBuilder::new()
@@ -219,12 +219,12 @@ fn build_backend_handlers(
     let core_provider_backend = BackEndHandlerBuilder::new()
         .with_provider(Arc::new(core_provider_builder.build()?))
         .with_converter(Box::from(ProtobufConverter {}))
-        .with_provider_id(ProviderID::Core)
+        .with_provider_id(ProviderId::Core)
         .with_content_type(BodyType::Protobuf)
         .with_accept_type(BodyType::Protobuf)
         .build()?;
 
-    let _ = map.insert(ProviderID::Core, core_provider_backend);
+    let _ = map.insert(ProviderId::Core, core_provider_backend);
 
     Ok(map)
 }
@@ -232,7 +232,7 @@ fn build_backend_handlers(
 fn build_providers(
     configs: &[ProviderConfig],
     kim_factorys: HashMap<String, KeyInfoManagerFactory>,
-) -> Result<Vec<(ProviderID, Provider)>> {
+) -> Result<Vec<(ProviderId, Provider)>> {
     let mut list = Vec::new();
     for config in configs {
         let provider_id = config.provider_id();
@@ -299,7 +299,7 @@ unsafe fn get_provider(
             info!("Creating a Mbed Crypto Provider.");
             Ok(Arc::new(
                 MbedCryptoProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderID::MbedCrypto))
+                    .with_key_info_store(kim_factory.build_client(ProviderId::MbedCrypto))
                     .build()?,
             ))
         }
@@ -316,7 +316,7 @@ unsafe fn get_provider(
             info!("Creating a PKCS 11 Provider.");
             Ok(Arc::new(
                 Pkcs11ProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderID::Pkcs11))
+                    .with_key_info_store(kim_factory.build_client(ProviderId::Pkcs11))
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number((*slot_number).try_into()?)
                     .with_user_pin(user_pin.clone())
@@ -333,7 +333,7 @@ unsafe fn get_provider(
             info!("Creating a TPM Provider.");
             Ok(Arc::new(
                 TpmProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderID::Tpm))
+                    .with_key_info_store(kim_factory.build_client(ProviderId::Tpm))
                     .with_tcti(tcti)
                     .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
                     .build()?,
@@ -353,7 +353,7 @@ unsafe fn get_provider(
             info!("Creating a CryptoAuthentication Library Provider.");
             Ok(Arc::new(
                 CryptoAuthLibProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderID::CryptoAuthLib))
+                    .with_key_info_store(kim_factory.build_client(ProviderId::CryptoAuthLib))
                     .with_device_type(device_type.to_string())
                     .with_iface_type(iface_type.to_string())
                     .with_wake_delay(*wake_delay)
@@ -369,7 +369,7 @@ unsafe fn get_provider(
             info!("Creating a TPM Provider.");
             Ok(Arc::new(
                 TrustedServiceProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderID::TrustedService))
+                    .with_key_info_store(kim_factory.build_client(ProviderId::TrustedService))
                     .build()?,
             ))
         }

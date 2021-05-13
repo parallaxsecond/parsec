@@ -16,7 +16,7 @@ use super::{KeyInfo, KeyTriple, ManageKeyInfo};
 use crate::authenticators::ApplicationName;
 use anyhow::{Context, Result};
 use log::{error, info, warn};
-use parsec_interface::requests::ProviderID;
+use parsec_interface::requests::ProviderId;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ffi::OsStr;
@@ -39,7 +39,7 @@ pub struct OnDiskKeyInfoManager {
 }
 
 /// Encodes a KeyTriple's data into base64 strings that can be used as filenames.
-/// The ProviderID will not be converted as a base64 as it can always be represented as a String
+/// The ProviderId will not be converted as a base64 as it can always be represented as a String
 /// being a number from 0 and 255.
 fn key_triple_to_base64_filenames(key_triple: &KeyTriple) -> (String, String, String) {
     (
@@ -72,7 +72,7 @@ fn base64_data_to_string(base64_bytes: &[u8]) -> Result<String, String> {
 /// Returns an error as a string if either the decoding or the bytes conversion to UTF-8 failed.
 fn base64_data_triple_to_key_triple(
     app_name: &[u8],
-    provider_id: ProviderID,
+    provider_id: ProviderId,
     key_name: &[u8],
 ) -> Result<KeyTriple, String> {
     let app_name = ApplicationName::from_name(base64_data_to_string(app_name)?);
@@ -100,15 +100,15 @@ fn os_str_to_u8_ref(os_str: &OsStr) -> std::io::Result<&[u8]> {
     }
 }
 
-/// Converts an OsStr reference to a ProviderID value.
+/// Converts an OsStr reference to a ProviderId value.
 ///
 /// # Errors
 ///
 /// Returns a custom std::io error if the conversion failed.
-fn os_str_to_provider_id(os_str: &OsStr) -> std::io::Result<ProviderID> {
+fn os_str_to_provider_id(os_str: &OsStr) -> std::io::Result<ProviderId> {
     match os_str.to_str() {
         Some(str) => match str.parse::<u8>() {
-            Ok(provider_id_u8) => match ProviderID::try_from(provider_id_u8) {
+            Ok(provider_id_u8) => match ProviderId::try_from(provider_id_u8) {
                 Ok(provider_id) => Ok(provider_id),
                 Err(response_status) => {
                     Err(Error::new(ErrorKind::Other, response_status.to_string()))
@@ -313,7 +313,7 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         }
     }
 
-    fn get_all(&self, provider_id: ProviderID) -> Result<Vec<&KeyTriple>, String> {
+    fn get_all(&self, provider_id: ProviderId) -> Result<Vec<&KeyTriple>, String> {
         Ok(self
             .key_store
             .keys()
@@ -389,7 +389,7 @@ mod test {
     use parsec_interface::operations::psa_key_attributes::{
         Attributes, Lifetime, Policy, Type, UsageFlags,
     };
-    use parsec_interface::requests::ProviderID;
+    use parsec_interface::requests::ProviderId;
     use std::fs;
     use std::path::PathBuf;
 
@@ -531,7 +531,7 @@ mod test {
         let big_app_name_ascii = ApplicationName::from_name("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
-        let key_triple = KeyTriple::new(big_app_name_ascii, ProviderID::Core, big_key_name_ascii);
+        let key_triple = KeyTriple::new(big_app_name_ascii, ProviderId::Core, big_key_name_ascii);
         let key_info = test_key_info();
 
         let _ = manager
@@ -551,7 +551,7 @@ mod test {
 
         let key_triple = KeyTriple::new(
             big_app_name_emoticons,
-            ProviderID::MbedCrypto,
+            ProviderId::MbedCrypto,
             big_key_name_emoticons,
         );
         let key_info = test_key_info();
@@ -569,12 +569,12 @@ mod test {
 
         let app_name1 = ApplicationName::from_name("😀 Application One 😀".to_string());
         let key_name1 = "😀 Key One 😀".to_string();
-        let key_triple1 = KeyTriple::new(app_name1, ProviderID::Core, key_name1);
+        let key_triple1 = KeyTriple::new(app_name1, ProviderId::Core, key_name1);
         let key_info1 = test_key_info();
 
         let app_name2 = ApplicationName::from_name("😇 Application Two 😇".to_string());
         let key_name2 = "😇 Key Two 😇".to_string();
-        let key_triple2 = KeyTriple::new(app_name2, ProviderID::MbedCrypto, key_name2);
+        let key_triple2 = KeyTriple::new(app_name2, ProviderId::MbedCrypto, key_name2);
         let key_info2 = KeyInfo {
             id: vec![0x12, 0x22, 0x32],
             attributes: test_key_attributes(),
@@ -582,7 +582,7 @@ mod test {
 
         let app_name3 = ApplicationName::from_name("😈 Application Three 😈".to_string());
         let key_name3 = "😈 Key Three 😈".to_string();
-        let key_triple3 = KeyTriple::new(app_name3, ProviderID::Core, key_name3);
+        let key_triple3 = KeyTriple::new(app_name3, ProviderId::Core, key_name3);
         let key_info3 = KeyInfo {
             id: vec![0x13, 0x23, 0x33],
             attributes: test_key_attributes(),
@@ -615,7 +615,7 @@ mod test {
     fn new_key_triple(key_name: String) -> KeyTriple {
         KeyTriple::new(
             ApplicationName::from_name("Testing Application 😎".to_string()),
-            ProviderID::MbedCrypto,
+            ProviderId::MbedCrypto,
             key_name,
         )
     }
