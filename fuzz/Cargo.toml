@@ -11,7 +11,7 @@ edition = "2018"
 cargo-fuzz = true
 
 [dependencies]
-parsec-service = { path = "..", features = ["mbed-crypto-provider", "pkcs11-provider", "tpm-provider"] }
+parsec-service = { path = "..", features = ["mbed-crypto-provider", "pkcs11-provider", "tpm-provider", "direct-authenticator"] }
 libfuzzer-sys = "0.3.0"
 flexi_logger = "0.14.5"
 log = "0.4.8"
@@ -20,7 +20,7 @@ lazy_static = "1.4.0"
 arbitrary = { version = "0.4.0", features = ["derive"] }
 
 [build-dependencies]
-parsec-client = "0.4.0"
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust.git", rev = "06b921c4bfc6cd0c2aad91ffacb6e0ea1cda1fd7" }
 
 # Prevent this from interfering with workspaces
 [workspace]
@@ -29,3 +29,8 @@ members = ["."]
 [[bin]]
 name = "fuzz_service"
 path = "fuzz_targets/fuzz_service.rs"
+
+[features]
+mbed-crypto-provider = []
+tpm-provider = []
+pkcs11-provider = []

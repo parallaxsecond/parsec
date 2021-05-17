@@ -5,7 +5,7 @@
 use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
-use parsec_service::front::front_end::FrontEndHandler;
+use parsec_service::front::{front_end::FrontEndHandler, listener::Connection};
 use parsec_service::utils::{ServiceBuilder, ServiceConfig};
 use std::cmp;
 use std::io::{Read, Result, Write};
@@ -50,7 +50,10 @@ impl Write for MockStream {
 }
 
 fuzz_target!(|stream: MockStream| {
-    FRONT_END_HANDLER.handle_request(stream);
+    FRONT_END_HANDLER.handle_request(Connection {
+        stream: Box::from(stream),
+        metadata: None,
+    });
 });
 
 fn log_setup() {
