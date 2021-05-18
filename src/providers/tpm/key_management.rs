@@ -12,7 +12,7 @@ use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
 use tss_esapi::abstraction::transient::RsaExponent;
@@ -27,7 +27,7 @@ impl Provider {
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
@@ -92,7 +92,7 @@ impl Provider {
 
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
         let key_data = op.data;
         self.key_info_store.does_not_exist(&key_triple)?;
         let mut esapi_context = self
@@ -144,7 +144,7 @@ impl Provider {
         }
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
         let key_data = op.data;
 
         self.key_info_store.does_not_exist(&key_triple)?;
@@ -197,7 +197,7 @@ impl Provider {
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
 
         let mut esapi_context = self
             .esapi_context
@@ -225,7 +225,7 @@ impl Provider {
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Tpm, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
 
         let _ = self.key_info_store.remove_key_info(&key_triple)?;
 

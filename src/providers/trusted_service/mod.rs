@@ -14,7 +14,7 @@ use parsec_interface::operations::{
     list_clients, list_keys, psa_destroy_key, psa_export_public_key, psa_generate_key,
     psa_import_key, psa_sign_hash, psa_verify_hash,
 };
-use parsec_interface::requests::{Opcode, ProviderID, Result};
+use parsec_interface::requests::{Opcode, ProviderId, Result};
 use psa_crypto::types::key;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -115,7 +115,7 @@ impl Provide for Provider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::TrustedService,
+            id: ProviderId::TrustedService,
         }, SUPPORTED_OPCODES.iter().copied().collect()))
     }
 

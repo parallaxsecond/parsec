@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::{ProviderID, Result};
+use parsec_client::core::interface::requests::{ProviderId, Result};
 
 const HASH: [u8; 32] = [
     0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84, 0xA2,
@@ -13,7 +13,7 @@ const PLAINTEXT_MESSAGE: [u8; 32] = [
     0x94, 0x8E, 0x92, 0x50, 0x35, 0xC2, 0x8C, 0x5C, 0x3C, 0xCA, 0xFE, 0x18, 0xE8, 0x81, 0x37, 0x78,
 ];
 
-fn setup_sign(provider: ProviderID, key_name: String) -> Result<(TestClient, Vec<u8>, Vec<u8>)> {
+fn setup_sign(provider: ProviderId, key_name: String) -> Result<(TestClient, Vec<u8>, Vec<u8>)> {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
@@ -27,7 +27,7 @@ fn setup_sign(provider: ProviderID, key_name: String) -> Result<(TestClient, Vec
     Ok((client, pub_key, signature))
 }
 
-fn setup_asym_encr(provider: ProviderID, key_name: String) -> Result<(TestClient, Vec<u8>)> {
+fn setup_asym_encr(provider: ProviderId, key_name: String) -> Result<(TestClient, Vec<u8>)> {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client
@@ -41,7 +41,7 @@ fn setup_asym_encr(provider: ProviderID, key_name: String) -> Result<(TestClient
 
 fn import_and_verify(
     client: &mut TestClient,
-    provider: ProviderID,
+    provider: ProviderId,
     key_name: String,
     pub_key: Vec<u8>,
     signature: Vec<u8>,
@@ -57,7 +57,7 @@ fn import_and_verify(
 
 fn import_and_encrypt(
     client: &mut TestClient,
-    provider: ProviderID,
+    provider: ProviderId,
     key_name: String,
     pub_key: Vec<u8>,
 ) -> Result<Vec<u8>> {
@@ -70,7 +70,7 @@ fn import_and_encrypt(
 
 fn verify_encrypt(
     client: &mut TestClient,
-    provider: ProviderID,
+    provider: ProviderId,
     key_name: String,
     ciphertext: Vec<u8>,
 ) -> Result<Vec<u8>> {
@@ -81,12 +81,12 @@ fn verify_encrypt(
 #[test]
 fn tpm_sign_cross() {
     let key_name = String::from("tpm_sign_cross");
-    let (mut client, pub_key, signature) = setup_sign(ProviderID::Tpm, key_name.clone()).unwrap();
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::Tpm, key_name.clone()).unwrap();
 
     // Mbed Crypto
     import_and_verify(
         &mut client,
-        ProviderID::MbedCrypto,
+        ProviderId::MbedCrypto,
         key_name.clone(),
         pub_key.clone(),
         signature.clone(),
@@ -95,7 +95,7 @@ fn tpm_sign_cross() {
     // PKCS11
     import_and_verify(
         &mut client,
-        ProviderID::Pkcs11,
+        ProviderId::Pkcs11,
         key_name,
         pub_key,
         signature,
@@ -106,61 +106,61 @@ fn tpm_sign_cross() {
 fn pkcs11_sign_cross() {
     let key_name = String::from("pkcs11_sign_cross");
     let (mut client, pub_key, signature) =
-        setup_sign(ProviderID::Pkcs11, key_name.clone()).unwrap();
+        setup_sign(ProviderId::Pkcs11, key_name.clone()).unwrap();
 
     // Mbed Crypto
     import_and_verify(
         &mut client,
-        ProviderID::MbedCrypto,
+        ProviderId::MbedCrypto,
         key_name.clone(),
         pub_key.clone(),
         signature.clone(),
     );
 
     // TPM
-    import_and_verify(&mut client, ProviderID::Tpm, key_name, pub_key, signature);
+    import_and_verify(&mut client, ProviderId::Tpm, key_name, pub_key, signature);
 }
 
 #[test]
 fn mbed_crypto_sign_cross() {
     let key_name = String::from("mbed_crypto_sign_cross");
     let (mut client, pub_key, signature) =
-        setup_sign(ProviderID::MbedCrypto, key_name.clone()).unwrap();
+        setup_sign(ProviderId::MbedCrypto, key_name.clone()).unwrap();
 
     // Mbed Crypto
     import_and_verify(
         &mut client,
-        ProviderID::Pkcs11,
+        ProviderId::Pkcs11,
         key_name.clone(),
         pub_key.clone(),
         signature.clone(),
     );
 
     // TPM
-    import_and_verify(&mut client, ProviderID::Tpm, key_name, pub_key, signature);
+    import_and_verify(&mut client, ProviderId::Tpm, key_name, pub_key, signature);
 }
 
 #[test]
 fn tpm_asym_encr_cross() {
     let key_name = String::from("tpm_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderID::Tpm, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::Tpm, key_name.clone()).unwrap();
 
     // Mbed Crypto
     let ciphertext = import_and_encrypt(
         &mut client,
-        ProviderID::MbedCrypto,
+        ProviderId::MbedCrypto,
         key_name.clone(),
         pub_key.clone(),
     )
     .unwrap();
     let plaintext =
-        verify_encrypt(&mut client, ProviderID::Tpm, key_name.clone(), ciphertext).unwrap();
+        verify_encrypt(&mut client, ProviderId::Tpm, key_name.clone(), ciphertext).unwrap();
     assert_eq!(&plaintext[..], &PLAINTEXT_MESSAGE[..]);
 
     // Pkcs11
     let ciphertext =
-        import_and_encrypt(&mut client, ProviderID::Pkcs11, key_name.clone(), pub_key).unwrap();
-    let plaintext = verify_encrypt(&mut client, ProviderID::Tpm, key_name, ciphertext).unwrap();
+        import_and_encrypt(&mut client, ProviderId::Pkcs11, key_name.clone(), pub_key).unwrap();
+    let plaintext = verify_encrypt(&mut client, ProviderId::Tpm, key_name, ciphertext).unwrap();
     assert_eq!(&plaintext[..], &PLAINTEXT_MESSAGE[..]);
 }
 
@@ -169,19 +169,19 @@ fn tpm_asym_encr_cross() {
 #[test]
 fn pkcs11_asym_encr_cross() {
     let key_name = String::from("pkcs11_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderID::Pkcs11, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::Pkcs11, key_name.clone()).unwrap();
 
     // Mbed Crypto
     let ciphertext = import_and_encrypt(
         &mut client,
-        ProviderID::MbedCrypto,
+        ProviderId::MbedCrypto,
         key_name.clone(),
         pub_key.clone(),
     )
     .unwrap();
     let plaintext = verify_encrypt(
         &mut client,
-        ProviderID::Pkcs11,
+        ProviderId::Pkcs11,
         key_name.clone(),
         ciphertext,
     )
@@ -190,8 +190,8 @@ fn pkcs11_asym_encr_cross() {
 
     // Tpm
     let ciphertext =
-        import_and_encrypt(&mut client, ProviderID::Tpm, key_name.clone(), pub_key).unwrap();
-    let plaintext = verify_encrypt(&mut client, ProviderID::Pkcs11, key_name, ciphertext).unwrap();
+        import_and_encrypt(&mut client, ProviderId::Tpm, key_name.clone(), pub_key).unwrap();
+    let plaintext = verify_encrypt(&mut client, ProviderId::Pkcs11, key_name, ciphertext).unwrap();
     assert_eq!(&plaintext[..], &PLAINTEXT_MESSAGE[..]);
 }
 
@@ -200,19 +200,19 @@ fn pkcs11_asym_encr_cross() {
 #[test]
 fn mbed_crypto_asym_encr_cross() {
     let key_name = String::from("mbed_crypto_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderID::MbedCrypto, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::MbedCrypto, key_name.clone()).unwrap();
 
     // Pkcs11
     let ciphertext = import_and_encrypt(
         &mut client,
-        ProviderID::Pkcs11,
+        ProviderId::Pkcs11,
         key_name.clone(),
         pub_key.clone(),
     )
     .unwrap();
     let plaintext = verify_encrypt(
         &mut client,
-        ProviderID::MbedCrypto,
+        ProviderId::MbedCrypto,
         key_name.clone(),
         ciphertext,
     )
@@ -221,8 +221,8 @@ fn mbed_crypto_asym_encr_cross() {
 
     // Tpm
     let ciphertext =
-        import_and_encrypt(&mut client, ProviderID::Tpm, key_name.clone(), pub_key).unwrap();
+        import_and_encrypt(&mut client, ProviderId::Tpm, key_name.clone(), pub_key).unwrap();
     let plaintext =
-        verify_encrypt(&mut client, ProviderID::MbedCrypto, key_name, ciphertext).unwrap();
+        verify_encrypt(&mut client, ProviderId::MbedCrypto, key_name, ciphertext).unwrap();
     assert_eq!(&plaintext[..], &PLAINTEXT_MESSAGE[..]);
 }

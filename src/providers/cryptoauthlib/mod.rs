@@ -13,14 +13,14 @@ use log::{error, trace, warn};
 use parsec_interface::operations::list_keys::KeyInfo;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_clients, list_keys};
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 use parsec_interface::operations::{
     psa_destroy_key, psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute,
-    psa_import_key, psa_sign_hash, psa_verify_hash,
+    psa_import_key, psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
 };
 
 mod asym_sign;
@@ -37,11 +37,11 @@ mod key_slot_storage;
 pub struct Provider {
     #[derivative(Debug = "ignore")]
     device: rust_cryptoauthlib::AteccDevice,
-    provider_id: ProviderID,
+    provider_id: ProviderId,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     key_slots: KeySlotStorage,
-    supported_opcodes: Vec<Opcode>,
+    supported_opcodes: HashSet<Opcode>,
 }
 
 impl Provider {
@@ -70,10 +70,10 @@ impl Provider {
 
         cryptoauthlib_provider = Provider {
             device,
-            provider_id: ProviderID::CryptoAuthLib,
+            provider_id: ProviderId::CryptoAuthLib,
             key_info_store,
             key_slots: KeySlotStorage::new(),
-            supported_opcodes: Vec::new(),
+            supported_opcodes: HashSet::new(),
         };
 
         // Get the configuration from ATECC...
@@ -192,20 +192,26 @@ impl Provider {
             rust_cryptoauthlib::AtcaDeviceType::ATECC508A
             | rust_cryptoauthlib::AtcaDeviceType::ATECC608A
             | rust_cryptoauthlib::AtcaDeviceType::ATECC108A => {
-                self.supported_opcodes.push(Opcode::PsaGenerateKey);
-                self.supported_opcodes.push(Opcode::PsaDestroyKey);
-                self.supported_opcodes.push(Opcode::PsaHashCompute);
-                self.supported_opcodes.push(Opcode::PsaHashCompare);
-                self.supported_opcodes.push(Opcode::PsaGenerateRandom);
-                self.supported_opcodes.push(Opcode::PsaImportKey);
-                self.supported_opcodes.push(Opcode::PsaSignHash);
-                self.supported_opcodes.push(Opcode::PsaVerifyHash);
-                Some(())
+                if self.supported_opcodes.insert(Opcode::PsaGenerateKey)
+                    && self.supported_opcodes.insert(Opcode::PsaDestroyKey)
+                    && self.supported_opcodes.insert(Opcode::PsaHashCompute)
+                    && self.supported_opcodes.insert(Opcode::PsaHashCompare)
+                    && self.supported_opcodes.insert(Opcode::PsaGenerateRandom)
+                    && self.supported_opcodes.insert(Opcode::PsaImportKey)
+                    && self.supported_opcodes.insert(Opcode::PsaSignHash)
+                    && self.supported_opcodes.insert(Opcode::PsaVerifyHash)
+                    && self.supported_opcodes.insert(Opcode::PsaSignMessage)
+                    && self.supported_opcodes.insert(Opcode::PsaVerifyMessage)
+                {
+                    Some(())
+                } else {
+                    None
+                }
             }
             rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevSuccess
             | rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevFail
             | rust_cryptoauthlib::AtcaDeviceType::AtcaTestDevFailUnimplemented => {
-                self.supported_opcodes.push(Opcode::PsaGenerateRandom);
+                let _ = self.supported_opcodes.insert(Opcode::PsaGenerateRandom);
                 Some(())
             }
             _ => None,
@@ -234,7 +240,7 @@ impl Provide for Provider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::CryptoAuthLib,
+            id: ProviderId::CryptoAuthLib,
         }, self.supported_opcodes.iter().copied().collect()))
     }
 
@@ -354,6 +360,32 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_verify_hash_internal(app_name, op)
+        }
+    }
+
+    fn psa_sign_message(
+        &self,
+        app_name: ApplicationName,
+        op: psa_sign_message::Operation,
+    ) -> Result<psa_sign_message::Result> {
+        trace!("psa_sign_message ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaSignMessage) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_sign_message_internal(app_name, op)
+        }
+    }
+
+    fn psa_verify_message(
+        &self,
+        app_name: ApplicationName,
+        op: psa_verify_message::Operation,
+    ) -> Result<psa_verify_message::Result> {
+        trace!("psa_verify_message ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaVerifyMessage) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_verify_message_internal(app_name, op)
         }
     }
 }

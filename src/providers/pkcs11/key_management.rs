@@ -12,7 +12,7 @@ use parsec_interface::operations::psa_key_attributes::{Id, Lifetime, Type};
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RSAPublicKey;
@@ -95,7 +95,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
 
         let session = self.new_session()?;
@@ -180,7 +180,7 @@ impl Provider {
     ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
@@ -258,7 +258,7 @@ impl Provider {
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let session = self.new_session()?;
@@ -308,7 +308,7 @@ impl Provider {
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _ = self.key_info_store.remove_key_info(&key_triple)?;

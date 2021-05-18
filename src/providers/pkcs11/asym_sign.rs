@@ -9,7 +9,7 @@ use cryptoki::types::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
-use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use std::convert::TryFrom;
 
 impl Provider {
@@ -18,7 +18,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
 
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
@@ -46,7 +46,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
@@ -76,7 +76,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::Pkcs11, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;

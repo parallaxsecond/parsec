@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
-use parsec_client::core::interface::requests::{ProviderID, ResponseStatus};
+use parsec_client::core::interface::requests::{ProviderId, ResponseStatus};
 
 // These tests are executed by different users in the following order:
 // 1. client1_before is executed as parsec-client-1
@@ -21,7 +21,7 @@ fn client1_before() {
 
     let key = String::from("multitenant");
 
-    for provider in [ProviderID::MbedCrypto, ProviderID::Pkcs11, ProviderID::Tpm].iter() {
+    for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
         client.generate_rsa_sign_key(key.clone()).unwrap();
     }
@@ -43,7 +43,7 @@ fn client2() {
     let keys = client.list_keys().unwrap();
     assert!(keys.is_empty());
 
-    for provider in [ProviderID::MbedCrypto, ProviderID::Pkcs11, ProviderID::Tpm].iter() {
+    for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
         assert_eq!(
             client.export_public_key(key.clone()).unwrap_err(),
@@ -82,7 +82,7 @@ fn client1_after() {
 
     // Destroy the keys
     let key = String::from("multitenant");
-    for provider in [ProviderID::MbedCrypto, ProviderID::Pkcs11, ProviderID::Tpm].iter() {
+    for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
         client.destroy_key(key.clone()).unwrap();
     }

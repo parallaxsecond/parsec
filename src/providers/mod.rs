@@ -7,7 +7,7 @@
 //! functionality in the underlying hardware which allows the PSA Crypto operations to be
 //! backed by a hardware root of trust.
 use log::trace;
-use parsec_interface::requests::{Opcode, ProviderID};
+use parsec_interface::requests::{Opcode, ProviderId};
 use serde::Deserialize;
 use std::collections::HashSet;
 use zeroize::Zeroize;
@@ -120,13 +120,13 @@ impl ProviderConfig {
         }
     }
     /// Get the Provider ID of the provider
-    pub fn provider_id(&self) -> ProviderID {
+    pub fn provider_id(&self) -> ProviderId {
         match *self {
-            ProviderConfig::MbedCrypto { .. } => ProviderID::MbedCrypto,
-            ProviderConfig::Pkcs11 { .. } => ProviderID::Pkcs11,
-            ProviderConfig::Tpm { .. } => ProviderID::Tpm,
-            ProviderConfig::CryptoAuthLib { .. } => ProviderID::CryptoAuthLib,
-            ProviderConfig::TrustedService { .. } => ProviderID::TrustedService,
+            ProviderConfig::MbedCrypto { .. } => ProviderId::MbedCrypto,
+            ProviderConfig::Pkcs11 { .. } => ProviderId::Pkcs11,
+            ProviderConfig::Tpm { .. } => ProviderId::Tpm,
+            ProviderConfig::CryptoAuthLib { .. } => ProviderId::CryptoAuthLib,
+            ProviderConfig::TrustedService { .. } => ProviderId::TrustedService,
         }
     }
 }
@@ -137,7 +137,7 @@ use parsec_interface::operations::{
     ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
     psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash,
-    psa_verify_hash,
+    psa_sign_message, psa_verify_hash, psa_verify_message,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -376,6 +376,26 @@ pub trait Provide {
         _op: psa_generate_random::Operation,
     ) -> Result<psa_generate_random::Result> {
         trace!("psa_generate_random ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Sign a message with a private key.
+    fn psa_sign_message(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_sign_message::Operation,
+    ) -> Result<psa_sign_message::Result> {
+        trace!("psa_sign_message ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Verify the signature of a message using a public key.
+    fn psa_verify_message(
+        &self,
+        _app_name: ApplicationName,
+        _op: psa_verify_message::Operation,
+    ) -> Result<psa_verify_message::Result> {
+        trace!("psa_verify_message ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

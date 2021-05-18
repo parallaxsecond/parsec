@@ -33,7 +33,7 @@ use parsec_client::auth::AuthenticationData;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::operations::*;
-use parsec_client::core::interface::requests::ProviderID;
+use parsec_client::core::interface::requests::ProviderId;
 use parsec_client::core::ipc_handler::{Connect, ReadWrite};
 use parsec_client::core::operation_client::OperationClient;
 use parsec_client::error::Result;
@@ -246,7 +246,7 @@ fn main() {
         let _ = client
             .process_operation(
                 operation,
-                ProviderID::Tpm,
+                ProviderId::Tpm,
                 &AuthenticationData::AppIdentity(String::from("app-ident")),
             )
             .unwrap_err();

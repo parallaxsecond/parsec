@@ -15,7 +15,7 @@ use parsec_interface::operations::{
     psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash,
     psa_verify_hash,
 };
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
@@ -155,7 +155,7 @@ impl Provide for Provider {
             version_maj: 0,
             version_min: 1,
             version_rev: 0,
-            id: ProviderID::MbedCrypto,
+            id: ProviderId::MbedCrypto,
         }, SUPPORTED_OPCODES.iter().copied().collect()))
     }
 

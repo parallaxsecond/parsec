@@ -16,7 +16,7 @@ use parsec_interface::operations::{
 use parsec_interface::operations::{
     list_authenticators::AuthenticatorInfo, list_keys::KeyInfo, list_providers::ProviderInfo,
 };
-use parsec_interface::requests::{Opcode, ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
@@ -43,7 +43,7 @@ pub struct Provider {
     wire_protocol_version_min: u8,
     wire_protocol_version_maj: u8,
     provider_info: Vec<ProviderInfo>,
-    provider_opcodes: HashMap<ProviderID, HashSet<Opcode>>,
+    provider_opcodes: HashMap<ProviderId, HashSet<Opcode>>,
     authenticator_info: Vec<AuthenticatorInfo>,
     #[derivative(Debug = "ignore")]
     prov_list: Vec<Arc<dyn Provide + Send + Sync>>,
@@ -231,7 +231,7 @@ impl ProviderBuilder {
     pub fn build(self) -> std::io::Result<Provider> {
         let mut provider_opcodes = HashMap::new();
         let _ = provider_opcodes.insert(
-            ProviderID::Core,
+            ProviderId::Core,
             SUPPORTED_OPCODES.iter().copied().collect(),
         );
 
@@ -262,7 +262,7 @@ impl ProviderBuilder {
             version_maj: crate_version.major,
             version_min: crate_version.minor,
             version_rev: crate_version.patch,
-            id: ProviderID::Core,
+            id: ProviderId::Core,
         });
 
         let core_provider = Provider {

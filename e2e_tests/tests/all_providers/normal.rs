@@ -5,7 +5,7 @@ use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::requests::request::RawHeader;
 use parsec_client::core::interface::requests::{
-    AuthType, Opcode, ProviderID, ResponseStatus, Result,
+    AuthType, Opcode, ProviderId, ResponseStatus, Result,
 };
 use std::collections::HashSet;
 
@@ -77,31 +77,31 @@ fn list_opcodes() {
 
     assert_eq!(
         client
-            .list_opcodes(ProviderID::Core)
+            .list_opcodes(ProviderId::Core)
             .expect("list providers failed"),
         core_provider_opcodes
     );
     assert_eq!(
         client
-            .list_opcodes(ProviderID::Tpm)
+            .list_opcodes(ProviderId::Tpm)
             .expect("list providers failed"),
         crypto_providers_tpm
     );
     assert_eq!(
         client
-            .list_opcodes(ProviderID::Pkcs11)
+            .list_opcodes(ProviderId::Pkcs11)
             .expect("list providers failed"),
         crypto_providers_hsm
     );
     assert_eq!(
         client
-            .list_opcodes(ProviderID::MbedCrypto)
+            .list_opcodes(ProviderId::MbedCrypto)
             .expect("list providers failed"),
         crypto_providers_mbed_crypto
     );
     assert_eq!(
         client
-            .list_opcodes(ProviderID::CryptoAuthLib)
+            .list_opcodes(ProviderId::CryptoAuthLib)
             .expect("list providers failed"),
         crypto_providers_cal
     );
@@ -113,7 +113,7 @@ fn mangled_list_providers() {
     let mut client = RequestTestClient::new();
     let mut req = Request::new();
     req.header.version_maj = 1;
-    req.header.provider = ProviderID::Core;
+    req.header.provider = ProviderId::Core;
     req.header.opcode = Opcode::ListProviders;
 
     req.body = RequestBody::_from_bytes(vec![0x11, 0x22, 0x33, 0x44, 0x55]);
@@ -152,7 +152,7 @@ fn list_keys() {
             .unwrap();
     }
 
-    let key_names: Vec<(String, ProviderID)> = client
+    let key_names: Vec<(String, ProviderId)> = client
         .list_keys()
         .expect("list_keys failed")
         .into_iter()

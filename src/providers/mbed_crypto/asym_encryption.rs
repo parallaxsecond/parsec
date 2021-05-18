@@ -4,7 +4,7 @@ use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
-use parsec_interface::requests::{ProviderID, ResponseStatus, Result};
+use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use psa_crypto::operations::asym_encryption;
 use psa_crypto::types::key;
 
@@ -16,7 +16,7 @@ impl Provider {
     ) -> Result<psa_asymmetric_encrypt::Result> {
         let key_name = op.key_name.clone();
 
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, key_name);
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let _guard = self
             .key_handle_mutex
@@ -51,7 +51,7 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderID::MbedCrypto, op.key_name.clone());
+        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, op.key_name.clone());
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self

@@ -6,9 +6,9 @@ use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    Attributes, Lifetime, Policy, Type, UsageFlags, EccFamily,
+    Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
 };
-use parsec_client::core::interface::requests::{Opcode, ProviderID, ResponseStatus};
+use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatus};
 
 // Ignored as only RSA key types are supported for now.
 #[ignore]
@@ -110,8 +110,7 @@ fn wrong_usage_flags() {
         let key_type = Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         };
-        let permitted_algorithm =
-            Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+        let permitted_algorithm = Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
             hash_alg: Hash::Sha256.into(),
         });
         let key_attributes = Attributes {
@@ -188,7 +187,7 @@ fn wrong_permitted_algorithm() {
 
     // The Mbed Crypto provider currently does not support other algorithms than the RSA PKCS 1v15
     // signing algorithm with hash when checking policies only.
-    if client.provider() == ProviderID::MbedCrypto {
+    if client.provider() == ProviderId::MbedCrypto {
         return;
     }
 
