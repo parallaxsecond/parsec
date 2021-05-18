@@ -22,7 +22,7 @@ impl Provider {
                 signature: signature.into(),
             }),
             _ => {
-                error!("Sign failed, hardware reported: {}", result);
+                error!("Sign hash ailed, hardware reported: {}", result);
                 Err(ResponseStatus::PsaErrorHardwareFailure)
             }
         }
@@ -65,7 +65,7 @@ impl Provider {
             Ok(true) => Ok(psa_verify_hash::Result {}),
             Ok(false) => Err(ResponseStatus::PsaErrorInvalidSignature),
             Err(status) => {
-                format_error!("Verify failed: ", status);
+                error!("Verify hash failed: {}.", status);
                 match status {
                     AtcaStatus::AtcaInvalidSize => Err(ResponseStatus::PsaErrorInvalidSignature),
                     _ => Err(ResponseStatus::PsaErrorHardwareFailure),
@@ -83,7 +83,7 @@ impl Provider {
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
-        if op.hash.len() != rust_cryptoauthlib::ATCA_SHA2_256_DIGEST_SIZE {
+        if op.hash.len() != Hash::Sha256.hash_length() {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
@@ -109,6 +109,9 @@ impl Provider {
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
+        if op.hash.len() != Hash::Sha256.hash_length() {
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
 
         match op.alg {
             AsymmetricSignature::Ecdsa {

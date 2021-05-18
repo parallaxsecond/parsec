@@ -12,21 +12,15 @@ impl Provider {
     /// Ensure proper return value type.
     pub fn sha256(&self, msg: &[u8]) -> Result<psa_hash_compute::Result> {
         let mut hash = vec![0u8; rust_cryptoauthlib::ATCA_SHA2_256_DIGEST_SIZE];
-        match self.device.sha(msg.to_vec(), &mut hash) {
+        let result = self.device.sha(msg.to_vec(), &mut hash);
+        match result {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
                 Ok(psa_hash_compute::Result { hash: hash.into() })
             }
-            rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
-                Err(ResponseStatus::PsaErrorInvalidArgument)
+            _ => {
+                error!("Hash compute failed, hardware reported: {}.", result);
+                Err(ResponseStatus::PsaErrorHardwareFailure)
             }
-            rust_cryptoauthlib::AtcaStatus::AtcaSmallBuffer => {
-                Err(ResponseStatus::PsaErrorBufferTooSmall)
-            }
-            rust_cryptoauthlib::AtcaStatus::AtcaRxNoResponse
-            | rust_cryptoauthlib::AtcaStatus::AtcaRxFail => {
-                Err(ResponseStatus::PsaErrorCommunicationFailure)
-            }
-            _ => Err(ResponseStatus::PsaErrorGenericError),
         }
     }
 
@@ -45,10 +39,9 @@ impl Provider {
         op: psa_hash_compare::Operation,
     ) -> Result<psa_hash_compare::Result> {
         // check hash length
-        if op.hash.len() != op.alg.hash_length() {
-            let error = ResponseStatus::PsaErrorInvalidArgument;
-            error!("Invalid input hash length: {}", error);
-            return Err(error);
+        if op.hash.len() != Hash::Sha256.hash_length() {
+            error!("Invalid input hash length.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
         match op.alg {
             Hash::Sha256 => {
@@ -56,9 +49,8 @@ impl Provider {
                 let hash = self.sha256(&op.input)?.hash;
                 // compare input vs. computed hash
                 if op.hash != hash {
-                    let error = ResponseStatus::PsaErrorInvalidSignature;
-                    error!("Hash comparison failed: {}", error);
-                    Err(error)
+                    error!("Hash comparison failed.");
+                    Err(ResponseStatus::PsaErrorInvalidSignature)
                 } else {
                     Ok(psa_hash_compare::Result)
                 }
