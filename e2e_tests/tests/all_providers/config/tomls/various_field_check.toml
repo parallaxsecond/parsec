@@ -1,0 +1,28 @@
+[core_settings]
+allow_root = true
+thread_pool_size = 2
+idle_listener_sleep_duration = 12
+log_level = "trace"
+log_timestamp = true
+# 1 KiB max for requests
+body_len_limit = 1024
+log_error_details = true
+# 1 KiB max for responses
+buffer_size_limit = 1024
+
+[listener]
+listener_type = "DomainSocket"
+timeout = 202
+socket_path = "/tmp/toto.sock"
+
+[authenticator]
+auth_type = "Direct"
+
+[[key_manager]]
+name = "I-want-to-speak-to-the-manager"
+manager_type = "OnDisk"
+store_path = "/tmp/the-mappings"
+
+[[provider]]
+provider_type = "MbedCrypto"
+key_info_manager = "I-want-to-speak-to-the-manager"

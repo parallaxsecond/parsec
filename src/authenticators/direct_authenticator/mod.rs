@@ -8,8 +8,9 @@
 //! This authenticator does not offer any security value and should only be used in environments
 //! where all the clients and the service are mutually trustworthy.
 
-use super::{Admin, AdminList, Application, Authenticate};
+use super::{AdminList, Application, Authenticate};
 use crate::front::listener::ConnectionMetadata;
+use crate::utils::config::Admin;
 use log::error;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
@@ -73,7 +74,7 @@ impl Authenticate for DirectAuthenticator {
 
 #[cfg(test)]
 mod test {
-    use super::super::{Admin, Authenticate};
+    use super::super::Authenticate;
     use super::DirectAuthenticator;
     use crate::authenticators::ApplicationName;
     use parsec_interface::requests::request::RequestAuth;
@@ -126,11 +127,9 @@ mod test {
     #[test]
     fn admin_check() {
         let admin_name = String::from("admin_name");
+        let admin = toml::from_str(&format!("name = '{}'", admin_name)).unwrap();
         let authenticator = DirectAuthenticator {
-            admins: vec![Admin {
-                name: admin_name.clone(),
-            }]
-            .into(),
+            admins: vec![admin].into(),
         };
 
         let app_name = "app_name".to_string();

@@ -7,10 +7,8 @@
 //! functionality in the underlying hardware which allows the PSA Crypto operations to be
 //! backed by a hardware root of trust.
 use log::trace;
-use parsec_interface::requests::{Opcode, ProviderId};
-use serde::Deserialize;
+use parsec_interface::requests::Opcode;
 use std::collections::HashSet;
-use zeroize::Zeroize;
 
 pub mod core;
 
@@ -30,106 +28,6 @@ pub mod cryptoauthlib;
 
 #[cfg(feature = "trusted-service-provider")]
 pub mod trusted_service;
-
-/// Provider configuration structure
-/// For providers configs in Parsec config.toml we use a format similar
-/// to the one described in the Internally Tagged Enum representation
-/// where "provider_type" is the tag field. For details see:
-/// https://serde.rs/enum-representations.html
-#[derive(Deserialize, Debug, Zeroize)]
-#[zeroize(drop)]
-#[serde(tag = "provider_type")]
-pub enum ProviderConfig {
-    /// Mbed Crypto provider configuration
-    MbedCrypto {
-        /// Name of the Key Info Manager to use
-        key_info_manager: String,
-    },
-    /// PKCS 11 provider configuration
-    Pkcs11 {
-        /// Name of the Key Info Manager to use
-        key_info_manager: String,
-        /// Path of the PKCS 11 library
-        library_path: String,
-        /// Slot number to use
-        slot_number: usize,
-        /// User Pin
-        user_pin: Option<String>,
-        /// Control whether public key operations are performed in software
-        software_public_operations: Option<bool>,
-    },
-    /// TPM provider configuration
-    Tpm {
-        /// Name of the Key Info Manager to use
-        key_info_manager: String,
-        /// TCTI to use with the provider
-        tcti: String,
-        /// Owner Hierarchy Authentication
-        owner_hierarchy_auth: String,
-    },
-    /// Microchip CryptoAuthentication Library provider configuration
-    CryptoAuthLib {
-        /// Name of the Key Info Manager to use
-        key_info_manager: String,
-        /// ATECC Device type
-        device_type: String,
-        /// Interface type
-        iface_type: String,
-        /// Wake delay
-        wake_delay: Option<u16>,
-        /// Number of rx retries
-        rx_retries: Option<i32>,
-        /// I2C slave address
-        slave_address: Option<u8>,
-        /// I2C bus
-        bus: Option<u8>,
-        /// I2C baud rate
-        baud: Option<u32>,
-    },
-    /// Trusted Service provider configuration
-    TrustedService {
-        /// Name of Key Info Manager to use
-        key_info_manager: String,
-    },
-}
-
-impl ProviderConfig {
-    /// Get the name of the Key Info Manager in the provider configuration
-    pub fn key_info_manager(&self) -> &String {
-        match *self {
-            ProviderConfig::MbedCrypto {
-                ref key_info_manager,
-                ..
-            } => key_info_manager,
-            ProviderConfig::Pkcs11 {
-                ref key_info_manager,
-                ..
-            } => key_info_manager,
-            ProviderConfig::Tpm {
-                ref key_info_manager,
-                ..
-            } => key_info_manager,
-            ProviderConfig::CryptoAuthLib {
-                ref key_info_manager,
-                ..
-            } => key_info_manager,
-            ProviderConfig::TrustedService {
-                ref key_info_manager,
-                ..
-            } => key_info_manager,
-        }
-    }
-    /// Get the Provider ID of the provider
-    pub fn provider_id(&self) -> ProviderId {
-        match *self {
-            ProviderConfig::MbedCrypto { .. } => ProviderId::MbedCrypto,
-            ProviderConfig::Pkcs11 { .. } => ProviderId::Pkcs11,
-            ProviderConfig::Tpm { .. } => ProviderId::Tpm,
-            ProviderConfig::CryptoAuthLib { .. } => ProviderId::CryptoAuthLib,
-            ProviderConfig::TrustedService { .. } => ProviderId::TrustedService,
-        }
-    }
-}
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{

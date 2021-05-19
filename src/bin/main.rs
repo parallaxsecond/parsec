@@ -41,7 +41,7 @@
 
 use anyhow::Result;
 use log::{info, trace};
-use parsec_service::utils::{ServiceBuilder, ServiceConfig};
+use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
 use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
 use std::sync::{

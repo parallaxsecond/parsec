@@ -6,7 +6,6 @@
 //! trait acts as an interface for the operations that must be supported by any implementation
 //! of the IPC mechanism used as a Parsec front.
 use derivative::Derivative;
-use serde::Deserialize;
 use std::time::Duration;
 
 /// This trait is created to allow the iterator returned by incoming to iterate over a trait object
@@ -14,24 +13,6 @@ use std::time::Duration;
 pub trait ReadWrite: std::io::Read + std::io::Write {}
 // Automatically implements ReadWrite for all types that implement Read and Write.
 impl<T: std::io::Read + std::io::Write> ReadWrite for T {}
-
-/// Type of the Listener used
-#[derive(Copy, Clone, Deserialize, Debug)]
-pub enum ListenerType {
-    /// Listener using Unix Domain Socket
-    DomainSocket,
-}
-
-/// Configuration of the Listener
-#[derive(Clone, Deserialize, Debug)]
-pub struct ListenerConfig {
-    /// Type of the Listener
-    pub listener_type: ListenerType,
-    /// Timeout of the Listener before the connection errors out (in milliseconds)
-    pub timeout: u64,
-    /// Path of the Unix Domain socket
-    pub socket_path: Option<String>,
-}
 
 /// Specifies metadata associated with a connection, if any.
 #[derive(Copy, Clone, Debug)]

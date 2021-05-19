@@ -23,13 +23,8 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
-use parsec_client::core::ipc_handler::unix_socket;
 use parsec_client::error::Error;
 use std::collections::HashSet;
-use std::time::Duration;
-
-const TEST_SOCKET_PATH: &str = "/tmp/parsec.sock";
-const TEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
@@ -58,20 +53,8 @@ impl TestClient {
             env_logger::try_init();
         }
 
-        let mut basic_client = BasicClient::new_naked();
-
-        let ipc_handler =
-            unix_socket::Handler::new(TEST_SOCKET_PATH.into(), Some(TEST_TIMEOUT)).unwrap();
-        basic_client.set_ipc_handler(Box::from(ipc_handler));
-        basic_client.set_timeout(Some(Duration::from_secs(10)));
-
-        basic_client.set_default_provider().unwrap();
-        basic_client
-            .set_default_auth(Some(String::from("root")))
-            .unwrap();
-
         TestClient {
-            basic_client,
+            basic_client: BasicClient::new(Some(String::from("root"))).unwrap(),
             created_keys: Some(HashSet::new()),
         }
     }
