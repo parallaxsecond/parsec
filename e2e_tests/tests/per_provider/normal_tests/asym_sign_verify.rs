@@ -8,6 +8,7 @@ use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus, Result};
 #[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
 use ring::signature::{self, UnparsedPublicKey};
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 use sha2::{Digest, Sha256};
 
@@ -143,9 +144,9 @@ fn only_verify_from_internet() -> Result<()> {
 
 #[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
-fn prv_sign_pub_ver() -> Result<()> {
-    let private_key_name = String::from("prv_sign_pub_ver_prv");
-    let public_key_name = String::from("prv_sign_pub_ver_pub");
+fn private_sign_public_verify() -> Result<()> {
+    let private_key_name = String::from("private_sign_public_verify_prv");
+    let public_key_name = String::from("private_sign_public_verify_pub");
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaVerifyHash) {
@@ -709,6 +710,7 @@ fn fail_verify_hash2_ecc() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn asym_verify_with_rsa_crate() {
     let key_name = String::from("asym_verify_with_rsa_crate");

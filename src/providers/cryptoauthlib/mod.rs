@@ -19,15 +19,15 @@ use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 use parsec_interface::operations::{
-    psa_destroy_key, psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute,
-    psa_import_key, psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
+    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_generate_random,
+    psa_hash_compare, psa_hash_compute, psa_import_key, psa_sign_hash, psa_sign_message,
+    psa_verify_hash, psa_verify_message,
 };
 
 mod asym_sign;
 mod generate_random;
 mod hash;
 mod key_management;
-mod key_operations;
 mod key_slot;
 mod key_slot_storage;
 
@@ -202,6 +202,7 @@ impl Provider {
                     && self.supported_opcodes.insert(Opcode::PsaVerifyHash)
                     && self.supported_opcodes.insert(Opcode::PsaSignMessage)
                     && self.supported_opcodes.insert(Opcode::PsaVerifyMessage)
+                    && self.supported_opcodes.insert(Opcode::PsaExportPublicKey)
                 {
                     Some(())
                 } else {
@@ -386,6 +387,19 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_verify_message_internal(app_name, op)
+        }
+    }
+
+    fn psa_export_public_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_export_public_key::Operation,
+    ) -> Result<psa_export_public_key::Result> {
+        trace!("psa_export_public_key ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaExportPublicKey) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_export_public_key_internal(app_name, op)
         }
     }
 }

@@ -1,21 +1,40 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::RSAPublicKey;
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
-fn export_public_key() -> Result<()> {
+fn export_rsa_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("export_public_key");
+    let key_name = String::from("export_rsa_public_key");
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
     client.generate_rsa_sign_key(key_name.clone())?;
+
+    let _ = client.export_public_key(key_name)?;
+
+    Ok(())
+}
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[test]
+fn export_ecc_public_key() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("export_ecc_public_key");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
 
     let _ = client.export_public_key(key_name)?;
 
@@ -35,10 +54,11 @@ fn export_without_create() {
     assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
-fn import_and_export_public_key() -> Result<()> {
+fn import_and_export_rsa_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_and_export_public_key");
+    let key_name = String::from("import_and_export_rsa_public_key");
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -59,6 +79,23 @@ fn import_and_export_public_key() -> Result<()> {
     Ok(())
 }
 
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[test]
+fn import_and_export_ecc_public_key() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("import_and_export_ecc_public_key");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    println!("PsaExportPublicKey is supported");
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), ECC_PUBLIC_KEY.to_vec())?;
+    println!("import succeeded");
+    assert_eq!(ECC_PUBLIC_KEY.to_vec(), client.export_public_key(key_name)?);
+    println!("export succeeded");
+    Ok(())
+}
+
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn check_public_rsa_export_format() -> Result<()> {
     let mut client = TestClient::new();
@@ -74,11 +111,30 @@ fn check_public_rsa_export_format() -> Result<()> {
     Ok(())
 }
 
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
-fn check_export_public_possible() -> Result<()> {
+fn check_public_ecc_export_format() -> Result<()> {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    let private_key_name = String::from("check_public_ecc_export_format_prv");
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(private_key_name.clone())?;
+    let public_key = client.export_public_key(private_key_name.clone())?;
+
+    // That should not fail if the bytes are in the expected format.
+    let public_key_name = String::from("check_public_ecc_export_format_pub");
+    let _ =
+        client.import_ecc_public_secp_r1_ecdsa_sha256_key(public_key_name.clone(), public_key)?;
+    Ok(())
+}
+
+#[cfg(not(feature = "cryptoauthlib-provider"))]
+#[test]
+fn check_export_rsa_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
     let mut client = TestClient::new();
-    let key_name = String::from("check_export_public_possible");
+    let key_name = String::from("check_export_rsa_public_possible");
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -104,6 +160,47 @@ fn check_export_public_possible() -> Result<()> {
                     hash_alg: Hash::Sha256.into(),
                 },
             ),
+        },
+    };
+
+    client.generate_key(key_name.clone(), key_attributes)?;
+
+    let _public_key = client.export_public_key(key_name)?;
+
+    Ok(())
+}
+
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[test]
+fn check_export_ecc_public_possible() -> Result<()> {
+    // Exporting a public key is always permitted
+    let mut client = TestClient::new();
+    let key_name = String::from("check_export_ecc_public_possible");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 256,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: true,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
         },
     };
 
