@@ -6,7 +6,7 @@ use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
 use parsec_service::front::{front_end::FrontEndHandler, listener::Connection};
-use parsec_service::utils::{ServiceBuilder, ServiceConfig};
+use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
 use std::cmp;
 use std::io::{Read, Result, Write};
 
