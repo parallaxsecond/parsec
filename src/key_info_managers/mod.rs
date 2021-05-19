@@ -8,6 +8,7 @@
 //! means but it has to be persistent.
 
 use crate::authenticators::ApplicationName;
+use crate::utils::config::{KeyInfoManagerConfig, KeyInfoManagerType};
 use anyhow::Result;
 use derivative::Derivative;
 use parsec_interface::operations::psa_key_attributes::Attributes;
@@ -19,24 +20,6 @@ use std::sync::{Arc, RwLock};
 use zeroize::Zeroize;
 
 pub mod on_disk_manager;
-
-/// Type of the KeyInfoManager
-#[derive(Copy, Clone, Deserialize, Debug)]
-pub enum KeyInfoManagerType {
-    /// KeyInfoManager storing the mappings on disk
-    OnDisk,
-}
-
-/// KeyInfoManager configuration
-#[derive(Deserialize, Debug)]
-pub struct KeyInfoManagerConfig {
-    /// Name of the KeyInfoManager
-    pub name: String,
-    /// Type of the KeyInfoManager
-    pub manager_type: KeyInfoManagerType,
-    /// Path used to store the mappings
-    pub store_path: Option<String>,
-}
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.

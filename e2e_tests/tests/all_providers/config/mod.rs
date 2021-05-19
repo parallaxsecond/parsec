@@ -3,6 +3,8 @@
 use e2e_tests::TestClient;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
+use parsec_client::core::interface::operations::psa_algorithm::Hash;
+use parsec_client::core::interface::requests::ResponseStatus;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -128,4 +130,33 @@ fn pkcs11_encrypt_software() {
         .asymmetric_decrypt_message_with_rsaoaep_sha1(key_name, ciphertext, vec![])
         .unwrap();
     assert_eq!(&plaintext_msg[..], &plaintext[..]);
+}
+
+#[test]
+fn various_fields() {
+    set_config("various_field_check.toml");
+    reload_service();
+
+    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/toto.sock");
+
+    let mut client = TestClient::new();
+    // Try to send a bit less than 1KiB, should work
+    let _ = client
+        .hash_compute(Hash::Sha256, &vec![0xDD; 1019])
+        .unwrap();
+    // Try to send 1KiB and one byte, should fail
+    assert_eq!(
+        client
+            .hash_compute(Hash::Sha256, &vec![0xDD; 1025])
+            .unwrap_err(),
+        ResponseStatus::BodySizeExceedsLimit
+    );
+
+    let _ = client.generate_bytes(1024).unwrap();
+    assert_eq!(
+        client.generate_bytes(1025).unwrap_err(),
+        ResponseStatus::ResponseTooLarge
+    );
+
+    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
 }

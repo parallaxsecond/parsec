@@ -5,24 +5,26 @@
 //! The service builder is required to bootstrap all the components based on a
 //! provided configuration.
 use super::global_config::GlobalConfigBuilder;
-use crate::authenticators::{Authenticate, AuthenticatorConfig};
+use crate::authenticators::Authenticate;
 use crate::back::{
     backend_handler::{BackEndHandler, BackEndHandlerBuilder},
     dispatcher::DispatcherBuilder,
 };
-use crate::front::listener::{ListenerConfig, ListenerType};
 use crate::front::{
     domain_socket::DomainSocketListenerBuilder, front_end::FrontEndHandler,
     front_end::FrontEndHandlerBuilder, listener::Listen,
 };
-use crate::key_info_managers::{KeyInfoManagerConfig, KeyInfoManagerFactory};
-use crate::providers::{core::ProviderBuilder as CoreProviderBuilder, Provide, ProviderConfig};
+use crate::key_info_managers::KeyInfoManagerFactory;
+use crate::providers::{core::ProviderBuilder as CoreProviderBuilder, Provide};
+use crate::utils::config::{
+    AuthenticatorConfig, KeyInfoManagerConfig, ListenerConfig, ListenerType, ProviderConfig,
+    ServiceConfig,
+};
 use anyhow::Result;
-use log::{error, warn, LevelFilter};
+use log::{error, warn};
 use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderId};
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 use std::sync::Arc;
@@ -65,35 +67,6 @@ pub const DEFAULT_BUFFER_SIZE_LIMIT: usize = 1 << 20;
 
 type Provider = Arc<dyn Provide + Send + Sync>;
 type Authenticator = Box<dyn Authenticate + Send + Sync>;
-
-/// Core settings
-///
-/// See the config.toml file for a description of each field.
-#[derive(Copy, Clone, Deserialize, Debug)]
-#[allow(missing_docs)]
-pub struct CoreSettings {
-    pub thread_pool_size: Option<usize>,
-    pub idle_listener_sleep_duration: Option<u64>,
-    pub log_level: Option<LevelFilter>,
-    pub log_timestamp: Option<bool>,
-    pub body_len_limit: Option<usize>,
-    pub log_error_details: Option<bool>,
-    pub allow_root: Option<bool>,
-    pub buffer_size_limit: Option<usize>,
-}
-
-/// Configuration of Parsec
-///
-/// See the config.toml file for a description of each field.
-#[derive(Deserialize, Debug)]
-#[allow(missing_docs)]
-pub struct ServiceConfig {
-    pub core_settings: CoreSettings,
-    pub listener: ListenerConfig,
-    pub authenticator: AuthenticatorConfig,
-    pub key_manager: Option<Vec<KeyInfoManagerConfig>>,
-    pub provider: Option<Vec<ProviderConfig>>,
-}
 
 /// Service component builder and assembler
 ///

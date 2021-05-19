@@ -22,12 +22,11 @@ pub mod direct_authenticator;
 pub mod unix_peer_credentials_authenticator;
 
 use crate::front::listener::ConnectionMetadata;
+use crate::utils::config::Admin;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::Result;
-use serde::Deserialize;
 use std::ops::Deref;
-use zeroize::Zeroize;
 
 /// String wrapper for app names
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -111,36 +110,6 @@ impl From<Application> for ApplicationName {
 impl std::fmt::Display for ApplicationName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name)
-    }
-}
-
-/// Authenticator configuration structure
-#[derive(Deserialize, Debug, Zeroize)]
-#[zeroize(drop)]
-#[serde(tag = "auth_type")]
-pub enum AuthenticatorConfig {
-    /// Direct authentication
-    Direct {
-        /// List of service admins
-        admins: Option<Vec<Admin>>,
-    },
-    /// Unix Peer Credentials authentication
-    UnixPeerCredentials {
-        /// List of service admins
-        admins: Option<Vec<Admin>>,
-    },
-}
-
-/// Structure defining the properties of a service admin
-#[derive(Deserialize, Debug, Zeroize, Clone)]
-#[zeroize(drop)]
-pub struct Admin {
-    name: String,
-}
-
-impl Admin {
-    fn name(&self) -> &str {
-        &self.name
     }
 }
 

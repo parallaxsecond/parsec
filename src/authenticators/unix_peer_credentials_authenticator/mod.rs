@@ -9,8 +9,9 @@
 //!
 //! Currently, the stringified UID is used as the application name.
 
-use super::{Admin, AdminList, Application, Authenticate};
+use super::{AdminList, Application, Authenticate};
 use crate::front::listener::ConnectionMetadata;
+use crate::utils::config::Admin;
 use log::error;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
@@ -98,7 +99,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
 
 #[cfg(test)]
 mod test {
-    use super::super::{Admin, Authenticate};
+    use super::super::Authenticate;
     use super::UnixPeerCredentialsAuthenticator;
     use crate::authenticators::ApplicationName;
     use crate::front::domain_socket::peer_credentials;
@@ -227,11 +228,9 @@ mod test {
             peer_credentials::peer_cred(&_sock_b).unwrap(),
         );
 
+        let admin = toml::from_str(&format!("name = '{}'", get_current_uid())).unwrap();
         let authenticator = UnixPeerCredentialsAuthenticator {
-            admins: vec![Admin {
-                name: get_current_uid().to_string(),
-            }]
-            .into(),
+            admins: vec![admin].into(),
         };
 
         let req_auth_data = cred_a.uid.to_le_bytes().to_vec();

@@ -82,6 +82,10 @@ run_key_mappings_tests() {
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
 }
 
+# During end-to-end tests, Parsec is configured with the socket in /tmp/
+# Individual tests might change that, but set the default after.
+export PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
+
 # Parse arguments
 NO_CARGO_CLEAN=
 NO_STRESS_TEST=
