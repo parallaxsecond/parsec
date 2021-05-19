@@ -83,6 +83,20 @@ jobs:
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
 
+  fuzz-test-checker:
+    name: Check that the fuzz testing framework is still working
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      - name: Run the fuzz test script
+        # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
+        run: ./fuzz.sh test
+      # When running the container built on the CI
+      # run: CONTAINER_TAG=parsec-service-test-all ./fuzz.sh test
+
   cross-compilation:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets

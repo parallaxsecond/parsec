@@ -29,13 +29,14 @@
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 
-use parsec_client::auth::AuthenticationData;
+use parsec_client::auth::Authentication;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::operations::*;
 use parsec_client::core::interface::requests::ProviderId;
 use parsec_client::core::ipc_handler::{Connect, ReadWrite};
 use parsec_client::core::operation_client::OperationClient;
+use parsec_client::core::secrecy::Secret;
 use parsec_client::error::Result;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -151,7 +152,7 @@ fn operations() -> Vec<(String, NativeOperation)> {
                 alg: AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: vec![0x5a; 32],
+                hash: vec![0x5a; 32].into(),
             }),
         ),
         (
@@ -161,7 +162,7 @@ fn operations() -> Vec<(String, NativeOperation)> {
                 alg: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: vec![0x5a; 32],
+                hash: vec![0x5a; 32].into(),
             }),
         ),
         (
@@ -171,8 +172,8 @@ fn operations() -> Vec<(String, NativeOperation)> {
                 alg: AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: vec![0x5a; 32],
-                signature: vec![0xff; 32],
+                hash: vec![0x5a; 32].into(),
+                signature: vec![0xff; 32].into(),
             }),
         ),
         (
@@ -182,8 +183,8 @@ fn operations() -> Vec<(String, NativeOperation)> {
                 alg: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 },
-                hash: vec![0x5a; 32],
-                signature: vec![0xff; 32],
+                hash: vec![0x5a; 32].into(),
+                signature: vec![0xff; 32].into(),
             }),
         ),
         (
@@ -216,7 +217,7 @@ fn operations() -> Vec<(String, NativeOperation)> {
                         ),
                     },
                 },
-                data: vec![
+                data: Secret::new(vec![
                     153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20, 102, 253, 217,
                     247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81, 135,
                     72, 112, 132, 150, 175, 128, 173, 182, 122, 227, 214, 196, 130, 54, 239, 93, 5,
@@ -225,10 +226,25 @@ fn operations() -> Vec<(String, NativeOperation)> {
                     228, 178, 252, 35, 209, 222, 228, 16, 143, 99, 143, 146, 241, 186, 187, 22,
                     209, 86, 141, 24, 159, 12, 146, 44, 111, 254, 183, 54, 229, 109, 28, 39, 22,
                     141, 173, 85, 26, 58, 9, 128, 27, 57, 131,
-                ],
+                ]),
             }),
         ),
     ]
+}
+
+fn generate_corpus(client: &mut OperationClient, id: ProviderId, path: &PathBuf) {
+    for (file_name_root, operation) in operations().drain(..) {
+        let mut file_path = path.clone();
+        file_path.push(format!("{}-{:?}", file_name_root, id));
+        client.request_client.ipc_handler = Box::from(FileHandler { file_path });
+        let _ = client
+            .process_operation(
+                operation,
+                id,
+                &Authentication::Direct(String::from("app-ident")),
+            )
+            .unwrap_err();
+    }
 }
 
 // This build file generates the corpus for the fuzz tests
@@ -238,17 +254,21 @@ fn main() {
     if !path.is_dir() {
         std::fs::create_dir(&path).unwrap();
     }
-    let mut client = OperationClient::new();
-    for (file_name, operation) in operations().drain(..) {
-        let mut file_path = path.clone();
-        file_path.push(file_name);
-        client.request_client.ipc_handler = Box::from(FileHandler { file_path });
-        let _ = client
-            .process_operation(
-                operation,
-                ProviderId::Tpm,
-                &AuthenticationData::AppIdentity(String::from("app-ident")),
-            )
-            .unwrap_err();
+    let mut client = OperationClient::default();
+    if cfg!(feature = "mbed-crypto-provider") {
+        generate_corpus(&mut client, ProviderId::MbedCrypto, &path);
+    }
+    if cfg!(feature = "tpm-provider") {
+        generate_corpus(&mut client, ProviderId::Tpm, &path);
+    }
+    if cfg!(feature = "pkcs11-provider") {
+        generate_corpus(&mut client, ProviderId::Pkcs11, &path);
+    }
+    if !cfg!(any(
+        feature = "mbed-crypto-provider",
+        feature = "tpm-provider",
+        feature = "pkcs11-provider"
+    )) {
+        panic!("In order to run the fuzz framework against some specific providers, the appropriate features must be set when initializing the corpus: \"mbed-crypto-provider\", \"tpm-provider\", or \"pkcs11-provider\"")
     }
 }
