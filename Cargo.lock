@@ -908,9 +908,9 @@ dependencies = [
 
 [[package]]
 name = "rust-cryptoauthlib"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40d1874177f968f181a00a8950eecb5b2ddbd8f33f6db175db78dc81ca4aa072"
+checksum = "2c7bdf92ddf5fd37cc52ef66275820ec6c4ca4a5a9b9e0d6e0490cac5cd77b7a"
 dependencies = [
  "cryptoauthlib-sys",
  "lazy_static",
