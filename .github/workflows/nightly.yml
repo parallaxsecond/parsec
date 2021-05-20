@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Check out the correct revision
-        run: [ ! -z "${{ github.event.inputs.rev }}" ] && git fetch origin ${{ github.event.inputs.rev }} && git checkout FETCH_HEAD
+        with:
+          ref: "${{ github.event.inputs.rev }}"
       - name: Install latest Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,8 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Check out the correct revision
-        run: [ ! -z "${{ github.event.inputs.rev }}" ] && git fetch origin ${{ github.event.inputs.rev }} && git checkout FETCH_HEAD
+        with:
+          ref: "${{ github.event.inputs.rev }}"
       - name: Install latest Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -49,8 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Check out the correct revision
-        run: [ ! -z "${{ github.event.inputs.rev }}" ] && git fetch origin ${{ github.event.inputs.rev }} && git checkout FETCH_HEAD
+        with:
+          ref: "${{ github.event.inputs.rev }}"
       - name: Run the container to execute the coverage script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh coverage
       - name: Collect coverage results
