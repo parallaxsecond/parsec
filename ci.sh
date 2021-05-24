@@ -157,7 +157,7 @@ if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "coverage" ]
 fi
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    PROVIDERS="mbed-crypto tpm pkcs11 trusted-service" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
+    PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*"
     # Install tarpaulin
     cargo install cargo-tarpaulin
