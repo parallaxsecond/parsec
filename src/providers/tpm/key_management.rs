@@ -31,6 +31,11 @@ impl Provider {
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
+        if op.attributes.key_type.is_public_key() {
+            error!("A public key type can not be generated.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         let mut esapi_context = self
             .esapi_context
             .lock()

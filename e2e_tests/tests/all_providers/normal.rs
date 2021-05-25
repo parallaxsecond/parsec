@@ -28,6 +28,32 @@ fn list_providers() {
 }
 
 #[test]
+fn list_providers_order_respected() {
+    let mut client = TestClient::new();
+    let providers = client.list_providers().expect("list providers failed");
+    assert_eq!(
+        providers[0].uuid,
+        Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap()
+    );
+    assert_eq!(
+        providers[1].uuid,
+        Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()
+    );
+    assert_eq!(
+        providers[2].uuid,
+        Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()
+    );
+    assert_eq!(
+        providers[3].uuid,
+        Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()
+    );
+    assert_eq!(
+        providers[4].uuid,
+        Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()
+    );
+}
+
+#[test]
 fn list_authenticators() {
     let mut client = TestClient::new();
     let authenticators = client
@@ -245,4 +271,32 @@ fn list_and_delete_clients() {
     let keys = client.list_keys().expect("list_keys failed");
 
     assert!(keys.is_empty());
+}
+
+#[test]
+fn get_and_use_provider_id() {
+    let mut client = TestClient::new();
+    let providers: Vec<ProviderId> = client
+        .list_providers()
+        .expect("list providers failed")
+        .into_iter()
+        .map(|v| v.id)
+        .filter(|v| *v != ProviderId::Core)
+        .collect();
+
+    for provider in providers {
+        client.set_provider(provider);
+        // Checking that the Provider ID returned by ListProviders can be used.
+        // We check that this operation does not fail with ProviderDoesNotExist.
+        let error = client
+            .destroy_key("this_key_does_not_exist".to_string())
+            .unwrap_err();
+        if error == ResponseStatus::ProviderDoesNotExist {
+            panic!(
+                "Was expecting {} but got {}",
+                ResponseStatus::ProviderDoesNotExist,
+                error
+            );
+        }
+    }
 }
