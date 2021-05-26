@@ -41,6 +41,7 @@
 
 use anyhow::Result;
 use log::{info, trace};
+use parsec_service::utils::cli::Opts;
 use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
 use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
@@ -51,22 +52,6 @@ use std::sync::{
 use std::time::Duration;
 use structopt::StructOpt;
 use users::get_current_uid;
-
-/// Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
-/// common API to secure services in a platform-agnostic way.
-///
-/// Parsec documentation is available at:
-/// https://parallaxsecond.github.io/parsec-book/index.html
-///
-/// Most of Parsec configuration comes from its configuration file.
-/// Please check the documentation to find more about configuration:
-/// https://parallaxsecond.github.io/parsec-book/user_guides/configuration.html
-#[derive(StructOpt)]
-struct Opts {
-    /// Sets the configuration file path
-    #[structopt(short, long, default_value = "config.toml")]
-    config: String,
-}
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
