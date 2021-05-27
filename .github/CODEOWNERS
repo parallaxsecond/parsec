@@ -1,3 +1,6 @@
 # The content of the config.rs file should not change in a breaking way.
 # See https://github.com/parallaxsecond/parsec/issues/393 for details.
 src/utils/config.rs   @parallaxsecond/admin
+# The content of the cli.rs file should not change in a breaking way.
+# See https://github.com/parallaxsecond/parsec/issues/392 for details.
+src/utils/cli.rs      @parallaxsecond/admin
