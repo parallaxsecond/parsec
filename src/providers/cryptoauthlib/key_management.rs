@@ -6,7 +6,7 @@ use crate::authenticators::ApplicationName;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{Opcode, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, Secret};
@@ -190,12 +190,56 @@ impl Provider {
                 let result = self.device.get_public_key(slot_number, &mut raw_public_key);
                 match result {
                     rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
-                        let public_key = raw_key_wrap(&Secret::new(raw_public_key))?;
-                        Ok(psa_export_public_key::Result { data: public_key })
+                        let public_key =
+                            raw_key_wrap(key_attributes.key_type, &Secret::new(raw_public_key))?;
+                        Ok(psa_export_public_key::Result {
+                            data: Zeroizing::new(public_key.expose_secret().to_vec()),
+                        })
                     }
                     _ => {
                         error!("Export public key from cryptochip. {}", result);
                         Err(ResponseStatus::PsaErrorHardwareFailure)
+                    }
+                }
+            }
+            _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+        }
+    }
+
+    pub(super) fn psa_export_key_internal(
+        &self,
+        app_name: ApplicationName,
+        op: psa_export_key::Operation,
+    ) -> Result<psa_export_key::Result> {
+        let key_triple = self.key_info_store.get_key_triple(app_name, op.key_name);
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+
+        if !key_attributes.is_exportable() {
+            return Err(ResponseStatus::PsaErrorNotPermitted);
+        }
+        let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
+            error!("Failed to get type for key. {}", e);
+            e
+        })?;
+
+        match key_attributes.key_type {
+            Type::Aes
+            | Type::RawData
+            | Type::EccPublicKey {
+                curve_family: EccFamily::SecpR1,
+            } => {
+                let slot_number = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let mut raw_key = Vec::new();
+                let result = self.device.export_key(key_type, &mut raw_key, slot_number);
+                match result {
+                    rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
+                        let exported_key =
+                            raw_key_wrap(key_attributes.key_type, &Secret::new(raw_key))?;
+                        Ok(psa_export_key::Result { data: exported_key })
+                    }
+                    _ => {
+                        error!("Export key failed, hardware reported: {}", result);
+                        Err(ResponseStatus::PsaErrorInvalidArgument)
                     }
                 }
             }
@@ -233,18 +277,29 @@ fn raw_key_extract(key_type: Type, secret: &Secret<Vec<u8>>) -> Result<Secret<Ve
 
 // Wrap the raw key with whatever Parsec wants
 // This is CALib -> Parsec conversion
-fn raw_key_wrap(secret: &Secret<Vec<u8>>) -> Result<Zeroizing<Vec<u8>>> {
+fn raw_key_wrap(key_type: Type, secret: &Secret<Vec<u8>>) -> Result<Secret<Vec<u8>>> {
     let key = secret.expose_secret().to_vec();
-
-    match key.len() {
-        // ECC public key length
-        64 => {
-            // Add the prefix
-            let mut wrapped_public_key = vec![0x04];
-            wrapped_public_key.extend_from_slice(&key);
-            Ok(Zeroizing::new(wrapped_public_key))
+    match key_type {
+        Type::Aes | Type::RawData => Ok(Secret::new(key)),
+        Type::EccPublicKey {
+            curve_family: EccFamily::SecpR1,
         }
-        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+        | Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        } => match key.len() {
+            // No support for EccKeyPair, because cryptochip does not support exporting private key.
+            // But public key can be calculated out of a private one, therefore this function
+            // looks like it supports EccKeyPair. But only a public key. See below.
+            // ECC public key length.
+            64 => {
+                // Add the prefix
+                let mut wrapped_public_key = vec![0x04];
+                wrapped_public_key.extend_from_slice(&key);
+                Ok(Secret::new(wrapped_public_key))
+            }
+            _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+        },
+        _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
 
@@ -322,9 +377,15 @@ fn test_wrap_raw_ecc_public_key() {
         0x08, 0xa7, 0xb4, 0xc6, 0xe0, 0xce, 0x73, 0xac, 0xd0, 0x69, 0xd4, 0xcc, 0xa8, 0xd0, 0x55,
         0xee, 0x6c, 0x65, 0xb5, 0x71,
     ];
-    let ecc_public_key = raw_key_wrap(&raw_ecc_pub_key).unwrap();
+    let ecc_public_key = raw_key_wrap(
+        Type::EccPublicKey {
+            curve_family: EccFamily::SecpR1,
+        },
+        &raw_ecc_pub_key,
+    )
+    .unwrap();
     assert_eq!(
-        Zeroizing::from(wrapped_ecc_public_key.to_vec()),
-        ecc_public_key
+        wrapped_ecc_public_key.to_vec(),
+        ecc_public_key.expose_secret().to_owned()
     );
 }

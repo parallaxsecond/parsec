@@ -184,6 +184,11 @@ key_info_manager = "on-disk-manager"
 # (Optional) i2c bus baud rate
 # - required for i2c
 #baud = 400000
+##########
+# (Optional) Atecc access key configuration file
+# - required for i2c
+# - this file contains potentially sensitive data, it should be stored in folder where only 'parsec' user may access it
+#access_key_file_name = "/etc/parsec/cal_access_keys.toml"
 ###########
 # Tree:
 # iface_type = ["test-interface", "i2c"]
