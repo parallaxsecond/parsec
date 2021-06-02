@@ -3,7 +3,7 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 #[cfg(not(feature = "cryptoauthlib-provider"))]
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::RsaPublicKey;
 
 #[test]
 fn create_and_destroy() {
@@ -141,7 +141,7 @@ fn generate_public_rsa_check_modulus() {
 
     let public_key = client.export_public_key(key_name).unwrap();
 
-    let public_key: RSAPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
+    let public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
     assert_eq!(
         public_key.public_exponent.as_unsigned_bytes_be(),
         [0x01, 0x00, 0x01]
