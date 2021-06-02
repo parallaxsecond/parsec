@@ -149,3 +149,64 @@ fn authenticator_not_registered() {
         ResponseStatus::AuthenticatorNotRegistered
     );
 }
+
+#[test]
+fn flags_ignored() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    req_hdr.provider = ProviderId::Core as u8;
+    req_hdr.opcode = Opcode::Ping as u32;
+    req_hdr.flags = 56;
+
+    let _resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+}
+
+#[test]
+fn status_ignored() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    req_hdr.provider = ProviderId::Core as u8;
+    req_hdr.opcode = Opcode::Ping as u32;
+
+    req_hdr.status = 0xFFFF;
+
+    let _resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+}
+
+#[test]
+fn reserved_fields_not_zero1() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    req_hdr.provider = ProviderId::Core as u8;
+    req_hdr.opcode = Opcode::Ping as u32;
+
+    req_hdr.reserved1 = 56;
+
+    let resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+    assert_eq!(resp.header.status, ResponseStatus::InvalidHeader);
+}
+
+#[test]
+fn reserved_fields_not_zero2() {
+    let mut client = RawRequestClient {};
+    let mut req_hdr = RawHeader::new();
+
+    req_hdr.provider = ProviderId::Core as u8;
+    req_hdr.opcode = Opcode::Ping as u32;
+
+    req_hdr.reserved2 = 56;
+
+    let resp = client
+        .send_raw_request(req_hdr, Vec::new())
+        .expect("Failed to read Response");
+    assert_eq!(resp.header.status, ResponseStatus::InvalidHeader);
+}

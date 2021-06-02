@@ -22,6 +22,12 @@ impl Provider {
         let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
 
         self.key_info_store.does_not_exist(&key_triple)?;
+
+        if op.attributes.key_type.is_public_key() {
+            error!("A public key type can not be generated.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         let key_attributes = op.attributes;
         let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
             error!("Failed to get type for key. {}", e);

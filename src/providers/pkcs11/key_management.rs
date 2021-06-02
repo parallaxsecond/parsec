@@ -87,6 +87,11 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        if op.attributes.key_type.is_public_key() {
+            error!("A public key type can not be generated.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         if op.attributes.key_type != Type::RsaKeyPair {
             error!("The PKCS11 provider currently only supports creating RSA key pairs.");
             return Err(ResponseStatus::PsaErrorNotSupported);

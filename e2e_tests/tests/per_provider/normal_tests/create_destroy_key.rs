@@ -164,3 +164,53 @@ fn failed_created_key_should_be_removed() {
     // The key should not exist anymore in the KIM
     client.generate_rsa_sign_key(key_name).unwrap();
 }
+
+#[test]
+// See https://github.com/ARMmbed/mbedtls/issues/4551
+#[cfg(not(any(
+    feature = "mbed-crypto-provider",
+    feature = "trusted-service-provider",
+    feature = "cryptoauthlib-provider"
+)))]
+fn try_generate_asymmetric_public_key() {
+    use parsec_client::core::interface::operations::psa_algorithm::{
+        Algorithm, AsymmetricSignature, Hash,
+    };
+    use parsec_client::core::interface::operations::psa_key_attributes::{
+        Attributes, Lifetime, Policy, Type, UsageFlags,
+    };
+
+    let mut client = TestClient::new();
+    let key_name = String::from("try_generate_asymmetric_public_key");
+    let err = client
+        .generate_key(
+            key_name,
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaPublicKey,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: true,
+                        verify_hash: true,
+                        sign_message: true,
+                        verify_message: true,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Sha256.into(),
+                        },
+                    ),
+                },
+            },
+        )
+        .unwrap_err();
+
+    assert_eq!(err, ResponseStatus::PsaErrorInvalidArgument);
+}

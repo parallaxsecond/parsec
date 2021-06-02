@@ -21,6 +21,11 @@ urXDbuN7S5c9ukBCvOjuqp4g2Q0LcrPvOsMBFTeueXJxN9HvNfIM741X+DGOwqFV\
 VJ8gc1rd0y/NXVtGwQJAc2w23nTmZ/olcMVRia1+AFsELcCnD+JqaJ2AEF1Ng6Ix\
 V/X2l32v6t3B57sw/8ce3LCheEdqLHlSOpQiaD7Qfw==";
 
+pub const ECC_PRIVATE_KEY: [u8; 32] = [
+    0x26, 0xc8, 0x82, 0x9e, 0x22, 0xe3, 0x0c, 0xa6, 0x3d, 0x29, 0xf5, 0xf7, 0x27, 0x39, 0x58, 0x47,
+    0x41, 0x81, 0xf6, 0x57, 0x4f, 0xdb, 0xcb, 0x4d, 0xbb, 0xdd, 0x52, 0xff, 0x3a, 0xc0, 0xf6, 0x0d,
+];
+
 #[test]
 fn export_key_not_supported() {
     let mut client = TestClient::new();
@@ -322,4 +327,48 @@ fn export_key_matches_import() {
         .unwrap();
     let exported_key = client.export_key(key_name).unwrap();
     assert_eq!(decoded_key, exported_key);
+}
+
+#[test]
+fn import_export_ecc_key() {
+    let mut client = TestClient::new();
+    let key_name = String::from("import_export_ecc_key");
+
+    if !client.is_operation_supported(Opcode::PsaExportKey)
+        || !client.is_operation_supported(Opcode::PsaImportKey)
+    {
+        return;
+    }
+
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 256,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: true,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    client
+        .import_key(key_name.clone(), key_attributes, ECC_PRIVATE_KEY.to_vec())
+        .unwrap();
+    let exported_key = client.export_key(key_name).unwrap();
+
+    assert_eq!(ECC_PRIVATE_KEY.to_vec(), exported_key);
 }

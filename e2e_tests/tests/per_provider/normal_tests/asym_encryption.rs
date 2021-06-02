@@ -3,6 +3,10 @@
 #![allow(unused, dead_code)]
 
 use e2e_tests::TestClient;
+use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
+use parsec_client::core::interface::operations::psa_key_attributes::{
+    Attributes, Lifetime, Policy, Type, UsageFlags,
+};
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use rand::rngs::OsRng;
 use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
@@ -356,4 +360,81 @@ fn asym_verify_decrypt_with_internet() {
         .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, encrypt_bytes)
         .unwrap();
     assert_eq!(ORIGINAL_MESSAGE.as_bytes(), plaintext_bytes.as_slice());
+}
+
+#[test]
+fn asym_encrypt_not_permitted() {
+    let key_name = String::from("asym_encrypt_not_permitted");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
+        return;
+    }
+
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: false,
+                decrypt: true,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+        },
+    };
+
+    client.generate_key(key_name.clone(), attributes).unwrap();
+
+    let error = client
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .unwrap_err();
+    assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
+}
+
+#[test]
+fn asym_decrypt_not_permitted() {
+    let key_name = String::from("asym_decrypt_not_permitted");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
+        return;
+    }
+
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::RsaKeyPair,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: true,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
+        },
+    };
+
+    client.generate_key(key_name.clone(), attributes).unwrap();
+
+    let encrypt_bytes = base64::decode(ENCRYPTED_MESSAGE).unwrap();
+    let error = client
+        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, encrypt_bytes)
+        .unwrap_err();
+    assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
 }

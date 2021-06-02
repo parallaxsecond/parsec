@@ -344,7 +344,11 @@ fn sign_hash_bad_format_rsa_sha256() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(not(any(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "trusted-service-provider"
+)))]
 #[test]
 fn sign_hash_bad_format_ecdsa_sha256() -> Result<()> {
     let key_name = String::from("sign_hash_bad_format_ecdsa_sha256");
@@ -841,6 +845,110 @@ fn sign_verify_message_ecc() {
     client
         .verify_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec(), signature)
         .unwrap();
+}
+
+#[test]
+fn sign_message_not_permitted() {
+    let key_name = String::from("sign_message_not_permitted");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaSignMessage) {
+        return;
+    }
+
+    let msg = b"Bob wrote this message.";
+
+    client
+        .generate_key(
+            key_name.clone(),
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: false,
+                        verify_message: false,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricSignature::Ecdsa {
+                        hash_alg: Hash::Sha256.into(),
+                    }
+                    .into(),
+                },
+            },
+        )
+        .unwrap();
+
+    let error = client
+        .sign_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec())
+        .unwrap_err();
+
+    assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
+}
+
+#[test]
+fn verify_message_not_permitted() {
+    let key_name = String::from("verify_message_not_permitted");
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaVerifyMessage)
+        || !client.is_operation_supported(Opcode::PsaSignMessage)
+    {
+        return;
+    }
+
+    let msg = b"Bob wrote this message.";
+
+    client
+        .generate_key(
+            key_name.clone(),
+            Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags: UsageFlags {
+                        sign_hash: false,
+                        verify_hash: false,
+                        sign_message: true,
+                        verify_message: false,
+                        export: false,
+                        encrypt: false,
+                        decrypt: false,
+                        cache: false,
+                        copy: false,
+                        derive: false,
+                    },
+                    permitted_algorithms: AsymmetricSignature::Ecdsa {
+                        hash_alg: Hash::Sha256.into(),
+                    }
+                    .into(),
+                },
+            },
+        )
+        .unwrap();
+
+    let signature = client
+        .sign_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec())
+        .unwrap();
+
+    let error = client
+        .verify_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec(), signature)
+        .unwrap_err();
+
+    assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
 }
 
 #[cfg(feature = "tpm-provider")]
