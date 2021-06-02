@@ -7,7 +7,7 @@ use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 #[cfg(not(feature = "cryptoauthlib-provider"))]
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::RsaPublicKey;
 
 #[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 pub const ECC_PUBLIC_KEY: [u8; 65] = [
@@ -98,7 +98,7 @@ fn check_public_rsa_export_format() -> Result<()> {
     let public_key = client.export_public_key(key_name)?;
 
     // That should not fail if the bytes are in the expected format.
-    let _public_key: RSAPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
+    let _public_key: RsaPublicKey = picky_asn1_der::from_bytes(&public_key).unwrap();
     Ok(())
 }
 

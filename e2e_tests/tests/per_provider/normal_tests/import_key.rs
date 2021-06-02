@@ -8,7 +8,7 @@ use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::RsaPublicKey;
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 const KEY_DATA: [u8; 140] = [
@@ -210,7 +210,7 @@ fn check_format_import1() -> Result<()> {
         return Ok(());
     }
 
-    let public_key = RSAPublicKey {
+    let public_key = RsaPublicKey {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
@@ -231,7 +231,7 @@ fn check_format_import2() -> Result<()> {
         return Ok(());
     }
 
-    let public_key = RSAPublicKey {
+    let public_key = RsaPublicKey {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
@@ -281,7 +281,7 @@ fn check_format_import3() -> Result<()> {
         return Ok(());
     }
 
-    let public_key = RSAPublicKey {
+    let public_key = RsaPublicKey {
         modulus: IntegerAsn1::from_bytes_be_unsigned(vec![0xDE; 1024]),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
@@ -333,7 +333,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         return Ok(());
     }
     #[cfg(not(feature = "cryptoauthlib-provider"))]
-    let public_key = RSAPublicKey {
+    let public_key = RsaPublicKey {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };

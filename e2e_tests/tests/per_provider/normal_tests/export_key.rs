@@ -5,7 +5,7 @@ use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
-use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
+use picky_asn1_x509::{RsaPrivateKey, RsaPublicKey};
 
 const PRIVATE_KEY: &str = "MIICWwIBAAKBgQCd+EKeRmZCKLmg7LasWqpKA9/01linY75ujilf6v/Kb8UP9r/E\
 cO75Pvi2YPnYhBadmVOVxMOqS2zmKm1a9VTegT8dN9Unf2s2KbKrKXupaQTXcrGG\
@@ -159,8 +159,8 @@ fn check_rsa_export_format() -> Result<()> {
     let key = client.export_key(key_name)?;
 
     // That should not fail if the bytes are in the expected format.
-    let _public_key: RSAPublicKey = picky_asn1_der::from_bytes(&key).unwrap();
-    let _private_key: RSAPrivateKey = picky_asn1_der::from_bytes(&key).unwrap();
+    let _public_key: RsaPublicKey = picky_asn1_der::from_bytes(&key).unwrap();
+    let _private_key: RsaPrivateKey = picky_asn1_der::from_bytes(&key).unwrap();
     Ok(())
 }
 

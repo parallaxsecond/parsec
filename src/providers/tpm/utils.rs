@@ -254,7 +254,7 @@ pub fn parsec_to_tpm_signature(
     })
 }
 
-/// Validates an RSAPublicKey against the attributes we expect. Returns ok on success, otherwise
+/// Validates an RsaPublicKey against the attributes we expect. Returns ok on success, otherwise
 /// returns an error.
 pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
     if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
