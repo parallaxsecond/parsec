@@ -25,6 +25,22 @@ fn create_and_destroy() {
 }
 
 #[test]
+fn create_and_destroy_ecc() {
+    let mut client = TestClient::new();
+    client.do_not_destroy_keys();
+    let key_name = String::from("create_and_destroy_ecc");
+
+    if !client.is_operation_supported(Opcode::PsaGenerateKey) {
+        return;
+    }
+
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
+    client.destroy_key(key_name).unwrap();
+}
+
+#[test]
 fn create_twice() {
     let mut client = TestClient::new();
     let key_name = String::from("create_twice");

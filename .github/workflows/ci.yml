@@ -108,6 +108,8 @@ jobs:
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
       - name: Run the container to execute the test script
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        # When running the container built on the CI
+        # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links
