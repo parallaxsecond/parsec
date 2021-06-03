@@ -31,7 +31,6 @@ cd ../
 # We use the Parsec Tool to create one RSA and one ECC key per provider,
 # when it is possible.
 cargo install parsec-tool
-export PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
 parsec-tool -p 1 create-rsa-key -k rsa
 parsec-tool -p 1 create-ecc-key -k ecc
 parsec-tool -p 2 create-rsa-key -k rsa

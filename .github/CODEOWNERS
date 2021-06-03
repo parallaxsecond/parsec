@@ -4,3 +4,11 @@ src/utils/config.rs   @parallaxsecond/admin
 # The content of the cli.rs file should not change in a breaking way.
 # See https://github.com/parallaxsecond/parsec/issues/392 for details.
 src/utils/cli.rs      @parallaxsecond/admin
+# The Docker container is also used to check that there are no breaking
+# changes in buildtime dependencies.
+# See https://github.com/parallaxsecond/parsec/issues/397
+# See https://github.com/parallaxsecond/parsec/issues/408
+e2e_tests/docker_image/   @parallaxsecond/admin
+# The way tests are executed should be only modified carefully to not remove
+# regression or breaking changes detection.
+ci.sh   @parallaxsecond/admin

@@ -55,6 +55,8 @@ prost-build = { version = "0.7.0", optional = true }
 [package.metadata.docs.rs]
 features = ["pkcs11-provider", "tpm-provider", "mbed-crypto-provider", "cryptoauthlib-provider", "direct-authenticator"]
 
+# The features should not be modified in a breaking way.
+# See https://github.com/parallaxsecond/parsec/issues/408 for details.
 [features]
 default = ["unix-peer-credentials-authenticator"]
 

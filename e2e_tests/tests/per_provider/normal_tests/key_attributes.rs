@@ -201,3 +201,39 @@ fn wrong_permitted_algorithm() {
 
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
 }
+
+#[test]
+#[cfg(not(feature = "cryptoauthlib-provider"))]
+fn no_usage_flag_set() {
+    let mut client = TestClient::new();
+    let key_name = String::from("no_usage_flag_set");
+    let key_type = Type::RsaKeyPair;
+    let permitted_algorithm =
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: Hash::Sha512.into(),
+        });
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type,
+        bits: 1024,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: permitted_algorithm,
+        },
+    };
+
+    client
+        .generate_key(key_name.clone(), key_attributes)
+        .unwrap();
+}

@@ -105,19 +105,23 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
                 x @ 1024 | x @ 2048 | x @ 3072 | x @ 4096 => x.try_into().unwrap(), // will not fail on the matched values
                 _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
             };
-            if attributes.is_encrypt_permitted() || attributes.is_decrypt_permitted() {
-                Ok(KeyParams::RsaEncrypt {
-                    size,
-                    pub_exponent: 0,
-                })
-            } else if attributes.is_hash_signable() || attributes.is_hash_verifiable() {
-                Ok(KeyParams::RsaSign {
+            match attributes.policy.permitted_algorithms {
+                Algorithm::AsymmetricSignature(alg) if alg.is_rsa_alg() => Ok(KeyParams::RsaSign {
                     size,
                     scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
                     pub_exponent: 0,
-                })
-            } else {
-                Err(ResponseStatus::PsaErrorNotSupported)
+                }),
+                Algorithm::AsymmetricEncryption(_) => Ok(KeyParams::RsaEncrypt {
+                    size,
+                    pub_exponent: 0,
+                }),
+                alg => {
+                    error!(
+                        "Permitted algorithm {:?} not supported with RSA key pair.",
+                        alg
+                    );
+                    Err(ResponseStatus::PsaErrorInvalidArgument)
+                }
             }
         }
         Type::EccKeyPair { .. } => Ok(KeyParams::Ecc {
