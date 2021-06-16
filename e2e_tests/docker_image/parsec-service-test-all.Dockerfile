@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 FROM ubuntu:18.04
 
+# The specific version of libraries used in this Dockerfile should not change without having
+# carefully checked that this is not breaking stability.
+# See https://github.com/parallaxsecond/parsec/issues/397
+# and https://parallaxsecond.github.io/parsec-book/parsec_service/stability.html
+
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 RUN apt update
@@ -9,7 +14,7 @@ RUN apt install -y autoconf-archive libcmocka0 libcmocka-dev procps
 RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake libssl-dev uthash-dev doxygen libjson-c-dev
 RUN apt install -y --fix-missing wget python3 cmake clang
 RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
-RUN apt install -y python3-distutils libclang-dev protobuf-compiler python3-pip
+RUN apt install -y python3-distutils libclang-6.0-dev protobuf-compiler python3-pip
 
 WORKDIR /tmp
 
@@ -63,6 +68,15 @@ RUN cd SoftHSMv2 \
 	&& make install
 RUN rm -rf SoftHSMv2
 
+# Download and install Mbed Crypto from Mbed TLS
+RUN git clone https://github.com/ARMmbed/mbedtls.git \
+	&& cd mbedtls \
+	&& git reset --hard mbedtls-2.25.0
+RUN cd mbedtls \
+	&& ./scripts/config.py crypto \
+	&& SHARED=1 make \
+	&& make install
+
 # Install dependencies for Trusted Services
 # Install cmake v 3.18
 RUN wget https://cmake.org/files/v3.18/cmake-3.18.0-Linux-x86_64.sh
@@ -115,6 +129,14 @@ RUN useradd -m parsec-client-2
 # Add `/usr/local/lib` to library path for Trusted service provider
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
+# During end-to-end tests, Parsec is configured with the socket in /tmp/
+# Individual tests might change that, but set the default after.
+ENV PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
+
 # Generate keys for the key mappings test
 COPY generate-keys.sh /tmp/
 RUN ./generate-keys.sh
+
+# Import an old version of the e2e tests
+COPY import-old-e2e-tests.sh /tmp/
+RUN ./import-old-e2e-tests.sh

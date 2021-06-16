@@ -56,6 +56,9 @@ wait_for_service() {
     done
 
     sleep 5
+
+    # Check that Parsec successfully started and is running
+    pgrep -f target/release/parsec >/dev/null
 }
 
 stop_service() {
@@ -77,14 +80,23 @@ run_normal_tests() {
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml normal_tests
 }
 
+run_old_e2e_tests() {
+    # The old client fails if ListProviders returns a ProviderID it does not know.
+    # See https://github.com/parallaxsecond/parsec-interface-rs/issues/111
+    if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "mbed-crypto" ] || [ "$PROVIDER_NAME" = "tpm" ]; then
+        echo "Execute old end-to-end normal tests"
+        # The version of the Parsec client used in those old tests expect the socket to be at
+        # /tmp/parsec/parsec.sock. This can not be created in the Dockerfile as this is where
+        # the repository is checked out.
+        ln -s /tmp/parsec.sock /tmp/parsec/parsec.sock
+        RUST_BACKTRACE=1 cargo test --manifest-path /tmp/old_e2e_tests/Cargo.toml normal_tests
+    fi
+}
+
 run_key_mappings_tests() {
     echo "Execute key mappings tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
 }
-
-# During end-to-end tests, Parsec is configured with the socket in /tmp/
-# Individual tests might change that, but set the default after.
-export PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
 
 # Parse arguments
 NO_CARGO_CLEAN=
@@ -156,6 +168,15 @@ if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "coverage" ]
     git submodule update --init
 fi
 
+if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+    # With those variables defined, dynamic linking will be attempted to build the
+    # Mbed Crypto provider. The Mbed Crypto library was installed in the container.
+    # Defining those variables during the trusted-service provider testing leads to a
+    # linking problem as it also used Mbed Crypto.
+    export MBEDTLS_LIB_DIR="/tmp/mbedtls/library"
+    export MBEDTLS_INCLUDE_DIR="/tmp/mbedtls/include"
+fi
+
 if [ "$PROVIDER_NAME" = "coverage" ]; then
     PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*"
@@ -183,6 +204,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
         # Run tests
         run_normal_tests
+        run_old_e2e_tests
         run_key_mappings_tests
         stop_service
     done
@@ -195,6 +217,40 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 fi
 
 echo "Build test"
+
+if [ "$PROVIDER_NAME" = "all" ]; then
+    # We test that everything in the service still builds with the current Rust stable
+    # and an old Rust compiler.
+    # The old Rust compiler version is found by manually checking the oldest Rust version of all
+    # Linux distributions that we support:
+    # - Fedora 33 and more recent releases
+    # - RHEL-8
+    # - openSUSE Tumbleweed
+    # - openSUSE Leap 15.3
+    # The oldest is currently in openSUSE Leap 15.3 and is 1.43.0.
+    rustup update
+
+    rustup toolchain install 1.43.0
+    RUST_BACKTRACE=1 cargo +1.43.0 check --release $FEATURES
+
+    # Latest stable
+    rustup toolchain install stable
+    RUST_BACKTRACE=1 cargo +stable check --release $FEATURES
+
+    # We test that each feature still exist.
+    RUST_BACKTRACE=1 cargo check
+    RUST_BACKTRACE=1 cargo check --features="mbed-crypto-provider"
+    RUST_BACKTRACE=1 cargo check --features="pkcs11-provider"
+    RUST_BACKTRACE=1 cargo check --features="tpm-provider"
+    RUST_BACKTRACE=1 cargo check --features="cryptoauthlib-provider"
+    # To be added when trusted-service is added to all-providers feature
+    #RUST_BACKTRACE=1 cargo check --features="trusted-service-provider"
+    RUST_BACKTRACE=1 cargo check --features="all-providers"
+    RUST_BACKTRACE=1 cargo check --features="direct-authenticator"
+    RUST_BACKTRACE=1 cargo check --features="unix-peer-credentials-authenticator"
+    RUST_BACKTRACE=1 cargo check --features="all-authenticators"
+fi
+
 RUST_BACKTRACE=1 cargo build $FEATURES
 
 echo "Static checks"
@@ -228,13 +284,9 @@ if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
 fi
 
 echo "Start Parsec for end-to-end tests"
-RUST_LOG=info RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
+RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
 # Sleep time needed to make sure Parsec is ready before launching the tests.
 wait_for_service
-
-# Check that Parsec successfully started and is running
-pgrep -f target/debug/parsec >/dev/null
-
 
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers normal tests"
@@ -263,6 +315,7 @@ if [ "$PROVIDER_NAME" = "all" ]; then
 else
     # Per provider tests
     run_normal_tests
+    run_old_e2e_tests
     run_key_mappings_tests
 
     if [ -z "$NO_STRESS_TEST" ]; then
@@ -274,8 +327,8 @@ else
         echo "Start Parsec for stress tests"
         # Change the log level for the stress tests because logging is limited on the
         # CI servers.
-        RUST_LOG=error RUST_BACKTRACE=1 cargo run $FEATURES -- --config $CONFIG_PATH &
-        sleep 5
+        RUST_LOG=error RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
+        wait_for_service
 
         echo "Execute stress tests"
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml stress_test
