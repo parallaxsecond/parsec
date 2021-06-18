@@ -365,19 +365,19 @@ mod tests {
         };
         // KeyType::P256EccKey
         // Type::EccKeyPair => NOK
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
         // private key attrs => OK
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::P256EccKey;
         key_slot.config.write_config = rust_cryptoauthlib::WriteConfig::Encrypt;
         key_slot.config.is_secret = true;
         key_slot.config.ecc_key_attr.is_private = true;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
+        assert!(key_slot.is_key_type_ok(0, &attributes));
         // Type::Aes => NOK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
         // Type::RawData => NOK
         attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
 
         // KeyType::Aes
         // Type::EccKeyPair => NOK
@@ -385,13 +385,13 @@ mod tests {
         attributes.key_type = Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         };
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
         // Type::Aes => OK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), true);
+        assert!(key_slot.is_key_type_ok(0, &attributes));
         // Type::RawData => NOK
         attributes.key_type = Type::RawData;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
 
         // KeyType::ShaOrText
         // Type::EccKeyPair => NOK
@@ -399,10 +399,10 @@ mod tests {
         attributes.key_type = Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         };
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
         // Type::Aes => NOK
         attributes.key_type = Type::Aes;
-        assert_eq!(key_slot.is_key_type_ok(0, &attributes), false);
+        assert!(!key_slot.is_key_type_ok(0, &attributes));
     }
 
     #[test]
@@ -468,30 +468,30 @@ mod tests {
         };
         // Type::EccKeyPair
         // && export && copy == true => OK
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
+        assert!(key_slot.is_usage_flags_ok(&attributes));
         // && pub_info == false => OK
         key_slot.config.pub_info = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
+        assert!(!key_slot.is_usage_flags_ok(&attributes));
         // && pub_info == false => NOK
         key_slot.config.pub_info = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
+        assert!(!key_slot.is_usage_flags_ok(&attributes));
         // && is_private == false => NOK
         key_slot.config.ecc_key_attr.is_private = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
+        assert!(key_slot.is_usage_flags_ok(&attributes));
         // && export && copy == false => OK
         attributes.policy.usage_flags.export = false;
         attributes.policy.usage_flags.copy = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), true);
+        assert!(key_slot.is_usage_flags_ok(&attributes));
 
         // KeyType::Aes => NOK
         attributes.policy.usage_flags.export = true;
         attributes.policy.usage_flags.copy = true;
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::Aes;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
+        assert!(!key_slot.is_usage_flags_ok(&attributes));
         // && sign_hash && sign_message == false => OK
         attributes.policy.usage_flags.sign_hash = false;
         attributes.policy.usage_flags.sign_message = false;
-        assert_eq!(key_slot.is_usage_flags_ok(&attributes), false);
+        assert!(!key_slot.is_usage_flags_ok(&attributes));
     }
 
     #[test]
@@ -559,37 +559,31 @@ mod tests {
 
         // KeyType::P256EccKey
         // && AsymmetricSignature::Ecdsa => OK
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
+        assert!(key_slot.is_permitted_algorithms_ok(&attributes, None));
         // && FullLengthMac::Hmac => NOK
         attributes.policy.permitted_algorithms = Mac::FullLength(FullLengthMac::Hmac {
             hash_alg: Hash::Sha256,
         })
         .into();
-        assert_eq!(
-            key_slot.is_permitted_algorithms_ok(&attributes, None),
-            false
-        );
+        assert!(!key_slot.is_permitted_algorithms_ok(&attributes, None));
         // && AsymmetricSignature::DeterministicEcdsa => NOK
         attributes.policy.permitted_algorithms = AsymmetricSignature::DeterministicEcdsa {
             hash_alg: Hash::Sha256.into(),
         }
         .into();
-        assert_eq!(
-            key_slot.is_permitted_algorithms_ok(&attributes, None),
-            false
-        );
+        assert!(!key_slot.is_permitted_algorithms_ok(&attributes, None));
         // && RawKeyAgreement::Ecdh => OK
         attributes.policy.permitted_algorithms = KeyAgreement::Raw(RawKeyAgreement::Ecdh).into();
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
+        assert!(key_slot.is_permitted_algorithms_ok(&attributes, None));
 
         // KeyType::Aes
         // && Aead::AeadWithDefaultLengthTag => OK
         attributes.policy.permitted_algorithms =
             Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm).into();
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::Aes;
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
+        assert!(key_slot.is_permitted_algorithms_ok(&attributes, None));
         // && Cipher(Cipher::CbcPkcs7) => OK
         attributes.policy.permitted_algorithms = Algorithm::Cipher(Cipher::CbcPkcs7);
-        assert_eq!(key_slot.is_permitted_algorithms_ok(&attributes, None), true);
+        assert!(key_slot.is_permitted_algorithms_ok(&attributes, None));
     }
 }

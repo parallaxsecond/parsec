@@ -142,7 +142,7 @@ mod test {
             auth_name.get_name(),
             &ApplicationName::from_name(get_current_uid().to_string())
         );
-        assert_eq!(auth_name.is_admin, false);
+        assert!(!auth_name.is_admin);
     }
 
     #[test]
@@ -249,7 +249,7 @@ mod test {
             auth_name.get_name(),
             &ApplicationName::from_name(get_current_uid().to_string())
         );
-        assert_eq!(auth_name.is_admin, true);
+        assert!(auth_name.is_admin);
     }
 
     #[test]

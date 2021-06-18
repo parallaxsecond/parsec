@@ -95,7 +95,7 @@ mod test {
             .expect("Failed to authenticate");
 
         assert_eq!(app.get_name(), &ApplicationName::from_name(app_name));
-        assert_eq!(app.is_admin, false);
+        assert!(!app.is_admin);
     }
 
     #[test]
@@ -141,7 +141,7 @@ mod test {
             .expect("Failed to authenticate");
 
         assert_eq!(auth_name.get_name(), &ApplicationName::from_name(app_name));
-        assert_eq!(auth_name.is_admin, false);
+        assert!(!auth_name.is_admin);
 
         let req_auth = RequestAuth::new(admin_name.clone().into_bytes());
         let auth_name = authenticator
@@ -152,6 +152,6 @@ mod test {
             auth_name.get_name(),
             &ApplicationName::from_name(admin_name)
         );
-        assert_eq!(auth_name.is_admin, true);
+        assert!(auth_name.is_admin);
     }
 }
