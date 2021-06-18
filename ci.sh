@@ -62,7 +62,13 @@ wait_for_service() {
 }
 
 stop_service() {
-    pkill parsec || true
+    # Randomly signals with SIGINT or SIGTERM to test that both can be used to
+    # gracefully shutdowm Parsec.
+    if ! (($RANDOM % 2)); then
+        pkill -SIGINT parsec || true
+    else
+        pkill -SIGTERM parsec || true
+    fi
 
     while [ -n "$(pgrep parsec)" ]; do
         sleep 1
@@ -320,9 +326,7 @@ else
 
     if [ -z "$NO_STRESS_TEST" ]; then
         echo "Shutdown Parsec"
-        pkill parsec
-        # Sleep time needed to make sure Parsec is killed.
-        sleep 2
+        stop_service
 
         echo "Start Parsec for stress tests"
         # Change the log level for the stress tests because logging is limited on the
