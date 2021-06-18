@@ -8,7 +8,11 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result;
-use picky_asn1_x509::{AlgorithmIdentifier, DigestInfo, SHAVariant};
+use picky_asn1::wrapper::ObjectIdentifierAsn1;
+use picky_asn1_x509::{
+    algorithm_identifier::ECParameters, AlgorithmIdentifier, DigestInfo, SHAVariant,
+};
+use std::convert::TryInto;
 
 // Public exponent value for all RSA keys.
 pub const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
@@ -110,6 +114,9 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha512),
         } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_512),
+        AsymmetricSignature::Ecdsa {
+            hash_alg: SignHash::Specific(Hash::Sha256),
+        } => AlgorithmIdentifier::new_ecdsa_with_sha256(),
         _ => return Err(ResponseStatus::PsaErrorNotSupported),
     };
     picky_asn1_der::to_vec(&DigestInfo {
@@ -118,4 +125,26 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
     })
     // should not fail - if it does, there's some error in our stack
     .map_err(|_| ResponseStatus::PsaErrorGenericError)
+}
+
+pub fn ec_params(ecc_family: EccFamily, bits: usize) -> Result<ECParameters> {
+    Ok(ECParameters::NamedCurve(match (ecc_family, bits) {
+        // The following "unwrap()" should be ok, as they cover constant conversions
+        (EccFamily::SecpR1, 192) => {
+            ObjectIdentifierAsn1(String::from("1.2.840.10045.3.1.1").try_into().unwrap())
+        }
+        (EccFamily::SecpR1, 224) => {
+            ObjectIdentifierAsn1(String::from("1.3.132.0.33").try_into().unwrap())
+        }
+        (EccFamily::SecpR1, 256) => {
+            ObjectIdentifierAsn1(String::from("1.2.840.10045.3.1.7").try_into().unwrap())
+        }
+        (EccFamily::SecpR1, 384) => {
+            ObjectIdentifierAsn1(String::from("1.3.132.0.34").try_into().unwrap())
+        }
+        (EccFamily::SecpR1, 521) => {
+            ObjectIdentifierAsn1(String::from("1.3.132.0.35").try_into().unwrap())
+        }
+        _ => return Err(ResponseStatus::PsaErrorNotSupported),
+    }))
 }

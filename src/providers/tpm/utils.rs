@@ -176,7 +176,7 @@ fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
             224 => Ok(EccCurve::NistP224),
             256 => Ok(EccCurve::NistP256),
             384 => Ok(EccCurve::NistP384),
-            512 => Ok(EccCurve::NistP521),
+            521 => Ok(EccCurve::NistP521),
             _ => Err(ResponseStatus::PsaErrorNotSupported),
         },
         _ => Err(ResponseStatus::PsaErrorNotSupported),
@@ -258,7 +258,7 @@ pub fn parsec_to_tpm_signature(
     })
 }
 
-/// Validates an RsaPublicKey against the attributes we expect. Returns ok on success, otherwise
+/// Validates an RSAPublicKey against the attributes we expect. Returns ok on success, otherwise
 /// returns an error.
 pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
     if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {

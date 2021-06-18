@@ -92,11 +92,6 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }
 
-        if op.attributes.key_type != Type::RsaKeyPair {
-            error!("The PKCS11 provider currently only supports creating RSA key pairs.");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 
@@ -117,6 +112,7 @@ impl Provider {
             .mechanism_type()]),
         ];
         let mut priv_template = pub_template.clone();
+        pub_template.push(Attribute::Private(false.into()));
 
         utils::key_pair_usage_flags_to_pkcs11_attributes(
             key_attributes.policy.usage_flags,
@@ -126,12 +122,21 @@ impl Provider {
 
         let mech = match key_attributes.key_type {
             Type::RsaKeyPair => {
-                pub_template.push(Attribute::Private(false.into()));
                 pub_template.push(Attribute::PublicExponent(utils::PUBLIC_EXPONENT.to_vec()));
                 pub_template.push(Attribute::ModulusBits(
                     key_attributes.bits.try_into().map_err(to_response_status)?,
                 ));
                 Ok(Mechanism::RsaPkcsKeyPairGen)
+            }
+            Type::EccKeyPair { curve_family } => {
+                pub_template.push(Attribute::EcParams(
+                    picky_asn1_der::to_vec(&utils::ec_params(curve_family, key_attributes.bits)?)
+                        .map_err(|e| {
+                        error!("Failed to generate EC parameters: {}", e);
+                        ResponseStatus::PsaErrorGenericError
+                    })?,
+                ));
+                Ok(Mechanism::EccKeyPairGen)
             }
             _ => Err(ResponseStatus::PsaErrorNotSupported),
         }?;
@@ -142,12 +147,12 @@ impl Provider {
                     self.key_info_store
                         .insert_key_info(key_triple, &key_id, key_attributes)
                 {
-                    format_error!("Failed to insert the mappings, deleting the key.", e);
+                    format_error!("Failed to insert the mappings, deleting the key", e);
                     if let Err(e) = session.destroy_object(public) {
-                        format_error!("Failed to destroy public part of the key: ", e);
+                        format_error!("Failed to destroy public part of the key", e);
                     }
                     if let Err(e) = session.destroy_object(private) {
-                        format_error!("Failed to destroy private part of the key: ", e);
+                        format_error!("Failed to destroy private part of the key", e);
                     }
                     Err(e)
                 } else {
@@ -155,7 +160,7 @@ impl Provider {
                 }
             }
             Err(error) => {
-                format_error!("Generate key status: ", error);
+                format_error!("Generate key status", error);
                 Err(to_response_status(error))
             }
         }
@@ -197,7 +202,7 @@ impl Provider {
 
         let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
             .map_err(|e| {
-                format_error!("Failed to parse RsaPublicKey data", e);
+                format_error!("Failed to parse RSAPublicKey data", e);
                 ResponseStatus::PsaErrorInvalidArgument
             })?;
 

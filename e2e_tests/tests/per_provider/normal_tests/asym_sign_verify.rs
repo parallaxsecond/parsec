@@ -1,15 +1,11 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
-use crate::per_provider::normal_tests::import_key::{ECC_PRIVATE_KEY, ECC_PUBLIC_KEY};
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
-use parsec_client::core::interface::requests::{Opcode, ResponseStatus, Result};
-#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
-use ring::signature::{self, UnparsedPublicKey};
-#[cfg(not(feature = "cryptoauthlib-provider"))]
-use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
+#[cfg(not(feature = "all-providers"))]
+use parsec_client::core::interface::requests::Result;
+use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use sha2::{Digest, Sha256};
 
 const HASH: [u8; 32] = [
@@ -63,7 +59,7 @@ fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn asym_verify_fail_ecc_sha256() -> Result<()> {
     let key_name = String::from("asym_verify_fail_ecc_sha256");
@@ -142,9 +138,15 @@ fn only_verify_from_internet() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, digest, signature)
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(
+    feature = "tpm-provider",
+    feature = "pkcs11-provider",
+    feature = "trusted-service-provider"
+)))]
 #[test]
 fn private_sign_public_verify() -> Result<()> {
+    use crate::per_provider::normal_tests::import_key::{ECC_PRIVATE_KEY, ECC_PUBLIC_KEY};
+
     let private_key_name = String::from("private_sign_public_verify_prv");
     let public_key_name = String::from("private_sign_public_verify_pub");
     let mut client = TestClient::new();
@@ -196,7 +198,7 @@ fn simple_sign_hash_rsa_sha256() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn simple_sign_hash_ecdsa_sha256() -> Result<()> {
     let key_name = String::from("simple_sign_hash_ecdsa_sha256");
@@ -268,7 +270,7 @@ fn sign_hash_not_permitted() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn sign_hash_not_permitted_ecc() -> Result<()> {
     let key_name = String::from("sign_hash_not_permitted_ecc");
@@ -344,11 +346,7 @@ fn sign_hash_bad_format_rsa_sha256() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(
-    feature = "mbed-crypto-provider",
-    feature = "pkcs11-provider",
-    feature = "trusted-service-provider"
-)))]
+#[cfg(not(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider")))]
 #[test]
 fn sign_hash_bad_format_ecdsa_sha256() -> Result<()> {
     let key_name = String::from("sign_hash_bad_format_ecdsa_sha256");
@@ -399,7 +397,7 @@ fn simple_verify_hash_rsa() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, hash, signature)
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn simple_verify_hash_ecc() -> Result<()> {
     let key_name = String::from("simple_verify_hash_ecc");
@@ -476,7 +474,7 @@ fn verify_hash_not_permitted_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn verify_hash_not_permitted_ecc() -> Result<()> {
     let key_name = String::from("verify_hash_not_permitted_ecc");
@@ -563,7 +561,11 @@ fn verify_hash_bad_format_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(not(any(
+    feature = "tpm-provider",
+    feature = "trusted-service-provider",
+    feature = "mbed-crypto-provider"
+)))]
 #[test]
 fn verify_hash_bad_format_ecc() -> Result<()> {
     let key_name = String::from("verify_hash_bad_format_ecc");
@@ -627,7 +629,7 @@ fn fail_verify_hash_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn fail_verify_hash_ecc() -> Result<()> {
     let key_name = String::from("fail_verify_hash_ecc");
@@ -685,7 +687,7 @@ fn fail_verify_hash2_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn fail_verify_hash2_ecc() -> Result<()> {
     let key_name = String::from("fail_verify_hash2_ecc");
@@ -717,6 +719,8 @@ fn fail_verify_hash2_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn asym_verify_with_rsa_crate() {
+    use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
+
     let key_name = String::from("asym_verify_with_rsa_crate");
     let mut client = TestClient::new();
 
@@ -746,9 +750,14 @@ fn asym_verify_with_rsa_crate() {
         .unwrap();
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+#[cfg(not(any(
+    feature = "cryptoauthlib-provider",
+    feature = "trusted-service-provider"
+)))]
 #[test]
 fn verify_with_ring() {
+    use ring::signature::{self, UnparsedPublicKey};
+
     let key_name = String::from("verify_with_ring");
     let mut client = TestClient::new();
 
@@ -766,9 +775,11 @@ fn verify_with_ring() {
     pk.verify(message, &signature).unwrap();
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "tpm-provider"))]
+#[cfg(not(any(feature = "cryptoauthlib-provider", feature = "pkcs11-provider")))]
 #[test]
 fn verify_ecc_with_ring() {
+    use ring::signature::{self, UnparsedPublicKey};
+
     let key_name = String::from("verify_ecc_with_ring");
     let mut client = TestClient::new();
     let message = b"Bob wrote this message.";
@@ -789,11 +800,6 @@ fn verify_ecc_with_ring() {
     pk.verify(message, &signature).unwrap();
 }
 
-#[cfg(any(
-    feature = "mbed-crypto-provider",
-    feature = "tpm-provider",
-    feature = "cryptoauthlib-provider"
-))]
 #[test]
 fn sign_verify_hash_ecc() {
     let key_name = String::from("sign_verify_hash_ecc");
@@ -819,11 +825,6 @@ fn sign_verify_hash_ecc() {
         .unwrap();
 }
 
-#[cfg(any(
-    feature = "mbed-crypto-provider",
-    feature = "tpm-provider",
-    feature = "cryptoauthlib-provider"
-))]
 #[test]
 fn sign_verify_message_ecc() {
     let key_name = String::from("sign_verify_message_ecc");
