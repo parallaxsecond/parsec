@@ -26,7 +26,7 @@ toml = "0.5.8"
 serde = { version = "1.0.123", features = ["derive"] }
 env_logger = "0.8.3"
 log = { version = "0.4.14", features = ["serde"] }
-cryptoki = { git = "https://github.com/parallaxsecond/rust-cryptoki", rev = "916f9bbb208ba8a671c593a36313f09c60cd0255", optional = true, features = ["psa-crypto-conversions"] }
+cryptoki = { git = "https://github.com/parallaxsecond/rust-cryptoki", rev = "2cd54bba7a00db93b3e9e2acf50726558a1784fc", optional = true, features = ["psa-crypto-conversions"] }
 picky-asn1-der = { version = "<=0.2.4", optional = true }
 picky-asn1 = { version = ">=0.3.1, <=0.3.1", optional = true }
 tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi", rev = "1f68655e278b0319c080b9804a7bf3f6e11ff721", optional = true }

@@ -94,7 +94,7 @@ manager_type = "OnDisk"
 
 # (Required) Provider configurations.
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
-# IMPORTANT: The order in which providers below are declared matters: providers should be listed 
+# IMPORTANT: The order in which providers below are declared matters: providers should be listed
 # in terms of priority, the highest priority provider being declared first in this file.
 # The first provider will be used as default provider by the Parsec clients. See below example
 # configurations for the different providers supported by the Parsec service.
@@ -119,13 +119,14 @@ key_info_manager = "on-disk-manager"
 # (Required for this provider) Path to the location of the dynamic library loaded by this provider.
 # For the PKCS 11 provider, this library implements the PKCS 11 API on the target platform.
 #library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
-# (Required) PKCS 11 slot that will be used by Parsec.
+# (Optional) PKCS 11 slot that will be used by Parsec.
+# If the slot number is not entered and there is only one slot available - with a valid token - it will be automatically used
 #slot_number = 123456789
 # (Optional) User pin for authentication with the specific slot. If not set, the sessions will not
 # be logged in. It might prevent some operations to execute successfully on some tokens.
 #user_pin = "123456"
 # (Optional) Control whether missing public key operation (such as verifying signatures or asymmetric
-# encryption) are fully performed in software. 
+# encryption) are fully performed in software.
 #software_public_operations = false
 # (Optional) Control whether it is allowed for a key to be exportable. On some platforms creating a
 # key that can be exported will fail with an obscure error. If this flag is set to false, creating
@@ -141,9 +142,9 @@ key_info_manager = "on-disk-manager"
 # - "device": uses a TPM device available as a file node; path can be given as a configuration string,
 # e.g "device:/path/to/tpm"; the default path is /dev/tpm0
 # - "mssim": uses the TPM simulator server with the socket; server path and/or port can be given as configuration values,
-# e.g. "mssim:host=168.0.1.1,port=1234"; "host" can be set to IPv4, IPv6 or a hostname; default values are 
+# e.g. "mssim:host=168.0.1.1,port=1234"; "host" can be set to IPv4, IPv6 or a hostname; default values are
 # "localhost" for "host" and 2321 for "port"
-# - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon; dbus name and type ("session" or 
+# - "tabrmd": uses the TPM2 Access Broker & Resource Management Daemon; dbus name and type ("session" or
 # "system") can be given as parameters: e.g. "tabrmd:bus_name=some.bus.Name,bus_type=session"; default
 # values are "com.intel.tss2.Tabrmd" for "bus_name" and "system" for "bus_type"
 #tcti = "mssim"
