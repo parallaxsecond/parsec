@@ -159,6 +159,25 @@ fn pkcs11_encrypt_software() {
 }
 
 #[test]
+fn no_tpm_support() {
+    set_config("no_tpm_support.toml");
+    // The service should still start, without the TPM provider.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let providers = client.list_providers().unwrap();
+    let uuids: Vec<Uuid> = providers.iter().map(|p| p.uuid).collect();
+    assert_eq!(
+        uuids,
+        vec![
+            Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").unwrap(), // Mbed crypto provider
+            Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap(), // Pkcs11 provider
+            Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap(), // Core provider
+        ]
+    );
+}
+
+#[test]
 fn various_fields() {
     set_config("various_field_check.toml");
     reload_service();

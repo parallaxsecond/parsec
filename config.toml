@@ -149,6 +149,8 @@ key_info_manager = "on-disk-manager"
 # e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
 # provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"
+# (Optional) Allows the service to still start without this provider if there is no TPM on the system. The priority list of providers will be as if this provider was commented out.
+#skip_if_no_tpm = false
 
 # Example of a CryptoAuthLib provider configuration
 # All below parameters depend on what devices, interfaces or parameters are required or supported by
