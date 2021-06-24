@@ -12,6 +12,7 @@
 #[cfg(not(any(
     feature = "direct-authenticator",
     feature = "unix-peer-credentials-authenticator",
+    feature = "jwt-svid-authenticator",
 )))]
 compile_error!("Please provide in at least one authenticator");
 
@@ -20,6 +21,9 @@ pub mod direct_authenticator;
 
 #[cfg(feature = "unix-peer-credentials-authenticator")]
 pub mod unix_peer_credentials_authenticator;
+
+#[cfg(feature = "jwt-svid-authenticator")]
+pub mod jwt_svid_authenticator;
 
 use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;

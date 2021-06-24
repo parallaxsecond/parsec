@@ -56,6 +56,13 @@ pub enum AuthenticatorConfig {
         /// List of service admins
         admins: Option<Vec<Admin>>,
     },
+    /// JWT-SVID
+    JwtSvid {
+        /// Path to the Workload API socket
+        workload_endpoint: String,
+        /// List of service admins
+        admins: Option<Vec<Admin>>,
+    },
 }
 
 /// Structure defining the properties of a service admin

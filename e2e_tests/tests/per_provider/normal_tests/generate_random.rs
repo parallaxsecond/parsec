@@ -53,5 +53,5 @@ fn generate_zero_bytes() {
     const NBYTES: usize = 0;
     let random_bytes = client.generate_bytes(NBYTES).unwrap();
 
-    assert_eq!(random_bytes, vec![]);
+    assert_eq!(random_bytes, Vec::<u8>::new());
 }
