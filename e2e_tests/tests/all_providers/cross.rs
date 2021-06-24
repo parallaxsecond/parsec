@@ -13,7 +13,7 @@ const PLAINTEXT_MESSAGE: [u8; 32] = [
     0x94, 0x8E, 0x92, 0x50, 0x35, 0xC2, 0x8C, 0x5C, 0x3C, 0xCA, 0xFE, 0x18, 0xE8, 0x81, 0x37, 0x78,
 ];
 
-fn setup_sign(provider: ProviderId, key_name: String) -> Result<(TestClient, Vec<u8>, Vec<u8>)> {
+fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
@@ -24,10 +24,26 @@ fn setup_sign(provider: ProviderId, key_name: String) -> Result<(TestClient, Vec
 
     let pub_key = client.export_public_key(key_name).unwrap();
 
-    Ok((client, pub_key, signature))
+    (client, pub_key, signature)
 }
 
-fn setup_asym_encr(provider: ProviderId, key_name: String) -> Result<(TestClient, Vec<u8>)> {
+fn setup_sign_ecc(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
+    let mut client = TestClient::new();
+    client.set_provider(provider);
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
+
+    let signature = client
+        .sign_with_ecdsa_sha256(key_name.clone(), HASH.to_vec())
+        .unwrap();
+
+    let pub_key = client.export_public_key(key_name).unwrap();
+
+    (client, pub_key, signature)
+}
+
+fn setup_asym_encr(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>) {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client
@@ -36,7 +52,7 @@ fn setup_asym_encr(provider: ProviderId, key_name: String) -> Result<(TestClient
 
     let pub_key = client.export_public_key(key_name).unwrap();
 
-    Ok((client, pub_key))
+    (client, pub_key)
 }
 
 fn import_and_verify(
@@ -52,6 +68,22 @@ fn import_and_verify(
         .unwrap();
     client
         .verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
+        .unwrap();
+}
+
+fn import_and_verify_ecc(
+    client: &mut TestClient,
+    provider: ProviderId,
+    key_name: String,
+    pub_key: Vec<u8>,
+    signature: Vec<u8>,
+) {
+    client.set_provider(provider);
+    client
+        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), pub_key)
+        .unwrap();
+    client
+        .verify_with_ecdsa_sha256(key_name, HASH.to_vec(), signature)
         .unwrap();
 }
 
@@ -81,7 +113,7 @@ fn verify_encrypt(
 #[test]
 fn tpm_sign_cross() {
     let key_name = String::from("tpm_sign_cross");
-    let (mut client, pub_key, signature) = setup_sign(ProviderId::Tpm, key_name.clone()).unwrap();
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::Tpm, key_name.clone());
 
     // Mbed Crypto
     import_and_verify(
@@ -103,10 +135,33 @@ fn tpm_sign_cross() {
 }
 
 #[test]
+fn tpm_sign_cross_ecc() {
+    let key_name = String::from("tpm_sign_cross_ecc");
+    let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Tpm, key_name.clone());
+
+    // Mbed Crypto
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::MbedCrypto,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    // PKCS11
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::Pkcs11,
+        key_name,
+        pub_key,
+        signature,
+    );
+}
+
+#[test]
 fn pkcs11_sign_cross() {
     let key_name = String::from("pkcs11_sign_cross");
-    let (mut client, pub_key, signature) =
-        setup_sign(ProviderId::Pkcs11, key_name.clone()).unwrap();
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::Pkcs11, key_name.clone());
 
     // Mbed Crypto
     import_and_verify(
@@ -122,10 +177,24 @@ fn pkcs11_sign_cross() {
 }
 
 #[test]
+fn pkcs11_sign_cross_ecc() {
+    let key_name = String::from("pkcs11_sign_cross_ecc");
+    let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Pkcs11, key_name.clone());
+
+    // Mbed Crypto
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::MbedCrypto,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+}
+
+#[test]
 fn mbed_crypto_sign_cross() {
     let key_name = String::from("mbed_crypto_sign_cross");
-    let (mut client, pub_key, signature) =
-        setup_sign(ProviderId::MbedCrypto, key_name.clone()).unwrap();
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::MbedCrypto, key_name.clone());
 
     // Mbed Crypto
     import_and_verify(
@@ -141,9 +210,24 @@ fn mbed_crypto_sign_cross() {
 }
 
 #[test]
+fn mbed_crypto_sign_cross_ecc() {
+    let key_name = String::from("mbed_crypto_sign_cross_ecc");
+    let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::MbedCrypto, key_name.clone());
+
+    // Mbed Crypto
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::Pkcs11,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+}
+
+#[test]
 fn tpm_asym_encr_cross() {
     let key_name = String::from("tpm_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderId::Tpm, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::Tpm, key_name.clone());
 
     // Mbed Crypto
     let ciphertext = import_and_encrypt(
@@ -169,7 +253,7 @@ fn tpm_asym_encr_cross() {
 #[test]
 fn pkcs11_asym_encr_cross() {
     let key_name = String::from("pkcs11_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderId::Pkcs11, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::Pkcs11, key_name.clone());
 
     // Mbed Crypto
     let ciphertext = import_and_encrypt(
@@ -200,7 +284,7 @@ fn pkcs11_asym_encr_cross() {
 #[test]
 fn mbed_crypto_asym_encr_cross() {
     let key_name = String::from("mbed_crypto_asym_encr_cross");
-    let (mut client, pub_key) = setup_asym_encr(ProviderId::MbedCrypto, key_name.clone()).unwrap();
+    let (mut client, pub_key) = setup_asym_encr(ProviderId::MbedCrypto, key_name.clone());
 
     // Pkcs11
     let ciphertext = import_and_encrypt(

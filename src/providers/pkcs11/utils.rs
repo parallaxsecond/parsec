@@ -114,9 +114,6 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha512),
         } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_512),
-        AsymmetricSignature::Ecdsa {
-            hash_alg: SignHash::Specific(Hash::Sha256),
-        } => AlgorithmIdentifier::new_ecdsa_with_sha256(),
         _ => return Err(ResponseStatus::PsaErrorNotSupported),
     };
     picky_asn1_der::to_vec(&DigestInfo {

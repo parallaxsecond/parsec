@@ -8,6 +8,7 @@ use crate::key_info_managers::KeyTriple;
 use cryptoki::types::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
+use parsec_interface::operations::psa_key_attributes::Type;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use std::convert::TryFrom;
@@ -32,10 +33,18 @@ impl Provider {
         let key = self.find_key(&session, key_id, KeyPairType::PrivateKey)?;
         info!("Located signing key.");
 
+        let hash = match key_attributes.key_type {
+            // For RSA signatures we need to format the hash into a DigestInfo structure
+            Type::RsaKeyPair => utils::digest_info(op.alg, op.hash.to_vec())?.into(),
+            // For ECDSA the format we get it in is sufficient.
+            Type::EccKeyPair { .. } => op.hash,
+            _ => return Err(ResponseStatus::PsaErrorNotSupported), // this shouldn't be reachable
+        };
+
         trace!("Sign* command");
         Ok(psa_sign_hash::Result {
             signature: session
-                .sign(&mech, key, &utils::digest_info(op.alg, op.hash.to_vec())?)
+                .sign(&mech, key, &hash)
                 .map_err(to_response_status)?
                 .into(),
         })
@@ -59,14 +68,19 @@ impl Provider {
         let key = self.find_key(&session, key_id, KeyPairType::PublicKey)?;
         info!("Located public key.");
 
+        let hash = match key_attributes.key_type {
+            // For RSA signatures we need to format the hash into a DigestInfo structure
+            Type::RsaKeyPair | Type::RsaPublicKey => {
+                utils::digest_info(op.alg, op.hash.to_vec())?.into()
+            }
+            // For ECDSA the format we get it in is sufficient.
+            Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => op.hash,
+            _ => return Err(ResponseStatus::PsaErrorNotSupported), // this shouldn't be reachable
+        };
+
         trace!("Verify* command");
         session
-            .verify(
-                &mech,
-                key,
-                &utils::digest_info(op.alg, op.hash.to_vec())?,
-                &op.signature,
-            )
+            .verify(&mech, key, &hash, &op.signature)
             .map_err(to_response_status)?;
         Ok(psa_verify_hash::Result {})
     }
