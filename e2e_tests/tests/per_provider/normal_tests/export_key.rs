@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
