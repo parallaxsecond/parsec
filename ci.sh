@@ -184,10 +184,11 @@ if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
 fi
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
+    rustup toolchain install 1.51.0
     PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
-    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*"
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*,src/authenticators/jwt_svid_authenticator/*"
     # Install tarpaulin
-    cargo install cargo-tarpaulin
+    cargo +1.51.0 install cargo-tarpaulin
 
     mkdir -p reports
 
@@ -205,19 +206,21 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         fi
 
         # Start service
-        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+        RUST_LOG=info cargo +1.51.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+            --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
+            --run-types bins --timeout 3600 --release -- -c $CONFIG_PATH &
         wait_for_service
 
         # Run tests
         run_normal_tests
-        run_old_e2e_tests
         run_key_mappings_tests
         stop_service
     done
 
     # Run unit tests
     mkdir -p reports/unit
-    cargo tarpaulin --tests --out Xml --features="all-providers,all-authenticators" --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
+    cargo +1.51.0 tarpaulin --tests --out Xml --features="all-providers,unix-peer-credentials-authenticator,direct-authenticator" \
+        --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
     exit 0
 fi
