@@ -10,7 +10,6 @@ use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
 use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
 use derivative::Derivative;
 use log::{error, trace, warn};
-use parsec_interface::operations::list_keys::KeyInfo;
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{list_clients, list_keys};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
@@ -19,11 +18,12 @@ use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_public_key, psa_generate_key, psa_generate_random,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
     psa_hash_compare, psa_hash_compute, psa_import_key, psa_sign_hash, psa_sign_message,
     psa_verify_hash, psa_verify_message,
 };
 
+mod access_keys;
 mod asym_sign;
 mod generate_random;
 mod hash;
@@ -49,6 +49,7 @@ impl Provider {
     fn new(
         key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
+        access_key_file_name: Option<String>,
     ) -> Option<Provider> {
         // This will be returned when everything succeedes
         let mut cryptoauthlib_provider: Provider;
@@ -63,7 +64,7 @@ impl Provider {
         };
 
         // ATECC is useful for non-trivial usage only when its configuration is locked
-        if !device.configuration_is_locked() {
+        if !device.is_configuration_locked() {
             error!("Error: configuration is not locked.");
             return None;
         }
@@ -177,11 +178,12 @@ impl Provider {
             warn!("Failed to setup opcodes for cryptoauthlib_provider");
         }
 
-        let err = cryptoauthlib_provider
-            .device
-            .set_write_encryption_key(&cryptoauthlib_provider.get_write_encrypt_key());
-        if rust_cryptoauthlib::AtcaStatus::AtcaSuccess != err {
-            warn!("Failed to setup write encryption key. Using ECC keys may not be possible.");
+        let err = cryptoauthlib_provider.set_access_keys(access_key_file_name);
+        match err {
+            Some(rust_cryptoauthlib::AtcaStatus::AtcaSuccess) => (),
+            _ => {
+                warn!("Unable to set access keys. This is dangerous for a hardware interface.");
+            }
         }
 
         Some(cryptoauthlib_provider)
@@ -203,6 +205,7 @@ impl Provider {
                     && self.supported_opcodes.insert(Opcode::PsaSignMessage)
                     && self.supported_opcodes.insert(Opcode::PsaVerifyMessage)
                     && self.supported_opcodes.insert(Opcode::PsaExportPublicKey)
+                    && self.supported_opcodes.insert(Opcode::PsaExportKey)
                 {
                     Some(())
                 } else {
@@ -217,16 +220,6 @@ impl Provider {
             }
             _ => None,
         }
-    }
-
-    // Get the deployment specific write key. With this the keys can be stored encrypted in their slots.
-    // For ECC private keys it is obligatory, for Aes it is an option.
-    fn get_write_encrypt_key(&self) -> [u8; rust_cryptoauthlib::ATCA_KEY_SIZE] {
-        [
-            0x4D, 0x50, 0x72, 0x6F, 0x20, 0x49, 0x4F, 0x20, 0x4B, 0x65, 0x79, 0x20, 0x9E, 0x31,
-            0xBD, 0x05, 0x82, 0x58, 0x76, 0xCE, 0x37, 0x90, 0xEA, 0x77, 0x42, 0x32, 0xBB, 0x51,
-            0x81, 0x49, 0x66, 0x45,
-        ]
     }
 }
 
@@ -247,20 +240,23 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        _app_name: ApplicationName,
+        app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
-        trace!("list_keys ingress");
-        let keys: Vec<KeyInfo> = Vec::new();
-
-        Ok(list_keys::Result { keys })
+        Ok(list_keys::Result {
+            keys: self.key_info_store.list_keys(&app_name)?,
+        })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
-        trace!("list_clients ingress");
-        let clients: Vec<String> = Vec::new();
-
-        Ok(list_clients::Result { clients })
+        Ok(list_clients::Result {
+            clients: self
+                .key_info_store
+                .list_clients()?
+                .into_iter()
+                .map(|app_name| app_name.to_string())
+                .collect(),
+        })
     }
 
     fn psa_hash_compute(
@@ -402,6 +398,19 @@ impl Provide for Provider {
             self.psa_export_public_key_internal(app_name, op)
         }
     }
+
+    fn psa_export_key(
+        &self,
+        app_name: ApplicationName,
+        op: psa_export_key::Operation,
+    ) -> Result<psa_export_key::Result> {
+        trace!("psa_export_key ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaExportKey) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_export_key_internal(app_name, op)
+        }
+    }
 }
 
 /// CryptoAuthentication Library Provider builder
@@ -417,6 +426,7 @@ pub struct ProviderBuilder {
     slave_address: Option<u8>,
     bus: Option<u8>,
     baud: Option<u32>,
+    access_key_file_name: Option<String>,
 }
 
 impl ProviderBuilder {
@@ -431,6 +441,7 @@ impl ProviderBuilder {
             slave_address: None,
             bus: None,
             baud: None,
+            access_key_file_name: None,
         }
     }
 
@@ -490,6 +501,13 @@ impl ProviderBuilder {
         self
     }
 
+    /// Specify access key file name
+    pub fn with_access_key_file(mut self, access_key_file_name: Option<String>) -> ProviderBuilder {
+        self.access_key_file_name = access_key_file_name;
+
+        self
+    }
+
     /// Attempt to build CryptoAuthLib Provider
     pub fn build(self) -> std::io::Result<Provider> {
         let iface_cfg = match self.iface_type {
@@ -541,6 +559,7 @@ impl ProviderBuilder {
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             iface_cfg,
+            self.access_key_file_name,
         )
         .ok_or_else(|| {
             Error::new(

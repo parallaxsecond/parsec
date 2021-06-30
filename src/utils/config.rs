@@ -151,6 +151,8 @@ pub enum ProviderConfig {
         bus: Option<u8>,
         /// I2C baud rate
         baud: Option<u32>,
+        /// Access key configuration file name
+        access_key_file_name: Option<String>,
     },
     /// Trusted Service provider configuration
     TrustedService {

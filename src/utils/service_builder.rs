@@ -323,6 +323,7 @@ unsafe fn get_provider(
             slave_address,
             bus,
             baud,
+            access_key_file_name,
             ..
         } => {
             info!("Creating a CryptoAuthentication Library Provider.");
@@ -336,6 +337,7 @@ unsafe fn get_provider(
                     .with_slave_address(*slave_address)
                     .with_bus(*bus)
                     .with_baud(*baud)
+                    .with_access_key_file(access_key_file_name.clone())
                     .build()?,
             ))
         }

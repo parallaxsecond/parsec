@@ -1,12 +1,15 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::{RsaPrivateKey, RsaPublicKey};
-
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const PRIVATE_KEY: &str = "MIICWwIBAAKBgQCd+EKeRmZCKLmg7LasWqpKA9/01linY75ujilf6v/Kb8UP9r/E\
 cO75Pvi2YPnYhBadmVOVxMOqS2zmKm1a9VTegT8dN9Unf2s2KbKrKXupaQTXcrGG\
 SB/BmHeWeiqidEMw7i9ysjHK4KEuacmYmZpvKAnNWMyvQgjGgGNpsNzqawIDAQAB\
@@ -21,11 +24,6 @@ urXDbuN7S5c9ukBCvOjuqp4g2Q0LcrPvOsMBFTeueXJxN9HvNfIM741X+DGOwqFV\
 VJ8gc1rd0y/NXVtGwQJAc2w23nTmZ/olcMVRia1+AFsELcCnD+JqaJ2AEF1Ng6Ix\
 V/X2l32v6t3B57sw/8ce3LCheEdqLHlSOpQiaD7Qfw==";
 
-pub const ECC_PRIVATE_KEY: [u8; 32] = [
-    0x26, 0xc8, 0x82, 0x9e, 0x22, 0xe3, 0x0c, 0xa6, 0x3d, 0x29, 0xf5, 0xf7, 0x27, 0x39, 0x58, 0x47,
-    0x41, 0x81, 0xf6, 0x57, 0x4f, 0xdb, 0xcb, 0x4d, 0xbb, 0xdd, 0x52, 0xff, 0x3a, 0xc0, 0xf6, 0x0d,
-];
-
 #[test]
 fn export_key_not_supported() {
     let mut client = TestClient::new();
@@ -39,6 +37,7 @@ fn export_key_not_supported() {
     }
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn export_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -95,15 +94,16 @@ fn export_without_create() {
     assert_eq!(status, ResponseStatus::PsaErrorDoesNotExist);
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
-fn import_and_export_key() -> Result<()> {
+fn import_and_export_rsa_public_key() -> Result<()> {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return Ok(());
     }
 
-    let key_name = String::from("import_and_export_key");
+    let key_name = String::from("import_and_export_rsa_public_key");
     let key_data = vec![
         48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20,
         102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81,
@@ -121,6 +121,52 @@ fn import_and_export_key() -> Result<()> {
     Ok(())
 }
 
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[test]
+fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaExportKey) {
+        return Ok(());
+    }
+
+    let key_name = String::from("import_and_export_ecc_public_key");
+    client.import_key(
+        key_name.clone(),
+        Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::EccPublicKey {
+                curve_family: EccFamily::SecpR1,
+            },
+            bits: 256,
+            policy: Policy {
+                usage_flags: UsageFlags {
+                    sign_hash: false,
+                    verify_hash: true,
+                    sign_message: false,
+                    verify_message: true,
+                    export: true,
+                    encrypt: false,
+                    decrypt: false,
+                    cache: false,
+                    copy: false,
+                    derive: false,
+                },
+                permitted_algorithms: AsymmetricSignature::Ecdsa {
+                    hash_alg: Hash::Sha256.into(),
+                }
+                .into(),
+            },
+        },
+        ECC_PUBLIC_KEY.to_vec(),
+    )?;
+
+    assert_eq!(ECC_PUBLIC_KEY.to_vec(), client.export_key(key_name)?);
+
+    Ok(())
+}
+
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn check_rsa_export_format() -> Result<()> {
     let mut client = TestClient::new();
@@ -164,15 +210,16 @@ fn check_rsa_export_format() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
-fn check_export_possible() -> Result<()> {
+fn check_export_rsa_possible() -> Result<()> {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return Ok(());
     }
 
-    let key_name = String::from("check_export_possible");
+    let key_name = String::from("check_export_rsa_possible");
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -206,15 +253,16 @@ fn check_export_possible() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
-fn check_export_not_possible() {
+fn check_export_rsa_not_possible() {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return;
     }
 
-    let key_name = String::from("check_export_not_possible");
+    let key_name = String::from("check_export_rsa_not_possible");
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -246,17 +294,63 @@ fn check_export_not_possible() {
         .unwrap();
 
     let _exported_key = client.export_key(key_name).unwrap_err();
+    assert_eq!(_exported_key, ResponseStatus::PsaErrorNotPermitted);
 }
 
+#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
-fn export_ecc_key() {
+fn check_export_ecc_not_possible() {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return;
     }
 
-    let key_name = String::from("export_ecc_key");
+    let key_name = String::from("check_export_ecc_not_possible");
+
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 256,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    let _generated_key = client
+        .generate_key(key_name.clone(), key_attributes)
+        .unwrap();
+
+    let _exported_key = client.export_key(key_name).unwrap_err();
+    assert_eq!(_exported_key, ResponseStatus::PsaErrorNotPermitted);
+}
+
+#[cfg(not(feature = "cryptoauthlib-provider"))]
+#[test]
+fn export_ecc_private_key() {
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaExportKey) {
+        return;
+    }
+
+    let key_name = String::from("export_ecc_private_key");
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -288,15 +382,60 @@ fn export_ecc_key() {
     let _exported_key = client.export_key(key_name).unwrap();
 }
 
+#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
-fn export_key_matches_import() {
+fn export_ecc_private_key_not_possible() {
+    // This is cryptoauthlib-provider exclusive!
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportKey) {
         return;
     }
 
-    let key_name = String::from("export_key_matches_import");
+    let key_name = String::from("export_ecc_private_key_not_possible");
+    let key_attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccKeyPair {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 256,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: false,
+                sign_message: false,
+                verify_message: false,
+                export: true,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    client
+        .generate_key(key_name.clone(), key_attributes)
+        .unwrap();
+
+    let _exported_key = client.export_key(key_name).unwrap_err();
+    assert_eq!(_exported_key, ResponseStatus::PsaErrorInvalidArgument);
+}
+
+#[cfg(not(feature = "cryptoauthlib-provider"))]
+#[test]
+fn export_rsa_private_key_matches_import() {
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaExportKey) {
+        return;
+    }
+
+    let key_name = String::from("export_rsa_private_key_matches_import");
 
     let decoded_key = base64::decode(PRIVATE_KEY).unwrap();
     client
@@ -327,48 +466,4 @@ fn export_key_matches_import() {
         .unwrap();
     let exported_key = client.export_key(key_name).unwrap();
     assert_eq!(decoded_key, exported_key);
-}
-
-#[test]
-fn import_export_ecc_key() {
-    let mut client = TestClient::new();
-    let key_name = String::from("import_export_ecc_key");
-
-    if !client.is_operation_supported(Opcode::PsaExportKey)
-        || !client.is_operation_supported(Opcode::PsaImportKey)
-    {
-        return;
-    }
-
-    let key_attributes = Attributes {
-        lifetime: Lifetime::Persistent,
-        key_type: Type::EccKeyPair {
-            curve_family: EccFamily::SecpR1,
-        },
-        bits: 256,
-        policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
-            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
-                hash_alg: Hash::Sha256.into(),
-            }),
-        },
-    };
-
-    client
-        .import_key(key_name.clone(), key_attributes, ECC_PRIVATE_KEY.to_vec())
-        .unwrap();
-    let exported_key = client.export_key(key_name).unwrap();
-
-    assert_eq!(ECC_PRIVATE_KEY.to_vec(), exported_key);
 }

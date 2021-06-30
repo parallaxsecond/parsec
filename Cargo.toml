@@ -41,13 +41,13 @@ picky-asn1-x509 = { version = "0.4.0", optional = true }
 users = "0.11.0"
 libc = "0.2.86"
 anyhow = "1.0.38"
-rust-cryptoauthlib = { version = "0.3.1", optional = true }
+rust-cryptoauthlib = { version = "0.4.0", optional = true }
 spiffe = { version = "0.1.1", optional = true }
 prost = { version = "0.7.0", optional = true }
 
 [dev-dependencies]
 rand = { version = "0.8.3", features = ["small_rng"] }
-rust-cryptoauthlib = { version = "0.3.1", features=["software-backend"]}
+rust-cryptoauthlib = { version = "0.4.0", features=["software-backend"]}
 
 [build-dependencies]
 bindgen = { version = "0.57.0", optional = true }

@@ -37,3 +37,4 @@ rx_retries = 20
 slave_address = 0xc0
 bus = 1
 baud = 400000
+access_key_file_name = "e2e_tests/provider_cfg/cryptoauthlib/cal_access_keys.toml"
