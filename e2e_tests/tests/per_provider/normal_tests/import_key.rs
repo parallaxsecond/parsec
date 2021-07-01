@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-#![allow(unused_imports)]
+#![allow(unused_imports, unused)]
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
@@ -10,7 +10,6 @@ use parsec_client::core::interface::requests::Result;
 use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RsaPublicKey;
 
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 const KEY_DATA: [u8; 140] = [
     48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20, 102,
     253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81, 135, 72,
@@ -21,7 +20,6 @@ const KEY_DATA: [u8; 140] = [
     39, 22, 141, 173, 85, 26, 58, 9, 128, 27, 57, 131, 2, 3, 1, 0, 1,
 ];
 
-#[cfg(feature = "tpm-provider")]
 const KEY_PAIR_DATA: [u8; 609] = [
     0x30, 0x82, 0x02, 0x5D, 0x02, 0x01, 0x00, 0x02, 0x81, 0x81, 0x00, 0xC7, 0xDF, 0x1D, 0x9B, 0x29,
     0xBA, 0x60, 0x1B, 0x1C, 0x65, 0x2C, 0xB8, 0xEF, 0x7F, 0x8E, 0x2C, 0x01, 0x8A, 0x9B, 0xE9, 0x6B,
@@ -64,13 +62,11 @@ const KEY_PAIR_DATA: [u8; 609] = [
     0x27,
 ];
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 pub const ECC_PRIVATE_KEY: [u8; 32] = [
     0x26, 0xc8, 0x82, 0x9e, 0x22, 0xe3, 0x0c, 0xa6, 0x3d, 0x29, 0xf5, 0xf7, 0x27, 0x39, 0x58, 0x47,
     0x41, 0x81, 0xf6, 0x57, 0x4f, 0xdb, 0xcb, 0x4d, 0xbb, 0xdd, 0x52, 0xff, 0x3a, 0xc0, 0xf6, 0x0d,
 ];
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 pub const ECC_PUBLIC_KEY: [u8; 65] = [
     0x04, 0x01, 0xf7, 0x69, 0xe2, 0x40, 0x3a, 0xeb, 0x0d, 0x64, 0x3e, 0x81, 0xb8, 0xda, 0x95, 0xb0,
     0x1c, 0x25, 0x80, 0xfe, 0xa3, 0xd3, 0xd0, 0x5b, 0x2f, 0xef, 0x6a, 0x31, 0x9c, 0xa9, 0xca, 0x5d,
@@ -79,7 +75,6 @@ pub const ECC_PUBLIC_KEY: [u8; 65] = [
     0x71,
 ];
 
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 fn example_modulus_1024() -> Vec<u8> {
     vec![
         153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20, 102, 253, 217, 247, 246, 142,
@@ -104,16 +99,23 @@ fn import_rsa_key() -> Result<()> {
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
-fn import_ecc_key() -> Result<()> {
+fn import_ecc_key() {
     let mut client = TestClient::new();
-    let key_name = String::from("import_key");
+    let key_name = String::from("import_key_ecc");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
-        return Ok(());
+        return;
     }
 
-    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_PUBLIC_KEY.to_vec())
+    client
+        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), ECC_PUBLIC_KEY.to_vec())
+        .unwrap();
+
+    let status = client
+        .verify_with_ecdsa_sha256(key_name, vec![0xff; 32], vec![0xff; 32])
+        .unwrap_err();
+    assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
 }
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]
@@ -126,26 +128,16 @@ fn create_and_import_rsa_key() -> Result<()> {
     }
 
     let status;
-    #[cfg(not(feature = "cryptoauthlib-provider"))]
-    {
-        client.generate_rsa_sign_key(key_name.clone())?;
-        status = client
-            .import_rsa_public_key(key_name, KEY_DATA.to_vec())
-            .expect_err("Key should have already existed");
-    }
-    #[cfg(feature = "cryptoauthlib-provider")]
-    {
-        client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
-        status = client
-            .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, PUB_KEY_ECC.to_vec())
-            .expect_err("Key should have already existed");
-    }
+    client.generate_rsa_sign_key(key_name.clone())?;
+    status = client
+        .import_rsa_public_key(key_name, KEY_DATA.to_vec())
+        .expect_err("Key should have already existed");
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);
 
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn create_and_import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -167,7 +159,7 @@ fn create_and_import_ecc_key() -> Result<()> {
 #[test]
 fn import_rsa_key_twice() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_key_twice");
+    let key_name = String::from("import_rsa_key_twice");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -182,11 +174,11 @@ fn import_rsa_key_twice() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_ecc_key_twice() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_key_twice");
+    let key_name = String::from("import_ecc_key_twice");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -368,10 +360,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         .import_key(key_name.clone(), attributes, Vec::new())
         .unwrap_err();
     // Should succeed because key would have been destroyed.
-    #[cfg(not(feature = "cryptoauthlib-provider"))]
     client.import_rsa_public_key(key_name, picky_asn1_der::to_vec(&public_key).unwrap())?;
-    #[cfg(feature = "cryptoauthlib-provider")]
-    client.import_ecc_public_secp_r1_ecdsa_sha256_key(key_name, ECC_PUBLIC_KEY.to_vec())?;
 
     Ok(())
 }

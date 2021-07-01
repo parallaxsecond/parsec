@@ -1,15 +1,13 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#![allow(unused_imports, unused)]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::{RsaPrivateKey, RsaPublicKey};
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 const PRIVATE_KEY: &str = "MIICWwIBAAKBgQCd+EKeRmZCKLmg7LasWqpKA9/01linY75ujilf6v/Kb8UP9r/E\
 cO75Pvi2YPnYhBadmVOVxMOqS2zmKm1a9VTegT8dN9Unf2s2KbKrKXupaQTXcrGG\
 SB/BmHeWeiqidEMw7i9ysjHK4KEuacmYmZpvKAnNWMyvQgjGgGNpsNzqawIDAQAB\
@@ -130,7 +128,7 @@ fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
         return Ok(());
     }
 
-    let key_name = String::from("import_and_export_ecc_public_key");
+    let key_name = String::from("import_and_export_ecc_public_key_by_export_key_fn");
     client.import_key(
         key_name.clone(),
         Attributes {

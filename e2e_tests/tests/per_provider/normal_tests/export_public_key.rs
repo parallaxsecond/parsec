@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#![allow(unused_imports, unused)]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
@@ -8,7 +8,6 @@ use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
-#[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::RsaPublicKey;
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]
@@ -26,7 +25,7 @@ fn export_rsa_public_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn export_ecc_public_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -79,11 +78,11 @@ fn import_and_export_rsa_public_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_and_export_ecc_public_key_by_export_public_key_fn() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_and_export_ecc_public_key");
+    let key_name = String::from("import_and_export_ecc_public_key_by_export_public_key_fn");
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -109,7 +108,7 @@ fn check_public_rsa_export_format() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
+#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn check_public_ecc_export_format() -> Result<()> {
     let mut client = TestClient::new();
@@ -118,12 +117,11 @@ fn check_public_ecc_export_format() -> Result<()> {
     }
     let private_key_name = String::from("check_public_ecc_export_format_prv");
     client.generate_ecc_key_pair_secpr1_ecdsa_sha256(private_key_name.clone())?;
+    let public_key_name = String::from("check_public_ecc_export_format_pub");
     let public_key = client.export_public_key(private_key_name.clone())?;
 
     // That should not fail if the bytes are in the expected format.
-    let public_key_name = String::from("check_public_ecc_export_format_pub");
-    let _ =
-        client.import_ecc_public_secp_r1_ecdsa_sha256_key(public_key_name.clone(), public_key)?;
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(public_key_name.clone(), public_key)?;
     Ok(())
 }
 
@@ -205,6 +203,39 @@ fn check_export_ecc_public_possible() -> Result<()> {
     client.generate_key(key_name.clone(), key_attributes)?;
 
     let _public_key = client.export_public_key(key_name)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "tpm-provider"))]
+#[test]
+fn import_and_export_ecc_public_key() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("import_and_export_ecc_public_key");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    client
+        .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), ECC_PUBLIC_KEY.to_vec())
+        .unwrap();
+
+    assert_eq!(ECC_PUBLIC_KEY.to_vec(), client.export_public_key(key_name)?);
+
+    Ok(())
+}
+
+#[test]
+fn check_public_ecc_export_format2() -> Result<()> {
+    let mut client = TestClient::new();
+    let key_name = String::from("check_public_ecc_export_format");
+    if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
+        return Ok(());
+    }
+    client.generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())?;
+    let public_key = client.export_public_key(key_name)?;
+
+    assert_eq!(public_key[0], 0x04);
+    assert_eq!(public_key.len(), 65);
 
     Ok(())
 }

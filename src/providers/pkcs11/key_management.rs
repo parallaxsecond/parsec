@@ -8,13 +8,13 @@ use cryptoki::types::mechanism::{Mechanism, MechanismType};
 use cryptoki::types::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
 use cryptoki::types::session::Session;
 use log::{error, info, trace};
-use parsec_interface::operations::psa_key_attributes::{Id, Lifetime, Type};
+use parsec_interface::operations::psa_key_attributes::{EccFamily, Id, Lifetime, Type};
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
-use picky_asn1::wrapper::IntegerAsn1;
+use picky_asn1::wrapper::{IntegerAsn1, OctetStringAsn1};
 use picky_asn1_x509::RSAPublicKey;
 use std::convert::{TryFrom, TryInto};
 
@@ -171,23 +171,6 @@ impl Provider {
         app_name: ApplicationName,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
-        match op.attributes.key_type {
-            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
-            _ => {
-                error!(
-                    "The pkcs11 provider does not support the {:?} key type.",
-                    op.attributes.key_type
-                );
-                Err(ResponseStatus::PsaErrorNotSupported)
-            }
-        }
-    }
-
-    pub(super) fn psa_import_key_internal_rsa_public(
-        &self,
-        app_name: ApplicationName,
-        op: psa_import_key::Operation,
-    ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
@@ -199,46 +182,35 @@ impl Provider {
         let key_id = self.create_key_id();
 
         let mut template: Vec<Attribute> = Vec::new();
-
-        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(op.data.expose_secret())
-            .map_err(|e| {
-                format_error!("Failed to parse RSAPublicKey data", e);
-                ResponseStatus::PsaErrorInvalidArgument
-            })?;
-
-        if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
-            error!("Only positive modulus and public exponent are supported.");
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-
-        let modulus_object = public_key.modulus.as_unsigned_bytes_be();
-        let exponent_object = public_key.public_exponent.as_unsigned_bytes_be();
-        let bits = key_attributes.bits;
-        if bits != 0 && modulus_object.len() * 8 != bits {
-            if crate::utils::GlobalConfig::log_error_details() {
-                error!(
-                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
-                    key_attributes.bits,
-                    modulus_object.len() * 8
-                );
-            } else {
-                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
-            }
-
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-
         template.push(Attribute::Class(ObjectClass::PUBLIC_KEY));
-        template.push(Attribute::KeyType(KeyType::RSA));
         template.push(Attribute::Token(true.into()));
-        template.push(Attribute::Modulus(modulus_object.into()));
-        template.push(Attribute::PublicExponent(exponent_object.into()));
         template.push(Attribute::Verify(true.into()));
-        template.push(Attribute::Encrypt(true.into()));
         template.push(Attribute::Id(key_id.to_be_bytes().to_vec()));
-        template.push(Attribute::Private(false.into()));
-        template.push(Attribute::AllowedMechanisms(vec![MechanismType::RSA_PKCS]));
 
+        match op.attributes.key_type {
+            Type::RsaPublicKey => {
+                self.handle_rsa_public_import_attrib(
+                    op.data.expose_secret(),
+                    key_attributes.bits,
+                    &mut template,
+                )?;
+            }
+            Type::EccPublicKey { curve_family } => {
+                self.handle_ecc_public_import_attrib(
+                    op.data.expose_secret(),
+                    key_attributes.bits,
+                    curve_family,
+                    &mut template,
+                )?;
+            }
+            _ => {
+                error!(
+                    "The pkcs11 provider does not support the {:?} key type.",
+                    op.attributes.key_type
+                );
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        }
         trace!("CreateObject command");
         match session.create_object(&template) {
             Ok(key) => {
@@ -262,6 +234,90 @@ impl Provider {
         }
     }
 
+    pub(super) fn handle_rsa_public_import_attrib(
+        &self,
+        key_data: &[u8],
+        bits: usize,
+        template: &mut Vec<Attribute>,
+    ) -> Result<()> {
+        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|e| {
+            format_error!("Failed to parse RSAPublicKey data", e);
+            ResponseStatus::PsaErrorInvalidArgument
+        })?;
+
+        if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
+            error!("Only positive modulus and public exponent are supported.");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
+        let modulus_object = public_key.modulus.as_unsigned_bytes_be();
+        let exponent_object = public_key.public_exponent.as_unsigned_bytes_be();
+        if bits != 0 && modulus_object.len() * 8 != bits {
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
+                    bits,
+                    modulus_object.len() * 8
+                );
+            } else {
+                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+            }
+
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
+        template.push(Attribute::Modulus(modulus_object.into()));
+        template.push(Attribute::PublicExponent(exponent_object.into()));
+        template.push(Attribute::Encrypt(true.into()));
+        template.push(Attribute::Private(false.into()));
+        template.push(Attribute::AllowedMechanisms(vec![MechanismType::RSA_PKCS]));
+        template.push(Attribute::KeyType(KeyType::RSA));
+
+        Ok(())
+    }
+
+    pub(super) fn handle_ecc_public_import_attrib(
+        &self,
+        key_data: &[u8],
+        bits: usize,
+        curve_family: EccFamily,
+        template: &mut Vec<Attribute>,
+    ) -> Result<()> {
+        match curve_family {
+            EccFamily::Montgomery => {
+                // Montgomery curves aren't supported because their format differs from what
+                // we need below.
+                // In any case, the list of curves for which we can create `EcParams` below
+                // is even shorter than that.
+                error!("Importing EC keys using Montgomery curves is not currently supported.");
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+            _ => (),
+        }
+        // The format expected by PKCS11 is an ASN.1 OctetString containing the
+        // data that the PSA Crypto interface specifies.
+        // See ECPoint in [SEC1](https://www.secg.org/sec1-v2.pdf). PKCS11 mandates using
+        // [ANSI X9.62 ECPoint](https://cryptsoft.com/pkcs11doc/v220/group__SEC__12__3__3__ECDSA__PUBLIC__KEY__OBJECTS.html),
+        // however SEC1 is an equivalent spec.
+        let key_data =
+            picky_asn1_der::to_vec(&OctetStringAsn1(key_data.to_vec())).map_err(|e| {
+                error!("Failed to generate EC Point OctetString: {}", e);
+                ResponseStatus::PsaErrorInvalidArgument
+            })?;
+        template.push(Attribute::EcPoint(key_data));
+        template.push(Attribute::Private(false.into()));
+        template.push(Attribute::AllowedMechanisms(vec![MechanismType::ECDSA]));
+        template.push(Attribute::KeyType(KeyType::EC));
+        template.push(Attribute::EcParams(
+            picky_asn1_der::to_vec(&utils::ec_params(curve_family, bits)?).map_err(|e| {
+                error!("Failed to generate EC parameters: {}", e);
+                ResponseStatus::PsaErrorGenericError
+            })?,
+        ));
+
+        Ok(())
+    }
+
     pub(super) fn psa_export_public_key_internal(
         &self,
         app_name: ApplicationName,
@@ -269,13 +325,28 @@ impl Provider {
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
         let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
-
         let session = self.new_session()?;
 
         let key = self.find_key(&session, key_id, KeyPairType::PublicKey)?;
         info!("Located key for export.");
+        let data = match key_attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => {
+                self.export_public_rsa_internal(key, &session)?
+            }
+            Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => {
+                self.export_public_ec_internal(key, &session)?
+            }
+            _ => {
+                return Err(ResponseStatus::PsaErrorNotSupported);
+            }
+        };
 
+        Ok(psa_export_public_key::Result { data: data.into() })
+    }
+
+    fn export_public_rsa_internal(&self, key: ObjectHandle, session: &Session) -> Result<Vec<u8>> {
         let mut attributes = session
             .get_attributes(
                 key,
@@ -305,11 +376,35 @@ impl Provider {
             modulus,
             public_exponent,
         };
-        let data = picky_asn1_der::to_vec(&key).map_err(|err| {
+        Ok(picky_asn1_der::to_vec(&key).map_err(|err| {
             format_error!("Could not serialise key elements", err);
             ResponseStatus::PsaErrorCommunicationFailure
-        })?;
-        Ok(psa_export_public_key::Result { data: data.into() })
+        })?)
+    }
+
+    fn export_public_ec_internal(&self, key: ObjectHandle, session: &Session) -> Result<Vec<u8>> {
+        let mut attributes = session
+            .get_attributes(key, &[AttributeType::EcPoint])
+            .map_err(to_response_status)?;
+
+        if attributes.len() != 1 {
+            error!("Expected to find EC point attribute in public key.");
+            return Err(ResponseStatus::PsaErrorCommunicationFailure);
+        }
+
+        if let Attribute::EcPoint(data) = attributes.remove(0) {
+            // The format provided by PKCS11 is an ASN.1 OctetString containing the
+            // data that the PSA Crypto interface expects.
+            // See ECPoint in [SEC1](https://www.secg.org/sec1-v2.pdf). PKCS11 mandates using
+            // [ANSI X9.62 ECPoint](https://cryptsoft.com/pkcs11doc/v220/group__SEC__12__3__3__ECDSA__PUBLIC__KEY__OBJECTS.html),
+            // however SEC1 is an equivalent spec.
+            let key_data: OctetStringAsn1 = picky_asn1_der::from_bytes(&data)
+                .map_err(|_| ResponseStatus::PsaErrorGenericError)?;
+            Ok(key_data.0)
+        } else {
+            error!("Expected to find modulus attribute.");
+            Err(ResponseStatus::PsaErrorCommunicationFailure)
+        }
     }
 
     pub(super) fn psa_destroy_key_internal(

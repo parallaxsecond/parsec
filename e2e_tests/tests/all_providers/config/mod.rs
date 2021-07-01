@@ -105,6 +105,32 @@ fn pkcs11_verify_software() {
 
 #[cfg(feature = "pkcs11-provider")]
 #[test]
+fn pkcs11_verify_software_ecc() {
+    use sha2::{Digest, Sha256};
+    set_config("pkcs11_software.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let key_name = String::from("pkcs11_verify_software_ecc");
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"Bob wrote this message.");
+    let hash = hasher.finalize().to_vec();
+
+    client
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(key_name.clone())
+        .unwrap();
+
+    let signature = client
+        .sign_with_ecdsa_sha256(key_name.clone(), hash.clone())
+        .unwrap();
+    client
+        .verify_with_ecdsa_sha256(key_name, hash, signature)
+        .unwrap();
+}
+
+#[cfg(feature = "pkcs11-provider")]
+#[test]
 fn pkcs11_encrypt_software() {
     set_config("pkcs11_software.toml");
     reload_service();

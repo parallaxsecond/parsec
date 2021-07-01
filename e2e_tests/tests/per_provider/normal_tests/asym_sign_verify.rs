@@ -767,7 +767,7 @@ fn verify_with_ring() {
     let pub_key = client.export_public_key(key_name.clone()).unwrap();
 
     let mut hasher = Sha256::new();
-    hasher.update(message.clone());
+    hasher.update(message);
     let hash = hasher.finalize().to_vec();
     let signature = client.sign_with_rsa_sha256(key_name, hash.clone()).unwrap();
 
@@ -775,7 +775,7 @@ fn verify_with_ring() {
     pk.verify(message, &signature).unwrap();
 }
 
-#[cfg(not(any(feature = "cryptoauthlib-provider", feature = "pkcs11-provider")))]
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn verify_ecc_with_ring() {
     use ring::signature::{self, UnparsedPublicKey};
@@ -790,7 +790,7 @@ fn verify_ecc_with_ring() {
     let pub_key = client.export_public_key(key_name.clone()).unwrap();
 
     let mut hasher = Sha256::new();
-    hasher.update(message.clone());
+    hasher.update(message);
     let hash = hasher.finalize().to_vec();
     let signature = client
         .sign_with_ecdsa_sha256(key_name, hash.clone())
