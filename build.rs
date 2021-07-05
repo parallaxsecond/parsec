@@ -6,16 +6,22 @@ use std::path::{Path, PathBuf};
 
 #[cfg(feature = "trusted-service-provider")]
 fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
-    let header = ts_include_dir.clone() + "/service/locator/interface/service_locator.h";
+    let header = ts_include_dir.clone() + "/components/service/locator/interface/service_locator.h";
+    let encoding_header = ts_include_dir.clone() + "/protocols/rpc/common/packed-c/encoding.h";
 
     println!("cargo:rerun-if-changed={}", header);
 
     let bindings = bindgen::Builder::default()
-        .clang_arg(format!("-I{}", ts_include_dir + "/rpc/common/interface"))
+        .clang_arg(format!(
+            "-I{}",
+            ts_include_dir + "/components/rpc/common/interface"
+        ))
         .rustfmt_bindings(true)
         .header(header)
+        .header(encoding_header)
         .generate_comments(false)
         .size_t_is_usize(true)
+        .derive_default(true)
         .generate()
         .map_err(|_| {
             Error::new(
@@ -71,7 +77,7 @@ fn generate_proto_sources(contract_dir: String) -> Result<()> {
 fn main() -> Result<()> {
     {
         generate_proto_sources(String::from("trusted-services-vendor/protocols"))?;
-        generate_ts_bindings(String::from("trusted-services-vendor/components"))?;
+        generate_ts_bindings(String::from("trusted-services-vendor"))?;
     }
 
     Ok(())

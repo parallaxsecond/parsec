@@ -94,9 +94,9 @@ RUN cd nanopb-0.4.4-linux-x86 \
 RUN rm -rf nanopb-0.4.4-linux-x86 nanopb-0.4.4-linux-x86.tar.gz
 
 # Install mock Trusted Services
-RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch main \
 	&& cd trusted-services \
-	&& git reset --hard 840696b9ac1ba6aa9ccd024ca9dc3b4be12bf837
+	&& git reset --hard 2fc7e10c7c21e4dafbf63dc9d00dfc2a7a7fddad
 # Install correct python dependencies
 RUN pip3 install -r trusted-services/requirements.txt
 RUN cd trusted-services/deployments/libts/linux-pc/ \

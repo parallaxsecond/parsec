@@ -100,7 +100,9 @@ impl Context {
 
         info!("Starting crypto Trusted Service context");
         let mut rpc_caller = null_mut();
-        let rpc_session_handle = unsafe { service_context_open(service_context, &mut rpc_caller) };
+        let rpc_session_handle = unsafe {
+            service_context_open(service_context, TS_RPC_ENCODING_PROTOBUF, &mut rpc_caller)
+        };
         if rpc_caller.is_null() || rpc_session_handle.is_null() {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
