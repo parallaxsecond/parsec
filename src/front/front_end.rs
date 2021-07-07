@@ -51,7 +51,7 @@ impl FrontEndHandler {
 
                 let response = Response::from_status(status);
                 if response.header.status != ResponseStatus::Success {
-                 format_error!("Sending back an error", response.header.status);
+                    format_error!("Sending back an error", response.header.status);
                 }
                 if let Err(status) = response.write_to_stream(&mut connection.stream) {
                     format_error!("Failed to write response", status);
