@@ -38,8 +38,8 @@ impl FrontEndHandler {
     /// Unmarshalls a request from the stream, passes it to the dispatcher and marshalls
     /// the response back onto the stream.
     ///
-    /// If an error occurs during (un)marshalling, no operation will be performed and the
-    /// method will return.
+    /// If an error occurs during (un)marshalling; no operation will be performed, an error will be logged
+    /// and the method will return.
     pub fn handle_request(&self, mut connection: Connection) {
         trace!("handle_request ingress");
         // Read bytes from stream
@@ -50,6 +50,9 @@ impl FrontEndHandler {
                 format_error!("Failed to read request", status);
 
                 let response = Response::from_status(status);
+                if response.header.status != ResponseStatus::Success {
+                 format_error!("Sending back an error", response.header.status);
+                }
                 if let Err(status) = response.write_to_stream(&mut connection.stream) {
                     format_error!("Failed to write response", status);
                 }
