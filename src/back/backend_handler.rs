@@ -154,7 +154,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
                     unwrap_or_else_return!(self.provider.psa_export_key(app.into(), op_export_key));
-                trace!("psa_export_public_key egress");
+                trace!("psa_export_key egress");
                 self.result_to_response(NativeResult::PsaExportKey(result), header)
             }
             NativeOperation::PsaDestroyKey(op_destroy_key) => {
@@ -185,7 +185,7 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_asymmetric_encrypt(app.into(), op_asymmetric_encrypt));
-                trace!("psa_asymmetric_encrypt_egress");
+                trace!("psa_asymmetric_encrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricEncrypt(result), header)
             }
             NativeOperation::PsaAsymmetricDecrypt(op_asymmetric_decrypt) => {
@@ -193,7 +193,7 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_asymmetric_decrypt(app.into(), op_asymmetric_decrypt));
-                trace!("psa_asymmetric_decrypt_egress");
+                trace!("psa_asymmetric_decrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricDecrypt(result), header)
             }
             NativeOperation::PsaAeadEncrypt(op_aead_encrypt) => {
@@ -201,7 +201,7 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_aead_encrypt(app.into(), op_aead_encrypt));
-                trace!("psa_aead_encrypt_egress");
+                trace!("psa_aead_encrypt egress");
                 self.result_to_response(NativeResult::PsaAeadEncrypt(result), header)
             }
             NativeOperation::PsaAeadDecrypt(op_aead_decrypt) => {
@@ -209,7 +209,7 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_aead_decrypt(app.into(), op_aead_decrypt));
-                trace!("psa_aead_decrypt_egress");
+                trace!("psa_aead_decrypt egress");
                 self.result_to_response(NativeResult::PsaAeadDecrypt(result), header)
             }
             NativeOperation::ListAuthenticators(op_list_authenticators) => {
@@ -239,13 +239,13 @@ impl BackEndHandler {
             NativeOperation::PsaHashCompute(op_hash_compute) => {
                 let result =
                     unwrap_or_else_return!(self.provider.psa_hash_compute(op_hash_compute));
-                trace!("psa_hash_compute_egress");
+                trace!("psa_hash_compute egress");
                 self.result_to_response(NativeResult::PsaHashCompute(result), header)
             }
             NativeOperation::PsaHashCompare(op_hash_compare) => {
                 let result =
                     unwrap_or_else_return!(self.provider.psa_hash_compare(op_hash_compare));
-                trace!("psa_hash_compare_egress");
+                trace!("psa_hash_compare egress");
                 self.result_to_response(NativeResult::PsaHashCompare(result), header)
             }
             NativeOperation::PsaRawKeyAgreement(op_raw_key_agreement) => {
@@ -253,13 +253,13 @@ impl BackEndHandler {
                 let result = unwrap_or_else_return!(self
                     .provider
                     .psa_raw_key_agreement(app.into(), op_raw_key_agreement));
-                trace!("psa_raw_key_agreement_egress");
+                trace!("psa_raw_key_agreement egress");
                 self.result_to_response(NativeResult::PsaRawKeyAgreement(result), header)
             }
             NativeOperation::PsaGenerateRandom(op_generate_random) => {
                 let result =
                     unwrap_or_else_return!(self.provider.psa_generate_random(op_generate_random));
-                trace!("psa_generate_random_egress");
+                trace!("psa_generate_random egress");
                 self.result_to_response(NativeResult::PsaGenerateRandom(result), header)
             }
             NativeOperation::PsaSignMessage(op_sign_message) => {

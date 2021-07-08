@@ -178,6 +178,7 @@ impl Provide for Provider {
     }
 
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        trace!("describe ingress");
         unreachable!()
     }
 }

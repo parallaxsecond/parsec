@@ -107,6 +107,7 @@ impl Provider {
 
 impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
+        trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 71129441-508a-4da6-b6e8-7b98a777e4c0
             uuid: Uuid::parse_str("71129441-508a-4da6-b6e8-7b98a777e4c0")?,
@@ -124,12 +125,14 @@ impl Provide for Provider {
         app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
+        trace!("list_keys ingress");
         Ok(list_keys::Result {
             keys: self.key_info_store.list_keys(&app_name)?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
+        trace!("list_clients ingress");
         Ok(list_clients::Result {
             clients: self
                 .key_info_store
