@@ -19,7 +19,6 @@ use psa_crypto::types::key;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 use uuid::Uuid;
-
 mod asym_sign;
 mod context;
 mod error;
@@ -80,12 +79,8 @@ impl Provider {
                             }
                         };
 
-                        if ts_provider.context.check_key_exists(key_id)? {
-                            if key_id > max_key_id {
-                                max_key_id = key_id;
-                            }
-                        } else {
-                            to_remove.push(key_triple.clone());
+                        if key_id > max_key_id {
+                            max_key_id = key_id;
                         }
                     }
                 }
