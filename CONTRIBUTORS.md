@@ -16,3 +16,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Patrick Uiterwijk (@puiterwijk)
 * Nicolas Stalder (@nickray)
 * Edmund Grimley Evans (@egrimley-arm)
+* Matt Davis (@MattDavis00)
