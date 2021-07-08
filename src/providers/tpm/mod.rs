@@ -99,12 +99,14 @@ impl Provide for Provider {
         app_name: ApplicationName,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
+        trace!("list_keys ingress");
         Ok(list_keys::Result {
             keys: self.key_info_store.list_keys(&app_name)?,
         })
     }
 
     fn list_clients(&self, _op: list_clients::Operation) -> Result<list_clients::Result> {
+        trace!("list_clients ingress");
         Ok(list_clients::Result {
             clients: self
                 .key_info_store
