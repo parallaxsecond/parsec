@@ -4,6 +4,10 @@ use e2e_tests::TestClient;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
+use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature};
+use parsec_client::core::interface::operations::psa_key_attributes::{
+    Attributes, Lifetime, Policy, Type, UsageFlags,
+};
 use parsec_client::core::interface::requests::ResponseStatus;
 use std::env;
 use std::fs;
@@ -204,4 +208,45 @@ fn various_fields() {
     );
 
     env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+}
+
+#[test]
+fn allow_export() {
+    set_config("allow_export.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    assert_eq!(
+        client
+            .generate_key(
+                "allow_export".to_string(),
+                Attributes {
+                    lifetime: Lifetime::Persistent,
+                    key_type: Type::RsaKeyPair,
+                    bits: 1024,
+                    policy: Policy {
+                        usage_flags: UsageFlags {
+                            sign_hash: true,
+                            verify_hash: true,
+                            sign_message: true,
+                            verify_message: true,
+                            // Should not be allowed by configuration
+                            export: true,
+                            encrypt: false,
+                            decrypt: false,
+                            cache: false,
+                            copy: false,
+                            derive: false,
+                        },
+                        permitted_algorithms: Algorithm::AsymmetricSignature(
+                            AsymmetricSignature::RsaPkcs1v15Sign {
+                                hash_alg: Hash::Sha256.into(),
+                            },
+                        ),
+                    },
+                },
+            )
+            .unwrap_err(),
+        ResponseStatus::PsaErrorNotPermitted
+    );
 }

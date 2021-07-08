@@ -95,6 +95,11 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 
+        if key_attributes.policy.usage_flags.export && !self.allow_export {
+            error!("The configuration of this provider does not allow it to generate keys that can be exported.");
+            return Err(ResponseStatus::PsaErrorNotPermitted);
+        }
+
         let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
 

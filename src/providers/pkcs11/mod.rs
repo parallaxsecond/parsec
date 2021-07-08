@@ -64,6 +64,7 @@ pub struct Provider {
     backend: Pkcs11,
     slot_number: Slot,
     software_public_operations: bool,
+    allow_export: bool,
 }
 
 impl Provider {
@@ -77,6 +78,7 @@ impl Provider {
         slot_number: Slot,
         user_pin: Option<SecretString>,
         software_public_operations: bool,
+        allow_export: bool,
     ) -> Option<Provider> {
         if let Some(pin) = user_pin {
             backend.set_pin(slot_number, pin.expose_secret()).ok()?;
@@ -89,6 +91,7 @@ impl Provider {
             backend,
             slot_number,
             software_public_operations,
+            allow_export,
         };
         {
             let mut local_ids_handle = pkcs11_provider
@@ -341,6 +344,7 @@ pub struct ProviderBuilder {
     slot_number: Option<u64>,
     user_pin: Option<SecretString>,
     software_public_operations: Option<bool>,
+    allow_export: Option<bool>,
 }
 
 impl ProviderBuilder {
@@ -352,6 +356,7 @@ impl ProviderBuilder {
             slot_number: None,
             user_pin: None,
             software_public_operations: None,
+            allow_export: None,
         }
     }
 
@@ -398,6 +403,13 @@ impl ProviderBuilder {
         self
     }
 
+    /// Specify the `allow_export` flag
+    pub fn with_allow_export(mut self, allow_export: Option<bool>) -> ProviderBuilder {
+        self.allow_export = allow_export;
+
+        self
+    }
+
     /// Attempt to build a PKCS11 provider
     pub fn build(self) -> std::io::Result<Provider> {
         let library_path = self
@@ -436,6 +448,7 @@ impl ProviderBuilder {
             slot,
             self.user_pin,
             self.software_public_operations.unwrap_or(false),
+            self.allow_export.unwrap_or(true),
         )
         .ok_or_else(|| Error::new(ErrorKind::InvalidData, "PKCS 11 initialization failed"))?)
     }

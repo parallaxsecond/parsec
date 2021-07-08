@@ -123,6 +123,8 @@ pub enum ProviderConfig {
         user_pin: Option<String>,
         /// Control whether public key operations are performed in software
         software_public_operations: Option<bool>,
+        /// Control whether it is allowed for a key to be exportable
+        allow_export: Option<bool>,
     },
     /// TPM provider configuration
     Tpm {
