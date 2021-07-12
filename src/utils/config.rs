@@ -132,6 +132,9 @@ pub enum ProviderConfig {
         tcti: String,
         /// Owner Hierarchy Authentication
         owner_hierarchy_auth: String,
+        /// Allows the service to still start without this provider if there is no TPM on the
+        /// system. The priority list of providers will be as if this provider was commented out.
+        skip_if_no_tpm: Option<bool>,
     },
     /// Microchip CryptoAuthentication Library provider configuration
     CryptoAuthLib {

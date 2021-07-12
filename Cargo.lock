@@ -1949,7 +1949,7 @@ dependencies = [
 [[package]]
 name = "tss-esapi"
 version = "5.0.1"
-source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=56c487a101dc85e17560416d71f0fc2eb81739a6#56c487a101dc85e17560416d71f0fc2eb81739a6"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=1f68655e278b0319c080b9804a7bf3f6e11ff721#1f68655e278b0319c080b9804a7bf3f6e11ff721"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1967,7 +1967,7 @@ dependencies = [
 [[package]]
 name = "tss-esapi-sys"
 version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=56c487a101dc85e17560416d71f0fc2eb81739a6#56c487a101dc85e17560416d71f0fc2eb81739a6"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=1f68655e278b0319c080b9804a7bf3f6e11ff721#1f68655e278b0319c080b9804a7bf3f6e11ff721"
 dependencies = [
  "pkg-config",
  "target-lexicon",
