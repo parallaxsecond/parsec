@@ -43,11 +43,11 @@ impl fmt::Display for KeyTriple {
 /// Information stored about a key
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Zeroize)]
 #[zeroize(drop)]
-pub struct KeyInfo {
+struct KeyInfo {
     /// Reference to a key in the Provider
-    pub id: Vec<u8>,
+    id: Vec<u8>,
     /// Attributes of a key
-    pub attributes: Attributes,
+    attributes: Attributes,
 }
 
 impl KeyTriple {
@@ -221,13 +221,13 @@ impl KeyInfoManagerClient {
     pub fn remove_key_info(
         &self,
         key_triple: &KeyTriple,
-    ) -> parsec_interface::requests::Result<KeyInfo> {
+    ) -> parsec_interface::requests::Result<()> {
         let mut key_info_manager_impl = self
             .key_info_manager_impl
             .write()
             .expect("Key Info Manager lock poisoned");
         match key_info_manager_impl.remove(key_triple) {
-            Ok(Some(key_info)) => Ok(key_info),
+            Ok(Some(_key_info)) => Ok(()),
             Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
             Err(string) => Err(to_response_status(string)),
         }
