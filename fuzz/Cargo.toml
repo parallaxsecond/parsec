@@ -2,8 +2,8 @@
 [package]
 name = "parsec-fuzz"
 version = "0.0.0"
-authors = ["Ionut Mihalcea <ionut.mihalcea@arm.com>",
-           "Hugues de Valon <hugues.devalon@arm.com>"]
+authors = ["Parsec Project Contributors"]
+description = "Fuzz testing framework for the PARSEC service"
 publish = false
 edition = "2018"
 
