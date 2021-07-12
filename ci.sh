@@ -117,13 +117,18 @@ while [ "$#" -gt 0 ]; do
         --no-stress-test )
             NO_STRESS_TEST="True"
         ;;
-        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all)
+        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all | cargo-check)
             if [ -n "$PROVIDER_NAME" ]; then
                 error_msg "Only one provider name must be given"
             fi
             PROVIDER_NAME=$1
-            cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
-            if [ "$PROVIDER_NAME" = "all" ]; then
+
+            # If running anything but cargo-check, copy config
+            if [ "$PROVIDER_NAME" != "cargo-check" ]; then
+                cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
+            fi
+
+            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ]; then
                 FEATURES="--features=all-providers,all-authenticators"
                 TEST_FEATURES="--features=all-providers"
             else
@@ -245,7 +250,7 @@ fi
 
 echo "Build test"
 
-if [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # We test that everything in the service still builds with the current Rust stable
     # and an old Rust compiler.
     # The old Rust compiler version is found by manually checking the oldest Rust version of all
@@ -278,6 +283,8 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     RUST_BACKTRACE=1 cargo check --features="unix-peer-credentials-authenticator"
     RUST_BACKTRACE=1 cargo check --features="jwt-svid-authenticator"
     RUST_BACKTRACE=1 cargo check --features="all-authenticators"
+
+    exit 0
 fi
 
 RUST_BACKTRACE=1 cargo build $FEATURES

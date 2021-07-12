@@ -16,6 +16,19 @@ jobs:
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh all
 
+  build-all-providers:
+    name: Cargo check all-providers (current Rust stable & old compiler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cargo-check
+      # When running the container built on the CI
+      # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cargo-check
+
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
