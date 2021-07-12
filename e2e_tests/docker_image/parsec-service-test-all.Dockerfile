@@ -71,7 +71,7 @@ RUN rm -rf SoftHSMv2
 # Download and install Mbed Crypto from Mbed TLS
 RUN git clone https://github.com/ARMmbed/mbedtls.git \
 	&& cd mbedtls \
-	&& git reset --hard mbedtls-2.25.0
+	&& git checkout v3.0.0
 RUN cd mbedtls \
 	&& ./scripts/config.py crypto \
 	&& SHARED=1 make \

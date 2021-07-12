@@ -22,12 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       # Use the following step when updating the `parsec-service-test-all` image
-      # - name: Build the container
-      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      - name: Build the container
+        run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
+      # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
       # When running the container built on the CI
-      # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
