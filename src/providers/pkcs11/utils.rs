@@ -94,7 +94,7 @@ pub fn key_pair_usage_flags_to_pkcs11_attributes(
     priv_template.push(Attribute::Decrypt((usage_flags.decrypt).into()));
     priv_template.push(Attribute::Derive((usage_flags.derive).into()));
     priv_template.push(Attribute::Extractable((usage_flags.export).into()));
-    priv_template.push(Attribute::Sensitive((usage_flags.export).into()));
+    priv_template.push(Attribute::Sensitive((!usage_flags.export).into()));
     priv_template.push(Attribute::Copyable((usage_flags.copy).into()));
     pub_template.push(Attribute::Copyable((usage_flags.copy).into()));
 }

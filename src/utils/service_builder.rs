@@ -289,6 +289,7 @@ unsafe fn get_provider(
             slot_number,
             user_pin,
             software_public_operations,
+            allow_export,
             ..
         } => {
             use std::convert::TryInto;
@@ -301,6 +302,7 @@ unsafe fn get_provider(
                     .with_slot_number((*slot_number).try_into()?)
                     .with_user_pin(user_pin.clone())
                     .with_software_public_operations(*software_public_operations)
+                    .with_allow_export(*allow_export)
                     .build()?,
             )))
         }

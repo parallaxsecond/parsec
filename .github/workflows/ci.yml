@@ -70,7 +70,7 @@ jobs:
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh tpm
 
   trusted-service-provider:
-    name: Integration tests using Cypto Trusted Service provider
+    name: Integration tests using Crypto Trusted Service provider
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
