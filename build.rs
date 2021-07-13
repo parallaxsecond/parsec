@@ -31,17 +31,8 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
         })?;
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings.write_to_file(out_path.join("ts_bindings.rs"))?;
-    // TODO: Remove once we can use the full TS stack and this isn't needed
-    println!("cargo:rustc-link-search=native=/usr/lib");
-    // libstdc++ is used on Ubuntu 18. On Ubuntu 20, libc++ (from libc++-dev and libc++abi-dev) can be used
-    println!("cargo:rustc-link-lib=dylib=stdc++");
 
-    println!("cargo:rustc-link-search=native=/usr/local/lib");
     println!("cargo:rustc-link-lib=dylib=ts");
-    // TODO: Remove once we can use the full TS stack and this isn't needed
-    println!("cargo:rustc-link-lib=static=mbedcrypto");
-    println!("cargo:rustc-link-lib=static=protobuf-nanopb");
-
     Ok(())
 }
 
