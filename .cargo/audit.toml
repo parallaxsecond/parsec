@@ -1,0 +1,31 @@
+[advisories]
+ignore = ["RUSTSEC-2021-0073", # We do not use `prost_types::Timestamp` anywhere in our code.
+          "RUSTSEC-2020-0036"] # We don't have control over the exact dependencies of `protoc-grpcio`; See https://github.com/mtp401/protoc-grpcio/issues/36
+informational_warnings = ["unmaintained"] # warn for categories of informational advisories
+severity_threshold = "low" # CVSS severity ("none", "low", "medium", "high", "critical")
+
+# Advisory Database Configuration
+[database]
+path = "/tmp/advisory-db" # Path where advisory git repo will be cloned
+url = "https://github.com/RustSec/advisory-db.git" # URL to git repo
+fetch = true # Perform a `git fetch` before auditing
+stale = false # Allow stale advisory DB (i.e. no commits for 90 days)
+
+# Output Configuration
+[output]
+deny = ["unmaintained"] # exit on error if unmaintained dependencies are found
+format = "terminal" # "terminal" (human readable report) or "json"
+quiet = false # Only print information on error
+show_tree = true # Show inverse dependency trees along with advisories
+
+# Target Configuration
+[target]
+arch = "x86_64" # Ignore advisories for CPU architectures other than this one
+os = "linux" # Ignore advisories for operating systems other than this one
+
+[packages]
+source = "all" # "all", "public" or "local"
+
+[yanked]
+enabled = true # Warn for yanked crates in Cargo.lock
+update_index = true # Auto-update the crates.io index 
