@@ -250,3 +250,52 @@ fn allow_export() {
         ResponseStatus::PsaErrorNotPermitted
     );
 }
+
+#[test]
+fn ts_pkcs11_cross() {
+    use super::cross::{import_and_verify, import_and_verify_ecc, setup_sign, setup_sign_ecc};
+    use parsec_client::core::interface::requests::ProviderId;
+    set_config("ts_pkcs11_cross.toml");
+    reload_service();
+
+    let key_name = String::from("ts_pkcs11_sign_cross");
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::TrustedService, key_name.clone());
+    import_and_verify(
+        &mut client,
+        ProviderId::Pkcs11,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    let key_name_ecc = String::from("ts_pkcs11_sign_cross_ecc");
+    let (mut client, pub_key, signature) =
+        setup_sign_ecc(ProviderId::TrustedService, key_name_ecc.clone());
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::Pkcs11,
+        key_name_ecc.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    let key_name = String::from("pkcs11_ts_sign_cross");
+    let (mut client, pub_key, signature) = setup_sign(ProviderId::Pkcs11, key_name.clone());
+    import_and_verify(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    let key_name_ecc = String::from("pkcs11_ts_sign_cross_ecc");
+    let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Pkcs11, key_name_ecc.clone());
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name_ecc.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+}
