@@ -6,5 +6,7 @@ jobs:
       - image: ghcr.io/parallaxsecond/parsec-service-test-all
     resource_class: medium
     steps:
-      - checkout
-      - run: cargo build --features=all-providers,all-authenticators
+      - name: checkout
+      - run: |
+          git submodule --init
+          cargo build --features=all-providers,all-authenticators
