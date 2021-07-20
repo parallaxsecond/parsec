@@ -4,9 +4,9 @@ jobs:
     working_directory: ~/repo
     docker:
       - image: ghcr.io/parallaxsecond/parsec-service-test-all
-    resource_class: medium
+    resource_class: arm.medium
     steps:
       - checkout
       - run: |
-          git submodule --init
+          git submodule init
           cargo build --features=all-providers,all-authenticators
