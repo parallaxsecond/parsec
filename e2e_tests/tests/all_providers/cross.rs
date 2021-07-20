@@ -13,7 +13,7 @@ const PLAINTEXT_MESSAGE: [u8; 32] = [
     0x94, 0x8E, 0x92, 0x50, 0x35, 0xC2, 0x8C, 0x5C, 0x3C, 0xCA, 0xFE, 0x18, 0xE8, 0x81, 0x37, 0x78,
 ];
 
-fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
+pub fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
@@ -27,7 +27,7 @@ fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, V
     (client, pub_key, signature)
 }
 
-fn setup_sign_ecc(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
+pub fn setup_sign_ecc(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
     let mut client = TestClient::new();
     client.set_provider(provider);
     client
@@ -55,7 +55,7 @@ fn setup_asym_encr(provider: ProviderId, key_name: String) -> (TestClient, Vec<u
     (client, pub_key)
 }
 
-fn import_and_verify(
+pub fn import_and_verify(
     client: &mut TestClient,
     provider: ProviderId,
     key_name: String,
@@ -71,7 +71,7 @@ fn import_and_verify(
         .unwrap();
 }
 
-fn import_and_verify_ecc(
+pub fn import_and_verify_ecc(
     client: &mut TestClient,
     provider: ProviderId,
     key_name: String,

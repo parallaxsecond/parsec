@@ -67,7 +67,7 @@ pkcs11-provider = ["cryptoki", "picky-asn1-der", "picky-asn1", "picky-asn1-x509"
 tpm-provider = ["tss-esapi", "picky-asn1-der", "picky-asn1", "picky-asn1-x509", "hex"]
 cryptoauthlib-provider = ["rust-cryptoauthlib"]
 trusted-service-provider = ["psa-crypto", "bindgen", "prost-build", "prost"]
-all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cryptoauthlib-provider"]
+all-providers = ["tpm-provider", "pkcs11-provider", "mbed-crypto-provider", "cryptoauthlib-provider", "trusted-service-provider"]
 
 # Authenticators
 direct-authenticator = []

@@ -175,9 +175,8 @@ if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVID
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
-    git submodule update --init
-fi
+# Initialising any submodules. Currently used for building the Trusted Service provider
+git submodule update --init
 
 if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
     # With those variables defined, dynamic linking will be attempted to build the
@@ -276,9 +275,9 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     RUST_BACKTRACE=1 cargo check --features="pkcs11-provider"
     RUST_BACKTRACE=1 cargo check --features="tpm-provider"
     RUST_BACKTRACE=1 cargo check --features="cryptoauthlib-provider"
-    # To be added when trusted-service is added to all-providers feature
-    #RUST_BACKTRACE=1 cargo check --features="trusted-service-provider"
+    RUST_BACKTRACE=1 cargo check --features="trusted-service-provider"
     RUST_BACKTRACE=1 cargo check --features="all-providers"
+
     RUST_BACKTRACE=1 cargo check --features="direct-authenticator"
     RUST_BACKTRACE=1 cargo check --features="unix-peer-credentials-authenticator"
     RUST_BACKTRACE=1 cargo check --features="jwt-svid-authenticator"
