@@ -65,6 +65,7 @@ pub struct Provider {
     slot_number: Slot,
     software_public_operations: bool,
     allow_export: bool,
+    need_login: bool,
 }
 
 impl Provider {
@@ -80,9 +81,13 @@ impl Provider {
         software_public_operations: bool,
         allow_export: bool,
     ) -> Option<Provider> {
-        if let Some(pin) = user_pin {
+        let need_login = if let Some(pin) = user_pin {
             backend.set_pin(slot_number, pin.expose_secret()).ok()?;
-        }
+            true
+        } else {
+            warn!("No user pin has been set in the configuration file, sessions will not be logged in.");
+            false
+        };
 
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
@@ -92,6 +97,7 @@ impl Provider {
             slot_number,
             software_public_operations,
             allow_export,
+            need_login,
         };
         {
             let mut local_ids_handle = pkcs11_provider
@@ -197,7 +203,9 @@ impl Provider {
             .open_session_no_callback(self.slot_number, flags)
             .map_err(to_response_status)?;
 
-        session.login(UserType::User).map_err(to_response_status)?;
+        if self.need_login {
+            session.login(UserType::User).map_err(to_response_status)?;
+        }
 
         Ok(session)
     }

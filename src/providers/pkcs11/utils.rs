@@ -38,7 +38,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
         Error::TryFromSlice(e) => ResponseStatus::from(e),
         Error::NulError(e) => ResponseStatus::from(e),
         error => {
-            error!("Conversion of {} to PsaErrorCommunicationFailure", error);
+            format_error!("Conversion of error to PsaErrorCommunicationFailure", error);
             ResponseStatus::PsaErrorCommunicationFailure
         }
     }
