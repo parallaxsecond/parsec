@@ -55,6 +55,9 @@ const SUPPORTED_OPCODES: [Opcode; 15] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The name of the provider set in the config.
+    provider_name: String,
+
     // When calling write on a reference of key_info_store, a type
     // std::sync::RwLockWriteGuard<dyn ManageKeyInfo + Send + Sync> is returned. We need to use the
     // dereference operator (*) to access the inner type dyn ManageKeyInfo + Send + Sync and then
@@ -74,11 +77,17 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for mbed-crypto provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "mbed-crypto-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "1c1139dc-ad7c-47dc-ad6b-db6fdb466552";
+
     /// Creates and initialise a new instance of MbedCryptoProvider.
     /// Checks if there are not more keys stored in the Key Info Manager than in the MbedCryptoProvider and
     /// if there, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
-    fn new(key_info_store: KeyInfoManagerClient) -> Option<Provider> {
+    fn new(provider_name: String, key_info_store: KeyInfoManagerClient) -> Option<Provider> {
         // Safety: this function should be called before any of the other Mbed Crypto functions
         // are.
         if let Err(error) = psa_crypto::init() {
@@ -86,6 +95,7 @@ impl Provider {
             return None;
         }
         let mbed_crypto_provider = Provider {
+            provider_name,
             key_info_store,
             key_handle_mutex: Mutex::new(()),
             id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
@@ -149,7 +159,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
-            uuid: Uuid::parse_str("1c1139dc-ad7c-47dc-ad6b-db6fdb466552").or(Err(ResponseStatus::InvalidEncoding))?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
             vendor: String::from("Arm"),
             version_maj: 0,
@@ -319,6 +329,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
 }
@@ -327,8 +338,16 @@ impl ProviderBuilder {
     /// Create a new provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -341,6 +360,9 @@ impl ProviderBuilder {
     /// Build into a MbedProvider
     pub fn build(self) -> std::io::Result<Provider> {
         Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
         )

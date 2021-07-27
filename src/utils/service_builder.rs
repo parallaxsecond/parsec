@@ -26,6 +26,7 @@ use parsec_interface::operations_protobuf::ProtobufConverter;
 use parsec_interface::requests::AuthType;
 use parsec_interface::requests::{BodyType, ProviderId};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::Arc;
 use std::time::Duration;
@@ -208,17 +209,21 @@ fn build_providers(
     configs: &[ProviderConfig],
     kim_factorys: HashMap<String, KeyInfoManagerFactory>,
 ) -> Result<Vec<(ProviderId, Provider)>> {
-    let mut list = Vec::new();
+    let mut providers = Vec::new();
+    let mut provider_names = HashSet::new();
     for config in configs {
+        // Check for duplicate providers.
         let provider_id = config.provider_id();
-        if list.iter().any(|(id, _)| *id == provider_id) {
-            error!("Parsec currently only supports one instance of each provider type, but {} was supplied twice. Please check your config.toml file.", provider_id);
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                "only one provider per type is supported",
-            )
-            .into());
+
+        // Check for duplicate provider names.
+        let provider_name = config.provider_name()?;
+        if provider_names.contains(&provider_name) {
+            error!("Duplicate provider names found.\n{} was found twice.\nThe \'[[provider]] name config option can be used to differentiate between providers of the same type.\nPlease check your config.toml file.", provider_name);
+            return Err(
+                Error::new(ErrorKind::InvalidData, "duplicate provider names found").into(),
+            );
         }
+        let _ = provider_names.insert(provider_name.clone());
 
         let kim_factory = match kim_factorys.get(config.key_info_manager()) {
             Some(kim_factory) => kim_factory,
@@ -249,10 +254,10 @@ fn build_providers(
                 return Err(Error::new(ErrorKind::Other, "failed to create provider").into());
             }
         };
-        let _ = list.push((provider_id, provider));
+        let _ = providers.push((provider_id, provider));
     }
 
-    Ok(list)
+    Ok(providers)
 }
 
 // This cfg_attr is used to allow the fact that key_info_manager is not used when there is no
@@ -280,6 +285,7 @@ unsafe fn get_provider(
             Ok(Some(Arc::new(
                 MbedCryptoProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::MbedCrypto))
+                    .with_provider_name(config.provider_name()?)
                     .build()?,
             )))
         }
@@ -296,6 +302,7 @@ unsafe fn get_provider(
             Ok(Some(Arc::new(
                 Pkcs11ProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::Pkcs11))
+                    .with_provider_name(config.provider_name()?)
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
                     .with_user_pin(user_pin.clone())
@@ -336,6 +343,7 @@ unsafe fn get_provider(
             Ok(Some(Arc::new(
                 TpmProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::Tpm))
+                    .with_provider_name(config.provider_name()?)
                     .with_tcti(tcti)
                     .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
                     .build()?,
@@ -357,6 +365,7 @@ unsafe fn get_provider(
             Ok(Some(Arc::new(
                 CryptoAuthLibProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::CryptoAuthLib))
+                    .with_provider_name(config.provider_name()?)
                     .with_device_type(device_type.to_string())
                     .with_iface_type(iface_type.to_string())
                     .with_wake_delay(*wake_delay)
@@ -374,6 +383,7 @@ unsafe fn get_provider(
             Ok(Some(Arc::new(
                 TrustedServiceProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::TrustedService))
+                    .with_provider_name(config.provider_name()?)
                     .build()?,
             )))
         }

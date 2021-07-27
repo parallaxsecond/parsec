@@ -35,7 +35,6 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaExportKey,
     Opcode::PsaGenerateRandom,
 ];
-
 /// Trusted Service provider structure
 ///
 /// Operations for this provider are serviced through an IPC interface that leads
@@ -43,6 +42,9 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The name of the provider set in the config.
+    provider_name: String,
+
     context: Context,
     // When calling write on a reference of key_info_store, a type
     // std::sync::RwLockWriteGuard<dyn ManageKeyInfo + Send + Sync> is returned. We need to use the
@@ -57,9 +59,19 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for trusted service provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "trusted-service-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "71129441-508a-4da6-b6e8-7b98a777e4c0";
+
     /// Creates and initialises a new instance of Provider.
-    fn new(key_info_store: KeyInfoManagerClient) -> anyhow::Result<Provider> {
+    fn new(
+        provider_name: String,
+        key_info_store: KeyInfoManagerClient,
+    ) -> anyhow::Result<Provider> {
         let ts_provider = Provider {
+            provider_name,
             key_info_store,
             context: Context::connect()?,
             id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
@@ -108,7 +120,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 71129441-508a-4da6-b6e8-7b98a777e4c0
-            uuid: Uuid::parse_str("71129441-508a-4da6-b6e8-7b98a777e4c0")?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID)?,
             description: String::from("Provider exposing functionality provided by the Crypto Trusted Service running in a Trusted Execution Environment"),
             vendor: String::from("Arm"),
             version_maj: 0,
@@ -217,6 +229,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
 }
@@ -225,8 +238,16 @@ impl ProviderBuilder {
     /// Create a new provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -238,8 +259,13 @@ impl ProviderBuilder {
 
     /// Build into a TrustedService
     pub fn build(self) -> anyhow::Result<Provider> {
-        Provider::new(self.key_info_store.ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "missing key info store")
-        })?)
+        Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
+            self.key_info_store.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing key info store")
+            })?,
+        )
     }
 }
