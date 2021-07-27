@@ -101,6 +101,16 @@ manager_type = "OnDisk"
 
 # Example of an Mbed Crypto provider configuration.
 [[provider]]
+# ⚠
+# ⚠ WARNING: Provider name cannot change.
+# ⚠ WARNING: Choose a suitable naming scheme for your providers now.
+# ⚠ WARNING: Provider name defaults to "mbed-crypto-provider" if not provided, you will not be able to change
+# ⚠ the provider's name from this if you decide to use the default.
+# ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
+# ⚠
+# (Optional) The name of the provider
+name = "mbed-crypto-provider"
+
 # (Required) Type of provider.
 provider_type = "MbedCrypto"
 
@@ -114,6 +124,15 @@ key_info_manager = "on-disk-manager"
 
 # Example of a PKCS 11 provider configuration
 #[[provider]]
+# ⚠
+# ⚠ WARNING: Provider name cannot change.
+# ⚠ WARNING: Choose a suitable naming scheme for your providers now.
+# ⚠ WARNING: Provider name defaults to "pkcs11-provider" if not provided, you will not be able to change
+# ⚠ the provider's name from this if you decide to use the default.
+# ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
+# ⚠
+# (Optional) The name of the provider
+# name = "pkcs11-provider"
 #provider_type = "Pkcs11"
 #key_info_manager = "on-disk-manager"
 # (Required for this provider) Path to the location of the dynamic library loaded by this provider.
@@ -135,6 +154,15 @@ key_info_manager = "on-disk-manager"
 
 # Example of a TPM provider configuration
 #[[provider]]
+# ⚠
+# ⚠ WARNING: Provider name cannot change.
+# ⚠ WARNING: Choose a suitable naming scheme for your providers now.
+# ⚠ WARNING: Provider name defaults to "tpm-provider" if not provided, you will not be able to change
+# ⚠ the provider's name from this if you decide to use the default.
+# ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
+# ⚠
+# (Optional) The name of the provider
+# name = "tpm-provider"
 #provider_type = "Tpm"
 #key_info_manager = "on-disk-manager"
 # (Required) TPM TCTI device to use with this provider. The string can include configuration values - if no
@@ -161,6 +189,15 @@ key_info_manager = "on-disk-manager"
 # All below parameters depend on what devices, interfaces or parameters are required or supported by
 # "rust-cryptoauthlib" wrapper for cryptoauthlib and underlying hardware.
 #[[provider]]
+# ⚠
+# ⚠ WARNING: Provider name cannot change.
+# ⚠ WARNING: Choose a suitable naming scheme for your providers now.
+# ⚠ WARNING: Provider name defaults to "cryptoauthlib-provider" if not provided, you will not be able to change
+# ⚠ the provider's name from this if you decide to use the default.
+# ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
+# ⚠
+# (Optional) The name of the provider
+# name = "cryptoauthlib-provider"
 #provider_type = "CryptoAuthLib"
 #key_info_manager = "on-disk-manager"
 ##########
@@ -213,6 +250,15 @@ key_info_manager = "on-disk-manager"
 
 # Example of a Trusted Service provider configuration.
 #[[provider]]
+# ⚠
+# ⚠ WARNING: Provider name cannot change.
+# ⚠ WARNING: Choose a suitable naming scheme for your providers now.
+# ⚠ WARNING: Provider name defaults to "trusted-service-provider" if not provided, you will not be able to change
+# ⚠ the provider's name from this if you decide to use the default.
+# ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
+# ⚠
+# (Optional) The name of the provider
+# name = "trusted-service-provider"
 # (Required) Type of provider.
 #provider_type = "TrustedService"
 

@@ -56,6 +56,9 @@ const AUTH_HEX_PREFIX: &str = "hex:";
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The name of the provider set in the config.
+    provider_name: String,
+
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
@@ -67,12 +70,20 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for tpm provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "tpm-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "1e4954a4-ff21-46d3-ab0c-661eeb667e1d";
+
     // Creates and initialise a new instance of TpmProvider.
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         esapi_context: tss_esapi::TransientKeyContext,
     ) -> Provider {
         Provider {
+            provider_name,
             esapi_context: Mutex::new(esapi_context),
             key_info_store,
         }
@@ -84,7 +95,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
-            uuid: Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").or(Err(ResponseStatus::InvalidEncoding))?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification."),
             vendor: String::from("Trusted Computing Group (TCG)"),
             version_maj: 0,
@@ -204,6 +215,7 @@ impl Drop for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     tcti: Option<String>,
@@ -214,10 +226,18 @@ impl ProviderBuilder {
     /// Create a new TPM provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             tcti: None,
             owner_hierarchy_auth: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -315,6 +335,9 @@ impl ProviderBuilder {
         self.tcti.zeroize();
         self.owner_hierarchy_auth.zeroize();
         Ok(Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
