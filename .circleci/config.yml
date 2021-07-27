@@ -8,5 +8,5 @@ jobs:
     steps:
       - checkout
       - run: |
-          git submodule init
+          git submodule update --init --recursive
           cargo build --features=all-providers,all-authenticators
