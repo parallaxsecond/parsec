@@ -38,6 +38,8 @@ pub struct Provider {
     #[derivative(Debug = "ignore")]
     device: rust_cryptoauthlib::AteccDevice,
     provider_id: ProviderId,
+    // The name of the provider set in the config.
+    provider_name: String,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     key_slots: KeySlotStorage,
@@ -45,8 +47,15 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for cryptoauthlib provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "cryptoauthlib-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "b8ba81e2-e9f7-4bdd-b096-a29d0019960c";
+
     /// Creates and initialises an instance of CryptoAuthLibProvider
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
         access_key_file_name: Option<String>,
@@ -72,6 +81,7 @@ impl Provider {
         cryptoauthlib_provider = Provider {
             device,
             provider_id: ProviderId::CryptoAuthLib,
+            provider_name,
             key_info_store,
             key_slots: KeySlotStorage::new(),
             supported_opcodes: HashSet::new(),
@@ -228,7 +238,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: b8ba81e2-e9f7-4bdd-b096-a29d0019960c
-            uuid: Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").or(Err(ResponseStatus::InvalidEncoding))?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("User space hardware provider, utilizing MicrochipTech CryptoAuthentication Library for ATECCx08 chips"),
             vendor: String::from("Arm"),
             version_maj: 0,
@@ -417,6 +427,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     device_type: Option<String>,
@@ -433,6 +444,7 @@ impl ProviderBuilder {
     /// Create a new CryptoAuthLib builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             device_type: None,
             iface_type: None,
@@ -443,6 +455,13 @@ impl ProviderBuilder {
             baud: None,
             access_key_file_name: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -556,6 +575,9 @@ impl ProviderBuilder {
             None => return Err(Error::new(ErrorKind::InvalidData, "Missing inteface type")),
         };
         Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             iface_cfg,

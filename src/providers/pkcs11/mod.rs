@@ -58,6 +58,8 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The name of the provider set in the config.
+    provider_name: String,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     local_ids: RwLock<LocalIdStore>,
@@ -70,11 +72,18 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for pkcs11 provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "pkcs11-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "30e39502-eba6-4d60-a4af-c518b7f5e38f";
+
     /// Creates and initialise a new instance of Pkcs11Provider.
     /// Checks if there are not more keys stored in the Key Info Manager than in the PKCS 11 library
     /// and if there are, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         backend: Pkcs11,
         slot_number: Slot,
@@ -92,6 +101,7 @@ impl Provider {
 
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
+            provider_name,
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             backend,
@@ -218,7 +228,7 @@ impl Provide for Provider {
         Ok((
             ProviderInfo {
                 // Assigned UUID for this provider: 30e39502-eba6-4d60-a4af-c518b7f5e38f
-                uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f")
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)
                     .or(Err(ResponseStatus::InvalidEncoding))?,
                 description: String::from(
                     "PKCS #11 provider, interfacing with a PKCS #11 library.",
@@ -347,6 +357,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     pkcs11_library_path: Option<String>,
@@ -360,6 +371,7 @@ impl ProviderBuilder {
     /// Create a new Pkcs11Provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             pkcs11_library_path: None,
             slot_number: None,
@@ -367,6 +379,13 @@ impl ProviderBuilder {
             software_public_operations: None,
             allow_export: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -474,6 +493,9 @@ impl ProviderBuilder {
         };
 
         Ok(Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,
