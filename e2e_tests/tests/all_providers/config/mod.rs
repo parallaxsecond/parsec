@@ -299,3 +299,13 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 }
+
+#[test]
+fn no_user_pin() {
+    set_config("no_user_pin.toml");
+    // The service should still start, without the user pin.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
