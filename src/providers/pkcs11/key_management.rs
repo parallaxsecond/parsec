@@ -117,6 +117,8 @@ impl Provider {
             .mechanism_type()]),
         ];
         let mut priv_template = pub_template.clone();
+        priv_template.push(Attribute::Class(ObjectClass::PRIVATE_KEY));
+        pub_template.push(Attribute::Class(ObjectClass::PUBLIC_KEY));
         pub_template.push(Attribute::Private(false.into()));
 
         utils::key_pair_usage_flags_to_pkcs11_attributes(
