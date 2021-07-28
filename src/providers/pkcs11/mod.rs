@@ -22,7 +22,8 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, SecretString};
 use std::collections::HashSet;
-use std::convert::TryInto;
+use std::convert::From;
+use std::convert::TryFrom;
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
 use std::sync::RwLock;
@@ -383,8 +384,8 @@ impl ProviderBuilder {
     }
 
     /// Specify the slot number used
-    pub fn with_slot_number(mut self, slot_number: u64) -> ProviderBuilder {
-        self.slot_number = Some(slot_number);
+    pub fn with_slot_number(mut self, slot_number: Option<u64>) -> ProviderBuilder {
+        self.slot_number = slot_number;
 
         self
     }
@@ -427,15 +428,6 @@ impl ProviderBuilder {
             "Building a PKCS 11 provider with library \'{}\'",
             library_path
         );
-        let slot_number = self
-            .slot_number
-            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing slot number"))?;
-        let slot = slot_number.try_into().or_else(|_| {
-            Err(Error::new(
-                ErrorKind::InvalidData,
-                "cannot convert slot value",
-            ))
-        })?;
 
         let backend = Pkcs11::new(library_path).map_err(|e| {
             format_error!("Error creating a PKCS 11 context", e);
@@ -449,11 +441,43 @@ impl ProviderBuilder {
                 Error::new(ErrorKind::InvalidData, "error initializing PKCS 11 context")
             })?;
 
+        let slot_number = match self.slot_number {
+            Some(i) => {
+                let slot = Slot::try_from(i).or_else(|_| {
+                    Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "cannot convert slot value",
+                    ))
+                })?;
+                slot
+            }
+            None => {
+                let slots = backend.get_slots_with_initialized_token().map_err(|e| {
+                    format_error!(
+                        "Failed retrieving a valid slot with an initialized token",
+                        e
+                    );
+                    Error::new(
+                        ErrorKind::InvalidData,
+                        "failed retrieving a valid slot with an initialized token",
+                    )
+                })?;
+                if slots.len() == 1 {
+                    slots[0]
+                } else {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "missing slot number or more than one initialized",
+                    ));
+                }
+            }
+        };
+
         Ok(Provider::new(
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,
-            slot,
+            slot_number,
             self.user_pin,
             self.software_public_operations.unwrap_or(false),
             self.allow_export.unwrap_or(true),

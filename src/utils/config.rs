@@ -118,7 +118,7 @@ pub enum ProviderConfig {
         /// Path of the PKCS 11 library
         library_path: String,
         /// Slot number to use
-        slot_number: usize,
+        slot_number: Option<u64>,
         /// User Pin
         user_pin: Option<String>,
         /// Control whether public key operations are performed in software
