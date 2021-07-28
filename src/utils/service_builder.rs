@@ -292,14 +292,12 @@ unsafe fn get_provider(
             allow_export,
             ..
         } => {
-            use std::convert::TryInto;
-
             info!("Creating a PKCS 11 Provider.");
             Ok(Some(Arc::new(
                 Pkcs11ProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::Pkcs11))
                     .with_pkcs11_library_path(library_path.clone())
-                    .with_slot_number((*slot_number).try_into()?)
+                    .with_slot_number(*slot_number)
                     .with_user_pin(user_pin.clone())
                     .with_software_public_operations(*software_public_operations)
                     .with_allow_export(*allow_export)

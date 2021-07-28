@@ -309,3 +309,13 @@ fn no_user_pin() {
     let mut client = TestClient::new();
     let _ = client.ping().unwrap();
 }
+
+#[test]
+fn no_slot_number() {
+    set_config("no_slot_number.toml");
+    // The service should still start, without the slot number.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
