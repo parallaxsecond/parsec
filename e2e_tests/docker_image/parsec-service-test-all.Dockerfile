@@ -68,15 +68,6 @@ RUN cd SoftHSMv2 \
 	&& make install
 RUN rm -rf SoftHSMv2
 
-# Download and install Mbed Crypto from Mbed TLS
-RUN git clone https://github.com/ARMmbed/mbedtls.git \
-	&& cd mbedtls \
-	&& git reset --hard mbedtls-2.25.0
-RUN cd mbedtls \
-	&& ./scripts/config.py crypto \
-	&& SHARED=1 make \
-	&& make install
-
 # Install dependencies for Trusted Services
 # Install cmake v 3.18
 RUN wget https://cmake.org/files/v3.18/cmake-3.18.0-Linux-x86_64.sh

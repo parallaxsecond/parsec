@@ -178,15 +178,6 @@ fi
 # Initialising any submodules. Currently used for building the Trusted Service provider
 git submodule update --init
 
-if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-    # With those variables defined, dynamic linking will be attempted to build the
-    # Mbed Crypto provider. The Mbed Crypto library was installed in the container.
-    # Defining those variables during the trusted-service provider testing leads to a
-    # linking problem as it also used Mbed Crypto.
-    export MBEDTLS_LIB_DIR="/tmp/mbedtls/library"
-    export MBEDTLS_INCLUDE_DIR="/tmp/mbedtls/include"
-fi
-
 if [ "$PROVIDER_NAME" = "coverage" ]; then
     rustup toolchain install 1.51.0
     PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
