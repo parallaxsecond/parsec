@@ -1,22 +1,26 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use parsec_interface::operations::{psa_aead_decrypt, psa_aead_encrypt};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use psa_crypto::operations::aead;
 use psa_crypto::types::key;
 
 impl Provider {
     pub(super) fn psa_aead_encrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_encrypt::Operation,
     ) -> Result<psa_aead_encrypt::Result> {
         let key_name = op.key_name.clone();
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let _guard = self
             .key_handle_mutex
@@ -54,10 +58,14 @@ impl Provider {
 
     pub(super) fn psa_aead_decrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_decrypt::Operation,
     ) -> Result<psa_aead_decrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _guard = self

@@ -6,15 +6,15 @@ use super::utils::validate_public_key;
 use super::utils::LegacyPasswordContext;
 use super::utils::PasswordContext;
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1_x509::RSAPublicKey;
 use std::convert::TryInto;
@@ -23,17 +23,17 @@ const AUTH_VAL_LEN: usize = 32;
 
 impl Provider {
     #[allow(deprecated)]
-    pub(super) fn get_key_ctx(&self, key_triple: &KeyTriple) -> Result<PasswordContext> {
+    pub(super) fn get_key_ctx(&self, key_identity: &KeyIdentity) -> Result<PasswordContext> {
         // Try to deserialize into the new format
         self.key_info_store
-            .get_key_id::<PasswordContext>(key_triple)
+            .get_key_id::<PasswordContext>(key_identity)
             .or_else(|e| {
                 // If it failed, check if it was a deserialization error
                 if let ResponseStatus::InvalidEncoding = e {
                     // Try to deserialize into legacy format
                     let legacy_ctx = self
                         .key_info_store
-                        .get_key_id::<LegacyPasswordContext>(key_triple)?;
+                        .get_key_id::<LegacyPasswordContext>(key_identity)?;
 
                     // Try to migrate the key context to the new format
                     let mut esapi_context = self
@@ -57,9 +57,9 @@ impl Provider {
                     );
 
                     // Grab key attributes and replace legacy entry with new one
-                    let attributes = self.key_info_store.get_key_attributes(key_triple)?;
+                    let attributes = self.key_info_store.get_key_attributes(key_identity)?;
                     let _ = self.key_info_store.replace_key_info(
-                        key_triple.clone(),
+                        key_identity.clone(),
                         &password_ctx,
                         attributes,
                     )?;
@@ -72,14 +72,18 @@ impl Provider {
 
     pub(super) fn psa_generate_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         if op.attributes.key_type.is_public_key() {
             error!("A public key type can not be generated.");
@@ -101,7 +105,7 @@ impl Provider {
         let auth_value = auth_value.unwrap();
 
         self.key_info_store.insert_key_info(
-            key_triple,
+            key_identity,
             &PasswordContext::new(key_material, auth_value.value().to_vec()),
             attributes,
         )?;
@@ -111,11 +115,11 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         match op.attributes.key_type {
-            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
+            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(application_identity, op),
             _ => {
                 error!(
                     "The TPM provider does not support importing for the {:?} key type.",
@@ -128,7 +132,7 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal_rsa_public(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         // Currently only the RSA PKCS1 v1.5 signature scheme is supported
@@ -143,9 +147,13 @@ impl Provider {
 
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_data = op.data;
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -168,7 +176,7 @@ impl Provider {
             })?;
 
         self.key_info_store.insert_key_info(
-            key_triple,
+            key_identity,
             &PasswordContext::new(key_material, Vec::new()),
             attributes,
         )?;
@@ -178,14 +186,18 @@ impl Provider {
 
     pub(super) fn psa_export_public_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
-        let password_context = self.get_key_ctx(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context = self.get_key_ctx(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         Ok(psa_export_public_key::Result {
             data: utils::pub_key_to_bytes(
@@ -198,13 +210,17 @@ impl Provider {
 
     pub(super) fn psa_destroy_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
-        let _ = self.key_info_store.remove_key_info(&key_triple)?;
+        let _ = self.key_info_store.remove_key_info(&key_identity)?;
 
         Ok(psa_destroy_key::Result {})
     }

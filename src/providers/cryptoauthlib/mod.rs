@@ -5,9 +5,10 @@
 //! This provider implements Parsec operations using CryptoAuthentication
 //! Library backed by the ATECCx08 cryptochip.
 use super::Provide;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
+use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{error, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -38,8 +39,8 @@ pub struct Provider {
     #[derivative(Debug = "ignore")]
     device: rust_cryptoauthlib::AteccDevice,
     provider_id: ProviderId,
-    // The name of the provider set in the config.
-    provider_name: String,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     key_slots: KeySlotStorage,
@@ -81,7 +82,10 @@ impl Provider {
         cryptoauthlib_provider = Provider {
             device,
             provider_id: ProviderId::CryptoAuthLib,
-            provider_name,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             key_slots: KeySlotStorage::new(),
             supported_opcodes: HashSet::new(),
@@ -109,7 +113,7 @@ impl Provider {
         // Validate key info store against hardware configuration.
         // Delete invalid entries or invalid mappings.
         // Mark the slots free/busy appropriately.
-        let mut to_remove: Vec<KeyTriple> = Vec::new();
+        let mut to_remove: Vec<KeyIdentity> = Vec::new();
         match cryptoauthlib_provider.key_info_store.get_all() {
             Ok(key_triples) => {
                 for key_triple in key_triples.iter().cloned() {
@@ -250,11 +254,11 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -264,7 +268,7 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
@@ -307,118 +311,118 @@ impl Provide for Provider {
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaGenerateKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_generate_key_internal(app_name, op)
+            self.psa_generate_key_internal(application_identity, op)
         }
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaDestroyKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_destroy_key_internal(app_name, op)
+            self.psa_destroy_key_internal(application_identity, op)
         }
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaImportKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_import_key_internal(app_name, op)
+            self.psa_import_key_internal(application_identity, op)
         }
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaSignHash) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_sign_hash_internal(app_name, op)
+            self.psa_sign_hash_internal(application_identity, op)
         }
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaVerifyHash) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_verify_hash_internal(app_name, op)
+            self.psa_verify_hash_internal(application_identity, op)
         }
     }
 
     fn psa_sign_message(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_message::Operation,
     ) -> Result<psa_sign_message::Result> {
         trace!("psa_sign_message ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaSignMessage) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_sign_message_internal(app_name, op)
+            self.psa_sign_message_internal(application_identity, op)
         }
     }
 
     fn psa_verify_message(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
         trace!("psa_verify_message ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaVerifyMessage) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_verify_message_internal(app_name, op)
+            self.psa_verify_message_internal(application_identity, op)
         }
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaExportPublicKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_export_public_key_internal(app_name, op)
+            self.psa_export_public_key_internal(application_identity, op)
         }
     }
 
     fn psa_export_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         trace!("psa_export_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaExportKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_export_key_internal(app_name, op)
+            self.psa_export_key_internal(application_identity, op)
         }
     }
 }
