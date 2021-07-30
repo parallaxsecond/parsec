@@ -4,8 +4,9 @@
 //!
 //! This provider is a software based implementation of PSA Crypto, Mbed Crypto.
 use super::Provide;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
+use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -55,8 +56,8 @@ const SUPPORTED_OPCODES: [Opcode; 15] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
-    // The name of the provider set in the config.
-    provider_name: String,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
 
     // When calling write on a reference of key_info_store, a type
     // std::sync::RwLockWriteGuard<dyn ManageKeyInfo + Send + Sync> is returned. We need to use the
@@ -95,14 +96,17 @@ impl Provider {
             return None;
         }
         let mbed_crypto_provider = Provider {
-            provider_name,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             key_handle_mutex: Mutex::new(()),
             id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
         };
         let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
-            let mut to_remove: Vec<KeyTriple> = Vec::new();
+            let mut to_remove: Vec<KeyIdentity> = Vec::new();
             // Go through all MbedCryptoProvider key triple to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
@@ -171,12 +175,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -187,108 +191,108 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_export_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         trace!("psa_export_key ingress");
-        self.psa_export_key_internal(app_name, op)
+        self.psa_export_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        self.psa_verify_hash_internal(application_identity, op)
     }
 
     fn psa_asymmetric_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         trace!("psa_asymmetric_encrypt ingress");
-        self.psa_asymmetric_encrypt_internal(app_name, op)
+        self.psa_asymmetric_encrypt_internal(application_identity, op)
     }
 
     fn psa_asymmetric_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
-        self.psa_asymmetric_decrypt_internal(app_name, op)
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 
     fn psa_aead_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_encrypt::Operation,
     ) -> Result<psa_aead_encrypt::Result> {
         trace!("psa_aead_encrypt ingress");
-        self.psa_aead_encrypt_internal(app_name, op)
+        self.psa_aead_encrypt_internal(application_identity, op)
     }
 
     fn psa_aead_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_decrypt::Operation,
     ) -> Result<psa_aead_decrypt::Result> {
         trace!("psa_aead_decrypt ingress");
-        self.psa_aead_decrypt_internal(app_name, op)
+        self.psa_aead_decrypt_internal(application_identity, op)
     }
 
     fn psa_hash_compute(
@@ -309,11 +313,11 @@ impl Provide for Provider {
 
     fn psa_raw_key_agreement(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_raw_key_agreement::Operation,
     ) -> Result<psa_raw_key_agreement::Result> {
         trace!("psa_raw_key_agreement ingress");
-        self.psa_raw_key_agreement(app_name, op)
+        self.psa_raw_key_agreement(application_identity, op)
     }
 
     fn psa_generate_random(

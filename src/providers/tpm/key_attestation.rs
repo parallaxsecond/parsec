@@ -1,10 +1,11 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::{utils, Provider};
-use crate::{authenticators::ApplicationName, key_info_managers::KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::{attest_key, prepare_key_attestation};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::zeroize::Zeroizing;
 use std::convert::TryFrom;
 use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
@@ -14,14 +15,14 @@ use tss_esapi::{abstraction::transient::ObjectWrapper, structures::Auth};
 impl Provider {
     pub(super) fn prepare_key_attestation_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: prepare_key_attestation::Operation,
     ) -> Result<prepare_key_attestation::Result> {
         match op {
             prepare_key_attestation::Operation::ActivateCredential {
                 attested_key_name,
                 attesting_key_name,
-            } => self.prepare_activate_credential(app_name, attested_key_name, attesting_key_name),
+            } => self.prepare_activate_credential(application_identity, attested_key_name, attesting_key_name),
             _ => {
                 error!("Key attestation mechanism is not supported");
                 Err(ResponseStatus::PsaErrorNotSupported)
@@ -35,7 +36,7 @@ impl Provider {
     // Endorsement Key will be used.
     fn prepare_activate_credential(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         attested_key_name: String,
         attesting_key_name: Option<String>,
     ) -> Result<prepare_key_attestation::Result> {
@@ -44,9 +45,13 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, attested_key_name);
-        let pass_context = self.get_key_ctx(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            attested_key_name,
+        );
+        let pass_context = self.get_key_ctx(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
         let params = utils::parsec_to_tpm_params(key_attributes)?;
         let auth = Some(
             Auth::try_from(pass_context.auth_value().to_vec())
@@ -79,7 +84,7 @@ impl Provider {
 
     pub(super) fn attest_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: attest_key::Operation,
     ) -> Result<attest_key::Result> {
         match op {
@@ -89,7 +94,7 @@ impl Provider {
                 credential_blob,
                 secret,
             } => self.activate_credential(
-                app_name,
+                application_identity,
                 attested_key_name,
                 attesting_key_name,
                 credential_blob,
@@ -104,7 +109,7 @@ impl Provider {
 
     fn activate_credential(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         attested_key_name: String,
         attesting_key_name: Option<String>,
         credential_blob: Zeroizing<Vec<u8>>,
@@ -115,9 +120,13 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, attested_key_name);
-        let pass_context = self.get_key_ctx(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            attested_key_name,
+        );
+        let pass_context = self.get_key_ctx(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
         let params = utils::parsec_to_tpm_params(key_attributes)?;
         let auth = Some(
             Auth::try_from(pass_context.auth_value().to_vec())

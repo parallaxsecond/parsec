@@ -8,12 +8,12 @@
 // - nonce lenght must be <7,13>
 
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::psa_algorithm::{Aead, AeadWithDefaultLengthTag};
 use parsec_interface::operations::{psa_aead_decrypt, psa_aead_encrypt};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 
 const DEFAULT_TAG_LENGTH: usize = 16;
 
@@ -58,15 +58,18 @@ pub fn get_aead_algorithm(
 impl Provider {
     pub(super) fn psa_aead_encrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_encrypt::Operation,
     ) -> Result<psa_aead_encrypt::Result> {
         match get_tag_length(&op.alg) {
             Some(tag_length) => {
-                let key_triple =
-                    KeyTriple::new(app_name, ProviderId::CryptoAuthLib, op.key_name.clone());
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
-                let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+                let key_identity = KeyIdentity::new(
+                    application_identity.clone(),
+                    self.provider_identity.clone(),
+                    op.key_name.clone(),
+                );
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
+                let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
                 op.validate(key_attributes)?;
 
                 let aead_param = rust_cryptoauthlib::AeadParam {
@@ -112,15 +115,18 @@ impl Provider {
 
     pub(super) fn psa_aead_decrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_decrypt::Operation,
     ) -> Result<psa_aead_decrypt::Result> {
         match get_tag_length(&op.alg) {
             Some(tag_length) => {
-                let key_triple =
-                    KeyTriple::new(app_name, ProviderId::CryptoAuthLib, op.key_name.clone());
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
-                let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+                let key_identity = KeyIdentity::new(
+                    application_identity.clone(),
+                    self.provider_identity.clone(),
+                    op.key_name.clone(),
+                );
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
+                let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
                 op.validate(key_attributes)?;
 
                 if tag_length < op.ciphertext.len() {

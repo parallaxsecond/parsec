@@ -5,9 +5,10 @@
 //! This provider allows clients to access any PKCS 11 compliant device
 //! through the Parsec interface.
 use super::Provide;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::crypto_capability::CanDoCrypto;
+use crate::providers::ProviderIdentity;
 use cryptoki::types::locking::CInitializeArgs;
 use cryptoki::types::session::{Session, UserType};
 use cryptoki::types::slot_token::Slot;
@@ -61,8 +62,8 @@ const SUPPORTED_OPCODES: [Opcode; 9] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
-    // The name of the provider set in the config.
-    provider_name: String,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     local_ids: RwLock<LocalIdStore>,
@@ -104,7 +105,10 @@ impl Provider {
 
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
-            provider_name,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             backend,
@@ -118,7 +122,7 @@ impl Provider {
                 .local_ids
                 .write()
                 .expect("Local ID lock poisoned");
-            let mut to_remove: Vec<KeyTriple> = Vec::new();
+            let mut to_remove: Vec<KeyIdentity> = Vec::new();
             // Go through all PKCS 11 key triple to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
@@ -248,12 +252,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -264,98 +268,98 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         if self.software_public_operations {
             trace!("software_psa_verify_hash ingress");
-            self.software_psa_verify_hash_internal(app_name, op)
+            self.software_psa_verify_hash_internal(application_identity, op)
         } else {
             trace!("pkcs11_psa_verify_hash ingress");
-            self.psa_verify_hash_internal(app_name, op)
+            self.psa_verify_hash_internal(application_identity, op)
         }
     }
 
     fn psa_asymmetric_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         if self.software_public_operations {
             trace!("software_psa_asymmetric_encrypt ingress");
-            self.software_psa_asymmetric_encrypt_internal(app_name, op)
+            self.software_psa_asymmetric_encrypt_internal(application_identity, op)
         } else {
             trace!("psa_asymmetric_encrypt ingress");
-            self.psa_asymmetric_encrypt_internal(app_name, op)
+            self.psa_asymmetric_encrypt_internal(application_identity, op)
         }
     }
 
     fn psa_asymmetric_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
-        self.psa_asymmetric_decrypt_internal(app_name, op)
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 
     /// Check if the crypto operation is supported by PKCS11 provider
     /// by using CanDoCrypto trait.
     fn can_do_crypto(
         &self,
-        app_name: ApplicationName,
+        app_name: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto PKCS11 ingress");

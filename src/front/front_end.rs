@@ -92,7 +92,7 @@ impl FrontEndHandler {
                 if let Some(app) = &app.as_ref() {
                     info!(
                         "New request received from application name \"{}\"",
-                        app.get_name()
+                        app.identity().name()
                     )
                 } else {
                     info!("New request received without authentication")
@@ -111,7 +111,7 @@ impl FrontEndHandler {
                     if let Some(app) = app {
                         info!(
                             "Response for application name \"{}\" sent back",
-                            app.get_name()
+                            app.identity().name()
                         );
                     } else {
                         info!("Response sent back from request without authentication");

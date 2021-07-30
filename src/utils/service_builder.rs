@@ -50,6 +50,26 @@ use crate::providers::tpm::ProviderBuilder as TpmProviderBuilder;
 #[cfg(feature = "trusted-service-provider")]
 use crate::providers::trusted_service::ProviderBuilder as TrustedServiceProviderBuilder;
 
+#[cfg(feature = "cryptoauthlib-provider")]
+use crate::providers::cryptoauthlib::Provider as CryptoAuthLibProvider;
+#[cfg(feature = "mbed-crypto-provider")]
+use crate::providers::mbed_crypto::Provider as MbedCryptoProvider;
+#[cfg(feature = "pkcs11-provider")]
+use crate::providers::pkcs11::Provider as Pkcs11Provider;
+#[cfg(feature = "tpm-provider")]
+use crate::providers::tpm::Provider as TpmProvider;
+#[cfg(feature = "trusted-service-provider")]
+use crate::providers::trusted_service::Provider as TrustedServiceProvider;
+
+#[cfg(any(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "tpm-provider",
+    feature = "cryptoauthlib-provider",
+    feature = "trusted-service-provider"
+))]
+use crate::providers::ProviderIdentity;
+
 #[cfg(any(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",
@@ -99,8 +119,16 @@ impl ServiceBuilder {
             )
             .build();
 
-        let key_info_manager_builders =
-            gey_key_info_manager_builders(config.key_manager.as_ref().unwrap_or(&Vec::new()))?;
+        let authenticators = build_authenticators(&config.authenticator)?;
+
+        if authenticators[0].0 == AuthType::Direct {
+            warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
+        }
+
+        let key_info_manager_builders = gey_key_info_manager_builders(
+            config.key_manager.as_ref().unwrap_or(&Vec::new()),
+            authenticators[0].0,
+        )?;
 
         let providers = build_providers(
             config.provider.as_ref().unwrap_or(&Vec::new()),
@@ -110,12 +138,6 @@ impl ServiceBuilder {
         if providers.is_empty() {
             error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
             return Err(Error::new(ErrorKind::InvalidData, "need one provider").into());
-        }
-
-        let authenticators = build_authenticators(&config.authenticator)?;
-
-        if authenticators[0].0 == AuthType::Direct {
-            warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
         }
 
         let backend_handlers = build_backend_handlers(providers, &authenticators)?;
@@ -282,9 +304,13 @@ unsafe fn get_provider(
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderConfig::MbedCrypto { .. } => {
             info!("Creating a Mbed Crypto Provider.");
+            let provider_identity = ProviderIdentity::new(
+                MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
             Ok(Some(Arc::new(
                 MbedCryptoProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderId::MbedCrypto))
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
                     .with_provider_name(config.provider_name()?)
                     .build()?,
             )))
@@ -299,9 +325,13 @@ unsafe fn get_provider(
             ..
         } => {
             info!("Creating a PKCS 11 Provider.");
+            let provider_identity = ProviderIdentity::new(
+                Pkcs11Provider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
             Ok(Some(Arc::new(
                 Pkcs11ProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderId::Pkcs11))
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
                     .with_provider_name(config.provider_name()?)
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
@@ -323,6 +353,11 @@ unsafe fn get_provider(
             use tss_esapi::tcti_ldr::{TctiContext, TctiNameConf};
             info!("Creating a TPM Provider.");
 
+            let provider_identity = ProviderIdentity::new(
+                TpmProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+
             let tcti_name_conf = TctiNameConf::from_str(tcti).map_err(|_| {
                 std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
             })?;
@@ -342,7 +377,7 @@ unsafe fn get_provider(
             }
 
             let mut builder = TpmProviderBuilder::new()
-                .with_key_info_store(kim_factory.build_client(ProviderId::Tpm))
+                .with_key_info_store(kim_factory.build_client(provider_identity))
                 .with_tcti(tcti)
                 .with_provider_name(config.provider_name()?)
                 .with_owner_hierarchy_auth(owner_hierarchy_auth.clone());
@@ -366,9 +401,13 @@ unsafe fn get_provider(
             ..
         } => {
             info!("Creating a CryptoAuthentication Library Provider.");
+            let provider_identity = ProviderIdentity::new(
+                CryptoAuthLibProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
             Ok(Some(Arc::new(
                 CryptoAuthLibProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderId::CryptoAuthLib))
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
                     .with_provider_name(config.provider_name()?)
                     .with_device_type(device_type.to_string())
                     .with_iface_type(iface_type.to_string())
@@ -383,10 +422,14 @@ unsafe fn get_provider(
         }
         #[cfg(feature = "trusted-service-provider")]
         ProviderConfig::TrustedService { .. } => {
-            info!("Creating a Trusted Service Provider.");
+            info!("Creating a TPM Provider.");
+            let provider_identity = ProviderIdentity::new(
+                TrustedServiceProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
             Ok(Some(Arc::new(
                 TrustedServiceProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderId::TrustedService))
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
                     .with_provider_name(config.provider_name()?)
                     .build()?,
             )))
@@ -410,10 +453,14 @@ unsafe fn get_provider(
 
 fn gey_key_info_manager_builders(
     configs: &[KeyInfoManagerConfig],
+    default_auth_type: AuthType,
 ) -> Result<HashMap<String, KeyInfoManagerFactory>> {
     let mut map = HashMap::new();
     for config in configs {
-        let _ = map.insert(config.name.clone(), KeyInfoManagerFactory::new(config)?);
+        let _ = map.insert(
+            config.name.clone(),
+            KeyInfoManagerFactory::new(config, default_auth_type)?,
+        );
     }
 
     Ok(map)

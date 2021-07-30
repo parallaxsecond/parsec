@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{utils, Provider};
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
@@ -13,7 +13,7 @@ use parsec_interface::requests::Result;
 impl CanDoCrypto for Provider {
     fn can_do_crypto_internal(
         &self,
-        _app_name: ApplicationName,
+        _application_identity: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto_internal for TPM provider");

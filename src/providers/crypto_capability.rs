@@ -6,7 +6,7 @@
 //! https://parallaxsecond.github.io/parsec-book/parsec_client/operations/can_do_crypto.html
 //! https://parallaxsecond.github.io/parsec-book/parsec_client/operations/service_api_coverage.html
 
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
 use parsec_interface::operations::can_do_crypto::{CheckType, Operation};
@@ -24,11 +24,11 @@ pub trait CanDoCrypto {
     /// This method is called by Provide trait and doesn't need to be changed.
     fn can_do_crypto_main(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto_main in CanDoCrypto trait");
-        let _ = self.can_do_crypto_internal(app_name, op)?;
+        let _ = self.can_do_crypto_internal(application_identity, op)?;
 
         match op.check_type {
             CheckType::Generate => self.generate_check(op.attributes),
@@ -95,7 +95,7 @@ pub trait CanDoCrypto {
     /// This method should be re-implemented by providers.
     fn can_do_crypto_internal(
         &self,
-        _app_name: ApplicationName,
+        _application_identity: &ApplicationIdentity,
         _op: Operation,
     ) -> Result<can_do_crypto::Result>;
 

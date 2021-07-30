@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! JWT SVID authenticator
 
-use super::{Admin, AdminList, Application, Authenticate};
+use super::{Admin, AdminList, Application, ApplicationIdentity, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use log::error;
 use parsec_interface::operations::list_authenticators;
@@ -72,6 +72,12 @@ impl Authenticate for JwtSvidAuthenticator {
             })?;
         let app_name = jwt_token.spiffe_id().to_string();
         let is_admin = self.admins.is_admin(&app_name);
-        Ok(Application::new(app_name, is_admin))
+        Ok(Application {
+            identity: ApplicationIdentity {
+                name: app_name,
+                authenticator_id: AuthType::JwtSvid,
+            },
+            is_admin,
+        })
     }
 }
