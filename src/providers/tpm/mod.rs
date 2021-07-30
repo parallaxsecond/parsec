@@ -5,8 +5,9 @@
 //! Provider allowing clients to use hardware or software TPM 2.0 implementations
 //! for their Parsec operations.
 use super::Provide;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyInfoManagerClient;
+use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
@@ -56,8 +57,8 @@ const AUTH_HEX_PREFIX: &str = "hex:";
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
-    // The name of the provider set in the config.
-    provider_name: String,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
 
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
@@ -83,7 +84,10 @@ impl Provider {
         esapi_context: tss_esapi::TransientKeyContext,
     ) -> Provider {
         Provider {
-            provider_name,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             esapi_context: Mutex::new(esapi_context),
             key_info_store,
         }
@@ -107,12 +111,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -123,81 +127,81 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        self.psa_verify_hash_internal(application_identity, op)
     }
 
     fn psa_asymmetric_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         trace!("psa_asymmetric_encrypt ingress");
-        self.psa_asymmetric_encrypt_internal(app_name, op)
+        self.psa_asymmetric_encrypt_internal(application_identity, op)
     }
 
     fn psa_asymmetric_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
-        self.psa_asymmetric_decrypt_internal(app_name, op)
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 }
 

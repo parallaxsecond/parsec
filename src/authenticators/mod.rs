@@ -4,7 +4,7 @@
 //!
 //! [Authenticators](https://parallaxsecond.github.io/parsec-book/parsec_service/authenticators.html)
 //! provide functionality to the service for verifying the authenticity of requests.
-//! The result of an authentication is an `ApplicationName` which is parsed by the authenticator and
+//! The result of an authentication is an `Application` which is parsed by the authenticator and
 //! used throughout the service for identifying the request initiator. The input to an authentication
 //! is the `RequestAuth` field of a request, which is parsed by the authenticator specified in the header.
 //! The authentication functionality is abstracted through an `Authenticate` trait.
@@ -29,28 +29,83 @@ use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
-use parsec_interface::requests::Result;
+use parsec_interface::requests::{AuthType, Result};
+use std::fmt;
 use std::ops::Deref;
 
-/// String wrapper for app names
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ApplicationName {
+/// A unique identifier for an application.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ApplicationIdentity {
+    /// The name of the application.
     name: String,
+    /// The id of the authenticator used to authenticate the application name.
+    authenticator_id: AuthType,
 }
 
-impl Deref for ApplicationName {
-    type Target = String;
+impl fmt::Display for ApplicationIdentity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "ApplicationIdentity: [name=\"{}\", authenticator_id=\"{}\"]",
+            self.name, self.authenticator_id
+        )
+    }
+}
 
-    fn deref(&self) -> &Self::Target {
+impl ApplicationIdentity {
+    /// Creates a new instance of ProviderIdentity.
+    pub fn new(name: String, authenticator_id: AuthType) -> ApplicationIdentity {
+        ApplicationIdentity {
+            name,
+            authenticator_id,
+        }
+    }
+
+    /// Get the identity of the application
+    pub fn name(&self) -> &String {
         &self.name
+    }
+
+    /// Get whether the application has administrator rights
+    pub fn authenticator_id(&self) -> &AuthType {
+        &self.authenticator_id
     }
 }
 
 /// Wrapper for a Parsec application
 #[derive(Debug, Clone)]
 pub struct Application {
-    name: ApplicationName,
+    /// The identity of the Application
+    identity: ApplicationIdentity,
+    /// Whether the application has administrator rights
     is_admin: bool,
+}
+
+impl fmt::Display for Application {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Application {{identity: {}, is_admin: {}}}",
+            self.identity, self.is_admin
+        )
+    }
+}
+
+impl Application {
+    /// Creates a new instance of ProviderIdentity.
+    pub fn new(identity: ApplicationIdentity, is_admin: bool) -> Application {
+        Application { identity, is_admin }
+    }
+
+    /// Get the identity of the application
+    pub fn identity(&self) -> &ApplicationIdentity {
+        &self.identity
+    }
+
+    /// Get whether the application has administrator rights
+    pub fn is_admin(&self) -> &bool {
+        &self.is_admin
+    }
 }
 
 /// Authentication interface
@@ -76,45 +131,6 @@ pub trait Authenticate {
         auth: &RequestAuth,
         meta: Option<ConnectionMetadata>,
     ) -> Result<Application>;
-}
-
-impl ApplicationName {
-    /// Create ApplicationName from name string only
-    pub fn from_name(name: String) -> ApplicationName {
-        ApplicationName { name }
-    }
-}
-
-impl Application {
-    /// Create a new Application structure
-    pub fn new(name: String, is_admin: bool) -> Application {
-        Application {
-            name: ApplicationName::from_name(name),
-            is_admin,
-        }
-    }
-
-    /// Check whether the application is an admin
-    pub fn is_admin(&self) -> bool {
-        self.is_admin
-    }
-
-    /// Get a reference to the inner ApplicationName string
-    pub fn get_name(&self) -> &ApplicationName {
-        &self.name
-    }
-}
-
-impl From<Application> for ApplicationName {
-    fn from(auth: Application) -> Self {
-        auth.name
-    }
-}
-
-impl std::fmt::Display for ApplicationName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 #[derive(Debug, Clone, Default)]
