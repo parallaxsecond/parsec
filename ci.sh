@@ -58,7 +58,7 @@ wait_for_service() {
     sleep 5
 
     # Check that Parsec successfully started and is running
-    pgrep -f target/release/parsec >/dev/null
+    pgrep parsec >/dev/null
 }
 
 stop_service() {
@@ -203,7 +203,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         # Start service
         RUST_LOG=info cargo +1.51.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
             --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
-            --run-types bins --timeout 3600 --release -- -c $CONFIG_PATH &
+            --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
 
         # Run tests
