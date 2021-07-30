@@ -3,9 +3,9 @@
 //! Trusted Service provider
 //!
 //! This provider is backed by a crypto Trusted Service deployed in TrustZone
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
-use crate::providers::Provide;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
+use crate::providers::{Provide, ProviderIdentity};
 use context::Context;
 use derivative::Derivative;
 use log::{error, trace};
@@ -19,6 +19,7 @@ use psa_crypto::types::key;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 use uuid::Uuid;
+
 mod asym_sign;
 mod context;
 mod error;
@@ -42,8 +43,8 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
-    // The name of the provider set in the config.
-    provider_name: String,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
 
     context: Context,
     // When calling write on a reference of key_info_store, a type
@@ -71,14 +72,17 @@ impl Provider {
         key_info_store: KeyInfoManagerClient,
     ) -> anyhow::Result<Provider> {
         let ts_provider = Provider {
-            provider_name,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             context: Context::connect()?,
             id_counter: AtomicU32::new(key::PSA_KEY_ID_USER_MIN),
         };
         let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
-            let mut to_remove: Vec<KeyTriple> = Vec::new();
+            let mut to_remove: Vec<KeyIdentity> = Vec::new();
             // Go through all TrustedServiceProvider key triples to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
@@ -132,12 +136,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -148,54 +152,54 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_export_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         trace!("psa_export_key ingress");
-        self.psa_export_key_internal(app_name, op)
+        self.psa_export_key_internal(application_identity, op)
     }
 
     fn psa_generate_random(
@@ -208,20 +212,20 @@ impl Provide for Provider {
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        self.psa_verify_hash_internal(application_identity, op)
     }
 }
 

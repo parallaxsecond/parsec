@@ -4,15 +4,15 @@ use super::utils;
 use super::utils::PasswordContext;
 use super::utils::{validate_private_key, validate_public_key, PUBLIC_EXPONENT};
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
 use tss_esapi::abstraction::transient::RsaExponent;
@@ -22,12 +22,16 @@ const AUTH_VAL_LEN: usize = 32;
 impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
@@ -64,12 +68,12 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         match op.attributes.key_type {
-            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
-            Type::RsaKeyPair => self.psa_import_key_internal_rsa_keypair(app_name, op),
+            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(application_identity, op),
+            Type::RsaKeyPair => self.psa_import_key_internal_rsa_keypair(application_identity, op),
             _ => {
                 error!(
                     "The TPM provider does not support importing for the {:?} key type.",
@@ -82,7 +86,7 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal_rsa_public(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         // Currently only the RSA PKCS1 v1.5 signature scheme is supported
@@ -97,7 +101,11 @@ impl Provider {
 
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_data = op.data;
         self.key_info_store.does_not_exist(&key_triple)?;
         let mut esapi_context = self
@@ -135,7 +143,7 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal_rsa_keypair(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         // Currently only the RSA PKCS1 v1.5 signature scheme is supported
@@ -149,7 +157,11 @@ impl Provider {
         }
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_data = op.data;
 
         self.key_info_store.does_not_exist(&key_triple)?;
@@ -198,11 +210,15 @@ impl Provider {
 
     pub(super) fn psa_export_public_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
         let mut esapi_context = self
             .esapi_context
@@ -226,11 +242,15 @@ impl Provider {
 
     pub(super) fn psa_destroy_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
 
         let _ = self.key_info_store.remove_key_info(&key_triple)?;
 

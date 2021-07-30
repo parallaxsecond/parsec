@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::key_slot::KeySlotStatus;
 use super::Provider;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
 use parsec_interface::operations::{
@@ -15,11 +15,13 @@ use zeroize::Zeroizing;
 impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
+        let key_triple = self
+            .key_info_store
+            .get_key_triple(application_identity.clone(), key_name);
 
         self.key_info_store.does_not_exist(&key_triple)?;
 
@@ -75,11 +77,13 @@ impl Provider {
 
     pub(super) fn psa_destroy_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
+        let key_triple = self
+            .key_info_store
+            .get_key_triple(application_identity.clone(), key_name);
         let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
 
         match self.key_info_store.remove_key_info(&key_triple) {
@@ -104,11 +108,13 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
+        let key_triple = self
+            .key_info_store
+            .get_key_triple(application_identity.clone(), key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
 
         let key_attributes = op.attributes;
@@ -172,10 +178,12 @@ impl Provider {
 
     pub(super) fn psa_export_public_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
-        let key_triple = self.key_info_store.get_key_triple(app_name, op.key_name);
+        let key_triple = self
+            .key_info_store
+            .get_key_triple(application_identity.clone(), op.key_name);
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         match key_attributes.key_type {
@@ -208,10 +216,12 @@ impl Provider {
 
     pub(super) fn psa_export_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
-        let key_triple = self.key_info_store.get_key_triple(app_name, op.key_name);
+        let key_triple = self
+            .key_info_store
+            .get_key_triple(application_identity.clone(), op.key_name);
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         if !key_attributes.is_exportable() {

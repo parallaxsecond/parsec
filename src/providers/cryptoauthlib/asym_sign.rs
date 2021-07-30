@@ -1,15 +1,15 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::psa_algorithm::{AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes::{EccFamily, Type};
 use parsec_interface::operations::{
     psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
 };
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use rust_cryptoauthlib::AtcaStatus;
 
 impl Provider {
@@ -76,10 +76,14 @@ impl Provider {
 
     pub(super) fn psa_sign_hash_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::CryptoAuthLib, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
@@ -100,12 +104,12 @@ impl Provider {
 
     pub(super) fn psa_verify_hash_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         let key_triple = self
             .key_info_store
-            .get_key_triple(app_name, op.key_name.clone());
+            .get_key_triple(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
@@ -127,12 +131,12 @@ impl Provider {
 
     pub(super) fn psa_sign_message_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_message::Operation,
     ) -> Result<psa_sign_message::Result> {
         let key_triple = self
             .key_info_store
-            .get_key_triple(app_name, op.key_name.clone());
+            .get_key_triple(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;
@@ -155,12 +159,12 @@ impl Provider {
 
     pub(super) fn psa_verify_message_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
         let key_triple = self
             .key_info_store
-            .get_key_triple(app_name, op.key_name.clone());
+            .get_key_triple(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;

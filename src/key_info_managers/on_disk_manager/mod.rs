@@ -12,35 +12,221 @@
 //! example, for operating systems having a limit of 255 characters for filenames (Unix systems),
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
-use super::{KeyInfo, KeyTriple, ManageKeyInfo};
-use crate::authenticators::ApplicationName;
+use crate::authenticators::{Application, ApplicationIdentity};
+
+use super::{KeyIdentity, KeyInfo, ManageKeyInfo, ProviderIdentity};
+use crate::providers::core::Provider as CoreProvider;
+#[cfg(feature = "cryptoauthlib-provider")]
+use crate::providers::cryptoauthlib::Provider as CryptoAuthLibProvider;
+#[cfg(feature = "mbed-crypto-provider")]
+use crate::providers::mbed_crypto::Provider as MbedCryptoProvider;
+#[cfg(feature = "pkcs11-provider")]
+use crate::providers::pkcs11::Provider as Pkcs11Provider;
+#[cfg(feature = "tpm-provider")]
+use crate::providers::tpm::Provider as TpmProvider;
+#[cfg(feature = "trusted-service-provider")]
+use crate::providers::trusted_service::Provider as TrustedServiceProvider;
 use anyhow::{Context, Result};
 use log::{error, info, warn};
-use parsec_interface::requests::ProviderId;
+use parsec_interface::requests::{AuthType, ProviderId};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ffi::OsStr;
-use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::{Error, ErrorKind, Read, Write};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::{fmt, fs};
 
 /// Default path where the mapping files will be stored on disk
 pub const DEFAULT_MAPPINGS_PATH: &str = "/var/lib/parsec/mappings";
+
+/// String wrapper for app names
+#[deprecated(since = "0.9.0", note = "ApplicationIdentity should be used instead.")]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ApplicationName {
+    name: String,
+}
+
+#[allow(deprecated)]
+impl Deref for ApplicationName {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
+    }
+}
+
+#[allow(deprecated)]
+#[deprecated(since = "0.9.0", note = "ApplicationIdentity should be used instead.")]
+impl ApplicationName {
+    /// Create ApplicationName from name string only
+    pub fn from_name(name: String) -> ApplicationName {
+        ApplicationName { name }
+    }
+}
+
+#[allow(deprecated)]
+impl std::fmt::Display for ApplicationName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+#[allow(deprecated)]
+impl From<Application> for ApplicationName {
+    fn from(app: Application) -> Self {
+        ApplicationName::from_name(app.identity().name().clone())
+    }
+}
+
+/// Should only be used internally to map KeyTriple to the new KeyIdentity
+/// for the on_disk_manager KeyInfoManager.
+/// Structure corresponds to a unique identifier of the key.
+/// It is used internally by the Key ID manager to refer to a key.
+#[deprecated(since = "0.9.0", note = "KeyIdentity should be used instead.")]
+#[allow(deprecated)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KeyTriple {
+    app_name: ApplicationName,
+    provider_id: ProviderId,
+    key_name: String,
+}
+
+#[allow(deprecated)]
+#[deprecated(since = "0.9.0", note = "KeyIdentity should be used instead.")]
+impl KeyTriple {
+    /// Creates a new instance of KeyTriple.
+    pub fn new(app_name: ApplicationName, provider_id: ProviderId, key_name: String) -> KeyTriple {
+        KeyTriple {
+            app_name,
+            provider_id,
+            key_name,
+        }
+    }
+
+    /// Checks if this key belongs to a specific provider.
+    pub fn belongs_to_provider(&self, provider_id: ProviderId) -> bool {
+        self.provider_id == provider_id
+    }
+    /// Get the provider id
+    pub fn provider_id(&self) -> &ProviderId {
+        &self.provider_id
+    }
+
+    /// Get the key name
+    pub fn key_name(&self) -> &str {
+        &self.key_name
+    }
+
+    /// Get the app name
+    pub fn app_name(&self) -> &ApplicationName {
+        &self.app_name
+    }
+}
+
+#[allow(deprecated)]
+impl fmt::Display for KeyTriple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "KeyTriple: app_name=\"{}\" provider_id={} key_name=\"{}\"",
+            self.app_name, self.provider_id, self.key_name
+        )
+    }
+}
+
+#[allow(deprecated)]
+impl TryFrom<KeyIdentity> for KeyTriple {
+    type Error = String;
+
+    fn try_from(key_identity: KeyIdentity) -> ::std::result::Result<Self, Self::Error> {
+        let provider_id = match key_identity.provider.uuid().as_str() {
+            CoreProvider::PROVIDER_UUID => Ok(ProviderId::Core),
+            #[cfg(feature = "cryptoauthlib-provider")]
+            CryptoAuthLibProvider::PROVIDER_UUID => Ok(ProviderId::CryptoAuthLib),
+            #[cfg(feature = "mbed-crypto-provider")]
+            MbedCryptoProvider::PROVIDER_UUID => Ok(ProviderId::MbedCrypto),
+            #[cfg(feature = "pkcs11-provider")]
+            Pkcs11Provider::PROVIDER_UUID => Ok(ProviderId::Pkcs11),
+            #[cfg(feature = "tpm-provider")]
+            TpmProvider::PROVIDER_UUID => Ok(ProviderId::Tpm),
+            #[cfg(feature = "trusted-service-provider")]
+            TrustedServiceProvider::PROVIDER_UUID => Ok(ProviderId::TrustedService),
+            _ => Err(format!(
+                "Cannot convert from KeyIdentity to KeyTriple.
+                Provider \"{}\" is not recognised.
+                Could be it does not exist, or Parsec was not compiled with the required provider feature flags.",
+                key_identity.provider().uuid()
+            )),
+        }?;
+
+        let app_name = ApplicationName::from_name(key_identity.application().name().clone());
+        Ok(KeyTriple {
+            provider_id,
+            app_name,
+            key_name: key_identity.key_name,
+        })
+    }
+}
+
+#[allow(deprecated)]
+impl TryFrom<(KeyTriple, ProviderIdentity, AuthType)> for KeyIdentity {
+    type Error = String;
+
+    fn try_from(
+        (key_triple, provider_identity, auth_type): (KeyTriple, ProviderIdentity, AuthType),
+    ) -> ::std::result::Result<Self, Self::Error> {
+        // Result types required by clippy as Err result has the possibility of not being compiled.
+        let provider_uuid = match key_triple.provider_id {
+            ProviderId::Core => Ok::<String, Self::Error>(
+                CoreProvider::PROVIDER_UUID.to_string(),
+            ),
+            #[cfg(feature = "cryptoauthlib-provider")]
+            ProviderId::CryptoAuthLib => Ok::<String, Self::Error>(CryptoAuthLibProvider::PROVIDER_UUID.to_string()),
+            #[cfg(feature = "mbed-crypto-provider")]
+            ProviderId::MbedCrypto => Ok::<String, Self::Error>(MbedCryptoProvider::PROVIDER_UUID.to_string()),
+            #[cfg(feature = "pkcs11-provider")]
+            ProviderId::Pkcs11 => Ok::<String, Self::Error>(Pkcs11Provider::PROVIDER_UUID.to_string()),
+            #[cfg(feature = "tpm-provider")]
+            ProviderId::Tpm => Ok::<String, Self::Error>(TpmProvider::PROVIDER_UUID.to_string()),
+            #[cfg(feature = "trusted-service-provider")]
+            ProviderId::TrustedService => Ok::<String, Self::Error>(TrustedServiceProvider::PROVIDER_UUID.to_string()),
+            #[cfg(not(all(
+                feature = "cryptoauthlib-provider",
+                feature = "mbed-crypto-provider",
+                feature = "pkcs11-provider",
+                feature = "tpm-provider",
+                feature = "trusted-service-provider",
+            )))]
+            _ => Err(format!("Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", key_triple.provider_id)),
+        }?;
+
+        Ok(KeyIdentity {
+            provider: ProviderIdentity::new(provider_uuid, provider_identity.name().clone()), // TODO: Figure out a better default null name
+            application: ApplicationIdentity::new(key_triple.app_name().to_string(), auth_type), // TODO: Figure out a better default null authenticator_id
+            key_name: key_triple.key_name.to_string(),
+        })
+    }
+}
 
 /// A key info manager storing key triple to key info mapping on files on disk
 #[derive(Debug)]
 pub struct OnDiskKeyInfoManager {
     /// Internal mapping, used for non-modifying operations.
+    #[allow(deprecated)]
     key_store: HashMap<KeyTriple, KeyInfo>,
     /// Folder where all the key triple to key info mappings are saved. This folder will be created
     /// if it does already exist.
     mappings_dir_path: PathBuf,
+    /// The AuthType currently being used by Parsec and hence used to namespace the OnDiskKeyInfoManager.
+    auth_type: AuthType,
 }
 
 /// Encodes a KeyTriple's data into base64 strings that can be used as filenames.
 /// The ProviderId will not be converted as a base64 as it can always be represented as a String
 /// being a number from 0 and 255.
+#[allow(deprecated)]
 fn key_triple_to_base64_filenames(key_triple: &KeyTriple) -> (String, String, String) {
     (
         base64::encode_config(key_triple.app_name.as_bytes(), base64::URL_SAFE),
@@ -70,6 +256,7 @@ fn base64_data_to_string(base64_bytes: &[u8]) -> Result<String, String> {
 /// # Errors
 ///
 /// Returns an error as a string if either the decoding or the bytes conversion to UTF-8 failed.
+#[allow(deprecated)]
 fn base64_data_triple_to_key_triple(
     app_name: &[u8],
     provider_id: ProviderId,
@@ -152,6 +339,7 @@ fn list_files(path: &Path) -> std::io::Result<Vec<PathBuf>> {
 ///
 /// The `OnDiskKeyInfoManager` relies on access control mechanisms provided by the OS for
 /// the filesystem to ensure security of the mappings.
+#[allow(deprecated)]
 impl OnDiskKeyInfoManager {
     /// Creates an instance of the on-disk manager from the mapping files. This function will
     /// create the mappings directory if it does not already exist.
@@ -181,7 +369,7 @@ impl OnDiskKeyInfoManager {
     /// # Errors
     ///
     /// Returns an std::io error if the function failed reading the mapping files.
-    fn new(mappings_dir_path: PathBuf) -> Result<OnDiskKeyInfoManager> {
+    fn new(mappings_dir_path: PathBuf, auth_type: AuthType) -> Result<OnDiskKeyInfoManager> {
         let mut key_store = HashMap::new();
 
         // Will ignore if the mappings directory already exists.
@@ -248,6 +436,7 @@ impl OnDiskKeyInfoManager {
         Ok(OnDiskKeyInfoManager {
             key_store,
             mappings_dir_path,
+            auth_type,
         })
     }
 
@@ -302,30 +491,44 @@ impl OnDiskKeyInfoManager {
     }
 }
 
+#[allow(deprecated)]
 impl ManageKeyInfo for OnDiskKeyInfoManager {
-    fn get(&self, key_triple: &KeyTriple) -> Result<Option<&KeyInfo>, String> {
+    fn get(&self, key_identity: &KeyIdentity) -> Result<Option<&KeyInfo>, String> {
+        let key_triple = KeyTriple::try_from(key_identity.clone())?;
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
         // done by hand.
-        if let Some(key_info) = self.key_store.get(key_triple) {
+        if let Some(key_info) = self.key_store.get(&key_triple) {
             Ok(Some(key_info))
         } else {
             Ok(None)
         }
     }
 
-    fn get_all(&self, provider_id: ProviderId) -> Result<Vec<&KeyTriple>, String> {
-        Ok(self
+    fn get_all(&self, provider_identity: ProviderIdentity) -> Result<Vec<KeyIdentity>, String> {
+        let provider_id = ProviderId::try_from(provider_identity.clone())?;
+        let key_triples = self
             .key_store
             .keys()
-            .filter(|key_triple| key_triple.belongs_to_provider(provider_id))
-            .collect())
+            .filter(|key_triple| key_triple.belongs_to_provider(provider_id));
+
+        let mut key_identites = Vec::new();
+        for key_triple in key_triples {
+            let key_identity = KeyIdentity::try_from((
+                key_triple.clone(),
+                provider_identity.clone(),
+                self.auth_type,
+            ))?;
+            key_identites.push(key_identity)
+        }
+        Ok(key_identites)
     }
 
     fn insert(
         &mut self,
-        key_triple: KeyTriple,
+        key_identity: KeyIdentity,
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String> {
+        let key_triple = KeyTriple::try_from(key_identity)?;
         if let Err(err) = self.save_mapping(&key_triple, &key_info) {
             Err(err.to_string())
         } else {
@@ -333,18 +536,20 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         }
     }
 
-    fn remove(&mut self, key_triple: &KeyTriple) -> Result<Option<KeyInfo>, String> {
-        if let Err(err) = self.delete_mapping(key_triple) {
+    fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String> {
+        let key_triple = KeyTriple::try_from(key_identity.clone())?;
+        if let Err(err) = self.delete_mapping(&key_triple) {
             Err(err.to_string())
-        } else if let Some(key_info) = self.key_store.remove(key_triple) {
+        } else if let Some(key_info) = self.key_store.remove(&key_triple) {
             Ok(Some(key_info))
         } else {
             Ok(None)
         }
     }
 
-    fn exists(&self, key_triple: &KeyTriple) -> Result<bool, String> {
-        Ok(self.key_store.contains_key(key_triple))
+    fn exists(&self, key_identity: &KeyIdentity) -> Result<bool, String> {
+        let key_triple = KeyTriple::try_from(key_identity.clone())?;
+        Ok(self.key_store.contains_key(&key_triple))
     }
 }
 
@@ -352,6 +557,7 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
 #[derive(Debug, Default)]
 pub struct OnDiskKeyInfoManagerBuilder {
     mappings_dir_path: Option<PathBuf>,
+    auth_type: Option<AuthType>,
 }
 
 impl OnDiskKeyInfoManagerBuilder {
@@ -359,6 +565,7 @@ impl OnDiskKeyInfoManagerBuilder {
     pub fn new() -> OnDiskKeyInfoManagerBuilder {
         OnDiskKeyInfoManagerBuilder {
             mappings_dir_path: None,
+            auth_type: None,
         }
     }
 
@@ -369,27 +576,43 @@ impl OnDiskKeyInfoManagerBuilder {
         self
     }
 
+    /// Add a mappings directory path to the builder
+    pub fn with_auth_type(mut self, default_auth_type: AuthType) -> OnDiskKeyInfoManagerBuilder {
+        self.auth_type = Some(default_auth_type);
+
+        self
+    }
+
     /// Build into a OnDiskKeyInfoManager
     pub fn build(self) -> Result<OnDiskKeyInfoManager> {
         OnDiskKeyInfoManager::new(
             self.mappings_dir_path
                 .unwrap_or_else(|| PathBuf::from(DEFAULT_MAPPINGS_PATH)),
+            self.auth_type.ok_or_else(|| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "AuthType must be supplied to OnDiskKeyInfoManager",
+                )
+            })?,
         )
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::super::{KeyInfo, KeyTriple, ManageKeyInfo};
+    use super::super::{KeyIdentity, KeyInfo, ManageKeyInfo};
     use super::OnDiskKeyInfoManager;
-    use crate::authenticators::ApplicationName;
+    use crate::key_info_managers::{ApplicationIdentity, ProviderIdentity};
+    use crate::providers::core::Provider as CoreProvider;
+    #[cfg(feature = "mbed-crypto-provider")]
+    use crate::providers::mbed_crypto::Provider as MbedCryptoProvider;
     use parsec_interface::operations::psa_algorithm::{
         Algorithm, AsymmetricSignature, Hash, SignHash,
     };
     use parsec_interface::operations::psa_key_attributes::{
         Attributes, Lifetime, Policy, Type, UsageFlags,
     };
-    use parsec_interface::requests::ProviderId;
+    use parsec_interface::requests::AuthType;
     use std::fs;
     use std::path::PathBuf;
 
@@ -430,7 +653,7 @@ mod test {
     #[test]
     fn insert_get_key_info() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_get_key_info_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
         let key_triple = new_key_triple("insert_get_key_info".to_string());
         let key_info = test_key_info();
@@ -456,7 +679,7 @@ mod test {
     #[test]
     fn insert_remove_key() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_remove_key_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
         let key_triple = new_key_triple("insert_remove_key".to_string());
         let key_info = test_key_info();
@@ -470,7 +693,7 @@ mod test {
     #[test]
     fn remove_unexisting_key() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/remove_unexisting_key_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
         let key_triple = new_key_triple("remove_unexisting_key".to_string());
         assert_eq!(manager.remove(&key_triple).unwrap(), None);
@@ -480,7 +703,7 @@ mod test {
     #[test]
     fn exists() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/exists_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
         let key_triple = new_key_triple("exists".to_string());
         let key_info = test_key_info();
@@ -498,7 +721,7 @@ mod test {
     #[test]
     fn insert_overwrites() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_overwrites_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
         let key_triple = new_key_triple("insert_overwrites".to_string());
         let key_info_1 = test_key_info();
@@ -526,12 +749,19 @@ mod test {
     #[test]
     fn big_names_ascii() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_ascii_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let big_app_name_ascii = ApplicationName::from_name("  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string());
+        let big_app_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
-        let key_triple = KeyTriple::new(big_app_name_ascii, ProviderId::Core, big_key_name_ascii);
+        let key_triple = KeyIdentity::new(
+            ApplicationIdentity::new(big_app_name_ascii, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            big_key_name_ascii,
+        );
         let key_info = test_key_info();
 
         let _ = manager
@@ -544,78 +774,106 @@ mod test {
     #[test]
     fn big_names_emoticons() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/big_names_emoticons_mappings");
-        let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+        let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let big_app_name_emoticons = ApplicationName::from_name("😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string());
+        let big_app_name_emoticons = "😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string();
         let big_key_name_emoticons = "😀😁😂😃😄😅😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮".to_string();
 
-        let key_triple = KeyTriple::new(
-            big_app_name_emoticons,
-            ProviderId::MbedCrypto,
+        let key_identity = KeyIdentity::new(
+            ApplicationIdentity::new(big_app_name_emoticons, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
             big_key_name_emoticons,
         );
         let key_info = test_key_info();
 
         let _ = manager
-            .insert(key_triple.clone(), key_info.clone())
+            .insert(key_identity.clone(), key_info.clone())
             .unwrap();
-        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_info);
+        assert_eq!(manager.remove(&key_identity).unwrap().unwrap(), key_info);
         fs::remove_dir_all(path).unwrap();
     }
 
+    #[cfg(feature = "mbed-crypto-provider")]
     #[test]
     fn create_and_load() {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/create_and_load_mappings");
 
-        let app_name1 = ApplicationName::from_name("😀 Application One 😀".to_string());
+        let app_name1 = "😀 Application One 😀".to_string();
         let key_name1 = "😀 Key One 😀".to_string();
-        let key_triple1 = KeyTriple::new(app_name1, ProviderId::Core, key_name1);
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name1, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name1,
+        );
         let key_info1 = test_key_info();
 
-        let app_name2 = ApplicationName::from_name("😇 Application Two 😇".to_string());
+        let app_name2 = "😇 Application Two 😇".to_string();
         let key_name2 = "😇 Key Two 😇".to_string();
-        let key_triple2 = KeyTriple::new(app_name2, ProviderId::MbedCrypto, key_name2);
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name2, AuthType::NoAuth),
+            ProviderIdentity::new(
+                MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                MbedCryptoProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name2,
+        );
         let key_info2 = KeyInfo {
             id: vec![0x12, 0x22, 0x32],
             attributes: test_key_attributes(),
         };
 
-        let app_name3 = ApplicationName::from_name("😈 Application Three 😈".to_string());
+        let app_name3 = "😈 Application Three 😈".to_string();
         let key_name3 = "😈 Key Three 😈".to_string();
-        let key_triple3 = KeyTriple::new(app_name3, ProviderId::Core, key_name3);
+        let key_identity_3 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name3, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name3,
+        );
         let key_info3 = KeyInfo {
             id: vec![0x13, 0x23, 0x33],
             attributes: test_key_attributes(),
         };
         {
-            let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+            let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
             let _ = manager
-                .insert(key_triple1.clone(), key_info1.clone())
+                .insert(key_identity_1.clone(), key_info1.clone())
                 .unwrap();
             let _ = manager
-                .insert(key_triple2.clone(), key_info2.clone())
+                .insert(key_identity_2.clone(), key_info2.clone())
                 .unwrap();
             let _ = manager
-                .insert(key_triple3.clone(), key_info3.clone())
+                .insert(key_identity_3.clone(), key_info3.clone())
                 .unwrap();
         }
         // The local hashmap is dropped when leaving the inner scope.
         {
-            let mut manager = OnDiskKeyInfoManager::new(path.clone()).unwrap();
+            let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-            assert_eq!(manager.remove(&key_triple1).unwrap().unwrap(), key_info1);
-            assert_eq!(manager.remove(&key_triple2).unwrap().unwrap(), key_info2);
-            assert_eq!(manager.remove(&key_triple3).unwrap().unwrap(), key_info3);
+            assert_eq!(manager.remove(&key_identity_1).unwrap().unwrap(), key_info1);
+            assert_eq!(manager.remove(&key_identity_2).unwrap().unwrap(), key_info2);
+            assert_eq!(manager.remove(&key_identity_3).unwrap().unwrap(), key_info3);
         }
 
         fs::remove_dir_all(path).unwrap();
     }
 
-    fn new_key_triple(key_name: String) -> KeyTriple {
-        KeyTriple::new(
-            ApplicationName::from_name("Testing Application 😎".to_string()),
-            ProviderId::MbedCrypto,
+    fn new_key_triple(key_name: String) -> KeyIdentity {
+        KeyIdentity::new(
+            ApplicationIdentity::new("Testing Application 😎".to_string(), AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
             key_name,
         )
     }

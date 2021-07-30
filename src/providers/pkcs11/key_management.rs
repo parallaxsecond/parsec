@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::utils::to_response_status;
 use super::{utils, KeyPairType, Provider};
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use cryptoki::types::mechanism::{Mechanism, MechanismType};
 use cryptoki::types::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
 use cryptoki::types::session::Session;
@@ -12,7 +12,7 @@ use parsec_interface::operations::psa_key_attributes::{EccFamily, Id, Lifetime, 
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::{IntegerAsn1, OctetStringAsn1};
 use picky_asn1_x509::RSAPublicKey;
@@ -47,13 +47,13 @@ impl Provider {
         }
     }
 
-    pub(super) fn move_pub_key_to_psa_crypto(&self, key_triple: &KeyTriple) -> Result<Id> {
+    pub(super) fn move_pub_key_to_psa_crypto(&self, key_triple: &KeyIdentity) -> Result<Id> {
         info!("Attempting to export public key");
         let export_operation = psa_export_public_key::Operation {
             key_name: key_triple.key_name().to_owned(),
         };
         let psa_export_public_key::Result { data } =
-            self.psa_export_public_key_internal(key_triple.app_name().clone(), export_operation)?;
+            self.psa_export_public_key_internal(key_triple.application(), export_operation)?;
 
         info!("Importing public key into PSA Crypto");
         let mut attributes = self.key_info_store.get_key_attributes(&key_triple)?;
@@ -84,7 +84,7 @@ impl Provider {
 
     pub(super) fn psa_generate_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         if op.attributes.key_type.is_public_key() {
@@ -100,7 +100,11 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         self.key_info_store.does_not_exist(&key_triple)?;
 
         let session = self.new_session()?;
@@ -175,7 +179,7 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
@@ -186,7 +190,11 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         self.key_info_store.does_not_exist(&key_triple)?;
 
         let session = self.new_session()?;
@@ -332,11 +340,15 @@ impl Provider {
 
     pub(super) fn psa_export_public_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let session = self.new_session()?;
@@ -421,11 +433,15 @@ impl Provider {
 
     pub(super) fn psa_destroy_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
 
         let _ = self.key_info_store.remove_key_info(&key_triple)?;

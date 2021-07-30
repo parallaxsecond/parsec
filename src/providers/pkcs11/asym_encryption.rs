@@ -3,22 +3,26 @@
 use super::utils::to_response_status;
 use super::KeyPairType;
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use cryptoki::types::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
 
 impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
@@ -42,10 +46,14 @@ impl Provider {
 
     pub(super) fn psa_asymmetric_decrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
         let key_id = self.key_info_store.get_key_id(&key_triple)?;
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
@@ -69,10 +77,14 @@ impl Provider {
 
     pub(super) fn software_psa_asymmetric_encrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         op.validate(key_attributes)?;

@@ -8,7 +8,7 @@
 //! This authenticator does not offer any security value and should only be used in environments
 //! where all the clients and the service are mutually trustworthy.
 
-use super::{AdminList, Application, Authenticate};
+use super::{AdminList, Application, ApplicationIdentity, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
 use log::error;
@@ -61,7 +61,13 @@ impl Authenticate for DirectAuthenticator {
                 Ok(str) => {
                     let app_name = String::from(str);
                     let is_admin = self.admins.is_admin(&app_name);
-                    Ok(Application::new(app_name, is_admin))
+                    Ok(Application {
+                        identity: ApplicationIdentity {
+                            name: app_name,
+                            authenticator_id: AuthType::Direct,
+                        },
+                        is_admin,
+                    })
                 }
                 Err(_) => {
                     error!("Error parsing the authentication value as a UTF-8 string.");
@@ -76,7 +82,6 @@ impl Authenticate for DirectAuthenticator {
 mod test {
     use super::super::Authenticate;
     use super::DirectAuthenticator;
-    use crate::authenticators::ApplicationName;
     use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
 
@@ -90,12 +95,12 @@ mod test {
         let req_auth = RequestAuth::new(app_name.clone().into_bytes());
         let conn_metadata = None;
 
-        let app = authenticator
+        let application = authenticator
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(app.get_name(), &ApplicationName::from_name(app_name));
-        assert!(!app.is_admin);
+        assert_eq!(application.identity.name, app_name);
+        assert!(!application.is_admin);
     }
 
     #[test]
@@ -136,22 +141,19 @@ mod test {
         let req_auth = RequestAuth::new(app_name.clone().into_bytes());
         let conn_metadata = None;
 
-        let auth_name = authenticator
+        let application = authenticator
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(auth_name.get_name(), &ApplicationName::from_name(app_name));
-        assert!(!auth_name.is_admin);
+        assert_eq!(application.identity.name, app_name);
+        assert!(!application.is_admin);
 
         let req_auth = RequestAuth::new(admin_name.clone().into_bytes());
-        let auth_name = authenticator
+        let application = authenticator
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(
-            auth_name.get_name(),
-            &ApplicationName::from_name(admin_name)
-        );
-        assert!(auth_name.is_admin);
+        assert_eq!(application.identity.name, admin_name);
+        assert!(application.is_admin);
     }
 }

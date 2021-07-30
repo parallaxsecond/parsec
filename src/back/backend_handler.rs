@@ -103,7 +103,7 @@ impl BackEndHandler {
             if !app.is_admin() {
                 warn!(
                     "Application name \"{}\" tried to perform an admin operation ({:?}).",
-                    app.get_name(),
+                    app.identity().name(),
                     opcode
                 );
                 return Response::from_request_header(header, ResponseStatus::AdminOperation);
@@ -131,14 +131,15 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_generate_key(app.into(), op_generate_key));
+                    .psa_generate_key(app.identity(), op_generate_key));
                 trace!("psa_generate_key egress");
                 self.result_to_response(NativeResult::PsaGenerateKey(result), header)
             }
             NativeOperation::PsaImportKey(op_import_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result =
-                    unwrap_or_else_return!(self.provider.psa_import_key(app.into(), op_import_key));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_import_key(app.identity(), op_import_key));
                 trace!("psa_import_key egress");
                 self.result_to_response(NativeResult::PsaImportKey(result), header)
             }
@@ -146,14 +147,15 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_export_public_key(app.into(), op_export_public_key));
+                    .psa_export_public_key(app.identity(), op_export_public_key));
                 trace!("psa_export_public_key egress");
                 self.result_to_response(NativeResult::PsaExportPublicKey(result), header)
             }
             NativeOperation::PsaExportKey(op_export_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result =
-                    unwrap_or_else_return!(self.provider.psa_export_key(app.into(), op_export_key));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_export_key(app.identity(), op_export_key));
                 trace!("psa_export_key egress");
                 self.result_to_response(NativeResult::PsaExportKey(result), header)
             }
@@ -161,14 +163,15 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_destroy_key(app.into(), op_destroy_key));
+                    .psa_destroy_key(app.identity(), op_destroy_key));
                 trace!("psa_destroy_key egress");
                 self.result_to_response(NativeResult::PsaDestroyKey(result), header)
             }
             NativeOperation::PsaSignHash(op_sign_hash) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result =
-                    unwrap_or_else_return!(self.provider.psa_sign_hash(app.into(), op_sign_hash));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_sign_hash(app.identity(), op_sign_hash));
                 trace!("psa_sign_hash egress");
                 self.result_to_response(NativeResult::PsaSignHash(result), header)
             }
@@ -176,7 +179,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_verify_hash(app.into(), op_verify_hash));
+                    .psa_verify_hash(app.identity(), op_verify_hash));
                 trace!("psa_verify_hash egress");
                 self.result_to_response(NativeResult::PsaVerifyHash(result), header)
             }
@@ -184,7 +187,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_asymmetric_encrypt(app.into(), op_asymmetric_encrypt));
+                    .psa_asymmetric_encrypt(app.identity(), op_asymmetric_encrypt));
                 trace!("psa_asymmetric_encrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricEncrypt(result), header)
             }
@@ -192,7 +195,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_asymmetric_decrypt(app.into(), op_asymmetric_decrypt));
+                    .psa_asymmetric_decrypt(app.identity(), op_asymmetric_decrypt));
                 trace!("psa_asymmetric_decrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricDecrypt(result), header)
             }
@@ -200,7 +203,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_aead_encrypt(app.into(), op_aead_encrypt));
+                    .psa_aead_encrypt(app.identity(), op_aead_encrypt));
                 trace!("psa_aead_encrypt egress");
                 self.result_to_response(NativeResult::PsaAeadEncrypt(result), header)
             }
@@ -208,7 +211,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_aead_decrypt(app.into(), op_aead_decrypt));
+                    .psa_aead_decrypt(app.identity(), op_aead_decrypt));
                 trace!("psa_aead_decrypt egress");
                 self.result_to_response(NativeResult::PsaAeadDecrypt(result), header)
             }
@@ -222,7 +225,7 @@ impl BackEndHandler {
             NativeOperation::ListKeys(op_list_keys) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
-                    unwrap_or_else_return!(self.provider.list_keys(app.into(), op_list_keys));
+                    unwrap_or_else_return!(self.provider.list_keys(app.identity(), op_list_keys));
                 trace!("list_keys egress");
                 self.result_to_response(NativeResult::ListKeys(result), header)
             }
@@ -232,7 +235,10 @@ impl BackEndHandler {
                 self.result_to_response(NativeResult::ListClients(result), header)
             }
             NativeOperation::DeleteClient(op_delete_client) => {
-                let result = unwrap_or_else_return!(self.provider.delete_client(op_delete_client));
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .delete_client(app.identity(), op_delete_client));
                 trace!("delete_client egress");
                 self.result_to_response(NativeResult::DeleteClient(result), header)
             }
@@ -252,7 +258,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_raw_key_agreement(app.into(), op_raw_key_agreement));
+                    .psa_raw_key_agreement(app.identity(), op_raw_key_agreement));
                 trace!("psa_raw_key_agreement egress");
                 self.result_to_response(NativeResult::PsaRawKeyAgreement(result), header)
             }
@@ -266,7 +272,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_sign_message(app.into(), op_sign_message));
+                    .psa_sign_message(app.identity(), op_sign_message));
                 trace!("psa_sign_message egress");
                 self.result_to_response(NativeResult::PsaSignMessage(result), header)
             }
@@ -274,7 +280,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_verify_message(app.into(), op_verify_message));
+                    .psa_verify_message(app.identity(), op_verify_message));
                 trace!("psa_verify_message egress");
                 self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
             }

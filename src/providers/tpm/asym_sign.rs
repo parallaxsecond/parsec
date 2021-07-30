@@ -4,22 +4,26 @@ use super::{
     utils::{self, PasswordContext},
     Provider,
 };
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use log::error;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
 use tss_esapi::structures::{Auth, Digest};
 
 impl Provider {
     pub(super) fn psa_sign_hash_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
 
         let mut esapi_context = self
             .esapi_context
@@ -70,10 +74,14 @@ impl Provider {
 
     pub(super) fn psa_verify_hash_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
+        let key_triple = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
 
         let mut esapi_context = self
             .esapi_context
