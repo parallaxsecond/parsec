@@ -115,7 +115,7 @@ impl Provider {
 
         let key_data = public_key.modulus.as_unsigned_bytes_be();
         let pub_key_context = esapi_context
-            .load_external_rsa_public_key(&key_data)
+            .load_external_rsa_public_key(key_data)
             .map_err(|e| {
                 format_error!("Error creating a RSA signing key", e);
                 utils::to_response_status(e)

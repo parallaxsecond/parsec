@@ -111,7 +111,7 @@ impl AteccKeySlot {
 
     fn is_usage_flags_ok(&self, key_attr: &Attributes) -> bool {
         let mut result = true;
-        if key_attr.policy.usage_flags.export || key_attr.policy.usage_flags.copy {
+        if key_attr.policy.usage_flags.export() || key_attr.policy.usage_flags.copy() {
             result &= match key_attr.key_type {
                 Type::EccKeyPair { .. } => {
                     self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey
@@ -128,7 +128,7 @@ impl AteccKeySlot {
             return result;
         }
 
-        if key_attr.policy.usage_flags.sign_hash || key_attr.policy.usage_flags.sign_message {
+        if key_attr.policy.usage_flags.sign_hash() || key_attr.policy.usage_flags.sign_message() {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= self.config.ecc_key_attr.is_private;
             result &= self.config.ecc_key_attr.ext_sign; // The only supported mode
@@ -138,7 +138,8 @@ impl AteccKeySlot {
             return result;
         }
 
-        if key_attr.policy.usage_flags.verify_hash || key_attr.policy.usage_flags.verify_message {
+        if key_attr.policy.usage_flags.verify_hash() || key_attr.policy.usage_flags.verify_message()
+        {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= match key_attr.key_type {
                 Type::EccKeyPair { .. } => {
@@ -345,17 +346,10 @@ mod tests {
             },
             bits: 256,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: true,
-                    verify_hash: true,
-                    sign_message: true,
-                    verify_message: false,
-                    export: false,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
+                usage_flags: {
+                    let mut flags = UsageFlags::default();
+                    let _ = flags.set_sign_hash().set_verify_hash().set_sign_message();
+                    flags
                 },
                 permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
                     hash_alg: Hash::Sha256.into(),
@@ -448,17 +442,10 @@ mod tests {
             },
             bits: 256,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: false,
-                    verify_hash: true,
-                    sign_message: false,
-                    verify_message: false,
-                    export: true,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: true,
-                    derive: false,
+                usage_flags: {
+                    let mut flags = UsageFlags::default();
+                    let _ = flags.set_verify_hash().set_export().set_copy();
+                    flags
                 },
                 permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
                     hash_alg: Hash::Sha256.into(),
@@ -479,19 +466,20 @@ mod tests {
         key_slot.config.ecc_key_attr.is_private = false;
         assert!(key_slot.is_usage_flags_ok(&attributes));
         // && export && copy == false => OK
-        attributes.policy.usage_flags.export = false;
-        attributes.policy.usage_flags.copy = false;
+        let mut flags = UsageFlags::default();
+        let _ = flags.set_verify_hash();
+        attributes.policy.usage_flags = flags;
         assert!(key_slot.is_usage_flags_ok(&attributes));
 
         // KeyType::Aes => NOK
-        attributes.policy.usage_flags.export = true;
-        attributes.policy.usage_flags.copy = true;
+        let mut flags = UsageFlags::default();
+        let _ = flags.set_verify_hash().set_export().set_copy();
+        attributes.policy.usage_flags = flags;
         key_slot.config.key_type = rust_cryptoauthlib::KeyType::Aes;
         assert!(!key_slot.is_usage_flags_ok(&attributes));
-        // && sign_hash && sign_message == false => OK
-        attributes.policy.usage_flags.sign_hash = false;
-        attributes.policy.usage_flags.sign_message = false;
-        assert!(!key_slot.is_usage_flags_ok(&attributes));
+        // && verify_hash == false => OK
+        attributes.policy.usage_flags = UsageFlags::default();
+        assert!(key_slot.is_usage_flags_ok(&attributes));
     }
 
     #[test]
@@ -538,17 +526,15 @@ mod tests {
             },
             bits: 256,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: true,
-                    verify_hash: true,
-                    sign_message: true,
-                    verify_message: false,
-                    export: true,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: true,
-                    derive: false,
+                usage_flags: {
+                    let mut flags = UsageFlags::default();
+                    let _ = flags
+                        .set_sign_hash()
+                        .set_verify_hash()
+                        .set_sign_message()
+                        .set_export()
+                        .set_copy();
+                    flags
                 },
                 permitted_algorithms: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),

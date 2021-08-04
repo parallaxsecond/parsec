@@ -185,8 +185,9 @@ dependencies = [
 
 [[package]]
 name = "cryptoki"
-version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=916f9bbb208ba8a671c593a36313f09c60cd0255#916f9bbb208ba8a671c593a36313f09c60cd0255"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dcf151ec0f80b3798687640a731829fee41723e5850eb75bc860c106f2dbfc2"
 dependencies = [
  "cryptoki-sys",
  "derivative",
@@ -198,8 +199,9 @@ dependencies = [
 
 [[package]]
 name = "cryptoki-sys"
-version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-cryptoki?rev=916f9bbb208ba8a671c593a36313f09c60cd0255#916f9bbb208ba8a671c593a36313f09c60cd0255"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a426b46cbf8e98cea0209767e5c601199369c593d83466ffbc541ac4e0a15f52"
 dependencies = [
  "libloading",
  "target-lexicon",
@@ -267,12 +269,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fixedbitset"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
-
-[[package]]
 name = "flexi_logger"
 version = "0.14.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,12 +307,6 @@ name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
-
-[[package]]
-name = "hashbrown"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
 
 [[package]]
 name = "heck"
@@ -363,16 +353,6 @@ dependencies = [
  "matches",
  "unicode-bidi",
  "unicode-normalization",
-]
-
-[[package]]
-name = "indexmap"
-version = "1.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "824845a0bf897a9042383849b02c1bc219c2383772efcd5c6f9766fa4b81aef3"
-dependencies = [
- "autocfg",
- "hashbrown",
 ]
 
 [[package]]
@@ -454,12 +434,6 @@ name = "memchr"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b16bd47d9e329435e309c58469fe0791c2d0d1ba96ec0954152a5ae2b04387dc"
-
-[[package]]
-name = "multimap"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
 name = "nom"
@@ -579,8 +553,9 @@ dependencies = [
 
 [[package]]
 name = "parsec-client"
-version = "0.12.0"
-source = "git+https://github.com/parallaxsecond/parsec-client-rust.git?rev=ce0b7fc911b28ca1e59ad6b94d8b03afa1eeb552#ce0b7fc911b28ca1e59ad6b94d8b03afa1eeb552"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44feb0437d2d62274a2fca2ad421b7decb621bba7c8679720ad20e4353869de5"
 dependencies = [
  "derivative",
  "log",
@@ -607,8 +582,9 @@ dependencies = [
 
 [[package]]
 name = "parsec-interface"
-version = "0.24.0"
-source = "git+https://github.com/parallaxsecond/parsec-interface-rs.git?rev=6b951390791b398b76eb02c942e24d7c91acc980#6b951390791b398b76eb02c942e24d7c91acc980"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68c10169382873c646754cccc2311f538cc8bfd75b66b375a27717dd17c288d3"
 dependencies = [
  "bincode",
  "derivative",
@@ -617,7 +593,6 @@ dependencies = [
  "num-derive",
  "num-traits",
  "prost",
- "prost-build",
  "psa-crypto",
  "secrecy",
  "serde",
@@ -668,16 +643,6 @@ name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
-
-[[package]]
-name = "petgraph"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
-dependencies = [
- "fixedbitset",
- "indexmap",
-]
 
 [[package]]
 name = "picky-asn1"
@@ -770,24 +735,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-build"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02b10678c913ecbd69350e8535c3aef91a8676c0773fc1d7b95cdd196d7f2f26"
-dependencies = [
- "bytes",
- "heck",
- "itertools",
- "log",
- "multimap",
- "petgraph",
- "prost",
- "prost-types",
- "tempfile",
- "which",
-]
-
-[[package]]
 name = "prost-derive"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -801,19 +748,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "prost-types"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1834f67c0697c001304b75be76f67add9c89742eda3a085ad8ee0bb38c3417aa"
-dependencies = [
- "bytes",
- "prost",
-]
-
-[[package]]
 name = "psa-crypto"
-version = "0.8.0"
-source = "git+https://github.com/parallaxsecond/rust-psa-crypto.git?rev=8605006d34944fa880edd3d4d347f460c5585747#8605006d34944fa880edd3d4d347f460c5585747"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aae242f8167e9c3743b3479cb95d06e6d7621a416bce9b6f55063cd68c773011"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -823,8 +761,9 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.8.0"
-source = "git+https://github.com/parallaxsecond/rust-psa-crypto.git?rev=8605006d34944fa880edd3d4d347f460c5585747#8605006d34944fa880edd3d4d347f460c5585747"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "441c9db98d9a676a3c8395b67b6fa253c867fb77c948c30977574a6989d4d56b"
 dependencies = [
  "bindgen",
  "cc",
@@ -882,15 +821,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "redox_syscall"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ab49abadf3f9e1c4bc499e8845e152ad87d2ad2d30371841171169e9d75feee"
-dependencies = [
- "bitflags",
-]
-
-[[package]]
 name = "regex"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -906,15 +836,6 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
-
-[[package]]
-name = "remove_dir_all"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
-dependencies = [
- "winapi",
-]
 
 [[package]]
 name = "rustc-hash"
@@ -1091,20 +1012,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64ae3b39281e4b14b8123bdbaddd472b7dfe215e444181f2f9d2443c2444f834"
 
 [[package]]
-name = "tempfile"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dac1c663cfc93810f88aed9b8941d48cabf856a1b111c29a40439018d870eb22"
-dependencies = [
- "cfg-if",
- "libc",
- "rand",
- "redox_syscall",
- "remove_dir_all",
- "winapi",
-]
-
-[[package]]
 name = "termcolor"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1176,8 +1083,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "5.0.1"
-source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=56c487a101dc85e17560416d71f0fc2eb81739a6#56c487a101dc85e17560416d71f0fc2eb81739a6"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23bb26bea47d9a884f613730d2f68c9aeaef9a6a51ce8277d111042dbb8c5975"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1194,8 +1102,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi-sys"
-version = "0.1.1"
-source = "git+https://github.com/parallaxsecond/rust-tss-esapi?rev=56c487a101dc85e17560416d71f0fc2eb81739a6#56c487a101dc85e17560416d71f0fc2eb81739a6"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d02e46e893c805b2e5740ae2af4a4c85e6671aaf7166a5b5df97a5102391e0d"
 dependencies = [
  "pkg-config",
  "target-lexicon",
