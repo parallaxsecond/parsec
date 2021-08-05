@@ -68,17 +68,15 @@ fn operations() -> Vec<(String, NativeOperation)> {
                     key_type: Type::RsaKeyPair,
                     bits: 1024,
                     policy: Policy {
-                        usage_flags: UsageFlags {
-                            sign_hash: true,
-                            verify_hash: true,
-                            sign_message: true,
-                            verify_message: true,
-                            export: true,
-                            encrypt: false,
-                            decrypt: false,
-                            cache: false,
-                            copy: false,
-                            derive: false,
+                        usage_flags: {
+                            let mut flags = UsageFlags::default();
+                            let _ = flags
+                                .set_sign_hash()
+                                .set_verify_hash()
+                                .set_sign_message()
+                                .set_verify_message()
+                                .set_export();
+                            flags
                         },
                         permitted_algorithms: Algorithm::AsymmetricSignature(
                             AsymmetricSignature::RsaPkcs1v15Sign {
@@ -100,17 +98,15 @@ fn operations() -> Vec<(String, NativeOperation)> {
                     },
                     bits: 256,
                     policy: Policy {
-                        usage_flags: UsageFlags {
-                            sign_hash: true,
-                            verify_hash: true,
-                            sign_message: true,
-                            verify_message: true,
-                            export: true,
-                            encrypt: false,
-                            decrypt: false,
-                            cache: false,
-                            copy: false,
-                            derive: false,
+                        usage_flags: {
+                            let mut flags = UsageFlags::default();
+                            let _ = flags
+                                .set_sign_hash()
+                                .set_verify_hash()
+                                .set_sign_message()
+                                .set_verify_message()
+                                .set_export();
+                            flags
                         },
                         permitted_algorithms: Algorithm::AsymmetricSignature(
                             AsymmetricSignature::Ecdsa {
@@ -198,17 +194,15 @@ fn operations() -> Vec<(String, NativeOperation)> {
                     },
                     bits: 256,
                     policy: Policy {
-                        usage_flags: UsageFlags {
-                            sign_hash: true,
-                            verify_hash: true,
-                            sign_message: true,
-                            verify_message: true,
-                            export: true,
-                            encrypt: false,
-                            decrypt: false,
-                            cache: false,
-                            copy: false,
-                            derive: false,
+                        usage_flags: {
+                            let mut flags = UsageFlags::default();
+                            let _ = flags
+                                .set_sign_hash()
+                                .set_verify_hash()
+                                .set_sign_message()
+                                .set_verify_message()
+                                .set_export();
+                            flags
                         },
                         permitted_algorithms: Algorithm::AsymmetricSignature(
                             AsymmetricSignature::RsaPkcs1v15Sign {

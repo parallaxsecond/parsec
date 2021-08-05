@@ -193,8 +193,8 @@ impl OnDiskKeyInfoManager {
         })?;
 
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
-            for provider_dir_path in list_dirs(&app_name_dir_path)?.iter() {
-                for key_name_file_path in list_files(&provider_dir_path)?.iter() {
+            for provider_dir_path in list_dirs(app_name_dir_path)?.iter() {
+                for key_name_file_path in list_files(provider_dir_path)?.iter() {
                     let mut key_info = Vec::new();
                     let mut key_info_file = File::open(&key_name_file_path).with_context(|| {
                         format!(
@@ -399,17 +399,10 @@ mod test {
             key_type: Type::Derive,
             bits: 1024,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: true,
-                    verify_hash: false,
-                    sign_message: false,
-                    verify_message: false,
-                    export: false,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
+                usage_flags: {
+                    let mut usage_flags = UsageFlags::default();
+                    let _ = usage_flags.set_sign_hash();
+                    usage_flags
                 },
                 permitted_algorithms: Algorithm::AsymmetricSignature(
                     AsymmetricSignature::RsaPkcs1v15Sign {

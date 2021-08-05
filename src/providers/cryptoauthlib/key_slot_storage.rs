@@ -35,7 +35,7 @@ impl KeySlotStorage {
         // (2) if there are no two key triples mapping to a single ATECC slot - warning only ATM
 
         // check (1)
-        match key_slots[key_id as usize].key_attr_vs_config(key_id, &key_attr, None) {
+        match key_slots[key_id as usize].key_attr_vs_config(key_id, key_attr, None) {
             Ok(_) => (),
             Err(err) => {
                 let error = std::format!("ATECC slot configuration mismatch: {}", err);

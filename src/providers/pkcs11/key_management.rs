@@ -95,7 +95,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 
-        if key_attributes.policy.usage_flags.export && !self.allow_export {
+        if key_attributes.policy.usage_flags.export() && !self.allow_export {
             error!("The configuration of this provider does not allow it to generate keys that can be exported.");
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
@@ -181,7 +181,7 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 
-        if key_attributes.policy.usage_flags.export && !self.allow_export {
+        if key_attributes.policy.usage_flags.export() && !self.allow_export {
             error!("The configuration of this provider does not allow it to generate keys that can be exported.");
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }

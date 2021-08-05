@@ -85,18 +85,18 @@ pub fn key_pair_usage_flags_to_pkcs11_attributes(
     priv_template: &mut Vec<Attribute>,
 ) {
     priv_template.push(Attribute::Sign(
-        (usage_flags.sign_hash || usage_flags.sign_message).into(),
+        (usage_flags.sign_hash() || usage_flags.sign_message()).into(),
     ));
     pub_template.push(Attribute::Verify(
-        (usage_flags.verify_hash || usage_flags.verify_message).into(),
+        (usage_flags.verify_hash() || usage_flags.verify_message()).into(),
     ));
-    pub_template.push(Attribute::Encrypt((usage_flags.encrypt).into()));
-    priv_template.push(Attribute::Decrypt((usage_flags.decrypt).into()));
-    priv_template.push(Attribute::Derive((usage_flags.derive).into()));
-    priv_template.push(Attribute::Extractable((usage_flags.export).into()));
-    priv_template.push(Attribute::Sensitive((!usage_flags.export).into()));
-    priv_template.push(Attribute::Copyable((usage_flags.copy).into()));
-    pub_template.push(Attribute::Copyable((usage_flags.copy).into()));
+    pub_template.push(Attribute::Encrypt((usage_flags.encrypt()).into()));
+    priv_template.push(Attribute::Decrypt((usage_flags.decrypt()).into()));
+    priv_template.push(Attribute::Derive((usage_flags.derive()).into()));
+    priv_template.push(Attribute::Extractable((usage_flags.export()).into()));
+    priv_template.push(Attribute::Sensitive((!usage_flags.export()).into()));
+    priv_template.push(Attribute::Copyable((usage_flags.copy()).into()));
+    pub_template.push(Attribute::Copyable((usage_flags.copy()).into()));
 }
 
 /// Format the input data into ASN1 DigestInfo bytes

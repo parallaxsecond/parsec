@@ -122,9 +122,9 @@ impl Provider {
             .find_suitable_slot(&key_attributes, Some(Opcode::PsaImportKey))?;
         let key_data = raw_key_extract(key_attributes.key_type, &op.data)?;
 
-        let atca_error_status =
-            self.device
-                .import_key(key_type, &key_data.expose_secret(), slot_id);
+        let atca_error_status = self
+            .device
+            .import_key(key_type, key_data.expose_secret(), slot_id);
 
         let psa_error_status: ResponseStatus = match atca_error_status {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
