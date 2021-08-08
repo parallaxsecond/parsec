@@ -160,9 +160,10 @@ fn wrong_permitted_algorithm() {
     }
     let key_type = Type::RsaKeyPair;
     // Do not permit RSA PKCS 1v15 signing algorithm with SHA-256.
+    #[allow(deprecated)]
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha512.into(),
+            hash_alg: Hash::Sha1.into(),
         });
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -210,7 +211,7 @@ fn no_usage_flag_set() {
     let key_type = Type::RsaKeyPair;
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha512.into(),
+            hash_alg: Hash::Sha256.into(),
         });
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
