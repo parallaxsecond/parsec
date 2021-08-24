@@ -21,7 +21,7 @@ pub enum KeySlotStatus {
 #[derive(Copy, Clone, Debug)]
 /// Hardware slot information
 pub struct AteccKeySlot {
-    /// Diagnostic field. Number of key triples pointing at this slot
+    /// Diagnostic field. Number of key identities pointing at this slot
     pub ref_count: u8,
     /// Slot status
     pub status: KeySlotStatus,

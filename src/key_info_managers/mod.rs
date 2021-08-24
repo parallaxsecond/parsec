@@ -1,6 +1,6 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-//! Persistent mapping between key triples and key information
+//! Persistent mapping between key identities and key information
 //!
 //! This module declares a [`ManageKeyInfo`](https://parallaxsecond.github.io/parsec-book/parsec_service/key_info_managers.html)
 //! trait to help providers to store in a persistent manner the mapping between the name and the
@@ -110,7 +110,7 @@ pub fn to_response_status(error_string: String) -> ResponseStatus {
 ///
 /// Interface to be implemented for persistent storage of key name -> key info mappings.
 trait ManageKeyInfo {
-    /// Returns a reference to the key info corresponding to this key triple or `None` if it does not
+    /// Returns a reference to the key info corresponding to this KeyIdentity or `None` if it does not
     /// exist.
     ///
     /// # Errors
@@ -118,14 +118,14 @@ trait ManageKeyInfo {
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn get(&self, key_identity: &KeyIdentity) -> Result<Option<&KeyInfo>, String>;
 
-    /// Returns a Vec of reference to the key triples corresponding to this provider.
+    /// Returns a Vec of reference to the key identities corresponding to this provider.
     ///
     /// # Errors
     ///
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn get_all(&self, provider_identity: ProviderIdentity) -> Result<Vec<KeyIdentity>, String>;
 
-    /// Inserts a new mapping between the key triple and the key info. If the triple already exists,
+    /// Inserts a new mapping between the KeyIdentity and the key info. If the KeyIdentity already exists,
     /// overwrite the existing mapping and returns the old `KeyInfo`. Otherwise returns `None`.
     ///
     /// # Errors
@@ -137,7 +137,7 @@ trait ManageKeyInfo {
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String>;
 
-    /// Removes a key triple mapping and returns it. Does nothing and returns `None` if the mapping
+    /// Removes a KeyIdentity mapping and returns it. Does nothing and returns `None` if the mapping
     /// does not exist.
     ///
     /// # Errors
@@ -145,7 +145,7 @@ trait ManageKeyInfo {
     /// Returns an error as a String if there was a problem accessing the Key Info Manager.
     fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String>;
 
-    /// Check if a key triple mapping exists.
+    /// Check if a KeyIdentity mapping exists.
     ///
     /// # Errors
     ///
@@ -164,8 +164,8 @@ pub struct KeyInfoManagerClient {
 }
 
 impl KeyInfoManagerClient {
-    /// Get the KeyTriple representing a key.
-    pub fn get_key_triple(
+    /// Get the KeyIdentity representing a key.
+    pub fn get_key_identity(
         &self,
         application: ApplicationIdentity,
         key_name: String,
@@ -173,7 +173,7 @@ impl KeyInfoManagerClient {
         KeyIdentity::new(application, self.provider_identity.clone(), key_name)
     }
 
-    /// Get the key ID for a given key triple
+    /// Get the key ID for a given KeyIdentity
     ///
     /// The ID does not have to be a specific type. Rather, it must implement the `serde::Deserialize`
     /// trait. Before returning, an instance of that type is created from the bytes stored by the KIM.
@@ -201,7 +201,7 @@ impl KeyInfoManagerClient {
         Ok(bincode::deserialize(&key_info.id)?)
     }
 
-    /// Get the `Attributes` for a given key triple
+    /// Get the `Attributes` for a given KeyIdentity
     ///
     /// # Errors
     ///
@@ -209,13 +209,13 @@ impl KeyInfoManagerClient {
     /// KeyInfoManagerError is returned.
     pub fn get_key_attributes(
         &self,
-        key_triple: &KeyIdentity,
+        key_identity: &KeyIdentity,
     ) -> parsec_interface::requests::Result<Attributes> {
         let key_info_manager_impl = self
             .key_info_manager_impl
             .read()
             .expect("Key Info Manager lock poisoned");
-        let key_info = match key_info_manager_impl.get(key_triple) {
+        let key_info = match key_info_manager_impl.get(key_identity) {
             Ok(Some(key_info)) => key_info,
             Ok(None) => return Err(ResponseStatus::PsaErrorDoesNotExist),
             Err(string) => return Err(to_response_status(string)),
@@ -223,7 +223,7 @@ impl KeyInfoManagerClient {
         Ok(key_info.attributes)
     }
 
-    /// Get all the key triples for the current provider
+    /// Get all the key identities for the current provider
     pub fn get_all(&self) -> parsec_interface::requests::Result<Vec<KeyIdentity>> {
         let key_info_manager_impl = self
             .key_info_manager_impl
@@ -236,7 +236,7 @@ impl KeyInfoManagerClient {
             .map_err(to_response_status)
     }
 
-    /// Remove the key represented by a key triple and return the stored info.
+    /// Remove the key represented by a KeyIdentity and return the stored info.
     ///
     /// # Errors
     ///
@@ -244,28 +244,28 @@ impl KeyInfoManagerClient {
     /// KeyInfoManagerError is returned.
     pub fn remove_key_info(
         &self,
-        key_triple: &KeyIdentity,
+        key_identity: &KeyIdentity,
     ) -> parsec_interface::requests::Result<()> {
         let mut key_info_manager_impl = self
             .key_info_manager_impl
             .write()
             .expect("Key Info Manager lock poisoned");
-        match key_info_manager_impl.remove(key_triple) {
+        match key_info_manager_impl.remove(key_identity) {
             Ok(Some(_key_info)) => Ok(()),
             Ok(None) => Err(ResponseStatus::PsaErrorDoesNotExist),
             Err(string) => Err(to_response_status(string)),
         }
     }
 
-    /// Insert key info for a given triple.
+    /// Insert key info for a given KeyIdentity.
     ///
     /// # Errors
     ///
-    /// If the key triple already existed in the KIM, PsaErrorAlreadyExists is returned. For
+    /// If the KeyIdentity already existed in the KIM, PsaErrorAlreadyExists is returned. For
     /// any other error occurring in the KIM, KeyInfoManagerError is returned.
     pub fn insert_key_info<T: Serialize>(
         &self,
-        key_triple: KeyIdentity,
+        key_identity: KeyIdentity,
         key_id: &T,
         attributes: Attributes,
     ) -> parsec_interface::requests::Result<()> {
@@ -278,7 +278,7 @@ impl KeyInfoManagerClient {
             attributes,
         };
 
-        match key_info_manager_impl.insert(key_triple, key_info) {
+        match key_info_manager_impl.insert(key_identity, key_info) {
             Ok(None) => Ok(()),
             Ok(Some(_)) => Err(ResponseStatus::PsaErrorAlreadyExists),
             Err(string) => Err(to_response_status(string)),
@@ -395,20 +395,20 @@ impl KeyInfoManagerClient {
         Ok(keys)
     }
 
-    /// Check if a key triple exists in the Key Info Manager and return a ResponseStatus
+    /// Check if a KeyIdentity exists in the Key Info Manager and return a ResponseStatus
     ///
     /// # Errors
     ///
-    /// Returns PsaErrorAlreadyExists if the key triple already exists or KeyInfoManagerError for
+    /// Returns PsaErrorAlreadyExists if the KeyIdentity already exists or KeyInfoManagerError for
     /// another error.
-    pub fn does_not_exist(&self, key_triple: &KeyIdentity) -> Result<(), ResponseStatus> {
+    pub fn does_not_exist(&self, key_identity: &KeyIdentity) -> Result<(), ResponseStatus> {
         let key_info_manager_impl = self
             .key_info_manager_impl
             .read()
             .expect("Key Info Manager lock poisoned");
 
         if key_info_manager_impl
-            .exists(key_triple)
+            .exists(key_identity)
             .map_err(to_response_status)?
         {
             Err(ResponseStatus::PsaErrorAlreadyExists)

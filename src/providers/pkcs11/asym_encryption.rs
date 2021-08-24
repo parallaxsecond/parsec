@@ -18,13 +18,13 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
 
@@ -49,13 +49,13 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
 
@@ -80,12 +80,12 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
 
@@ -93,7 +93,7 @@ impl Provider {
         let salt_buff = op.salt.as_ref().map(|salt| salt.as_slice());
         let buffer_size = key_attributes.asymmetric_encrypt_output_size(alg)?;
         let mut ciphertext = vec![0u8; buffer_size];
-        let pub_key_id = self.move_pub_key_to_psa_crypto(&key_triple)?;
+        let pub_key_id = self.move_pub_key_to_psa_crypto(&key_identity)?;
 
         info!("Encrypting plaintext with PSA Crypto");
         let res = match psa_crypto::operations::asym_encryption::encrypt(
