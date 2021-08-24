@@ -131,7 +131,9 @@ impl Provider {
                                     max_key_id = key_id;
                                 }
                             }
-                            Err(status::Error::InvalidHandle) => to_remove.push(key_triple.clone()),
+                            Err(status::Error::InvalidHandle) => {
+                                to_remove.push(key_identity.clone())
+                            }
                             Err(e) => {
                                 format_error!("Failed to open persistent Mbed Crypto key", e);
                                 return None;
