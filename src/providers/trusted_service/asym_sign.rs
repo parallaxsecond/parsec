@@ -12,12 +12,12 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         Ok(psa_sign_hash::Result {
             signature: self
@@ -32,12 +32,12 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         self.context
             .verify_hash(key_id, op.hash.to_vec(), op.signature.to_vec(), op.alg)?;

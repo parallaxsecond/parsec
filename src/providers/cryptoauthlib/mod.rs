@@ -116,47 +116,47 @@ impl Provider {
         // Mark the slots free/busy appropriately.
         let mut to_remove: Vec<KeyIdentity> = Vec::new();
         match cryptoauthlib_provider.key_info_store.get_all() {
-            Ok(key_triples) => {
-                for key_triple in key_triples.iter().cloned() {
+            Ok(key_identities) => {
+                for key_identity in key_identities.iter().cloned() {
                     match cryptoauthlib_provider
                         .key_info_store
-                        .does_not_exist(&key_triple)
+                        .does_not_exist(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
-                            warn!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
-                                key_triple,
+                            warn!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
+                                key_identity,
                                 err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
                     let key_info_id = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_id::<u8>(&key_triple)
+                        .get_key_id::<u8>(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
                             warn!(
-                                "Could not get key info id for key triple {:?} because {}",
-                                key_triple, err
+                                "Could not get key info id for KeyIdentity {:?} because {}",
+                                key_identity, err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
                     let key_info_attributes = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_attributes(&key_triple)
+                        .get_key_attributes(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
                             warn!(
-                                "Could not get key attributes for key triple {:?} because {}",
-                                key_triple, err
+                                "Could not get key attributes for KeyIdentity {:?} because {}",
+                                key_identity, err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
@@ -165,10 +165,12 @@ impl Provider {
                         .key_validate_and_mark_busy(key_info_id, &key_info_attributes)
                     {
                         Ok(None) => (),
-                        Ok(Some(warning)) => warn!("{} for key triple {:?}", warning, key_triple),
+                        Ok(Some(warning)) => {
+                            warn!("{} for KeyIdentity {:?}", warning, key_identity)
+                        }
                         Err(err) => {
-                            warn!("{} for key triple {:?}", err, key_triple);
-                            to_remove.push(key_triple.clone());
+                            warn!("{} for KeyIdentity {:?}", err, key_identity);
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     }
@@ -179,10 +181,10 @@ impl Provider {
                 return None;
             }
         };
-        for key_triple in to_remove.iter() {
+        for key_identity in to_remove.iter() {
             if let Err(err) = cryptoauthlib_provider
                 .key_info_store
-                .remove_key_info(key_triple)
+                .remove_key_info(key_identity)
             {
                 error!("Key Info Manager error: {}", err);
                 return None;

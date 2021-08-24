@@ -123,30 +123,31 @@ impl Provider {
                 .write()
                 .expect("Local ID lock poisoned");
             let mut to_remove: Vec<KeyIdentity> = Vec::new();
-            // Go through all PKCS 11 key triple to key info mappings and check if they are still
+            // Go through all PKCS 11 key identities to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match pkcs11_provider.key_info_store.get_all() {
-                Ok(key_triples) => {
+                Ok(key_identities) => {
                     let session = pkcs11_provider.new_session().ok()?;
 
-                    for key_triple in key_triples.iter().cloned() {
-                        let key_id = match pkcs11_provider.key_info_store.get_key_id(&key_triple) {
+                    for key_identity in key_identities.iter().cloned() {
+                        let key_id = match pkcs11_provider.key_info_store.get_key_id(&key_identity)
+                        {
                             Ok(id) => id,
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
-                                error!("Stored key info missing for key triple {}.", key_triple);
+                                error!("Stored key info missing for KeyIdentity {}.", key_identity);
                                 continue;
                             }
                             Err(e) => {
                                 format_error!(
                                     format!(
-                                        "Stored key info invalid for key triple {}.",
-                                        key_triple
+                                        "Stored key info invalid for KeyIdentity {}.",
+                                        key_identity
                                     ),
                                     e
                                 );
 
-                                to_remove.push(key_triple.clone());
+                                to_remove.push(key_identity.clone());
                                 continue;
                             }
                         };
@@ -156,7 +157,7 @@ impl Provider {
                                 if crate::utils::GlobalConfig::log_error_details() {
                                     warn!(
                                         "Key {} found in the PKCS 11 library, adding it.",
-                                        key_triple
+                                        key_identity
                                     );
                                 } else {
                                     warn!("Key found in the PKCS 11 library, adding it.");
@@ -167,12 +168,12 @@ impl Provider {
                                 if crate::utils::GlobalConfig::log_error_details() {
                                     warn!(
                                         "Key {} not found in the PKCS 11 library, deleting it.",
-                                        key_triple
+                                        key_identity
                                     );
                                 } else {
                                     warn!("Key not found in the PKCS 11 library, deleting it.");
                                 }
-                                to_remove.push(key_triple.clone());
+                                to_remove.push(key_identity.clone());
                             }
                             Err(e) => {
                                 format_error!("Error finding key objects", e);
@@ -186,10 +187,10 @@ impl Provider {
                     return None;
                 }
             };
-            for key_triple in to_remove.iter() {
+            for key_identity in to_remove.iter() {
                 if pkcs11_provider
                     .key_info_store
-                    .remove_key_info(&key_triple)
+                    .remove_key_info(&key_identity)
                     .is_err()
                 {
                     return None;

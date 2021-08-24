@@ -107,11 +107,9 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_identity = KeyIdentity::new(
-            application_identity.clone(),
-            self.provider_identity.clone(),
-            op.key_name.clone(),
-        );
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
@@ -136,11 +134,9 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_message::Operation,
     ) -> Result<psa_sign_message::Result> {
-        let key_identity = KeyIdentity::new(
-            application_identity.clone(),
-            self.provider_identity.clone(),
-            op.key_name.clone(),
-        );
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
@@ -166,11 +162,9 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
-        let key_identity = KeyIdentity::new(
-            application_identity.clone(),
-            self.provider_identity.clone(),
-            op.key_name.clone(),
-        );
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
         let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
