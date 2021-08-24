@@ -27,13 +27,13 @@ impl Provider {
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
 
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         if op.attributes.key_type.is_public_key() {
             error!("A public key type can not be generated.");
@@ -55,7 +55,7 @@ impl Provider {
         let auth_value = auth_value.unwrap();
 
         self.key_info_store.insert_key_info(
-            key_triple,
+            key_identity,
             &PasswordContext {
                 context: key_context,
                 auth_value: auth_value.value().to_vec(),
@@ -101,13 +101,13 @@ impl Provider {
 
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
         let key_data = op.data;
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -130,7 +130,7 @@ impl Provider {
             })?;
 
         self.key_info_store.insert_key_info(
-            key_triple,
+            key_identity,
             &PasswordContext {
                 context: pub_key_context,
                 auth_value: Vec::new(),
@@ -157,14 +157,14 @@ impl Provider {
         }
         let key_name = op.key_name;
         let attributes = op.attributes;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
         let key_data = op.data;
 
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
         let mut esapi_context = self
             .esapi_context
             .lock()
@@ -197,7 +197,7 @@ impl Provider {
             })?;
 
         self.key_info_store.insert_key_info(
-            key_triple,
+            key_identity,
             &PasswordContext {
                 context: keypair_context,
                 auth_value: Vec::new(),
@@ -214,7 +214,7 @@ impl Provider {
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
@@ -225,8 +225,8 @@ impl Provider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         let pub_key_data = esapi_context
             .read_public_key(password_context.context)
@@ -246,13 +246,13 @@ impl Provider {
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
 
-        let _ = self.key_info_store.remove_key_info(&key_triple)?;
+        let _ = self.key_info_store.remove_key_info(&key_identity)?;
 
         Ok(psa_destroy_key::Result {})
     }

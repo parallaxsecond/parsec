@@ -79,12 +79,12 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
         );
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
         if op.hash.len() != Hash::Sha256.hash_length() {
@@ -95,7 +95,7 @@ impl Provider {
             AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             } => {
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
                 self.ecdsa_hash_sign(key_id, &op.hash)
             }
             _ => Err(ResponseStatus::PsaErrorNotSupported),
@@ -107,10 +107,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = self
+        let key_identity = self
             .key_info_store
-            .get_key_triple(application_identity.clone(), op.key_name.clone());
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
         if op.hash.len() != Hash::Sha256.hash_length() {
@@ -121,7 +121,7 @@ impl Provider {
             AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             } => {
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
                 let verify_mode = self.ecdsa_verify_mode_get(key_id, key_attributes.key_type)?;
                 self.ecdsa_hash_verify(verify_mode, op.hash, op.signature)
             }
@@ -134,10 +134,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_message::Operation,
     ) -> Result<psa_sign_message::Result> {
-        let key_triple = self
+        let key_identity = self
             .key_info_store
-            .get_key_triple(application_identity.clone(), op.key_name.clone());
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
 
@@ -145,7 +145,7 @@ impl Provider {
             AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             } => {
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
                 // Compute a hash
                 let hash = self.sha256(&op.message)?.hash;
                 // Sign computed hash
@@ -162,10 +162,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
-        let key_triple = self
+        let key_identity = self
             .key_info_store
-            .get_key_triple(application_identity.clone(), op.key_name.clone());
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+            .get_key_identity(application_identity.clone(), op.key_name.clone());
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
 
@@ -173,7 +173,7 @@ impl Provider {
             AsymmetricSignature::Ecdsa {
                 hash_alg: SignHash::Specific(Hash::Sha256),
             } => {
-                let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
                 // Calculate a hash of a message
                 let hash = self.sha256(&op.message)?.hash;
                 // Determine verify mode

@@ -19,7 +19,7 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
@@ -30,8 +30,8 @@ impl Provider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
@@ -77,7 +77,7 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             op.key_name.clone(),
@@ -88,8 +88,8 @@ impl Provider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
