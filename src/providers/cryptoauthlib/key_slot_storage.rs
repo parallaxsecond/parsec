@@ -30,9 +30,9 @@ impl KeySlotStorage {
     ) -> Result<Option<String>, String> {
         let mut key_slots = self.storage.write().unwrap();
 
-        // Get CryptoAuthLibProvider mapping of key triple to key info and check
-        // (1) if the key info matches ATECC configuration - drop key triple if not
-        // (2) if there are no two key triples mapping to a single ATECC slot - warning only ATM
+        // Get CryptoAuthLibProvider mapping of KeyIdentity to key info and check
+        // (1) if the key info matches ATECC configuration - drop KeyIdentity if not
+        // (2) if there are no two key identities mapping to a single ATECC slot - warning only ATM
 
         // check (1)
         match key_slots[key_id as usize].key_attr_vs_config(key_id, &key_attr, None) {

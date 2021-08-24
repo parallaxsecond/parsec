@@ -17,12 +17,12 @@ impl Provider {
     ) -> Result<psa_raw_key_agreement::Result> {
         let key_name = op.private_key_name.clone();
 
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
         let _guard = self
             .key_handle_mutex
             .lock()

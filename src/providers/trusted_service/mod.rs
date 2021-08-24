@@ -83,17 +83,17 @@ impl Provider {
         let mut max_key_id: key::psa_key_id_t = key::PSA_KEY_ID_USER_MIN;
         {
             let mut to_remove: Vec<KeyIdentity> = Vec::new();
-            // Go through all TrustedServiceProvider key triples to key info mappings and check if they are still
+            // Go through all TrustedServiceProvider key identities to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match ts_provider.key_info_store.get_all() {
-                Ok(key_triples) => {
-                    for key_triple in key_triples.iter().cloned() {
-                        let key_id = match ts_provider.key_info_store.get_key_id(&key_triple) {
+                Ok(key_identities) => {
+                    for key_identity in key_identities.iter().cloned() {
+                        let key_id = match ts_provider.key_info_store.get_key_id(&key_identity) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                error!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...", key_triple, response_status);
-                                to_remove.push(key_triple.clone());
+                                error!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...", key_identity, response_status);
+                                to_remove.push(key_identity.clone());
                                 continue;
                             }
                         };
@@ -108,8 +108,8 @@ impl Provider {
                     return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
                 }
             };
-            for key_triple in to_remove.iter() {
-                if let Err(string) = ts_provider.key_info_store.remove_key_info(key_triple) {
+            for key_identity in to_remove.iter() {
+                if let Err(string) = ts_provider.key_info_store.remove_key_info(key_identity) {
                     return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
                 }
             }

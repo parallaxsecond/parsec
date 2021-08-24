@@ -39,13 +39,13 @@ impl Provider {
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
 
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -58,7 +58,7 @@ impl Provider {
             Ok(key) => {
                 if let Err(e) =
                     self.key_info_store
-                        .insert_key_info(key_triple, &key_id, key_attributes)
+                        .insert_key_info(key_identity, &key_id, key_attributes)
                 {
                     // Safe as this thread should be the only one accessing this key yet.
                     if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
@@ -85,12 +85,12 @@ impl Provider {
         let key_name = op.key_name;
         let key_attributes = op.attributes;
         let key_data = op.data;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         let key_id = create_key_id(&self.id_counter)?;
 
@@ -107,7 +107,7 @@ impl Provider {
             Ok(key) => {
                 if let Err(e) =
                     self.key_info_store
-                        .insert_key_info(key_triple, &key_id, key_attributes)
+                        .insert_key_info(key_identity, &key_id, key_attributes)
                 {
                     // Safe as this thread should be the only one accessing this key yet.
                     if unsafe { psa_crypto_key_management::destroy(key) }.is_err() {
@@ -132,12 +132,12 @@ impl Provider {
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex
@@ -163,12 +163,12 @@ impl Provider {
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex
@@ -194,14 +194,14 @@ impl Provider {
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
 
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
-        let _ = self.key_info_store.remove_key_info(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
+        let _ = self.key_info_store.remove_key_info(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex

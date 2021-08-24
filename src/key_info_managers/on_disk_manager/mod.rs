@@ -655,24 +655,24 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_get_key_info_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let key_triple = new_key_triple("insert_get_key_info".to_string());
+        let key_identity = new_key_identity("insert_get_key_info".to_string());
         let key_info = test_key_info();
 
-        assert!(manager.get(&key_triple).unwrap().is_none());
+        assert!(manager.get(&key_identity).unwrap().is_none());
 
         assert!(manager
-            .insert(key_triple.clone(), key_info.clone())
+            .insert(key_identity.clone(), key_info.clone())
             .unwrap()
             .is_none());
 
         let stored_key_info = manager
-            .get(&key_triple)
+            .get(&key_identity)
             .unwrap()
             .expect("Failed to get key info")
             .clone();
 
         assert_eq!(stored_key_info, key_info);
-        assert!(manager.remove(&key_triple).unwrap().is_some());
+        assert!(manager.remove(&key_identity).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -681,12 +681,12 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_remove_key_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let key_triple = new_key_triple("insert_remove_key".to_string());
+        let key_identity = new_key_identity("insert_remove_key".to_string());
         let key_info = test_key_info();
 
-        let _ = manager.insert(key_triple.clone(), key_info).unwrap();
+        let _ = manager.insert(key_identity.clone(), key_info).unwrap();
 
-        assert!(manager.remove(&key_triple).unwrap().is_some());
+        assert!(manager.remove(&key_identity).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -695,8 +695,8 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/remove_unexisting_key_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let key_triple = new_key_triple("remove_unexisting_key".to_string());
-        assert_eq!(manager.remove(&key_triple).unwrap(), None);
+        let key_identity = new_key_identity("remove_unexisting_key".to_string());
+        assert_eq!(manager.remove(&key_identity).unwrap(), None);
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -705,16 +705,16 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/exists_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let key_triple = new_key_triple("exists".to_string());
+        let key_identity = new_key_identity("exists".to_string());
         let key_info = test_key_info();
 
-        assert!(!manager.exists(&key_triple).unwrap());
+        assert!(!manager.exists(&key_identity).unwrap());
 
-        let _ = manager.insert(key_triple.clone(), key_info).unwrap();
-        assert!(manager.exists(&key_triple).unwrap());
+        let _ = manager.insert(key_identity.clone(), key_info).unwrap();
+        assert!(manager.exists(&key_identity).unwrap());
 
-        let _ = manager.remove(&key_triple).unwrap();
-        assert!(!manager.exists(&key_triple).unwrap());
+        let _ = manager.remove(&key_identity).unwrap();
+        assert!(!manager.exists(&key_identity).unwrap());
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -723,26 +723,26 @@ mod test {
         let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/insert_overwrites_mappings");
         let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
 
-        let key_triple = new_key_triple("insert_overwrites".to_string());
+        let key_identity = new_key_identity("insert_overwrites".to_string());
         let key_info_1 = test_key_info();
         let key_info_2 = KeyInfo {
             id: vec![0xaa, 0xbb, 0xcc],
             attributes: test_key_attributes(),
         };
 
-        let _ = manager.insert(key_triple.clone(), key_info_1).unwrap();
+        let _ = manager.insert(key_identity.clone(), key_info_1).unwrap();
         let _ = manager
-            .insert(key_triple.clone(), key_info_2.clone())
+            .insert(key_identity.clone(), key_info_2.clone())
             .unwrap();
 
         let stored_key_info = manager
-            .get(&key_triple)
+            .get(&key_identity)
             .unwrap()
             .expect("Failed to get key info")
             .clone();
 
         assert_eq!(stored_key_info, key_info_2);
-        assert!(manager.remove(&key_triple).unwrap().is_some());
+        assert!(manager.remove(&key_identity).unwrap().is_some());
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -754,7 +754,7 @@ mod test {
         let big_app_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
         let big_key_name_ascii = "  Lorem ipsum dolor sit amet, ei suas viris sea, deleniti repudiare te qui. Natum paulo decore ut nec, ne propriae offendit adipisci has. Eius clita legere mel at, ei vis minimum tincidunt.".to_string();
 
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             ApplicationIdentity::new(big_app_name_ascii, AuthType::NoAuth),
             ProviderIdentity::new(
                 CoreProvider::PROVIDER_UUID.to_string(),
@@ -765,9 +765,9 @@ mod test {
         let key_info = test_key_info();
 
         let _ = manager
-            .insert(key_triple.clone(), key_info.clone())
+            .insert(key_identity.clone(), key_info.clone())
             .unwrap();
-        assert_eq!(manager.remove(&key_triple).unwrap().unwrap(), key_info);
+        assert_eq!(manager.remove(&key_identity).unwrap().unwrap(), key_info);
         fs::remove_dir_all(path).unwrap();
     }
 
@@ -867,7 +867,7 @@ mod test {
         fs::remove_dir_all(path).unwrap();
     }
 
-    fn new_key_triple(key_name: String) -> KeyIdentity {
+    fn new_key_identity(key_name: String) -> KeyIdentity {
         KeyIdentity::new(
             ApplicationIdentity::new("Testing Application 😎".to_string(), AuthType::NoAuth),
             ProviderIdentity::new(

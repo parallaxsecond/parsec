@@ -17,12 +17,12 @@ impl Provider {
         let key_name = op.key_name;
         let hash = op.hash;
         let alg = op.alg;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex
@@ -58,12 +58,12 @@ impl Provider {
         let hash = op.hash;
         let alg = op.alg;
         let signature = op.signature;
-        let key_triple = KeyIdentity::new(
+        let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
             key_name,
         );
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex
