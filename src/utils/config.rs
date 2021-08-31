@@ -111,6 +111,8 @@ impl Admin {
 pub enum KeyInfoManagerType {
     /// KeyInfoManager storing the mappings on disk
     OnDisk,
+    /// KeyInfoManager for storing mappings within a SQLite database on disk.
+    SQLite,
 }
 
 /// KeyInfoManager configuration
@@ -120,8 +122,10 @@ pub struct KeyInfoManagerConfig {
     pub name: String,
     /// Type of the KeyInfoManager
     pub manager_type: KeyInfoManagerType,
-    /// Path used to store the mappings
+    /// Path used to store the OnDiskKeyInfoManager mappings
     pub store_path: Option<String>,
+    /// File path where the SQLite database should be stored when using SQLiteKeyInfoManager
+    pub sqlite_db_path: Option<String>,
 }
 
 /// Provider configuration structure

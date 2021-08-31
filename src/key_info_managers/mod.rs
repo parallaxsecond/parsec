@@ -23,6 +23,7 @@ use std::sync::{Arc, RwLock};
 use zeroize::Zeroize;
 
 pub mod on_disk_manager;
+pub mod sqlite_manager;
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.
@@ -71,8 +72,9 @@ impl KeyIdentity {
     }
 
     /// Checks if this key belongs to a specific provider.
-    pub fn belongs_to_provider(&self, provider_name: String) -> bool {
-        *self.provider().name() == provider_name
+    pub fn belongs_to_provider(&self, provider_identity: &ProviderIdentity) -> bool {
+        self.provider().name() == provider_identity.name()
+            && self.provider().uuid() == provider_identity.uuid()
     }
 
     /// Get the key name
@@ -429,20 +431,31 @@ pub struct KeyInfoManagerFactory {
 impl KeyInfoManagerFactory {
     /// Create a KeyInfoManagerFactory
     pub fn new(config: &KeyInfoManagerConfig, default_auth_type: AuthType) -> Result<Self> {
-        let manager = match config.manager_type {
+        let factory = match config.manager_type {
             KeyInfoManagerType::OnDisk => {
                 let mut builder = on_disk_manager::OnDiskKeyInfoManagerBuilder::new();
                 if let Some(store_path) = &config.store_path {
                     builder = builder.with_mappings_dir_path(store_path.into());
                 }
                 builder = builder.with_auth_type(default_auth_type);
-                builder.build()?
+                let manager = builder.build()?;
+                KeyInfoManagerFactory {
+                    key_info_manager_impl: Arc::new(RwLock::new(manager)),
+                }
+            }
+            KeyInfoManagerType::SQLite => {
+                let mut builder = sqlite_manager::SQLiteKeyInfoManagerBuilder::new();
+                if let Some(sqlite_db_path) = &config.sqlite_db_path {
+                    builder = builder.with_db_path(sqlite_db_path.into());
+                }
+                let manager = builder.build()?;
+                KeyInfoManagerFactory {
+                    key_info_manager_impl: Arc::new(RwLock::new(manager)),
+                }
             }
         };
 
-        Ok(KeyInfoManagerFactory {
-            key_info_manager_impl: Arc::new(RwLock::new(manager)),
-        })
+        Ok(factory)
     }
 
     /// Build a KeyInfoManagerClient

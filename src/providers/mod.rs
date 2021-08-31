@@ -79,7 +79,7 @@ impl ProviderIdentity {
 
     /// Get the name of the provider
     pub fn name(&self) -> &String {
-        &self.uuid
+        &self.name
     }
 }
 
