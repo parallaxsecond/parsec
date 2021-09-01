@@ -288,6 +288,7 @@ mod test {
         Attributes, Lifetime, Policy, Type, UsageFlags,
     };
     use parsec_interface::requests::AuthType;
+    use rand::Rng;
     use std::fs;
     use std::path::PathBuf;
 
@@ -297,17 +298,10 @@ mod test {
             key_type: Type::Derive,
             bits: 1024,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: true,
-                    verify_hash: false,
-                    sign_message: false,
-                    verify_message: false,
-                    export: false,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
+                usage_flags: {
+                    let mut usage_flags = UsageFlags::default();
+                    let _ = usage_flags.set_sign_hash();
+                    usage_flags
                 },
                 permitted_algorithms: Algorithm::AsymmetricSignature(
                     AsymmetricSignature::RsaPkcs1v15Sign {
@@ -321,6 +315,14 @@ mod test {
     fn test_key_info() -> KeyInfo {
         KeyInfo {
             id: vec![0x11, 0x22, 0x33],
+            attributes: test_key_attributes(),
+        }
+    }
+
+    fn test_key_info_with_random_id() -> KeyInfo {
+        let mut rng = rand::thread_rng();
+        KeyInfo {
+            id: vec![rng.gen(), rng.gen(), rng.gen()],
             attributes: test_key_attributes(),
         }
     }
@@ -491,15 +493,240 @@ mod test {
         fs::remove_file(&path).unwrap();
     }
 
-    // TODO:
-    // Add tests:
-    // - Add tests for namespaces (check keys are separated by):
-    //   - Application Name
-    //   - Authenticator
-    //   - Key Name
-    // - Check keys are not separated by:
-    //   - Provider Name
-    //   - Provider UUID
+    /// Test that keys with identical identities (aside from authenticator id)
+    /// produce separate entries.
+    #[test]
+    fn namespace_authenticator_id() {
+        let path = PathBuf::from(
+            env!("OUT_DIR").to_owned() + "/kim/sqlite/namespace_authenticator_id.sqlite3",
+        );
+        fs::remove_file(&path).unwrap_or_default();
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let key_name = "key_name".to_string();
+        let app_name = "the_application".to_string();
+
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name.clone(), AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name.clone(),
+        );
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name, AuthType::Direct),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name,
+        );
+
+        let key_info_1 = test_key_info_with_random_id();
+        let key_info_2 = test_key_info_with_random_id();
+
+        let _ = manager
+            .insert(key_identity_1.clone(), key_info_1.clone())
+            .unwrap();
+        let _ = manager
+            .insert(key_identity_2.clone(), key_info_2.clone())
+            .unwrap();
+
+        assert_eq!(
+            manager.remove(&key_identity_1).unwrap().unwrap(),
+            key_info_1
+        );
+        assert_eq!(
+            manager.remove(&key_identity_2).unwrap().unwrap(),
+            key_info_2
+        );
+
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// Test that keys with identical identities (aside from application name)
+    /// produce separate entries.
+    #[test]
+    fn namespace_application_name() {
+        let path = PathBuf::from(
+            env!("OUT_DIR").to_owned() + "/kim/sqlite/namespace_application_name.sqlite3",
+        );
+        fs::remove_file(&path).unwrap_or_default();
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let key_name = "key_name".to_string();
+        let app_name_1 = "application_1".to_string();
+        let app_name_2 = "application_2".to_string();
+
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name_1, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name.clone(),
+        );
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name_2, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name,
+        );
+
+        let key_info_1 = test_key_info_with_random_id();
+        let key_info_2 = test_key_info_with_random_id();
+
+        let _ = manager
+            .insert(key_identity_1.clone(), key_info_1.clone())
+            .unwrap();
+        let _ = manager
+            .insert(key_identity_2.clone(), key_info_2.clone())
+            .unwrap();
+
+        assert_eq!(
+            manager.remove(&key_identity_1).unwrap().unwrap(),
+            key_info_1
+        );
+        assert_eq!(
+            manager.remove(&key_identity_2).unwrap().unwrap(),
+            key_info_2
+        );
+
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// Test that keys with identical identities (aside from key name)
+    /// produce separate entries.
+    #[test]
+    fn namespace_key_name() {
+        let path =
+            PathBuf::from(env!("OUT_DIR").to_owned() + "/kim/sqlite/namespace_key_name.sqlite3");
+        fs::remove_file(&path).unwrap_or_default();
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let key_name_1 = "key_1".to_string();
+        let key_name_2 = "key_2".to_string();
+        let app_name = "the_application".to_string();
+
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name.clone(), AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name_1,
+        );
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name_2,
+        );
+
+        let key_info_1 = test_key_info_with_random_id();
+        let key_info_2 = test_key_info_with_random_id();
+
+        let _ = manager
+            .insert(key_identity_1.clone(), key_info_1.clone())
+            .unwrap();
+        let _ = manager
+            .insert(key_identity_2.clone(), key_info_2.clone())
+            .unwrap();
+
+        assert_eq!(
+            manager.remove(&key_identity_1).unwrap().unwrap(),
+            key_info_1
+        );
+        assert_eq!(
+            manager.remove(&key_identity_2).unwrap().unwrap(),
+            key_info_2
+        );
+
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// Test that keys with identical identities (aside from provider name)
+    /// produce the same entry.
+    #[test]
+    fn namespace_provider_name() {
+        let path = PathBuf::from(
+            env!("OUT_DIR").to_owned() + "/kim/sqlite/namespace_provider_name.sqlite3",
+        );
+        fs::remove_file(&path).unwrap_or_default();
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let key_name = "key_name".to_string();
+        let app_name = "the_application".to_string();
+
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name.clone(), AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                "One provider name".to_string(),
+            ),
+            key_name.clone(),
+        );
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                "Another provider name".to_string(),
+            ),
+            key_name,
+        );
+
+        let key_info = test_key_info_with_random_id();
+
+        let _ = manager.insert(key_identity_1, key_info.clone()).unwrap();
+
+        assert_eq!(manager.remove(&key_identity_2).unwrap().unwrap(), key_info);
+
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// Test that keys with identical identities (aside from provider name)
+    /// produce the same entry.
+    #[test]
+    fn namespace_provider_uuid() {
+        let path = PathBuf::from(
+            env!("OUT_DIR").to_owned() + "/kim/sqlite/namespace_provider_uuid.sqlite3",
+        );
+        fs::remove_file(&path).unwrap_or_default();
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let key_name = "key_name".to_string();
+        let app_name = "the_application".to_string();
+
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name.clone(), AuthType::NoAuth),
+            ProviderIdentity::new(
+                "some-random-uuid".to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name.clone(),
+        );
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name, AuthType::NoAuth),
+            ProviderIdentity::new(
+                "some-random-uuid-that-isn't-the-same".to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name,
+        );
+
+        let key_info = test_key_info_with_random_id();
+
+        let _ = manager.insert(key_identity_1, key_info.clone()).unwrap();
+
+        assert_eq!(manager.remove(&key_identity_2).unwrap().unwrap(), key_info);
+
+        fs::remove_file(&path).unwrap();
+    }
 
     #[cfg(feature = "mbed-crypto-provider")]
     #[test]
