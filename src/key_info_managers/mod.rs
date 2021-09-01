@@ -19,6 +19,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock};
 use zeroize::Zeroize;
 
@@ -27,7 +28,9 @@ pub mod sqlite_manager;
 
 /// This structure corresponds to a unique identifier of the key. It is used internally by the Key
 /// ID manager to refer to a key.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// Note: for equality and hashing, key identity structs with matching ApplicationIdentity and key_name
+/// are considered equal; ProviderIdentity is not considered when evaluating equality or the hash.
+#[derive(Debug, Clone)]
 pub struct KeyIdentity {
     /// The identity of the application that created the key.
     application: ApplicationIdentity,
@@ -36,6 +39,21 @@ pub struct KeyIdentity {
     /// The key name
     key_name: String,
 }
+
+impl Hash for KeyIdentity {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.application.hash(state);
+        self.key_name.hash(state);
+    }
+}
+
+impl PartialEq for KeyIdentity {
+    fn eq(&self, other: &Self) -> bool {
+        self.key_name() == other.key_name() && self.application() == other.application()
+    }
+}
+
+impl Eq for KeyIdentity {}
 
 impl fmt::Display for KeyIdentity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
