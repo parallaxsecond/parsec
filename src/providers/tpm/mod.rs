@@ -19,9 +19,9 @@ use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::str::FromStr;
 use std::sync::Mutex;
-use tss_esapi::abstraction::cipher::Cipher;
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
+use tss_esapi::structures::{SymmetricCipherParameters, SymmetricDefinitionObject};
 use tss_esapi::Tcti;
 use uuid::Uuid;
 use zeroize::Zeroize;
@@ -268,9 +268,12 @@ impl ProviderBuilder {
     ///
     /// The method is unsafe because it relies on creating a TSS Context which could cause
     /// undefined behaviour if multiple such contexts are opened concurrently.
-    unsafe fn find_default_context_cipher(&self) -> std::io::Result<Cipher> {
+    unsafe fn find_default_context_cipher(&self) -> std::io::Result<SymmetricDefinitionObject> {
         info!("Checking for ciphers supported by the TPM.");
-        let ciphers = [Cipher::aes_256_cfb(), Cipher::aes_128_cfb()];
+        let ciphers = [
+            SymmetricDefinitionObject::AES_256_CFB,
+            SymmetricDefinitionObject::AES_128_CFB,
+        ];
         let mut ctx = tss_esapi::Context::new(
             Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
@@ -285,7 +288,9 @@ impl ProviderBuilder {
         })?;
         for cipher in ciphers.iter() {
             if ctx
-                .test_parms(tss_esapi::utils::PublicParmsUnion::SymDetail(*cipher))
+                .test_parms(tss_esapi::structures::PublicParameters::SymCipher(
+                    SymmetricCipherParameters::new(*cipher),
+                ))
                 .is_ok()
             {
                 return Ok(*cipher);

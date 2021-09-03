@@ -1,24 +1,28 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(deprecated)]
+
 use log::error;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
-use picky_asn1_x509::{RSAPrivateKey, RSAPublicKey};
+use picky_asn1_x509::RSAPublicKey;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
-use tss_esapi::abstraction::transient::KeyParams;
+use std::convert::{TryFrom, TryInto};
+use tss_esapi::abstraction::transient::{KeyMaterial, KeyParams};
 use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
-use tss_esapi::interface_types::algorithm::HashingAlgorithm;
-use tss_esapi::interface_types::ecc::EccCurve;
-use tss_esapi::utils::{
-    AsymSchemeUnion, PublicKey, Signature, SignatureData, TpmsContext, RSA_KEY_SIZES,
+use tss_esapi::interface_types::{
+    algorithm::HashingAlgorithm, ecc::EccCurve, key_bits::RsaKeyBits,
 };
+use tss_esapi::structures::{
+    EccScheme, EccSignature, HashScheme, RsaExponent, RsaScheme, RsaSignature, Signature,
+};
+use tss_esapi::tss2_esys::TPMS_CONTEXT;
+use tss_esapi::utils::{PublicKey, TpmsContext};
 use tss_esapi::Error;
 use zeroize::{Zeroize, Zeroizing};
-pub const PUBLIC_EXPONENT: u32 = 0x10001;
 const PUBLIC_EXPONENT_BYTES: [u8; 3] = [0x01, 0x00, 0x01];
 
 /// Convert the TSS library specific error values to ResponseStatus values that are returned on
@@ -93,6 +97,39 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
 // The PasswordContext is what is stored by the Key Info Manager.
 #[derive(Serialize, Deserialize, Zeroize)]
 pub struct PasswordContext {
+    /// This value is kept for legacy purposes, to aid in the migration process
+    context: TpmsContext,
+    /// This value is confidential and needs to be zeroized by its new owner.
+    auth_value: Vec<u8>,
+    /// Public and private parts of the key
+    key_material: KeyMaterial,
+}
+
+impl PasswordContext {
+    /// Create a new [PasswordContext]
+    pub fn new(key_material: KeyMaterial, auth_value: Vec<u8>) -> Self {
+        PasswordContext {
+            context: TPMS_CONTEXT::default().try_into().unwrap(), // the default value is guaranteed to work
+            auth_value,
+            key_material,
+        }
+    }
+
+    /// Get a slice of bytes representing the authentication value of the key
+    pub fn auth_value(&self) -> &[u8] {
+        &self.auth_value
+    }
+
+    /// Get reference to the [KeyMaterial] of the key
+    pub fn key_material(&self) -> &KeyMaterial {
+        &self.key_material
+    }
+}
+
+// LegacyPasswordContext that stored key contexts only.
+#[deprecated]
+#[derive(Serialize, Deserialize, Zeroize)]
+pub struct LegacyPasswordContext {
     pub context: TpmsContext,
     /// This value is confidential and needs to be zeroized by its new owner.
     pub auth_value: Vec<u8>,
@@ -100,20 +137,41 @@ pub struct PasswordContext {
 
 pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     match attributes.key_type {
-        Type::RsaKeyPair => {
-            let size = match attributes.bits {
-                x @ 1024 | x @ 2048 | x @ 3072 | x @ 4096 => x.try_into().unwrap(), // will not fail on the matched values
-                _ => return Err(ResponseStatus::PsaErrorInvalidArgument),
-            };
+        Type::RsaKeyPair | Type::RsaPublicKey => {
+            let size_u16 = u16::try_from(attributes.bits).map_err(|_| {
+                error!(
+                    "Requested RSA key size is not supported ({})",
+                    attributes.bits
+                );
+                ResponseStatus::PsaErrorInvalidArgument
+            })?;
+            let size = RsaKeyBits::try_from(size_u16).map_err(|_| {
+                error!("Requested RSA key size is not supported ({})", size_u16);
+                ResponseStatus::PsaErrorInvalidArgument
+            })?;
             match attributes.policy.permitted_algorithms {
-                Algorithm::AsymmetricSignature(alg) if alg.is_rsa_alg() => Ok(KeyParams::RsaSign {
+                Algorithm::AsymmetricSignature(alg) if alg.is_rsa_alg() => Ok(KeyParams::Rsa {
                     size,
-                    scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
-                    pub_exponent: 0,
+                    scheme: match alg {
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: SignHash::Specific(hash),
+                        } => RsaScheme::RsaSsa(HashScheme::new(convert_hash_to_tpm(hash)?)),
+                        AsymmetricSignature::RsaPss {
+                            hash_alg: SignHash::Specific(hash),
+                        } => RsaScheme::RsaPss(HashScheme::new(convert_hash_to_tpm(hash)?)),
+                        _ => return Err(ResponseStatus::PsaErrorNotSupported),
+                    },
+                    pub_exponent: RsaExponent::create(0).unwrap(),
                 }),
-                Algorithm::AsymmetricEncryption(_) => Ok(KeyParams::RsaEncrypt {
+                Algorithm::AsymmetricEncryption(alg) => Ok(KeyParams::Rsa {
                     size,
-                    pub_exponent: 0,
+                    scheme: match alg {
+                        AsymmetricEncryption::RsaPkcs1v15Crypt => RsaScheme::RsaEs,
+                        AsymmetricEncryption::RsaOaep { hash_alg } => {
+                            RsaScheme::Oaep(HashScheme::new(convert_hash_to_tpm(hash_alg)?))
+                        }
+                    },
+                    pub_exponent: RsaExponent::create(0).unwrap(),
                 }),
                 alg => {
                     error!(
@@ -124,28 +182,25 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
                 }
             }
         }
-        Type::EccKeyPair { .. } => Ok(KeyParams::Ecc {
-            scheme: convert_asym_scheme_to_tpm(attributes.policy.permitted_algorithms)?,
+        Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => Ok(KeyParams::Ecc {
+            scheme: match attributes.policy.permitted_algorithms {
+                Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                    hash_alg: SignHash::Specific(hash),
+                }) => EccScheme::EcDsa(HashScheme::new(convert_hash_to_tpm(hash)?)),
+                Algorithm::AsymmetricSignature(AsymmetricSignature::EcdsaAny)
+                | Algorithm::AsymmetricSignature(AsymmetricSignature::DeterministicEcdsa {
+                    ..
+                }) => return Err(ResponseStatus::PsaErrorNotSupported),
+                _ => {
+                    error!(
+                        "Wrong algorithm provided for ECC key: {:?}",
+                        attributes.policy.permitted_algorithms
+                    );
+                    return Err(ResponseStatus::PsaErrorInvalidArgument);
+                }
+            },
             curve: convert_curve_to_tpm(attributes)?,
         }),
-        _ => Err(ResponseStatus::PsaErrorNotSupported),
-    }
-}
-
-pub fn convert_asym_scheme_to_tpm(algorithm: Algorithm) -> Result<AsymSchemeUnion> {
-    match algorithm {
-        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: SignHash::Specific(hash_alg),
-        }) => Ok(AsymSchemeUnion::RSASSA(convert_hash_to_tpm(hash_alg)?)),
-        Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
-            hash_alg: SignHash::Specific(hash_alg),
-        }) => Ok(AsymSchemeUnion::ECDSA(convert_hash_to_tpm(hash_alg)?)),
-        Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaPkcs1v15Crypt) => {
-            Ok(AsymSchemeUnion::RSAES)
-        }
-        Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaOaep { hash_alg }) => {
-            Ok(AsymSchemeUnion::RSAOAEP(convert_hash_to_tpm(hash_alg)?))
-        }
         _ => Err(ResponseStatus::PsaErrorNotSupported),
     }
 }
@@ -218,20 +273,24 @@ fn elliptic_curve_point_to_octet_string(mut x: Vec<u8>, mut y: Vec<u8>) -> Vec<u
     octet_string
 }
 
-pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) -> Result<Vec<u8>> {
+pub fn signature_data_to_bytes(data: Signature, key_attributes: Attributes) -> Result<Vec<u8>> {
     match data {
-        SignatureData::RsaSignature(signature) => Ok(signature),
-        SignatureData::EcdsaSignature { mut r, mut s } => {
+        Signature::RsaSsa(rsa_signature) | Signature::RsaPss(rsa_signature) => {
+            Ok(rsa_signature.signature().value().to_vec())
+        }
+        Signature::EcDsa(ecc_signature) => {
             // ECDSA signature data is represented the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
             let p_byte_size = key_attributes.bits / 8; // should not fail for valid keys
-            if r.len() != p_byte_size || s.len() != p_byte_size {
+            if ecc_signature.signature_r().value().len() != p_byte_size
+                || ecc_signature.signature_s().value().len() != p_byte_size
+            {
                 if crate::utils::GlobalConfig::log_error_details() {
                     error!(
                         "Received ECC signature with invalid size: r - {} bytes; s - {} bytes",
-                        r.len(),
-                        s.len()
+                        ecc_signature.signature_r().value().len(),
+                        ecc_signature.signature_s().value().len()
                     );
                 } else {
                     error!("Received ECC signature with invalid size.");
@@ -240,9 +299,13 @@ pub fn signature_data_to_bytes(data: SignatureData, key_attributes: Attributes) 
             }
 
             let mut signature = vec![];
-            signature.append(&mut r);
-            signature.append(&mut s);
+            signature.append(&mut ecc_signature.signature_r().value().to_vec());
+            signature.append(&mut ecc_signature.signature_s().value().to_vec());
             Ok(signature)
+        }
+        _ => {
+            error!("Unsupported signature type received from TPM");
+            Err(ResponseStatus::PsaErrorGenericError)
         }
     }
 }
@@ -252,9 +315,55 @@ pub fn parsec_to_tpm_signature(
     key_attributes: Attributes,
     signature_alg: AsymmetricSignature,
 ) -> Result<Signature> {
-    Ok(Signature {
-        scheme: convert_asym_scheme_to_tpm(Algorithm::AsymmetricSignature(signature_alg))?,
-        signature: bytes_to_signature_data(data, key_attributes)?,
+    // Ok(Signature {
+    //     scheme: convert_asym_scheme_to_tpm(Algorithm::AsymmetricSignature(signature_alg))?,
+    //     signature: bytes_to_signature_data(data, key_attributes)?,
+    // })
+    Ok(match signature_alg {
+        AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: SignHash::Specific(hash),
+        } => Signature::RsaSsa(
+            RsaSignature::create(
+                convert_hash_to_tpm(hash)?,
+                data.to_vec().try_into().map_err(to_response_status)?,
+            )
+            .map_err(to_response_status)?,
+        ),
+        AsymmetricSignature::RsaPss {
+            hash_alg: SignHash::Specific(hash),
+        } => Signature::RsaPss(
+            RsaSignature::create(
+                convert_hash_to_tpm(hash)?,
+                data.to_vec().try_into().map_err(to_response_status)?,
+            )
+            .map_err(to_response_status)?,
+        ),
+        AsymmetricSignature::Ecdsa {
+            hash_alg: SignHash::Specific(hash),
+        } => {
+            // ECDSA signature data is represented the concatenation of the two result values, r and s,
+            // in big endian format, as described here:
+            // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
+            let p_size = key_attributes.bits / 8;
+            if data.len() != p_size * 2 {
+                return Err(ResponseStatus::PsaErrorInvalidArgument);
+            }
+
+            let mut r = data.to_vec();
+            let s = r.split_off(p_size);
+            Signature::EcDsa(
+                EccSignature::create(
+                    convert_hash_to_tpm(hash)?,
+                    r.try_into().map_err(to_response_status)?,
+                    s.try_into().map_err(to_response_status)?,
+                )
+                .map_err(to_response_status)?,
+            )
+        }
+        _ => {
+            error!("Signature type not supported: {:?}", signature_alg);
+            return Err(ResponseStatus::PsaErrorNotSupported);
+        }
     })
 }
 
@@ -291,85 +400,19 @@ pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -
         return Err(ResponseStatus::PsaErrorInvalidArgument);
     }
 
-    let valid_key_sizes_vec = RSA_KEY_SIZES.to_vec();
-    if !valid_key_sizes_vec.contains(&((len * 8) as u16)) {
+    if RsaKeyBits::try_from((len * 8) as u16).is_err() {
         if crate::utils::GlobalConfig::log_error_details() {
             error!(
-                "The TPM provider only supports RSA public keys of size {:?} bits ({} bits given).",
-                valid_key_sizes_vec,
+                "The TPM provider only supports RSA public keys of size 1024, 2048, 3072 and 4096 bits ({} bits given).",
                 len * 8,
             );
         } else {
             error!(
-                "The TPM provider only supports RSA public keys of size {:?} bits",
-                valid_key_sizes_vec,
+                "The TPM provider only supports RSA public keys of size 1024, 2048, 3072 and 4096 bits"
             );
         }
         return Err(ResponseStatus::PsaErrorNotSupported);
     }
 
     Ok(())
-}
-
-/// Validates an RSAPrivateKey against the attributes we expect. Returns ok on success, otherwise
-/// returns an error.
-pub fn validate_private_key(private_key: &RSAPrivateKey, attributes: &Attributes) -> Result<()> {
-    // NOTE: potentially incomplete, but any errors that aren't caught here should be caught
-    //       further down the stack (i.e. in the tss crate).
-
-    // The public exponent must be exactly 0x10001 -- that is the only value supported by the TPM
-    // provider. Reject everything else.
-    let given_public_exponent = private_key.public_exponent.as_unsigned_bytes_be();
-    if given_public_exponent != PUBLIC_EXPONENT_BYTES {
-        if crate::utils::GlobalConfig::log_error_details() {
-            error!(
-                "Unexpected public exponent in private key (expected: {:?}, got: {:?}).",
-                PUBLIC_EXPONENT_BYTES, given_public_exponent
-            );
-        } else {
-            error!("Unexpected public exponent in private key.");
-        }
-        return Err(ResponseStatus::PsaErrorInvalidArgument);
-    }
-
-    // The key prime's length in bits should be exactly half of the size of the size of the key's
-    // public modulus.
-    let key_prime = private_key.prime_1.as_unsigned_bytes_be();
-    let key_prime_len_bits = key_prime.len() * 8;
-    if key_prime_len_bits != attributes.bits / 2 {
-        if crate::utils::GlobalConfig::log_error_details() {
-            error!(
-                "The key prime is not of the expected size (expected {}, got {}).",
-                attributes.bits / 2,
-                key_prime_len_bits,
-            );
-        } else {
-            error!("The key prime is not of the expected size.",);
-        }
-        return Err(ResponseStatus::PsaErrorInvalidArgument);
-    }
-    Ok(())
-}
-
-fn bytes_to_signature_data(
-    data: Zeroizing<Vec<u8>>,
-    key_attributes: Attributes,
-) -> Result<SignatureData> {
-    match key_attributes.key_type {
-        Type::RsaKeyPair | Type::RsaPublicKey => Ok(SignatureData::RsaSignature(data.to_vec())),
-        Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => {
-            // ECDSA signature data is represented the concatenation of the two result values, r and s,
-            // in big endian format, as described here:
-            // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
-            let p_size = key_attributes.bits / 8;
-            if data.len() != p_size * 2 {
-                return Err(ResponseStatus::PsaErrorInvalidArgument);
-            }
-
-            let mut r = data.to_vec();
-            let s = r.split_off(p_size);
-            Ok(SignatureData::EcdsaSignature { r, s })
-        }
-        _ => Err(ResponseStatus::PsaErrorNotSupported),
-    }
 }

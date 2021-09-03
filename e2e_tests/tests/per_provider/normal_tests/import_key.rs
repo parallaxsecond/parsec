@@ -365,43 +365,43 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "tpm-provider")]
-#[test]
-fn import_key_pair() {
-    let mut client = TestClient::new();
-    let key_name = String::from("failed_imported_key_should_be_removed");
+// #[cfg(feature = "tpm-provider")]
+// #[test]
+// fn import_key_pair() {
+//     let mut client = TestClient::new();
+//     let key_name = String::from("failed_imported_key_should_be_removed");
 
-    client
-        .import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags: UsageFlags {
-                        export: false,
-                        copy: false,
-                        cache: false,
-                        encrypt: false,
-                        decrypt: false,
-                        sign_message: true,
-                        sign_hash: true,
-                        verify_message: true,
-                        verify_hash: true,
-                        derive: false,
-                    },
-                    permitted_algorithms: Algorithm::AsymmetricSignature(
-                        AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256.into(),
-                        },
-                    ),
-                },
-            },
-            KEY_PAIR_DATA.to_vec(),
-        )
-        .unwrap();
-}
+//     client
+//         .import_key(
+//             key_name,
+//             Attributes {
+//                 lifetime: Lifetime::Persistent,
+//                 key_type: Type::RsaKeyPair,
+//                 bits: 1024,
+//                 policy: Policy {
+//                     usage_flags: UsageFlags {
+//                         export: false,
+//                         copy: false,
+//                         cache: false,
+//                         encrypt: false,
+//                         decrypt: false,
+//                         sign_message: true,
+//                         sign_hash: true,
+//                         verify_message: true,
+//                         verify_hash: true,
+//                         derive: false,
+//                     },
+//                     permitted_algorithms: Algorithm::AsymmetricSignature(
+//                         AsymmetricSignature::RsaPkcs1v15Sign {
+//                             hash_alg: Hash::Sha256.into(),
+//                         },
+//                     ),
+//                 },
+//             },
+//             KEY_PAIR_DATA.to_vec(),
+//         )
+//         .unwrap();
+// }
 
 #[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
