@@ -7,7 +7,7 @@ use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::ProviderIdentity;
 use anyhow::Result;
-use log::info;
+use log::{error, info};
 use num_traits::FromPrimitive;
 use parsec_interface::requests::AuthType;
 use rusqlite::types::Type::{Blob, Integer};
@@ -35,11 +35,6 @@ pub struct SQLiteKeyInfoManager {
     /// The file path where the SQLite database exists. This database holds
     /// key identity to key info mappings.
     database_path: PathBuf,
-}
-
-struct KeyInfoRecord {
-    key_identity: KeyIdentity,
-    key_info: KeyInfo,
 }
 
 /// TODO: Implement this until the interface TryFrom u8 to AuthType is implemented.
@@ -70,28 +65,158 @@ impl SQLiteKeyInfoManager {
         let conn = Connection::open(&database_path)?;
         let mut key_store = HashMap::new();
 
-        // TODO: Implement kim_metadata table creation here using CURRENT_SCHEMA_VERSION value if
-        // key_mapping & kim_metadata tables do not exist.
-
-        // Create table key_mapping table if it does not already exist
-        let _ = conn.execute(
+        // Check if the tables we require exist
+        let mut check_for_tables_stmt = conn.prepare(
             "
-            CREATE TABLE IF NOT EXISTS key_mapping (
-                authenticator_id      INTEGER NOT NULL,
-                application_name      TEXT NOT NULL,
-                key_name              TEXT NOT NULL,
-                provider_uuid         TEXT NOT NULL,
-                provider_name         TEXT NOT NULL,
-                key_info              BLOB NOT NULL,
-                key_info_version      INTEGER NOT NULL,
-                PRIMARY KEY (authenticator_id, application_name, key_name)
-            )
-            ",
-            [],
+            SELECT
+                *
+            FROM
+                sqlite_master
+            WHERE
+                type='table'
+                AND (
+                    name='key_mapping'
+                    OR name='kim_metadata'
+                )
+        ",
         )?;
+        let key_iter = check_for_tables_stmt.query_map([], |_row| Ok(()))?;
+        let num_of_tables = key_iter.count();
+        match num_of_tables {
+            // Create tables as they do not exist.
+            0 => {
+                let _ = conn.execute(
+                    "
+                    CREATE TABLE kim_metadata (
+                        id                    TEXT NOT NULL,
+                        int_value             INTEGER NOT NULL,
+                        PRIMARY KEY (id)
+                    )
+                    ",
+                    [],
+                )?;
+                let _ = conn.execute(
+                    "
+                    INSERT INTO
+                        kim_metadata
+                        (id, int_value)
+                    VALUES
+                        ('schema_version', ?1)
+                    ",
+                    params![CURRENT_SCHEMA_VERSION],
+                )?;
+                let _ = conn.execute(
+                    "
+                    CREATE TABLE IF NOT EXISTS key_mapping (
+                        authenticator_id      INTEGER NOT NULL,
+                        application_name      TEXT NOT NULL,
+                        key_name              TEXT NOT NULL,
+                        provider_uuid         TEXT NOT NULL,
+                        provider_name         TEXT NOT NULL,
+                        key_info              BLOB NOT NULL,
+                        key_info_version      INTEGER NOT NULL,
+                        PRIMARY KEY (authenticator_id, application_name, key_name)
+                    )
+                    ",
+                    [],
+                )?;
+            }
+            // The correct number of tables are present, no-op
+            2 => {}
+            // The KIM expects both the kim_metadata and key_mapping table to be present, throw an error
+            _ => {
+                let error_message = format!(
+                    "SQLiteKeyInfoManager database schema is not in a recognised format.
+                    There is an unrecognised number of tables in the database.
+                    Database found at {}",
+                    database_path
+                        .into_os_string()
+                        .into_string()
+                        .unwrap_or_else(|_| "DB_FILE_PATH_UNKNOWN".to_string()),
+                );
+                error!("{}", error_message);
+                return Err(Error::new(ErrorKind::Other, error_message).into());
+            }
+        }
 
-        let mut stmt = conn.prepare("SELECT * FROM key_mapping")?;
-        let key_iter = stmt.query_map([], |row| {
+        // The tables we require exist, check schema version matches
+        let mut schema_version_stmt = conn.prepare(
+            "
+            SELECT
+                *
+            FROM
+                kim_metadata
+            WHERE
+                id = 'schema_version'
+        ",
+        )?;
+        let mut rows = schema_version_stmt.query(params![])?;
+        while let Some(row) = rows.next()? {
+            let version_number: u8 = row.get("int_value")?;
+            if version_number != CURRENT_SCHEMA_VERSION {
+                let error_message = format!(
+                    "
+                    SQLiteKeyInfoManager database schema version is incompatible.
+                    Parsec Service is using version [{}].
+                    Database at [{}] is using version [{}].
+                    ",
+                    CURRENT_SCHEMA_VERSION,
+                    database_path
+                        .into_os_string()
+                        .into_string()
+                        .unwrap_or_else(|_| "DB_FILE_PATH_UNKNOWN".to_string()),
+                    version_number
+                );
+                error!("{}", error_message);
+                return Err(Error::new(ErrorKind::Other, error_message).into());
+            }
+        }
+
+        // The tables we require exist and the schema version is the correct.
+        // Check that the key_info_version for every key is correct.
+        let mut key_info_version_stmt = conn.prepare(
+            "
+            SELECT
+                *
+            FROM
+                key_mapping
+            WHERE
+                key_info_version != ?1
+            ",
+        )?;
+        let mut rows = key_info_version_stmt.query(params![CURRENT_KEY_INFO_VERSION])?;
+        // If a mapping exists with the wrong key_info_version, throw an error.
+        if let Some(row) = rows.next()? {
+            let version_number: u8 = row.get("key_info_version")?;
+            let error_message = format!(
+                "
+                Some records within the SQLiteKeyInfoManager are using an incompatible key_info_version.
+                Parsec Service SQLiteKeyInfoManager is using version [{}].
+                Database at [{}] contains mapping(s) using version [{}].
+                ",
+                CURRENT_KEY_INFO_VERSION,
+                database_path
+                    .into_os_string()
+                    .into_string()
+                    .unwrap_or_else(|_| "DB_FILE_PATH".to_string()),
+                version_number
+            );
+            error!("{}", error_message);
+            return Err(Error::new(ErrorKind::Other, error_message).into());
+        }
+
+        // All checks have passed, load key mappings
+        let mut key_mapping_stmt = conn.prepare(
+            "
+            SELECT
+                *
+            FROM
+                key_mapping
+            ",
+        )?;
+        // Deserialize key mappings and store within local key_store HashMap.
+        let mut rows = key_mapping_stmt.query(params![])?;
+        while let Some(row) = rows.next()? {
             let key_identity = KeyIdentity::new(
                 ApplicationIdentity::new(
                     row.get("application_name")?,
@@ -112,16 +237,7 @@ impl SQLiteKeyInfoManager {
                 RusqliteError::FromSqlConversionFailure(key_info_blob.len(), Blob, e)
             })?;
 
-            Ok(KeyInfoRecord {
-                key_identity,
-                key_info,
-            })
-        })?;
-
-        // Add keys to key_store cache
-        for key_info_record in key_iter {
-            let key_info_record = key_info_record?;
-            let _ = key_store.insert(key_info_record.key_identity, key_info_record.key_info);
+            let _ = key_store.insert(key_identity, key_info);
         }
 
         if !crate::utils::GlobalConfig::log_error_details() {
