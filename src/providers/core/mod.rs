@@ -169,7 +169,6 @@ impl Provide for Provider {
                 let key_name = key.name;
                 let _ = provider
                     .psa_destroy_key(
-                        // TODO: Check auth type. Will need passing down when SQLite KIM is implemented.
                         &ApplicationIdentity::new(
                             client.clone(),
                             *application_identity.authenticator_id(),
