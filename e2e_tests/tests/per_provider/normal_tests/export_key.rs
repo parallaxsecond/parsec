@@ -44,24 +44,15 @@ fn export_key() -> Result<()> {
         return Ok(());
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export();
     let key_name = String::from("export_key");
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -129,6 +120,8 @@ fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
     }
 
     let key_name = String::from("import_and_export_ecc_public_key_by_export_key_fn");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export().set_verify_message().set_verify_hash();
     client.import_key(
         key_name.clone(),
         Attributes {
@@ -138,18 +131,7 @@ fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
             },
             bits: 256,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    sign_hash: false,
-                    verify_hash: true,
-                    sign_message: false,
-                    verify_message: true,
-                    export: true,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
-                },
+                usage_flags,
                 permitted_algorithms: AsymmetricSignature::Ecdsa {
                     hash_alg: Hash::Sha256.into(),
                 }
@@ -174,23 +156,14 @@ fn check_rsa_export_format() -> Result<()> {
     }
 
     let key_name = String::from("check_public_rsa_export_format");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -218,24 +191,15 @@ fn check_export_rsa_possible() -> Result<()> {
     }
 
     let key_name = String::from("check_export_rsa_possible");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -261,24 +225,14 @@ fn check_export_rsa_not_possible() {
     }
 
     let key_name = String::from("check_export_rsa_not_possible");
+    let usage_flags: UsageFlags = Default::default();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -305,6 +259,7 @@ fn check_export_ecc_not_possible() {
     }
 
     let key_name = String::from("check_export_ecc_not_possible");
+    let usage_flags: UsageFlags = Default::default();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -313,18 +268,7 @@ fn check_export_ecc_not_possible() {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -349,6 +293,8 @@ fn export_ecc_private_key() {
     }
 
     let key_name = String::from("export_ecc_private_key");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -356,18 +302,7 @@ fn export_ecc_private_key() {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -391,6 +326,8 @@ fn export_ecc_private_key_not_possible() {
     }
 
     let key_name = String::from("export_ecc_private_key_not_possible");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_export();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -398,18 +335,7 @@ fn export_ecc_private_key_not_possible() {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: true,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -434,6 +360,8 @@ fn export_rsa_private_key_matches_import() {
     }
 
     let key_name = String::from("export_rsa_private_key_matches_import");
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_encrypt().set_decrypt().set_export();
 
     let decoded_key = base64::decode(PRIVATE_KEY).unwrap();
     client
@@ -444,18 +372,7 @@ fn export_rsa_private_key_matches_import() {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: true,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
                 },
             },

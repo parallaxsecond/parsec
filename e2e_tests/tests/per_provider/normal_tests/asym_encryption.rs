@@ -371,23 +371,14 @@ fn asym_encrypt_not_permitted() {
         return;
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_decrypt();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: true,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
         },
     };
@@ -409,23 +400,14 @@ fn asym_decrypt_not_permitted() {
         return;
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_encrypt();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: true,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
         },
     };
