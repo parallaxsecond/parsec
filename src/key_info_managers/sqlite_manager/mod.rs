@@ -6,6 +6,7 @@
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::ProviderIdentity;
+use crate::utils::config::KeyInfoManagerType;
 use anyhow::Result;
 use log::{error, info};
 use num_traits::FromPrimitive;
@@ -37,7 +38,7 @@ pub struct SQLiteKeyInfoManager {
     database_path: PathBuf,
 }
 
-/// TODO: Implement this until the interface TryFrom u8 to AuthType is implemented.
+/// Converts a 64 bit integer to an AuthType
 fn i64_to_auth_type(auth_type: i64) -> Result<AuthType, String> {
     match FromPrimitive::from_i64(auth_type) {
         Some(auth_type) => Ok(auth_type),
@@ -231,7 +232,6 @@ impl SQLiteKeyInfoManager {
             );
             let key_info_blob: Vec<u8> = row.get("key_info")?;
 
-            // TODO: Change this to (protobuf?) version once format has been decided.
             let key_info = bincode::deserialize(&key_info_blob[..]).map_err(|e| {
                 format_error!("Error deserializing key info", e);
                 RusqliteError::FromSqlConversionFailure(key_info_blob.len(), Blob, e)
@@ -262,7 +262,6 @@ impl SQLiteKeyInfoManager {
     ) -> rusqlite::Result<(), RusqliteError> {
         let conn = Connection::open(&self.database_path)?;
 
-        // TODO: Change this to (protobuf?) version once format has been decided.
         let key_info_blob = bincode::serialize(&key_info).map_err(|e| {
             format_error!("Error serializing key info", e);
             RusqliteError::ToSqlConversionFailure(e)
@@ -316,6 +315,10 @@ impl SQLiteKeyInfoManager {
 }
 
 impl ManageKeyInfo for SQLiteKeyInfoManager {
+    fn key_info_manager_type(&self) -> KeyInfoManagerType {
+        KeyInfoManagerType::SQLite
+    }
+
     fn get(&self, key_identity: &KeyIdentity) -> Result<Option<&KeyInfo>, String> {
         if let Some(key_info) = self.key_store.get(key_identity) {
             Ok(Some(key_info))

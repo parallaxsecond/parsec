@@ -130,6 +130,9 @@ pub fn to_response_status(error_string: String) -> ResponseStatus {
 ///
 /// Interface to be implemented for persistent storage of key name -> key info mappings.
 trait ManageKeyInfo {
+    /// Returns the key info manager type.
+    fn key_info_manager_type(&self) -> KeyInfoManagerType;
+
     /// Returns a reference to the key info corresponding to this KeyIdentity or `None` if it does not
     /// exist.
     ///
@@ -354,7 +357,6 @@ impl KeyInfoManagerClient {
 
         let mut clients = Vec::new();
         for key_identity in key_identities {
-            // TODO: Check this comparison
             if !clients.contains(&key_identity.application) {
                 let _ = clients.push(key_identity.application.clone());
             }
@@ -386,9 +388,20 @@ impl KeyInfoManagerClient {
             .map_err(to_response_status)?;
 
         for key_identity in key_identities {
-            // TODO: Change this to also match on authenticator_id for SQLiteKeyInfoManager.
-            if key_identity.application.name() != application_identity.name() {
-                continue;
+            // If the OnDisk KIM is being used, only check if the app name is the same.
+            // Otherwise, check if the entire ApplicationIdentity matches.
+            // If it does not match, skip to the next key.
+            match key_info_manager_impl.key_info_manager_type() {
+                KeyInfoManagerType::OnDisk => {
+                    if key_identity.application().name() != application_identity.name() {
+                        continue;
+                    }
+                }
+                _ => {
+                    if key_identity.application() != application_identity {
+                        continue;
+                    }
+                }
             }
 
             let key_info = key_info_manager_impl
@@ -399,11 +412,12 @@ impl KeyInfoManagerClient {
                 _ => continue,
             };
 
-            // TODO: Fix this translation when SQLiteKeyInfoManager is added.
             #[allow(deprecated)]
             let key_triple =
                 KeyTriple::try_from(key_identity.clone()).map_err(to_response_status)?;
 
+            // The KeyInfo structure we return here may need changing in the future to
+            // accomodate for different authenticators, provider names etc.
             #[allow(deprecated)]
             keys.push(KeyInfo {
                 provider_id: *key_triple.provider_id(),
