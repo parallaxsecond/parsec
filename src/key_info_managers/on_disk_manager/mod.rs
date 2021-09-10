@@ -13,6 +13,7 @@
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use crate::authenticators::{Application, ApplicationIdentity};
+use crate::utils::config::KeyInfoManagerType;
 
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo, ProviderIdentity};
 use crate::providers::core::Provider as CoreProvider;
@@ -203,8 +204,8 @@ impl TryFrom<(KeyTriple, ProviderIdentity, AuthType)> for KeyIdentity {
         }?;
 
         Ok(KeyIdentity {
-            provider: ProviderIdentity::new(provider_uuid, provider_identity.name().clone()), // TODO: Figure out a better default null name
-            application: ApplicationIdentity::new(key_triple.app_name().to_string(), auth_type), // TODO: Figure out a better default null authenticator_id
+            provider: ProviderIdentity::new(provider_uuid, provider_identity.name().clone()),
+            application: ApplicationIdentity::new(key_triple.app_name().to_string(), auth_type),
             key_name: key_triple.key_name.to_string(),
         })
     }
@@ -493,6 +494,10 @@ impl OnDiskKeyInfoManager {
 
 #[allow(deprecated)]
 impl ManageKeyInfo for OnDiskKeyInfoManager {
+    fn key_info_manager_type(&self) -> KeyInfoManagerType {
+        KeyInfoManagerType::OnDisk
+    }
+
     fn get(&self, key_identity: &KeyIdentity) -> Result<Option<&KeyInfo>, String> {
         let key_triple = KeyTriple::try_from(key_identity.clone())?;
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
