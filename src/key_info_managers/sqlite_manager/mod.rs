@@ -10,6 +10,7 @@ use crate::utils::config::KeyInfoManagerType;
 use anyhow::Result;
 use log::{error, info};
 use num_traits::FromPrimitive;
+use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::AuthType;
 use rusqlite::types::Type::{Blob, Integer};
 use rusqlite::{params, Connection, Error as RusqliteError};
@@ -22,8 +23,12 @@ use std::path::PathBuf;
 pub const DEFAULT_DB_PATH: &str =
     "/var/lib/parsec/kim-mappings/sqlite/sqlite-key-info-manager.sqlite3";
 
-/// The current serialization version of the KeyInfo object.
-pub const CURRENT_KEY_INFO_VERSION: u8 = 1;
+/// The current serialization version of the Attributes object.
+pub const CURRENT_KEY_ATTRIBUTES_VERSION: u8 = 1;
+
+/// Placeholder global key_id_version until a new key id version for
+/// one of the providers is needed.
+pub const CURRENT_KEY_ID_VERSION: u8 = 1;
 
 /// The current database schema version of the SQLiteKeyInfoManager.
 pub const CURRENT_SCHEMA_VERSION: u8 = 1;
@@ -109,13 +114,15 @@ impl SQLiteKeyInfoManager {
                 let _ = conn.execute(
                     "
                     CREATE TABLE IF NOT EXISTS key_mapping (
-                        authenticator_id      INTEGER NOT NULL,
-                        application_name      TEXT NOT NULL,
-                        key_name              TEXT NOT NULL,
-                        provider_uuid         TEXT NOT NULL,
-                        provider_name         TEXT NOT NULL,
-                        key_info              BLOB NOT NULL,
-                        key_info_version      INTEGER NOT NULL,
+                        authenticator_id            INTEGER NOT NULL,
+                        application_name            TEXT NOT NULL,
+                        key_name                    TEXT NOT NULL,
+                        provider_uuid               TEXT NOT NULL,
+                        provider_name               TEXT NOT NULL,
+                        key_id                      BLOB NOT NULL,
+                        key_id_version              INTEGER NOT NULL,
+                        key_attributes              BLOB NOT NULL,
+                        key_attributes_version      INTEGER NOT NULL,
                         PRIMARY KEY (authenticator_id, application_name, key_name)
                     )
                     ",
@@ -182,25 +189,32 @@ impl SQLiteKeyInfoManager {
             FROM
                 key_mapping
             WHERE
-                key_info_version != ?1
+                key_id_version != ?1
+                OR key_attributes_version != ?2
             ",
         )?;
-        let mut rows = key_info_version_stmt.query(params![CURRENT_KEY_INFO_VERSION])?;
-        // If a mapping exists with the wrong key_info_version, throw an error.
+        let mut rows = key_info_version_stmt.query(params![
+            CURRENT_KEY_ID_VERSION,
+            CURRENT_KEY_ATTRIBUTES_VERSION
+        ])?;
+        // If a mapping exists with the wrong key_id_version or key_attributes_version, throw an error.
         if let Some(row) = rows.next()? {
-            let version_number: u8 = row.get("key_info_version")?;
+            let key_id_version: u8 = row.get("key_id_version")?;
+            let key_attributes_version: u8 = row.get("key_attributes_version")?;
             let error_message = format!(
                 "
-                Some records within the SQLiteKeyInfoManager are using an incompatible key_info_version.
-                Parsec Service SQLiteKeyInfoManager is using version [{}].
-                Database at [{}] contains mapping(s) using version [{}].
+                Some records within the SQLiteKeyInfoManager are using an incompatible key_id_version or key_attributes_version.
+                Parsec Service SQLiteKeyInfoManager is using [key_id_version={}, key_attributes_version={}].
+                Database at [{}] contains mapping(s) using [key_id_version={}, key_attributes_version={}].
                 ",
-                CURRENT_KEY_INFO_VERSION,
+                CURRENT_KEY_ID_VERSION,
+                CURRENT_KEY_ATTRIBUTES_VERSION,
                 database_path
                     .into_os_string()
                     .into_string()
                     .unwrap_or_else(|_| "DB_FILE_PATH".to_string()),
-                version_number
+                key_id_version,
+                key_attributes_version,
             );
             error!("{}", error_message);
             return Err(Error::new(ErrorKind::Other, error_message).into());
@@ -230,12 +244,19 @@ impl SQLiteKeyInfoManager {
                 ProviderIdentity::new(row.get("provider_uuid")?, row.get("provider_name")?),
                 row.get("key_name")?,
             );
-            let key_info_blob: Vec<u8> = row.get("key_info")?;
 
-            let key_info = bincode::deserialize(&key_info_blob[..]).map_err(|e| {
-                format_error!("Error deserializing key info", e);
-                RusqliteError::FromSqlConversionFailure(key_info_blob.len(), Blob, e)
-            })?;
+            let key_id: Vec<u8> = row.get("key_id")?;
+            let key_attributes_blob: Vec<u8> = row.get("key_attributes")?;
+            let key_attributes: Attributes = bincode::deserialize(&key_attributes_blob[..])
+                .map_err(|e| {
+                    format_error!("Error deserializing key attributes", e);
+                    RusqliteError::FromSqlConversionFailure(key_attributes_blob.len(), Blob, e)
+                })?;
+
+            let key_info = KeyInfo {
+                id: key_id,
+                attributes: key_attributes,
+            };
 
             let _ = key_store.insert(key_identity, key_info);
         }
@@ -262,7 +283,12 @@ impl SQLiteKeyInfoManager {
     ) -> rusqlite::Result<(), RusqliteError> {
         let conn = Connection::open(&self.database_path)?;
 
-        let key_info_blob = bincode::serialize(&key_info).map_err(|e| {
+        // The key_info.id should already be serialized using bincode at this stage by the
+        // KIM client insert_key_info() function.
+        let key_id_blob = key_info.id.clone();
+        // TODO: Change this to (protobuf?) version once format has been decided.
+        // https://github.com/parallaxsecond/parsec/issues/424#issuecomment-883608164
+        let key_attributes_blob = bincode::serialize(&key_info.attributes).map_err(|e| {
             format_error!("Error serializing key info", e);
             RusqliteError::ToSqlConversionFailure(e)
         })?;
@@ -273,9 +299,9 @@ impl SQLiteKeyInfoManager {
             "
             REPLACE INTO
                 `key_mapping`
-                (`authenticator_id`, `application_name`, `provider_uuid`, `provider_name`, `key_name`, `key_info`, `key_info_version`)
+                (`authenticator_id`, `application_name`, `provider_uuid`, `provider_name`, `key_name`, `key_id`, `key_id_version`, `key_attributes`, `key_attributes_version`)
             VALUES
-                (?1, ?2, ?3, ?4, ?5, ?6, ?7);
+                (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9);
             ",
             params![
                 *key_identity.application().authenticator_id() as u8,
@@ -283,8 +309,12 @@ impl SQLiteKeyInfoManager {
                 key_identity.provider().uuid(),
                 key_identity.provider().name(),
                 key_identity.key_name(),
-                key_info_blob,
-                CURRENT_KEY_INFO_VERSION,
+                key_id_blob,
+                // Key ID versioning will eventually need passing down from individual providers
+                // if the serialization structure of one of them changes.
+                CURRENT_KEY_ID_VERSION,
+                key_attributes_blob,
+                CURRENT_KEY_ATTRIBUTES_VERSION,
             ],
         )?;
         Ok(())
