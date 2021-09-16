@@ -370,7 +370,7 @@ unsafe fn get_provider(
         }
         #[cfg(feature = "trusted-service-provider")]
         ProviderConfig::TrustedService { .. } => {
-            info!("Creating a TPM Provider.");
+            info!("Creating a Trusted Service Provider.");
             Ok(Some(Arc::new(
                 TrustedServiceProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(ProviderId::TrustedService))

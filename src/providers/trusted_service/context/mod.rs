@@ -74,15 +74,10 @@ impl Context {
 
         info!("Obtaining a crypto Trusted Service context.");
         let mut status = 0;
-        let service_context = unsafe {
-            service_locator_query(
-                CString::new("sn:trustedfirmware.org:crypto:0")
-                    .unwrap()
-                    .into_raw(),
-                &mut status,
-            )
-        };
+        let service_name = CString::new("sn:trustedfirmware.org:crypto:0").unwrap();
+        let service_context = unsafe { service_locator_query(service_name.as_ptr(), &mut status) };
         if service_context.is_null() {
+            error!("Locating crypto Trusted Service failed, status: {}", status);
             return Err(io::Error::new(
                 io::ErrorKind::Other,
                 "Failed to obtain a Trusted Service context",
