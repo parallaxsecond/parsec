@@ -3,3 +3,5 @@
 mod key_mappings;
 mod normal_tests;
 mod stress_test;
+#[cfg(feature = "tpm-provider")]
+mod tpm_reset;

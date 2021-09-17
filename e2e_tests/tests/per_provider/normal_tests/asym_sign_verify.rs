@@ -90,7 +90,7 @@ fn asym_verify_fail_ecc_sha256() -> Result<()> {
 #[test]
 fn only_verify_from_internet() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("only_verify");
+    let key_name = String::from("only_verify_from_internet");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
