@@ -42,6 +42,7 @@ where PROVIDER_NAME can be one of:
     - cryptoauthlib
     - all
     - coverage
+    - sqlite-kim
 "
 }
 
@@ -118,18 +119,20 @@ while [ "$#" -gt 0 ]; do
         --no-stress-test )
             NO_STRESS_TEST="True"
         ;;
-        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all | cargo-check)
+        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all | cargo-check | sqlite-kim)
             if [ -n "$PROVIDER_NAME" ]; then
                 error_msg "Only one provider name must be given"
             fi
             PROVIDER_NAME=$1
 
             # If running anything but cargo-check, copy config
-            if [ "$PROVIDER_NAME" != "cargo-check" ]; then
+            if [ "$PROVIDER_NAME" != "cargo-check" ] && [ "$PROVIDER_NAME" != "sqlite-kim" ]; then
                 cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
+            elif [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+                cp $(pwd)/e2e_tests/provider_cfg/all/sqlite-kim-all-providers.toml $CONFIG_PATH
             fi
 
-            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ]; then
+            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
                 FEATURES="--features=all-providers,all-authenticators"
                 TEST_FEATURES="--features=all-providers"
             else
@@ -154,7 +157,7 @@ fi
 
 trap cleanup EXIT
 
-if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
 	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
     cp /tmp/NVChip .
     # Start and configure TPM server
@@ -176,7 +179,7 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
     pushd e2e_tests
     # This command suppose that the slot created by the container will be the first one that appears
     # when printing all the available slots.
@@ -231,7 +234,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     exit 0
 fi
 
-if [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
     # Start SPIRE server and agent
     pushd /tmp/spire-0.11.1
     ./bin/spire-server run -config conf/server/server.conf &
@@ -247,6 +250,22 @@ if [ "$PROVIDER_NAME" = "all" ]; then
 		    -spiffeID spiffe://example.org/parsec-client-2 -selector unix:uid:$(id -u parsec-client-2)
     sleep 5
     popd
+fi
+
+# Test the SQLite KIM
+if [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+    echo "Start Parsec for end-to-end tests with sqlite-kim"
+    RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
+    # Sleep time needed to make sure Parsec is ready before launching the tests.
+    wait_for_service
+
+    echo "Execute all-providers sqlite-kim normal tests"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::normal
+
+    echo "Shutdown Parsec"
+    stop_service
+
+    exit 0
 fi
 
 echo "Build test"

@@ -12,7 +12,9 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh all
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec
+          ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh all
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh all
 
@@ -25,7 +27,8 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cargo-check
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cargo-check
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cargo-check
 
@@ -38,7 +41,8 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
 
@@ -52,7 +56,8 @@ jobs:
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         # Not running stress tests because they fail, presumably because of the same issue as #264
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
 
@@ -65,7 +70,8 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh tpm
 
@@ -78,7 +84,8 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
         # When running the container built on the CI
         # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh trusted-service
 
@@ -92,7 +99,8 @@ jobs:
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
       - name: Run the container to execute the test script
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
 
@@ -110,6 +118,20 @@ jobs:
       # When running the container built on the CI
       # run: CONTAINER_TAG=parsec-service-test-all ./fuzz.sh test
 
+  sqlite-kim:
+    name: SQLiteKIM E2E tests on all providers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      - name: Run the container to execute the test script
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh sqlite-kim
+      # When running the container built on the CI
+      # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh sqlite-kim
+
   cross-compilation:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets
@@ -120,7 +142,8 @@ jobs:
       # - name: Build the container
       #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        run:
+          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
         # When running the container built on the CI
         # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
