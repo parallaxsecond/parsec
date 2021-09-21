@@ -96,6 +96,19 @@ jobs:
       # When running the container built on the CI
       # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
 
+  sqlite-kim:
+    name: SQLiteKIM E2E tests on all providers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Use the following step when updating the `parsec-service-test-all` image
+      # - name: Build the container
+      #   run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh sqlite-kim
+      # When running the container built on the CI
+      # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh sqlite-kim
+
   # Disabled due to the issue discussed in https://github.com/parallaxsecond/parsec/issues/514
   # fuzz-test-checker:
   #   name: Check that the fuzz testing framework is still working
