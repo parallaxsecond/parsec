@@ -246,7 +246,7 @@ fn list_and_delete_clients() {
 
         client.set_default_auth(Some(all_providers_user.clone()));
         client
-            .generate_rsa_sign_key("all-providers-user-key".to_string())
+            .generate_rsa_sign_key(format!("{}-all-providers-user-key", provider.id))
             .unwrap();
 
         client.set_default_auth(Some(format!("user_{}", provider.id)));
