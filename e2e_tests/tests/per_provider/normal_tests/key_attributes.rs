@@ -29,23 +29,14 @@ fn wrong_type() {
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: Hash::Sha256.into(),
         });
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_hash();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: permitted_algorithm,
         },
     };
@@ -76,24 +67,14 @@ fn wrong_usage_flags() {
             Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
                 hash_alg: Hash::Sha256.into(),
             });
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_verify_hash();
         let key_attributes = Attributes {
             lifetime: Lifetime::Persistent,
             key_type,
             bits: 1024,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    // Forbid signing
-                    sign_hash: false,
-                    verify_hash: true,
-                    sign_message: false,
-                    verify_message: false,
-                    export: false,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
-                },
+                usage_flags,
                 permitted_algorithms: permitted_algorithm,
             },
         };
@@ -113,24 +94,14 @@ fn wrong_usage_flags() {
         let permitted_algorithm = Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
             hash_alg: Hash::Sha256.into(),
         });
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_verify_hash();
         let key_attributes = Attributes {
             lifetime: Lifetime::Persistent,
             key_type,
             bits: 256,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    // Forbid signing
-                    sign_hash: false,
-                    verify_hash: true,
-                    sign_message: false,
-                    verify_message: false,
-                    export: false,
-                    encrypt: false,
-                    decrypt: false,
-                    cache: false,
-                    copy: false,
-                    derive: false,
-                },
+                usage_flags,
                 permitted_algorithms: permitted_algorithm,
             },
         };
@@ -165,23 +136,14 @@ fn wrong_permitted_algorithm() {
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: Hash::Sha1.into(),
         });
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_hash();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: permitted_algorithm,
         },
     };
@@ -213,23 +175,13 @@ fn no_usage_flag_set() {
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: Hash::Sha256.into(),
         });
+    let usage_flags: UsageFlags = Default::default();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: permitted_algorithm,
         },
     };

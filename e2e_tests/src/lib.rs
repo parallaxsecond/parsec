@@ -12,6 +12,7 @@ pub use parsec_client::error;
 use log::error;
 use parsec_client::auth::Authentication;
 use parsec_client::core::basic_client::BasicClient;
+use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::list_authenticators::AuthenticatorInfo;
 use parsec_client::core::interface::operations::list_keys::KeyInfo;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
@@ -98,7 +99,7 @@ impl TestClient {
     /// Creates a key with specific attributes.
     pub fn generate_key(&mut self, key_name: String, attributes: Attributes) -> Result<()> {
         self.basic_client
-            .psa_generate_key(key_name.clone(), attributes)
+            .psa_generate_key(&key_name.clone(), attributes)
             .map_err(convert_error)?;
 
         let provider = self.provider();
@@ -124,6 +125,12 @@ impl TestClient {
     /// Generate a 1024 bits RSA key pair.
     /// The key can only be used for signing/verifying with the RSA PKCS 1v15 signing algorithm with SHA-256 and exporting its public part.
     pub fn generate_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags
+            .set_sign_hash()
+            .set_verify_hash()
+            .set_sign_message()
+            .set_verify_message();
         self.generate_key(
             key_name,
             Attributes {
@@ -131,18 +138,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
                             hash_alg: Hash::Sha256.into(),
@@ -154,6 +150,12 @@ impl TestClient {
     }
 
     pub fn generate_long_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags
+            .set_sign_hash()
+            .set_verify_hash()
+            .set_sign_message()
+            .set_verify_message();
         self.generate_key(
             key_name,
             Attributes {
@@ -161,18 +163,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 2048,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
                             hash_alg: Hash::Sha256.into(),
@@ -187,6 +178,8 @@ impl TestClient {
         &mut self,
         key_name: String,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.generate_key(
             key_name,
             Attributes {
@@ -194,18 +187,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
                 },
             },
@@ -213,6 +195,8 @@ impl TestClient {
     }
 
     pub fn generate_aes_keys_ccm(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.generate_key(
             key_name,
             Attributes {
@@ -220,18 +204,7 @@ impl TestClient {
                 key_type: Type::Aes,
                 bits: 192,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Aead::AeadWithDefaultLengthTag(
                         AeadWithDefaultLengthTag::Ccm,
                     )
@@ -242,6 +215,8 @@ impl TestClient {
     }
 
     pub fn generate_rsa_encryption_keys_rsaoaep_sha256(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.generate_key(
             key_name,
             Attributes {
@@ -249,18 +224,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaOaep {
                         hash_alg: Hash::Sha256,
                     }
@@ -272,6 +236,8 @@ impl TestClient {
 
     #[allow(deprecated)]
     pub fn generate_rsa_encryption_keys_rsaoaep_sha1(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.generate_key(
             key_name,
             Attributes {
@@ -279,18 +245,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaOaep {
                         hash_alg: Hash::Sha1,
                     }
@@ -304,6 +259,11 @@ impl TestClient {
         &mut self,
         key_name: String,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags
+            .set_sign_hash()
+            .set_verify_hash()
+            .set_sign_message();
         self.generate_key(
             key_name,
             Attributes {
@@ -313,18 +273,7 @@ impl TestClient {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: false,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -335,6 +284,12 @@ impl TestClient {
     }
 
     pub fn generate_ecc_key_pair_secpr1_ecdsa_sha256(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags
+            .set_sign_hash()
+            .set_verify_hash()
+            .set_sign_message()
+            .set_verify_message();
         self.generate_key(
             key_name,
             Attributes {
@@ -344,18 +299,7 @@ impl TestClient {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -368,6 +312,8 @@ impl TestClient {
     /// Generate ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn generate_ecc_pair_secp_r1_key(&mut self, key_name: String) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_derive();
         let attributes = Attributes {
             key_type: Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
@@ -375,10 +321,7 @@ impl TestClient {
             bits: 256,
             lifetime: Lifetime::Volatile,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    derive: true,
-                    ..Default::default()
-                },
+                usage_flags,
                 permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
             },
         };
@@ -393,7 +336,7 @@ impl TestClient {
         data: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_import_key(key_name.clone(), &data, attributes)
+            .psa_import_key(&key_name.clone(), &data, attributes)
             .map_err(convert_error)?;
 
         let provider = self.provider();
@@ -413,6 +356,8 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.import_key(
             key_name,
             Attributes {
@@ -420,18 +365,7 @@ impl TestClient {
                 key_type: Type::RsaKeyPair,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
                 },
             },
@@ -444,6 +378,8 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt().set_verify_message();
         self.import_key(
             key_name,
             Attributes {
@@ -451,18 +387,7 @@ impl TestClient {
                 key_type: Type::RsaPublicKey,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: true,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
                 },
             },
@@ -473,6 +398,8 @@ impl TestClient {
     /// Import a 1024 bit RSA public key.
     /// The key can only be used for verifying with the RSA PKCS 1v15 signing algorithm with SHA-256.
     pub fn import_rsa_public_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_verify_hash().set_verify_message();
         self.import_key(
             key_name,
             Attributes {
@@ -480,18 +407,7 @@ impl TestClient {
                 key_type: Type::RsaPublicKey,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: true,
-                        sign_message: false,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
                             hash_alg: Hash::Sha256.into(),
@@ -506,6 +422,8 @@ impl TestClient {
     /// Import an AES key.
     /// The key can only be used for AEAD encryption and decryption with the CCM algorithm
     pub fn import_aes_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_encrypt().set_decrypt();
         self.import_key(
             key_name,
             Attributes {
@@ -513,18 +431,7 @@ impl TestClient {
                 key_type: Type::Aes,
                 bits: 0,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: true,
-                        decrypt: true,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Aead::AeadWithDefaultLengthTag(
                         AeadWithDefaultLengthTag::Ccm,
                     )
@@ -538,6 +445,8 @@ impl TestClient {
     /// Import ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn import_ecc_pair_secp_r1_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_derive();
         let attributes = Attributes {
             key_type: Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
@@ -545,10 +454,7 @@ impl TestClient {
             bits: 256,
             lifetime: Lifetime::Volatile,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    derive: true,
-                    ..Default::default()
-                },
+                usage_flags,
                 permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
             },
         };
@@ -562,6 +468,8 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_derive();
         let attributes = Attributes {
             key_type: Type::EccKeyPair {
                 curve_family: EccFamily::BrainpoolPR1,
@@ -569,10 +477,7 @@ impl TestClient {
             bits: 0,
             lifetime: Lifetime::Volatile,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    derive: true,
-                    ..Default::default()
-                },
+                usage_flags,
                 permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
             },
         };
@@ -586,6 +491,8 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_verify_hash().set_verify_message();
         self.import_key(
             key_name,
             Attributes {
@@ -595,18 +502,7 @@ impl TestClient {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: true,
-                        sign_message: false,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -622,6 +518,12 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags
+            .set_sign_hash()
+            .set_sign_message()
+            .set_verify_hash()
+            .set_verify_message();
         self.import_key(
             key_name,
             Attributes {
@@ -631,18 +533,7 @@ impl TestClient {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -656,21 +547,21 @@ impl TestClient {
     /// Exports a key
     pub fn export_key(&mut self, key_name: String) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_export_key(key_name)
+            .psa_export_key(&key_name)
             .map_err(convert_error)
     }
 
     /// Exports a public key.
     pub fn export_public_key(&mut self, key_name: String) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_export_public_key(key_name)
+            .psa_export_public_key(&key_name)
             .map_err(convert_error)
     }
 
     /// Destroys a key.
     pub fn destroy_key(&mut self, key_name: String) -> Result<()> {
         self.basic_client
-            .psa_destroy_key(key_name.clone())
+            .psa_destroy_key(&key_name.clone())
             .map_err(convert_error)?;
 
         let provider = self.provider();
@@ -691,7 +582,7 @@ impl TestClient {
         hash: Vec<u8>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_sign_hash(key_name, &hash, alg)
+            .psa_sign_hash(&key_name, &hash, alg)
             .map_err(convert_error)
     }
 
@@ -726,7 +617,7 @@ impl TestClient {
         signature: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_verify_hash(key_name, &hash, alg, &signature)
+            .psa_verify_hash(&key_name, &hash, alg, &signature)
             .map_err(convert_error)
     }
 
@@ -772,7 +663,7 @@ impl TestClient {
         msg: Vec<u8>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_sign_message(key_name, &msg, alg)
+            .psa_sign_message(&key_name, &msg, alg)
             .map_err(convert_error)
     }
 
@@ -800,7 +691,7 @@ impl TestClient {
         signature: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_verify_message(key_name, &msg, alg, &signature)
+            .psa_verify_message(&key_name, &msg, alg, &signature)
             .map_err(convert_error)
     }
 
@@ -921,7 +812,7 @@ impl TestClient {
         salt: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_asymmetric_encrypt(key_name, encryption_alg, &plaintext, salt)
+            .psa_asymmetric_encrypt(&key_name, encryption_alg, &plaintext, salt)
             .map_err(convert_error)
     }
 
@@ -933,7 +824,7 @@ impl TestClient {
         salt: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_asymmetric_decrypt(key_name, encryption_alg, &ciphertext, salt)
+            .psa_asymmetric_decrypt(&key_name, encryption_alg, &ciphertext, salt)
             .map_err(convert_error)
     }
 
@@ -946,7 +837,7 @@ impl TestClient {
         plaintext: &[u8],
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_aead_encrypt(key_name, encryption_alg, nonce, additional_data, plaintext)
+            .psa_aead_encrypt(&key_name, encryption_alg, nonce, additional_data, plaintext)
             .map_err(convert_error)
     }
 
@@ -959,7 +850,7 @@ impl TestClient {
         ciphertext: &[u8],
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_aead_decrypt(key_name, encryption_alg, nonce, additional_data, ciphertext)
+            .psa_aead_decrypt(&key_name, encryption_alg, nonce, additional_data, ciphertext)
             .map_err(convert_error)
     }
 
@@ -982,7 +873,7 @@ impl TestClient {
         peer_key: &[u8],
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_raw_key_agreement(alg, private_key, peer_key)
+            .psa_raw_key_agreement(alg, &private_key, peer_key)
             .map_err(convert_error)
     }
 
@@ -1018,13 +909,20 @@ impl TestClient {
     /// Delete a client.
     pub fn delete_client(&mut self, client: String) -> Result<()> {
         self.basic_client
-            .delete_client(client)
+            .delete_client(&client)
             .map_err(convert_error)
     }
 
     /// Executes a ping operation.
     pub fn ping(&mut self) -> Result<(u8, u8)> {
         self.basic_client.ping().map_err(convert_error)
+    }
+
+    ///Executes the CanDoCrypto operation.
+    pub fn can_do_crypto(&self, check_type: CheckType, attributes: Attributes) -> Result<()> {
+        self.basic_client
+            .can_do_crypto(check_type, attributes)
+            .map_err(convert_error)
     }
 }
 

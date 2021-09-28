@@ -68,20 +68,21 @@ fn list_authenticators() {
 #[test]
 fn list_opcodes() {
     let mut client = TestClient::new();
-    let mut crypto_providers_hsm = HashSet::new();
+    let mut crypto_providers_tpm = HashSet::new();
     let mut core_provider_opcodes = HashSet::new();
     let mut crypto_providers_cal = HashSet::new();
 
-    let _ = crypto_providers_hsm.insert(Opcode::PsaGenerateKey);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaDestroyKey);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaSignHash);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaVerifyHash);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaImportKey);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaExportPublicKey);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaAsymmetricDecrypt);
-    let _ = crypto_providers_hsm.insert(Opcode::PsaAsymmetricEncrypt);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaGenerateKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaDestroyKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaSignHash);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaVerifyHash);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaImportKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaExportPublicKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricDecrypt);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricEncrypt);
 
-    let crypto_providers_tpm = crypto_providers_hsm.clone();
+    let mut crypto_providers_hsm = crypto_providers_tpm.clone();
+    let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);
 
     let mut crypto_providers_mbed_crypto = crypto_providers_tpm.clone();
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompute);

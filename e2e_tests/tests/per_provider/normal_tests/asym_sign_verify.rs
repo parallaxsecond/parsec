@@ -236,23 +236,14 @@ fn sign_hash_not_permitted() -> Result<()> {
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_message().set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: true,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -286,6 +277,8 @@ fn sign_hash_not_permitted_ecc() -> Result<()> {
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_message().set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -293,18 +286,7 @@ fn sign_hash_not_permitted_ecc() -> Result<()> {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: true,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -438,23 +420,14 @@ fn verify_hash_not_permitted_rsa() -> Result<()> {
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_message().set_sign_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: true,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -491,6 +464,8 @@ fn verify_hash_not_permitted_ecc() -> Result<()> {
     hasher.update(b"Bob wrote this message.");
     let hash = hasher.finalize().to_vec();
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_message().set_sign_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -498,18 +473,7 @@ fn verify_hash_not_permitted_ecc() -> Result<()> {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: true,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -859,6 +823,7 @@ fn sign_message_not_permitted() {
 
     let msg = b"Bob wrote this message.";
 
+    let usage_flags: UsageFlags = Default::default();
     client
         .generate_key(
             key_name.clone(),
@@ -869,18 +834,7 @@ fn sign_message_not_permitted() {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: false,
-                        verify_message: false,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -910,6 +864,8 @@ fn verify_message_not_permitted() {
 
     let msg = b"Bob wrote this message.";
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_message();
     client
         .generate_key(
             key_name.clone(),
@@ -920,18 +876,7 @@ fn verify_message_not_permitted() {
                 },
                 bits: 256,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: false,
-                        verify_hash: false,
-                        sign_message: true,
-                        verify_message: false,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: AsymmetricSignature::Ecdsa {
                         hash_alg: Hash::Sha256.into(),
                     }
@@ -957,6 +902,8 @@ fn verify_message_not_permitted() {
 fn wildcard_hash_not_supported() {
     let key_name = String::from("sign_verify_ecc");
     let mut client = TestClient::new();
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_hash().set_verify_hash();
 
     assert_eq!(
         client
@@ -967,18 +914,7 @@ fn wildcard_hash_not_supported() {
                     key_type: Type::RsaKeyPair,
                     bits: 1024,
                     policy: Policy {
-                        usage_flags: UsageFlags {
-                            sign_hash: true,
-                            verify_hash: true,
-                            sign_message: false,
-                            verify_message: false,
-                            export: false,
-                            encrypt: false,
-                            decrypt: false,
-                            cache: false,
-                            copy: false,
-                            derive: false,
-                        },
+                        usage_flags,
                         permitted_algorithms: Algorithm::AsymmetricSignature(
                             AsymmetricSignature::RsaPkcs1v15Sign {
                                 hash_alg: SignHash::Any,

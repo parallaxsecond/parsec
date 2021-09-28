@@ -14,3 +14,4 @@ mod import_key;
 mod key_agreement;
 mod key_attributes;
 mod ping;
+mod capability_discovery;
