@@ -249,12 +249,12 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # - RHEL-8
     # - openSUSE Tumbleweed
     # - openSUSE Leap 15.3
-    # The oldest is currently in openSUSE Leap 15.3 and is 1.43.0.
+    # The oldest is currently in openSUSE Leap 15.3 and is 1.53.0.
     rustup update
 
-    rustup toolchain install 1.43.0
-    # The "jwt-svid-authenticator" can not be compiled on 1.43.0
-    RUST_BACKTRACE=1 cargo +1.43.0 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
+    rustup toolchain install 1.53.0
+    # The "jwt-svid-authenticator" can not be compiled on 1.53.0
+    RUST_BACKTRACE=1 cargo +1.53.0 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
 
     # Latest stable
     rustup toolchain install stable
