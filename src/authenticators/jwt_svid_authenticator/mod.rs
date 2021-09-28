@@ -63,14 +63,14 @@ impl Authenticate for JwtSvidAuthenticator {
             ResponseStatus::InvalidEncoding
         })?;
 
-        let (spiffe_id, _) = self
+        let jwt_token = self
             .client
             .validate_jwt_token("parsec", &svid)
             .map_err(|e| {
                 error!("The validation of the JWT-SVID failed ({}).", e);
                 ResponseStatus::AuthenticationError
             })?;
-        let app_name = spiffe_id.to_string();
+        let app_name = jwt_token.spiffe_id().to_string();
         let is_admin = self.admins.is_admin(&app_name);
         Ok(Application::new(app_name, is_admin))
     }
