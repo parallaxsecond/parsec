@@ -205,6 +205,42 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     }
 }
 
+/// Modifies the `bits` field of the key attributes to match the key length.
+///
+/// This is a problem when importing a key where its number of bits is left
+/// unspecified and up to the service to deduce.
+pub fn adjust_attributes_key_bits(
+    mut attributes: Attributes,
+    key_data: &[u8],
+) -> Result<Attributes> {
+    if attributes.bits != 0 {
+        return Ok(attributes);
+    }
+
+    // For a breakdown of the key formats we support see:
+    // * for public keys: https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_export_public_key.html#description
+    // * private keys currently not supported
+    match attributes.key_type {
+        Type::RsaPublicKey => {
+            let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|err| {
+                format_error!("Could not deserialise key elements", err);
+                ResponseStatus::PsaErrorInvalidArgument
+            })?;
+            attributes.bits = public_key.modulus.as_unsigned_bytes_be().len() * 8;
+            Ok(attributes)
+        }
+        Type::EccPublicKey { .. } => {
+            if key_data.is_empty() || key_data.len() % 2 == 0 {
+                return Err(ResponseStatus::PsaErrorInvalidArgument);
+            }
+
+            attributes.bits = ((key_data.len() - 1) / 2) * 8;
+            Ok(attributes)
+        }
+        _ => Ok(attributes),
+    }
+}
+
 #[allow(deprecated)]
 fn convert_hash_to_tpm(hash: Hash) -> Result<HashingAlgorithm> {
     match hash {

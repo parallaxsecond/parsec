@@ -132,6 +132,7 @@ impl Provider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
+        let attributes = utils::adjust_attributes_key_bits(attributes, key_data.expose_secret())?;
         let key_params = utils::parsec_to_tpm_params(attributes)?;
         let pub_key = utils::bytes_to_pub_key(key_data.expose_secret().to_vec(), &attributes)?;
         let key_material = esapi_context
