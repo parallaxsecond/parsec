@@ -3,7 +3,6 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
-#[cfg(not(feature = "all-providers"))]
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use sha2::{Digest, Sha256};

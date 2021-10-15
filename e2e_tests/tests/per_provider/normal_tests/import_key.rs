@@ -313,6 +313,7 @@ fn check_format_import3() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn check_format_import_ecc() -> Result<()> {
     // If the bits field of the key attributes is zero, the operation should still work.
@@ -353,12 +354,13 @@ fn check_format_import_ecc() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn check_format_import_ecc2() -> Result<()> {
     // If the bits field of the key attributes is different that the size of the key parsed
     // from the data parameter, the operation should fail.
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import_ecc");
+    let key_name = String::from("check_format_import_ecc2");
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
