@@ -99,7 +99,6 @@ fn import_rsa_key() -> Result<()> {
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_ecc_key() {
     let mut client = TestClient::new();
@@ -113,7 +112,7 @@ fn import_ecc_key() {
         .unwrap();
 
     let status = client
-        .verify_with_ecdsa_sha256(key_name, vec![0xff; 32], vec![0xff; 32])
+        .verify_with_ecdsa_sha256(key_name, vec![0xff; 32], vec![0xff; 64])
         .unwrap_err();
     assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
 }
@@ -137,7 +136,6 @@ fn create_and_import_rsa_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn create_and_import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -174,7 +172,6 @@ fn import_rsa_key_twice() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_ecc_key_twice() -> Result<()> {
     let mut client = TestClient::new();

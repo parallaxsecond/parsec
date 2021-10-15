@@ -273,6 +273,41 @@ fn elliptic_curve_point_to_octet_string(mut x: Vec<u8>, mut y: Vec<u8>) -> Vec<u
     octet_string
 }
 
+pub fn bytes_to_pub_key(key_data: Vec<u8>, key_attributes: &Attributes) -> Result<PublicKey> {
+    match key_attributes.key_type {
+        Type::RsaPublicKey => {
+            let public_key: RSAPublicKey =
+                picky_asn1_der::from_bytes(&key_data).map_err(|err| {
+                    format_error!("Could not deserialise key elements", err);
+                    ResponseStatus::PsaErrorInvalidArgument
+                })?;
+
+            validate_rsa_public_key(&public_key, key_attributes)?;
+
+            Ok(PublicKey::Rsa(
+                public_key.modulus.as_unsigned_bytes_be().to_vec(),
+            ))
+        }
+        Type::EccPublicKey { .. } => {
+            validate_ecc_public_key(&key_data, key_attributes)?;
+
+            let (x, y) = octet_string_to_elliptic_curve_point(key_data);
+            Ok(PublicKey::Ecc { x, y })
+        }
+        _ => Err(ResponseStatus::PsaErrorInvalidArgument),
+    }
+}
+
+// Points on elliptic curves are represented as defined in section 2.3.3 of https://www.secg.org/sec1-v2.pdf
+// The (uncompressed) representation is [ 0x04 || x || y ] where x and y are the coordinates of the point
+fn octet_string_to_elliptic_curve_point(mut data: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
+    let mut data = data.split_off(1);
+    let key_len = data.len();
+    let y = data.split_off(key_len / 2);
+    let x = data.to_vec();
+    (x, y)
+}
+
 pub fn signature_data_to_bytes(data: Signature, key_attributes: Attributes) -> Result<Vec<u8>> {
     match data {
         Signature::RsaSsa(rsa_signature) | Signature::RsaPss(rsa_signature) => {
@@ -341,11 +376,20 @@ pub fn parsec_to_tpm_signature(
         AsymmetricSignature::Ecdsa {
             hash_alg: SignHash::Specific(hash),
         } => {
-            // ECDSA signature data is represented the concatenation of the two result values, r and s,
+            // ECDSA signature data is represented as the concatenation of the two result values, r and s,
             // in big endian format, as described here:
             // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_algorithm.html#asymmetricsignature-algorithm
             let p_size = key_attributes.bits / 8;
             if data.len() != p_size * 2 {
+                if crate::utils::GlobalConfig::log_error_details() {
+                    error!(
+                        "Signature is not of the correct size - expected {} bytes, got {}.",
+                        p_size * 2,
+                        data.len()
+                    );
+                } else {
+                    error!("Signature is not of the correct size.");
+                }
                 return Err(ResponseStatus::PsaErrorInvalidArgument);
             }
 
@@ -369,7 +413,7 @@ pub fn parsec_to_tpm_signature(
 
 /// Validates an RSAPublicKey against the attributes we expect. Returns ok on success, otherwise
 /// returns an error.
-pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
+fn validate_rsa_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
     if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
         error!("Only positive modulus and public exponent are supported.");
         return Err(ResponseStatus::PsaErrorInvalidArgument);
@@ -390,12 +434,12 @@ pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -
     if key_bits != 0 && len * 8 != key_bits {
         if crate::utils::GlobalConfig::log_error_details() {
             error!(
-                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}).",
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}) for RSA keys.",
                     attributes.bits,
                     len * 8
                 );
         } else {
-            error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+            error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data` for RSA keys.");
         }
         return Err(ResponseStatus::PsaErrorInvalidArgument);
     }
@@ -412,6 +456,36 @@ pub fn validate_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -
             );
         }
         return Err(ResponseStatus::PsaErrorNotSupported);
+    }
+
+    Ok(())
+}
+
+fn validate_ecc_public_key(public_key: &[u8], attributes: &Attributes) -> Result<()> {
+    if public_key.is_empty() {
+        error!("Public key buffer is empty.");
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+
+    // For the format of ECC public keys, see:
+    // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_export_public_key.html#description
+    if public_key[0] != 0x04 {
+        error!("ECC public key buffer is incorrectly formatted.");
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
+    }
+
+    let len = public_key.len() - 1; // discard the first byte
+    if attributes.bits != 0 && (len * 8) / 2 != attributes.bits {
+        if crate::utils::GlobalConfig::log_error_details() {
+            error!(
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
+                    attributes.bits,
+                    len * 8
+                );
+        } else {
+            error!("`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves.");
+        }
+        return Err(ResponseStatus::PsaErrorInvalidArgument);
     }
 
     Ok(())
