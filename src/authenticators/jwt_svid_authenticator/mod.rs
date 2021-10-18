@@ -65,7 +65,7 @@ impl Authenticate for JwtSvidAuthenticator {
 
         let jwt_token = self
             .client
-            .validate_jwt_token("parsec", &svid)
+            .validate_jwt_token("parsec", svid)
             .map_err(|e| {
                 error!("The validation of the JWT-SVID failed ({}).", e);
                 ResponseStatus::AuthenticationError

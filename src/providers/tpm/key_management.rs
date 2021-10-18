@@ -1,7 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::utils;
-use super::utils::validate_public_key;
 #[allow(deprecated)]
 use super::utils::LegacyPasswordContext;
 use super::utils::PasswordContext;
@@ -9,14 +8,12 @@ use super::Provider;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::error;
-use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature, Hash, SignHash};
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
 use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
-use picky_asn1_x509::RSAPublicKey;
 use std::convert::TryInto;
 
 const AUTH_VAL_LEN: usize = 32;
@@ -115,30 +112,14 @@ impl Provider {
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         match op.attributes.key_type {
-            Type::RsaPublicKey => self.psa_import_key_internal_rsa_public(app_name, op),
+            Type::RsaPublicKey | Type::EccPublicKey { .. } => (),
             _ => {
                 error!(
                     "The TPM provider does not support importing for the {:?} key type.",
                     op.attributes.key_type
                 );
-                Err(ResponseStatus::PsaErrorNotSupported)
+                return Err(ResponseStatus::PsaErrorNotSupported);
             }
-        }
-    }
-
-    pub(super) fn psa_import_key_internal_rsa_public(
-        &self,
-        app_name: ApplicationName,
-        op: psa_import_key::Operation,
-    ) -> Result<psa_import_key::Result> {
-        // Currently only the RSA PKCS1 v1.5 signature scheme is supported
-        // by the tss-esapi crate.
-        if op.attributes.policy.permitted_algorithms
-            != Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-                hash_alg: SignHash::Specific(Hash::Sha256),
-            })
-        {
-            return Err(ResponseStatus::PsaErrorNotSupported);
         }
 
         let key_name = op.key_name;
@@ -151,17 +132,11 @@ impl Provider {
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data.expose_secret())
-            .map_err(|err| {
-                format_error!("Could not deserialise key elements", err);
-                ResponseStatus::PsaErrorInvalidArgument
-            })?;
-
-        validate_public_key(&public_key, &attributes)?;
-
-        let key_data = public_key.modulus.as_unsigned_bytes_be();
+        let attributes = utils::adjust_attributes_key_bits(attributes, key_data.expose_secret())?;
+        let key_params = utils::parsec_to_tpm_params(attributes)?;
+        let pub_key = utils::bytes_to_pub_key(key_data.expose_secret().to_vec(), &attributes)?;
         let key_material = esapi_context
-            .load_external_rsa_public_key(key_data)
+            .load_external_public_key(pub_key, key_params)
             .map_err(|e| {
                 format_error!("Error creating a RSA signing key", e);
                 utils::to_response_status(e)

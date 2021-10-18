@@ -3,7 +3,6 @@
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
-#[cfg(not(feature = "all-providers"))]
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 use sha2::{Digest, Sha256};
@@ -59,11 +58,10 @@ fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, HASH.to_vec(), signature)
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn asym_verify_fail_ecc_sha256() -> Result<()> {
     let key_name = String::from("asym_verify_fail_ecc_sha256");
-    let signature = vec![0xff; 128];
+    let signature = vec![0xff; 64];
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return Ok(());
@@ -138,11 +136,7 @@ fn only_verify_from_internet() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, digest, signature)
 }
 
-#[cfg(not(any(
-    feature = "tpm-provider",
-    feature = "pkcs11-provider",
-    feature = "trusted-service-provider"
-)))]
+#[cfg(not(any(feature = "tpm-provider", feature = "pkcs11-provider",)))]
 #[test]
 fn private_sign_public_verify() -> Result<()> {
     use crate::per_provider::normal_tests::import_key::{ECC_PRIVATE_KEY, ECC_PUBLIC_KEY};
@@ -198,7 +192,6 @@ fn simple_sign_hash_rsa_sha256() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn simple_sign_hash_ecdsa_sha256() -> Result<()> {
     let key_name = String::from("simple_sign_hash_ecdsa_sha256");
@@ -270,7 +263,6 @@ fn sign_hash_not_permitted() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn sign_hash_not_permitted_ecc() -> Result<()> {
     let key_name = String::from("sign_hash_not_permitted_ecc");
@@ -397,7 +389,6 @@ fn simple_verify_hash_rsa() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, hash, signature)
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn simple_verify_hash_ecc() -> Result<()> {
     let key_name = String::from("simple_verify_hash_ecc");
@@ -474,7 +465,6 @@ fn verify_hash_not_permitted_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn verify_hash_not_permitted_ecc() -> Result<()> {
     let key_name = String::from("verify_hash_not_permitted_ecc");
@@ -561,11 +551,7 @@ fn verify_hash_bad_format_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(
-    feature = "tpm-provider",
-    feature = "trusted-service-provider",
-    feature = "mbed-crypto-provider"
-)))]
+#[cfg(not(any(feature = "trusted-service-provider", feature = "mbed-crypto-provider")))]
 #[test]
 fn verify_hash_bad_format_ecc() -> Result<()> {
     let key_name = String::from("verify_hash_bad_format_ecc");
@@ -629,7 +615,6 @@ fn fail_verify_hash_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn fail_verify_hash_ecc() -> Result<()> {
     let key_name = String::from("fail_verify_hash_ecc");
@@ -687,7 +672,6 @@ fn fail_verify_hash2_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "trusted-service-provider")))]
 #[test]
 fn fail_verify_hash2_ecc() -> Result<()> {
     let key_name = String::from("fail_verify_hash2_ecc");
@@ -750,10 +734,7 @@ fn asym_verify_with_rsa_crate() {
         .unwrap();
 }
 
-#[cfg(not(any(
-    feature = "cryptoauthlib-provider",
-    feature = "trusted-service-provider"
-)))]
+#[cfg(not(feature = "cryptoauthlib-provider",))]
 #[test]
 fn verify_with_ring() {
     use ring::signature::{self, UnparsedPublicKey};

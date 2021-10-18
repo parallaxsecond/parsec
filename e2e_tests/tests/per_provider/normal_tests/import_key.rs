@@ -99,7 +99,6 @@ fn import_rsa_key() -> Result<()> {
     client.import_rsa_public_key(key_name, KEY_DATA.to_vec())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_ecc_key() {
     let mut client = TestClient::new();
@@ -113,7 +112,7 @@ fn import_ecc_key() {
         .unwrap();
 
     let status = client
-        .verify_with_ecdsa_sha256(key_name, vec![0xff; 32], vec![0xff; 32])
+        .verify_with_ecdsa_sha256(key_name, vec![0xff; 32], vec![0xff; 64])
         .unwrap_err();
     assert_eq!(status, ResponseStatus::PsaErrorInvalidSignature);
 }
@@ -137,7 +136,6 @@ fn create_and_import_rsa_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn create_and_import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -174,7 +172,6 @@ fn import_rsa_key_twice() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_ecc_key_twice() -> Result<()> {
     let mut client = TestClient::new();
@@ -313,6 +310,91 @@ fn check_format_import3() -> Result<()> {
 
     assert_eq!(status, ResponseStatus::PsaErrorInvalidArgument);
 
+    Ok(())
+}
+
+#[cfg(not(feature = "pkcs11-provider"))]
+#[test]
+fn check_format_import_ecc() -> Result<()> {
+    // If the bits field of the key attributes is zero, the operation should still work.
+    // The size of the key is always taken from the data parameter.
+    let mut client = TestClient::new();
+    let key_name = String::from("check_format_import_ecc");
+    if !client.is_operation_supported(Opcode::PsaImportKey) {
+        return Ok(());
+    }
+
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccPublicKey {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 0,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: true,
+                sign_message: false,
+                verify_message: true,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    client.import_key(key_name, attributes, ECC_PUBLIC_KEY.to_vec())?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "pkcs11-provider"))]
+#[test]
+fn check_format_import_ecc2() -> Result<()> {
+    // If the bits field of the key attributes is different that the size of the key parsed
+    // from the data parameter, the operation should fail.
+    let mut client = TestClient::new();
+    let key_name = String::from("check_format_import_ecc2");
+    if !client.is_operation_supported(Opcode::PsaImportKey) {
+        return Ok(());
+    }
+
+    let attributes = Attributes {
+        lifetime: Lifetime::Persistent,
+        key_type: Type::EccPublicKey {
+            curve_family: EccFamily::SecpR1,
+        },
+        bits: 224,
+        policy: Policy {
+            usage_flags: UsageFlags {
+                sign_hash: false,
+                verify_hash: true,
+                sign_message: false,
+                verify_message: true,
+                export: false,
+                encrypt: false,
+                decrypt: false,
+                cache: false,
+                copy: false,
+                derive: false,
+            },
+            permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                hash_alg: Hash::Sha256.into(),
+            }),
+        },
+    };
+
+    let status = client
+        .import_key(key_name, attributes, ECC_PUBLIC_KEY.to_vec())
+        .unwrap_err();
+
+    assert_eq!(status, ResponseStatus::PsaErrorInvalidArgument);
     Ok(())
 }
 
