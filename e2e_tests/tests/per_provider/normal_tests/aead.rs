@@ -37,7 +37,6 @@ const CIPHERTEXT_CCM: [u8; 40] = [
     0xb0, 0x6d, 0x43, 0x13, 0xf0, 0xdb, 0x9b, 0xe9,
 ];
 
-#[cfg(feature = "cryptoauthlib-provider")]
 const CIPHERTEXT_GCM: [u8; 40] = [
     0x7e, 0x3c, 0x18, 0xe5, 0xca, 0xfb, 0xd5, 0x5c, 0x15, 0xda, 0x01, 0x84, 0xff, 0x99, 0x66, 0xc6,
     0xc6, 0x1a, 0x21, 0x7c, 0xae, 0x40, 0x0d, 0x94, 0xa9, 0x43, 0xfa, 0x0f, 0x40, 0x5d, 0xd1, 0xe1,
@@ -51,7 +50,6 @@ const EXPECTED_DECRYPT_CCM: [u8; 56] = [
     0x26, 0x83, 0x8c, 0xf4, 0x18, 0x67, 0x9, 0xf2,
 ];
 
-#[cfg(feature = "cryptoauthlib-provider")]
 const EXPECTED_DECRYPT_GCM: [u8; 56] = [
     0x45, 0x35, 0xd1, 0x2b, 0x43, 0x77, 0x92, 0x8a, 0x7c, 0xa, 0x61, 0xc9, 0xf8, 0x25, 0xa4, 0x86,
     0x71, 0xea, 0x5, 0x91, 0x7, 0x48, 0xc8, 0xef, 0xd3, 0xf1, 0x7e, 0x3c, 0x99, 0x7b, 0x6b, 0xf5,
@@ -436,7 +434,6 @@ fn aead_encrypt_ccm_encrypt_tag_length_too_long() {
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt() {
     let key_name = String::from("aead_encrypt_gcm_encrypt");
@@ -463,7 +460,6 @@ fn aead_encrypt_gcm_encrypt() {
     assert_eq!(&CIPHERTEXT_GCM[..], ciphertext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_not_equal() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_not_equal");
@@ -490,7 +486,6 @@ fn aead_encrypt_gcm_encrypt_not_equal() {
     assert_ne!(&CIPHERTEXT_GCM[..], ciphertext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_decrypt() {
     let key_name = String::from("aead_encrypt_gcm_decrypt");
@@ -517,7 +512,6 @@ fn aead_encrypt_gcm_decrypt() {
     assert_eq!(&EXPECTED_DECRYPT_GCM[..], plaintext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_decrypt_not_equal() {
     let key_name = String::from("aead_encrypt_gcm_decrypt_not_equal");
@@ -544,7 +538,6 @@ fn aead_encrypt_gcm_decrypt_not_equal() {
     assert_ne!(&PLAINTEXT[..], plaintext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_decrypt() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_decrypt");
@@ -586,7 +579,7 @@ fn aead_encrypt_gcm_encrypt_decrypt() {
 #[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_decrypt_shortened_tag() {
-    let key_name = String::from("aead_encrypt_gcm_encrypt_decrypt_shortenedTag");
+    let key_name = String::from("aead_encrypt_gcm_encrypt_decrypt_shortened_tag");
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadEncrypt)
         || !client.is_operation_supported(Opcode::PsaAeadDecrypt)

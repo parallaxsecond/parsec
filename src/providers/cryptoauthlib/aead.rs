@@ -1,7 +1,7 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 // CAL supports CCM with:
-// - tag lenght must be <4,16> and must be odd number
+// - tag lenght must be <4,16> and must be even number
 // - nonce lenght must be <7,13>
 // CAL supports GCM with:
 // - tag lenght must be <12,16>
@@ -44,6 +44,17 @@ pub fn is_ccm_selected(alg: &Aead) -> bool {
     )
 }
 
+pub fn get_aead_algorithm(
+    aead_params: rust_cryptoauthlib::AeadParam,
+    alg: &Aead,
+) -> rust_cryptoauthlib::AeadAlgorithm {
+    if is_ccm_selected(alg) {
+        rust_cryptoauthlib::AeadAlgorithm::Ccm(aead_params)
+    } else {
+        rust_cryptoauthlib::AeadAlgorithm::Gcm(aead_params)
+    }
+}
+
 impl Provider {
     pub(super) fn psa_aead_encrypt_internal(
         &self,
@@ -58,25 +69,20 @@ impl Provider {
                 let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
                 op.validate(key_attributes)?;
 
-                let aead_param_gcm = rust_cryptoauthlib::AeadParam {
+                let aead_param = rust_cryptoauthlib::AeadParam {
                     nonce: op.nonce.to_vec(),
                     tag_length: Some(tag_length as u8),
                     additional_data: Some(op.additional_data.to_vec()),
                     ..Default::default()
                 };
 
-                let aead_param_ccc = aead_param_gcm.clone();
-                let mut aead_algorithm = rust_cryptoauthlib::AeadAlgorithm::Gcm(aead_param_gcm);
-                if is_ccm_selected(&op.alg) {
-                    aead_algorithm = rust_cryptoauthlib::AeadAlgorithm::Ccm(aead_param_ccc);
-                }
-
                 let mut plaintext = op.plaintext.to_vec();
 
-                match self
-                    .device
-                    .aead_encrypt(aead_algorithm, key_id, &mut plaintext)
-                {
+                match self.device.aead_encrypt(
+                    get_aead_algorithm(aead_param, &op.alg),
+                    key_id,
+                    &mut plaintext,
+                ) {
                     Ok(tag) => {
                         plaintext.extend(tag);
 
@@ -110,28 +116,21 @@ impl Provider {
                 let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
                 op.validate(key_attributes)?;
 
-                let mut ciphertext: Vec<_> = op.ciphertext.to_vec();
-                let tag: Vec<_> = ciphertext
-                    .drain((ciphertext.len() - tag_length)..)
-                    .collect();
+                let mut ciphertext = op.ciphertext.to_vec();
+                let tag = ciphertext.split_off(ciphertext.len() - tag_length);
 
-                let aead_param_gcm = rust_cryptoauthlib::AeadParam {
+                let aead_param = rust_cryptoauthlib::AeadParam {
                     nonce: op.nonce.to_vec(),
                     tag: Some(tag),
                     additional_data: Some(op.additional_data.to_vec()),
                     ..Default::default()
                 };
 
-                let aead_param_ccc = aead_param_gcm.clone();
-                let mut aead_algorithm = rust_cryptoauthlib::AeadAlgorithm::Gcm(aead_param_gcm);
-                if is_ccm_selected(&op.alg) {
-                    aead_algorithm = rust_cryptoauthlib::AeadAlgorithm::Ccm(aead_param_ccc);
-                }
-
-                match self
-                    .device
-                    .aead_decrypt(aead_algorithm, key_id, &mut ciphertext)
-                {
+                match self.device.aead_decrypt(
+                    get_aead_algorithm(aead_param, &op.alg),
+                    key_id,
+                    &mut ciphertext,
+                ) {
                     Ok(true) => Ok(psa_aead_decrypt::Result {
                         plaintext: ciphertext.into(),
                     }),
