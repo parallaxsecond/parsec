@@ -185,6 +185,10 @@ impl Provider {
             error!("The configuration of this provider does not allow it to generate keys that can be exported.");
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
+        if op.data.expose_secret().is_empty() {
+            error!("Key data is empty");
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
 
         let key_triple = KeyTriple::new(app_name, ProviderId::Pkcs11, key_name);
         self.key_info_store.does_not_exist(&key_triple)?;
@@ -306,6 +310,24 @@ impl Provider {
             }
             _ => (),
         }
+
+        // For the format of ECC public keys, see:
+        // https://parallaxsecond.github.io/parsec-book/parsec_client/operations/psa_export_public_key.html#description
+        let key_len = ((key_data.len() - 1) / 2) * 8;
+        let bits = if bits == 0 { key_len } else { bits };
+        if bits != key_len {
+            if crate::utils::GlobalConfig::log_error_details() {
+                error!(
+                        "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
+                        bits,
+                        key_len
+                    );
+            } else {
+                error!("`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves.");
+            }
+            return Err(ResponseStatus::PsaErrorInvalidArgument);
+        }
+
         // The format expected by PKCS11 is an ASN.1 OctetString containing the
         // data that the PSA Crypto interface specifies.
         // See ECPoint in [SEC1](https://www.secg.org/sec1-v2.pdf). PKCS11 mandates using
