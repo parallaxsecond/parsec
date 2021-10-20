@@ -249,12 +249,12 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # - RHEL-8
     # - openSUSE Tumbleweed
     # - openSUSE Leap 15.3
-    # The oldest is currently in openSUSE Leap 15.3 and is 1.43.0.
+    # The oldest is currently in openSUSE Leap 15.3 and is 1.53.0.
     rustup update
 
-    rustup toolchain install 1.43.0
-    # The "jwt-svid-authenticator" can not be compiled on 1.43.0
-    RUST_BACKTRACE=1 cargo +1.43.0 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
+    rustup toolchain install 1.53.0
+    # The "jwt-svid-authenticator" can not be compiled on 1.53.0
+    RUST_BACKTRACE=1 cargo +1.53.0 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
 
     # Latest stable
     rustup toolchain install stable
@@ -366,4 +366,27 @@ else
         echo "Execute stress tests"
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml stress_test
 	fi
+
+    # For the TPM provider we check that keys can still be used after a TPM Reset
+    if [ "$PROVIDER_NAME" = "tpm" ]; then
+        # We first create the keys
+        RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml before_tpm_reset
+        stop_service
+
+        # In order to reset the TPM, we need to restart the TPM server and send a Startup(CLEAR)
+        pkill tpm_server
+        sleep 1
+
+        tpm_server &
+        TPM_SRV_PID=$!
+        sleep 5
+
+        tpm2_startup -c -T mssim
+
+        # We then spin up the service again and check that the keys can still be used
+        RUST_LOG=error RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
+        wait_for_service
+
+        RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml after_tpm_reset
+    fi
 fi

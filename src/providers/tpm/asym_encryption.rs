@@ -1,9 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{
-    utils::{self, PasswordContext},
-    Provider,
-};
+use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
@@ -19,21 +16,22 @@ impl Provider {
     ) -> Result<psa_asymmetric_encrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
+        let password_context = self.get_key_ctx(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
-
         op.validate(key_attributes)?;
 
         match esapi_context.rsa_encrypt(
-            password_context.context,
+            password_context.key_material().clone(),
+            utils::parsec_to_tpm_params(key_attributes)?,
             Some(
                 password_context
-                    .auth_value
+                    .auth_value()
                     .try_into()
                     .map_err(utils::to_response_status)?,
             ),
@@ -42,7 +40,6 @@ impl Provider {
                 .clone()
                 .try_into()
                 .map_err(utils::to_response_status)?,
-            utils::convert_asym_scheme_to_tpm(op.alg.into())?,
             match op.salt {
                 Some(salt) => Some(
                     salt.deref()
@@ -71,21 +68,22 @@ impl Provider {
     ) -> Result<psa_asymmetric_decrypt::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
+        let password_context = self.get_key_ctx(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
 
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
-
         op.validate(key_attributes)?;
 
         match esapi_context.rsa_decrypt(
-            password_context.context,
+            password_context.key_material().clone(),
+            utils::parsec_to_tpm_params(key_attributes)?,
             Some(
                 password_context
-                    .auth_value
+                    .auth_value()
                     .try_into()
                     .map_err(utils::to_response_status)?,
             ),
@@ -94,7 +92,6 @@ impl Provider {
                 .clone()
                 .try_into()
                 .map_err(utils::to_response_status)?,
-            utils::convert_asym_scheme_to_tpm(op.alg.into())?,
             match op.salt {
                 Some(salt) => Some(
                     salt.deref()

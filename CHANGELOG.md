@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.8.1](https://github.com/parallaxsecond/parsec/tree/0.8.1) (2021-09-17)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.8.0...0.8.1)
+
+**Implemented enhancements:**
+
+- Add Unit Tests to SQLiteKeyInfoManager [\#510](https://github.com/parallaxsecond/parsec/issues/510)
+-  Change KeyTriple to Include Auth ID, Provider Name & Provider UUID [\#488](https://github.com/parallaxsecond/parsec/issues/488)
+- Update provider to use new version fo TransKeyCtx [\#515](https://github.com/parallaxsecond/parsec/pull/515) ([ionut-arm](https://github.com/ionut-arm))
+
+**Fixed bugs:**
+
+- Decide and implement a new serialization format for KeyInfo [\#509](https://github.com/parallaxsecond/parsec/issues/509)
+- Memory leak in TS context [\#501](https://github.com/parallaxsecond/parsec/issues/501)
+- Disable broken workflows [\#525](https://github.com/parallaxsecond/parsec/pull/525) ([ionut-arm](https://github.com/ionut-arm))
+
+**Closed issues:**
+
+- Make a Parsec Ockam Vault: investigation issue [\#506](https://github.com/parallaxsecond/parsec/issues/506)
+- Add Basic SQLiteKeyInfoManager Storage/Retrieval Functionality [\#503](https://github.com/parallaxsecond/parsec/issues/503)
+- Add config tests for multiple provider names [\#496](https://github.com/parallaxsecond/parsec/issues/496)
+
+**Merged pull requests:**
+
+- Bump version for release [\#526](https://github.com/parallaxsecond/parsec/pull/526) ([ionut-arm](https://github.com/ionut-arm))
+- Use as\_ptr for TS service name [\#524](https://github.com/parallaxsecond/parsec/pull/524) ([anta5010](https://github.com/anta5010))
+- Lower Hash algorithm [\#499](https://github.com/parallaxsecond/parsec/pull/499) ([hug-dev](https://github.com/hug-dev))
+- Update CHANGELOG [\#498](https://github.com/parallaxsecond/parsec/pull/498) ([hug-dev](https://github.com/hug-dev))
+
 ## [0.8.0](https://github.com/parallaxsecond/parsec/tree/0.8.0) (2021-08-05)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.7.2...0.8.0)

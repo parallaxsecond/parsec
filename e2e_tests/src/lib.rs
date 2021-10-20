@@ -812,7 +812,7 @@ impl TestClient {
         salt: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_asymmetric_encrypt(&key_name, encryption_alg, &plaintext, salt)
+            .psa_asymmetric_encrypt(&key_name, encryption_alg, plaintext, salt)
             .map_err(convert_error)
     }
 
@@ -824,7 +824,7 @@ impl TestClient {
         salt: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_asymmetric_decrypt(&key_name, encryption_alg, &ciphertext, salt)
+            .psa_asymmetric_decrypt(&key_name, encryption_alg, ciphertext, salt)
             .map_err(convert_error)
     }
 
