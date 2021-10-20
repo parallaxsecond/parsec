@@ -116,32 +116,41 @@ impl Provider {
                 let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
                 op.validate(key_attributes)?;
 
-                let mut ciphertext = op.ciphertext.to_vec();
-                let tag = ciphertext.split_off(ciphertext.len() - tag_length);
+                if tag_length < op.ciphertext.len() {
+                    let mut ciphertext = op.ciphertext.to_vec();
+                    let tag = ciphertext.split_off(ciphertext.len() - tag_length);
 
-                let aead_param = rust_cryptoauthlib::AeadParam {
-                    nonce: op.nonce.to_vec(),
-                    tag: Some(tag),
-                    additional_data: Some(op.additional_data.to_vec()),
-                    ..Default::default()
-                };
+                    let aead_param = rust_cryptoauthlib::AeadParam {
+                        nonce: op.nonce.to_vec(),
+                        tag: Some(tag),
+                        additional_data: Some(op.additional_data.to_vec()),
+                        ..Default::default()
+                    };
 
-                match self.device.aead_decrypt(
-                    get_aead_algorithm(aead_param, &op.alg),
-                    key_id,
-                    &mut ciphertext,
-                ) {
-                    Ok(true) => Ok(psa_aead_decrypt::Result {
-                        plaintext: ciphertext.into(),
-                    }),
-                    Ok(false) => {
-                        error!("aead_decrypt authentication failed");
-                        Err(ResponseStatus::PsaErrorGenericError)
+                    match self.device.aead_decrypt(
+                        get_aead_algorithm(aead_param, &op.alg),
+                        key_id,
+                        &mut ciphertext,
+                    ) {
+                        Ok(true) => Ok(psa_aead_decrypt::Result {
+                            plaintext: ciphertext.into(),
+                        }),
+                        Ok(false) => {
+                            error!("aead_decrypt authentication failed");
+                            Err(ResponseStatus::PsaErrorInvalidSignature)
+                        }
+                        Err(error) => {
+                            error!("aead_decrypt error {}", error);
+                            Err(ResponseStatus::PsaErrorGenericError)
+                        }
                     }
-                    Err(error) => {
-                        error!("aead_decrypt error {}", error);
-                        Err(ResponseStatus::PsaErrorGenericError)
-                    }
+                } else {
+                    error!(
+                        "aead_decrypt failed, tag lenght {} longer then ciphertext {}",
+                        tag_length,
+                        op.ciphertext.len()
+                    );
+                    Err(ResponseStatus::PsaErrorInvalidArgument)
                 }
             }
 
