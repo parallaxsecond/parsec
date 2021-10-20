@@ -304,6 +304,8 @@ fn check_format_import_ecc() -> Result<()> {
         return Ok(());
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccPublicKey {
@@ -311,18 +313,7 @@ fn check_format_import_ecc() -> Result<()> {
         },
         bits: 0,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -345,6 +336,8 @@ fn check_format_import_ecc2() -> Result<()> {
         return Ok(());
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccPublicKey {
@@ -352,18 +345,7 @@ fn check_format_import_ecc2() -> Result<()> {
         },
         bits: 224,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -417,33 +399,37 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "tpm-provider")]
-#[test]
-fn import_key_pair() {
-    let mut client = TestClient::new();
-    let key_name = String::from("failed_imported_key_should_be_removed");
-    let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_hash().set_sign_message().set_verify_hash().set_verify_message();
-    client
-        .import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Algorithm::AsymmetricSignature(
-                        AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256.into(),
-                        },
-                    ),
-                },
-            },
-            KEY_PAIR_DATA.to_vec(),
-        )
-        .unwrap();
-}
+// #[cfg(feature = "tpm-provider")]
+// #[test]
+// fn import_key_pair() {
+//     let mut client = TestClient::new();
+//     let key_name = String::from("failed_imported_key_should_be_removed");
+//     let mut usage_flags: UsageFlags = Default::default();
+//     let _ = usage_flags
+//         .set_sign_hash()
+//         .set_sign_message()
+//         .set_verify_hash()
+//         .set_verify_message();
+//     client
+//         .import_key(
+//             key_name,
+//             Attributes {
+//                 lifetime: Lifetime::Persistent,
+//                 key_type: Type::RsaKeyPair,
+//                 bits: 1024,
+//                 policy: Policy {
+//                     usage_flags,
+//                     permitted_algorithms: Algorithm::AsymmetricSignature(
+//                         AsymmetricSignature::RsaPkcs1v15Sign {
+//                             hash_alg: Hash::Sha256.into(),
+//                         },
+//                     ),
+//                 },
+//             },
+//             KEY_PAIR_DATA.to_vec(),
+//         )
+//         .unwrap();
+// }
 
 #[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
