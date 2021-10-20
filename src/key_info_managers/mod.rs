@@ -261,6 +261,39 @@ impl KeyInfoManagerClient {
         }
     }
 
+    /// Replace the key info saved for a given triple
+    ///
+    /// # Errors
+    ///
+    /// If the key triple doesn't exist in the KIM, PsaErrorDoesNotExist is returned. For
+    /// any other error occurring in the KIM, KeyInfoManagerError is returned.
+    pub fn replace_key_info<T: Serialize>(
+        &self,
+        key_triple: KeyTriple,
+        key_id: &T,
+        attributes: Attributes,
+    ) -> parsec_interface::requests::Result<()> {
+        let mut key_info_manager_impl = self
+            .key_info_manager_impl
+            .write()
+            .expect("Key Info Manager lock poisoned");
+        let key_info = KeyInfo {
+            id: bincode::serialize(key_id)?,
+            attributes,
+        };
+
+        match key_info_manager_impl.insert(key_triple.clone(), key_info) {
+            Ok(None) => {
+                let _ = key_info_manager_impl
+                    .remove(&key_triple)
+                    .map_err(to_response_status)?;
+                Err(ResponseStatus::PsaErrorDoesNotExist)
+            }
+            Ok(Some(_)) => Ok(()),
+            Err(string) => Err(to_response_status(string)),
+        }
+    }
+
     /// Returns a Vec of ApplicationName of clients having keys in the provider.
     ///
     /// # Errors

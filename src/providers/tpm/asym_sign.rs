@@ -1,9 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{
-    utils::{self, PasswordContext},
-    Provider,
-};
+use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyTriple;
 use log::error;
@@ -21,13 +18,13 @@ impl Provider {
     ) -> Result<psa_sign_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
+        let password_context = self.get_key_ctx(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
-
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
@@ -49,9 +46,10 @@ impl Provider {
 
         let signature = esapi_context
             .sign(
-                password_context.context,
+                password_context.key_material().clone(),
+                utils::parsec_to_tpm_params(key_attributes)?,
                 Some(
-                    Auth::try_from(password_context.auth_value)
+                    Auth::try_from(password_context.auth_value())
                         .map_err(utils::to_response_status)?,
                 ),
                 Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
@@ -64,7 +62,7 @@ impl Provider {
             })?;
 
         Ok(psa_sign_hash::Result {
-            signature: utils::signature_data_to_bytes(signature.signature, key_attributes)?.into(),
+            signature: utils::signature_data_to_bytes(signature, key_attributes)?.into(),
         })
     }
 
@@ -75,13 +73,13 @@ impl Provider {
     ) -> Result<psa_verify_hash::Result> {
         let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
 
+        let password_context = self.get_key_ctx(&key_triple)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+
         let mut esapi_context = self
             .esapi_context
             .lock()
             .expect("ESAPI Context lock poisoned");
-
-        let password_context: PasswordContext = self.key_info_store.get_key_id(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
 
         match op.alg {
             AsymmetricSignature::RsaPkcs1v15Sign { .. } => (),
@@ -105,7 +103,8 @@ impl Provider {
 
         let _ = esapi_context
             .verify_signature(
-                password_context.context,
+                password_context.key_material().clone(),
+                utils::parsec_to_tpm_params(key_attributes)?,
                 Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
                 signature,
             )
