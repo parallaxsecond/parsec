@@ -6,7 +6,7 @@ use cryptoki::types::mechanism::Mechanism;
 use cryptoki::types::mechanism::MechanismInfo;
 use cryptoki::types::mechanism::MechanismType;
 use cryptoki::types::Ulong;
-use log::trace;
+use log::info;
 use parsec_interface::operations::can_do_crypto;
 use parsec_interface::operations::can_do_crypto::CheckType;
 use parsec_interface::operations::psa_algorithm::Algorithm;
@@ -35,11 +35,18 @@ impl Provider {
                 curve_family: EccFamily::SecpR1,
             } => {
                 if !(supported_ecc_family_sizes.contains(&attributes.bits)) {
+                    info!(
+                        "Unsupported size {} for SecpR1 curve family",
+                        attributes.bits
+                    );
                     return Err(PsaErrorNotSupported);
                 }
             }
             Type::RsaKeyPair | Type::RsaPublicKey => (),
-            _ => return Err(PsaErrorNotSupported),
+            _ => {
+                info!("Unsupported key type {:?}", attributes.key_type);
+                return Err(PsaErrorNotSupported);
+            }
         }
         match check_type {
             CheckType::Generate => return self.generate_check(attributes),
@@ -51,6 +58,7 @@ impl Provider {
 
     fn use_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
         if attributes.policy.permitted_algorithms == Algorithm::None {
+            info!("No algorithm defined for the operation");
             return Err(PsaErrorNotSupported);
         }
         if !(attributes.policy.usage_flags.decrypt()
@@ -60,6 +68,7 @@ impl Provider {
             || attributes.policy.usage_flags.verify_hash()
             || attributes.policy.usage_flags.verify_message())
         {
+            info!("No usage flags defined for the operation");
             return Err(PsaErrorNotSupported);
         }
         attributes.compatible_with_alg(attributes.policy.permitted_algorithms)?;
@@ -71,6 +80,7 @@ impl Provider {
         let mechanism = Mechanism::try_from(attributes.policy.permitted_algorithms)
             .map_err(to_response_status)?;
         if !(supported_mechanisms.contains(&mechanism.mechanism_type())) {
+            info!("Mechanism {:?} is not supported", mechanism);
             return Err(PsaErrorNotSupported);
         }
 
@@ -82,12 +92,20 @@ impl Provider {
             if !((attributes.bits as u64) >= (*mechanism_info.min_key_size()).into()
                 && (attributes.bits as u64) <= (*mechanism_info.max_key_size()).into())
             {
+                info!(
+                    "Incorrect key size {} for mechanism {:?}",
+                    attributes.bits, mechanism
+                );
                 return Err(PsaErrorNotSupported);
             }
         } else {
             if !((attributes.bits as u64) >= (*mechanism_info.min_key_size() as u64)
                 && (attributes.bits as u64) <= (*mechanism_info.max_key_size() as u64))
             {
+                info!(
+                    "Incorrect key size {} for mechanism {:?}",
+                    attributes.bits, mechanism
+                );
                 return Err(PsaErrorNotSupported);
             }
         }
@@ -95,6 +113,7 @@ impl Provider {
     }
 
     fn derive_check(attributes: Attributes) -> Result<can_do_crypto::Result> {
+        info!("Derive check type is not supported");
         return Err(PsaErrorNotSupported);
     }
 
@@ -104,7 +123,10 @@ impl Provider {
             Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
             } => (),
-            _ => return Err(PsaErrorNotSupported),
+            _ => {
+                info!("Unsupported key type {:?}", attributes.key_type);
+                return Err(PsaErrorNotSupported);
+            }
         }
         if attributes.policy.permitted_algorithms != Algorithm::None {
             return self.use_check(attributes);
@@ -118,7 +140,10 @@ impl Provider {
             Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => (),
-            _ => return Err(PsaErrorNotSupported),
+            _ => {
+                info!("Unsupported key type {:?}", attributes.key_type);
+                return Err(PsaErrorNotSupported);
+            }
         }
         if attributes.policy.permitted_algorithms != Algorithm::None {
             return self.use_check(attributes);
