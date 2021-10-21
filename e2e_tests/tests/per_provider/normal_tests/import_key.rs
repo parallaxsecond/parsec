@@ -313,7 +313,6 @@ fn check_format_import3() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn check_format_import_ecc() -> Result<()> {
     // If the bits field of the key attributes is zero, the operation should still work.
@@ -354,7 +353,6 @@ fn check_format_import_ecc() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn check_format_import_ecc2() -> Result<()> {
     // If the bits field of the key attributes is different that the size of the key parsed
