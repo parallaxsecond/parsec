@@ -42,21 +42,17 @@ impl Provider {
             _ => return Err(PsaErrorNotSupported),
         }
         match check_type {
-            CheckType::Generate => return Provider::generate_check(&self, attributes),
-            CheckType::Import => return Provider::import_check(&self, attributes),
-            CheckType::Use => {
-                if attributes.policy.permitted_algorithms == Algorithm::None {
-                    return Err(PsaErrorNotSupported);
-                } else {
-                    return Provider::use_check(&self, attributes);
-                }
-            }
+            CheckType::Generate => return self.generate_check(attributes),
+            CheckType::Import => return self.import_check(attributes),
+            CheckType::Use => return self.use_check(attributes),
             CheckType::Derive => return Provider::derive_check(attributes),
         };
-        return Ok(can_do_crypto::Result {});
     }
 
     fn use_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+        if attributes.policy.permitted_algorithms == Algorithm::None {
+            return Err(PsaErrorNotSupported);
+        }
         if !(attributes.policy.usage_flags.decrypt()
             || attributes.policy.usage_flags.encrypt()
             || attributes.policy.usage_flags.sign_hash()
@@ -67,19 +63,21 @@ impl Provider {
             return Err(PsaErrorNotSupported);
         }
         attributes.compatible_with_alg(attributes.policy.permitted_algorithms)?;
+
         let supported_mechanisms: Vec<MechanismType> = self
             .backend
             .get_mechanism_list(self.slot_number)
             .map_err(to_response_status)?;
         let mechanism = Mechanism::try_from(attributes.policy.permitted_algorithms)
             .map_err(to_response_status)?;
+        if !(supported_mechanisms.contains(&mechanism.mechanism_type())) {
+            return Err(PsaErrorNotSupported);
+        }
+
         let mechanism_info: MechanismInfo = self
             .backend
             .get_mechanism_info(self.slot_number, mechanism.mechanism_type())
             .map_err(to_response_status)?;
-        if !(supported_mechanisms.contains(&mechanism.mechanism_type())) {
-            return Err(PsaErrorNotSupported);
-        }
         if std::any::type_name::<Ulong>() == std::any::type_name::<u64>() {
             if !((attributes.bits as u64) >= (*mechanism_info.min_key_size()).into()
                 && (attributes.bits as u64) <= (*mechanism_info.max_key_size()).into())
@@ -87,7 +85,7 @@ impl Provider {
                 return Err(PsaErrorNotSupported);
             }
         } else {
-            if !((*mechanism_info.min_key_size() as u64) <= (attributes.bits as u64)
+            if !((attributes.bits as u64) >= (*mechanism_info.min_key_size() as u64)
                 && (attributes.bits as u64) <= (*mechanism_info.max_key_size() as u64))
             {
                 return Err(PsaErrorNotSupported);
@@ -101,31 +99,29 @@ impl Provider {
     }
 
     fn generate_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        if !(attributes.key_type == Type::RsaKeyPair
-            || attributes.key_type
-                == (Type::EccKeyPair {
-                    curve_family: EccFamily::SecpR1,
-                }))
-        {
-            return Err(PsaErrorNotSupported);
+        match attributes.key_type {
+            Type::RsaKeyPair => (),
+            Type::EccKeyPair {
+                curve_family: EccFamily::SecpR1,
+            } => (),
+            _ => return Err(PsaErrorNotSupported),
         }
         if attributes.policy.permitted_algorithms != Algorithm::None {
-            return Provider::use_check(&self, attributes);
+            return self.use_check(attributes);
         }
         return Ok(can_do_crypto::Result);
     }
 
     fn import_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        if !(attributes.key_type == Type::RsaPublicKey
-            || attributes.key_type
-                == (Type::EccPublicKey {
-                    curve_family: EccFamily::SecpR1,
-                }))
-        {
-            return Err(PsaErrorNotSupported);
+        match attributes.key_type {
+            Type::RsaPublicKey => (),
+            Type::EccPublicKey {
+                curve_family: EccFamily::SecpR1,
+            } => (),
+            _ => return Err(PsaErrorNotSupported),
         }
         if attributes.policy.permitted_algorithms != Algorithm::None {
-            return Provider::use_check(&self, attributes);
+            return self.use_check(attributes);
         }
         return Ok(can_do_crypto::Result);
     }
