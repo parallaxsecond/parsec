@@ -1,5 +1,5 @@
 #![allow(unused, trivial_numeric_casts)]
-use super::Provider;
+use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::providers::pkcs11::to_response_status;
 use cryptoki::types::mechanism::Mechanism;
@@ -25,22 +25,15 @@ impl Provider {
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         let attributes = op.attributes;
-        let check_type = op.check_type;
-        let supported_ecc_family_sizes = [192, 224, 256, 384, 512];
         match attributes.key_type {
-            Type::EccKeyPair {
-                curve_family: EccFamily::SecpR1,
-            }
-            | Type::EccPublicKey {
-                curve_family: EccFamily::SecpR1,
-            } => {
-                if !(supported_ecc_family_sizes.contains(&attributes.bits)) {
+            Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
+                let _ = utils::ec_params(curve_family, attributes.bits).map_err(|_| {
                     info!(
-                        "Unsupported size {} for SecpR1 curve family",
-                        attributes.bits
+                        "Unsupported EC curve family {} or key size {}",
+                        curve_family, attributes.bits
                     );
-                    return Err(PsaErrorNotSupported);
-                }
+                    PsaErrorNotSupported
+                })?;
             }
             Type::RsaKeyPair | Type::RsaPublicKey => (),
             _ => {
@@ -48,7 +41,7 @@ impl Provider {
                 return Err(PsaErrorNotSupported);
             }
         }
-        match check_type {
+        match op.check_type {
             CheckType::Generate => return self.generate_check(attributes),
             CheckType::Import => return self.import_check(attributes),
             CheckType::Use => return self.use_check(attributes),
@@ -119,10 +112,7 @@ impl Provider {
 
     fn generate_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
         match attributes.key_type {
-            Type::RsaKeyPair => (),
-            Type::EccKeyPair {
-                curve_family: EccFamily::SecpR1,
-            } => (),
+            Type::RsaKeyPair | Type::EccKeyPair { .. } => (),
             _ => {
                 info!("Unsupported key type {:?}", attributes.key_type);
                 return Err(PsaErrorNotSupported);
@@ -136,10 +126,7 @@ impl Provider {
 
     fn import_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
         match attributes.key_type {
-            Type::RsaPublicKey => (),
-            Type::EccPublicKey {
-                curve_family: EccFamily::SecpR1,
-            } => (),
+            Type::RsaPublicKey | Type::EccPublicKey { .. } => (),
             _ => {
                 info!("Unsupported key type {:?}", attributes.key_type);
                 return Err(PsaErrorNotSupported);
