@@ -8,6 +8,7 @@ use parsec_client::core::interface::requests::{
     AuthType, Opcode, ProviderId, ResponseStatus, Result,
 };
 use std::collections::HashSet;
+use std::iter::FromIterator;
 
 #[test]
 fn list_providers() {
@@ -68,39 +69,47 @@ fn list_authenticators() {
 #[test]
 fn list_opcodes() {
     let mut client = TestClient::new();
-    let mut crypto_providers_tpm = HashSet::new();
-    let mut core_provider_opcodes = HashSet::new();
+    let core_opcodes = vec![
+        Opcode::Ping,
+        Opcode::ListProviders,
+        Opcode::ListAuthenticators,
+        Opcode::ListOpcodes,
+        Opcode::ListKeys,
+    ];
+    let common_opcodes = vec![
+        Opcode::PsaGenerateKey,
+        Opcode::PsaDestroyKey,
+        Opcode::PsaSignHash,
+        Opcode::PsaVerifyHash,
+        Opcode::PsaImportKey,
+        Opcode::PsaExportPublicKey,
+        Opcode::PsaAsymmetricDecrypt,
+        Opcode::PsaAsymmetricEncrypt,
+    ];
+    let mut mbed_crypto_opcodes = vec![
+        Opcode::PsaHashCompute,
+        Opcode::PsaHashCompare,
+        Opcode::PsaRawKeyAgreement,
+        Opcode::PsaAeadEncrypt,
+        Opcode::PsaAeadDecrypt,
+        Opcode::PsaExportKey,
+        Opcode::PsaGenerateRandom,
+    ];
+    mbed_crypto_opcodes.extend(common_opcodes.clone());
+
+    let core_provider_opcodes = HashSet::from_iter(core_opcodes);
+
     let mut crypto_providers_cal = HashSet::new();
-
-    let _ = crypto_providers_tpm.insert(Opcode::PsaGenerateKey);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaDestroyKey);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaSignHash);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaVerifyHash);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaImportKey);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaExportPublicKey);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricDecrypt);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaAsymmetricEncrypt);
-
-    let mut crypto_providers_hsm = crypto_providers_tpm.clone();
-    let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);
-
-    let mut crypto_providers_mbed_crypto = crypto_providers_tpm.clone();
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompute);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaHashCompare);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaRawKeyAgreement);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadEncrypt);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadDecrypt);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaExportKey);
-    let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaGenerateRandom);
-
-    let _ = core_provider_opcodes.insert(Opcode::Ping);
-    let _ = core_provider_opcodes.insert(Opcode::ListProviders);
-    let _ = core_provider_opcodes.insert(Opcode::ListAuthenticators);
-    let _ = core_provider_opcodes.insert(Opcode::ListOpcodes);
-    let _ = core_provider_opcodes.insert(Opcode::ListKeys);
-
     // Not that much to be tested with test-interface
     let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
+
+    let mut crypto_providers_tpm = HashSet::from_iter(common_opcodes.clone());
+    let _ = crypto_providers_tpm.insert(Opcode::CanDoCrypto);
+
+    let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes.clone());
+    let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);
+
+    let crypto_providers_mbed_crypto = HashSet::from_iter(mbed_crypto_opcodes);
 
     assert_eq!(
         client

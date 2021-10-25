@@ -7,6 +7,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::providers::crypto_capability::CanDoCrypto;
 use cryptoki::types::locking::CInitializeArgs;
 use cryptoki::types::session::{Session, UserType};
 use cryptoki::types::slot_token::Slot;
@@ -340,13 +341,15 @@ impl Provide for Provider {
         self.psa_asymmetric_decrypt_internal(app_name, op)
     }
 
+    /// Check if the crypto operation is supported by PKCS11 provider
+    /// by using CanDoCrypto trait.
     fn can_do_crypto(
         &self,
         app_name: ApplicationName,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto ingress");
-        self.can_do_crypto_internal(app_name, op)
+        trace!("can_do_crypto PKCS11 ingress");
+        self.can_do_crypto_main(app_name, op)
     }
 }
 

@@ -255,7 +255,7 @@ fn use_check() {
 
     let status = client.can_do_crypto(CheckType::Use, attributes);
 
-    assert_eq!(Err(ResponseStatus::PsaErrorNotPermitted), status)
+    assert_eq!(Err(ResponseStatus::PsaErrorNotSupported), status)
 }
 
 #[test]

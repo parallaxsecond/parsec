@@ -12,6 +12,8 @@ use std::collections::HashSet;
 
 pub mod core;
 
+pub mod crypto_capability;
+
 #[cfg(feature = "pkcs11-provider")]
 //TODO: To remove when #301 is merged
 #[allow(clippy::all)]
@@ -297,13 +299,13 @@ pub trait Provide {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    ///Get the filtered list of supported algorithms.
+    ///Check if the crypto operation is supported by provider.
     fn can_do_crypto(
         &self,
         _app_name: ApplicationName,
         _op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto ingress");
+        trace!("can_do_crypto main ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }
