@@ -138,17 +138,7 @@ pub struct LegacyPasswordContext {
 pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     match attributes.key_type {
         Type::RsaKeyPair | Type::RsaPublicKey => {
-            let size_u16 = u16::try_from(attributes.bits).map_err(|_| {
-                error!(
-                    "Requested RSA key size is not supported ({})",
-                    attributes.bits
-                );
-                ResponseStatus::PsaErrorInvalidArgument
-            })?;
-            let size = RsaKeyBits::try_from(size_u16).map_err(|_| {
-                error!("Requested RSA key size is not supported ({})", size_u16);
-                ResponseStatus::PsaErrorInvalidArgument
-            })?;
+            let size = rsa_key_bits(attributes.bits)?;
             match attributes.policy.permitted_algorithms {
                 Algorithm::AsymmetricSignature(alg) if alg.is_rsa_alg() => Ok(KeyParams::Rsa {
                     size,
@@ -251,11 +241,25 @@ fn convert_hash_to_tpm(hash: Hash) -> Result<HashingAlgorithm> {
         Hash::Sha3_256 => Ok(HashingAlgorithm::Sha3_256),
         Hash::Sha3_384 => Ok(HashingAlgorithm::Sha3_384),
         Hash::Sha3_512 => Ok(HashingAlgorithm::Sha3_512),
-        _ => Err(ResponseStatus::PsaErrorNotSupported),
+        _ => {
+            error!("Requested hash is not supported ({:?})", hash);
+            Err(ResponseStatus::PsaErrorNotSupported)
+        }
     }
 }
 
-fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
+pub fn rsa_key_bits(bits: usize) -> Result<RsaKeyBits> {
+    let size_u16 = u16::try_from(bits).map_err(|_| {
+        error!("Requested RSA key size is not supported ({})", bits);
+        ResponseStatus::PsaErrorInvalidArgument
+    })?;
+    RsaKeyBits::try_from(size_u16).map_err(|_| {
+        error!("Requested RSA key size is not supported ({})", size_u16);
+        ResponseStatus::PsaErrorInvalidArgument
+    })
+}
+
+pub fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
     match key_attributes.key_type {
         Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
@@ -268,9 +272,21 @@ fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
             256 => Ok(EccCurve::NistP256),
             384 => Ok(EccCurve::NistP384),
             521 => Ok(EccCurve::NistP521),
-            _ => Err(ResponseStatus::PsaErrorNotSupported),
+            _ => {
+                error!(
+                    "Requested ECC key size is not supported ({})",
+                    key_attributes.bits
+                );
+                Err(ResponseStatus::PsaErrorNotSupported)
+            }
         },
-        _ => Err(ResponseStatus::PsaErrorNotSupported),
+        _ => {
+            error!(
+                "Requested key type is not supported ({:?})",
+                key_attributes.key_type
+            );
+            Err(ResponseStatus::PsaErrorNotSupported)
+        }
     }
 }
 

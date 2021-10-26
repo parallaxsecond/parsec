@@ -1,4 +1,4 @@
-// Copyright 2019 Contributors to the Parsec project.
+// Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 //! Crypto capabilities trait for Parsec providers
 //!

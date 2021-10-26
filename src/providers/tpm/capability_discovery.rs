@@ -1,3 +1,6 @@
+// Copyright 2021 Contributors to the Parsec project.
+// SPDX-License-Identifier: Apache-2.0
+
 use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
 use crate::providers::crypto_capability::CanDoCrypto;
@@ -15,19 +18,31 @@ impl CanDoCrypto for Provider {
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto_internal for TPM provider");
 
-        // Check attributes compatibility
-
-        // TO_DO what to do when attributes.policy.permitted_algorithms == Algorithm::None?
-        // it should pass for generate_check and import_check
-        let _ = utils::parsec_to_tpm_params(op.attributes).map_err(|_| PsaErrorNotSupported)?;
-        Ok(can_do_crypto::Result)
+        // Check attributes compatibility with the provider
+        match op.attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => {
+                let _ =
+                    utils::rsa_key_bits(op.attributes.bits).map_err(|_| PsaErrorNotSupported)?;
+                Ok(can_do_crypto::Result)
+            }
+            Type::EccKeyPair { .. } | Type::EccPublicKey { .. } => {
+                let _ = utils::convert_curve_to_tpm(op.attributes)?;
+                Ok(can_do_crypto::Result)
+            }
+            _ => {
+                info!("Unsupported key type {:?}", op.attributes.key_type);
+                Err(PsaErrorNotSupported)
+            }
+        }
     }
 
-    fn use_check_internal(&self, _attributes: Attributes) -> Result<can_do_crypto::Result> {
+    fn use_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
         trace!("use_check_internal for TPM provider");
 
-        // This method can be called only if can_do_crypto_internal passed
-        // where we check generic crypto capabilites.
+        let _ = utils::parsec_to_tpm_params(attributes).map_err(|_| PsaErrorNotSupported)?;
+
+        // TO-DO we also need to check capabilities of used TMP module.
+        // TPM_GetCapability support in the tss-esapi crate is required.
         Ok(can_do_crypto::Result)
     }
 

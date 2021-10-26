@@ -67,12 +67,14 @@ fn key_size_check() {
     let mut attributes = get_default_rsa_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
     attributes.bits = 256;
+    // Unsupported RSA key size
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Use, attributes.clone())
     );
 
     attributes.bits = 2048;
+    // Supported RSA key size
     assert_eq!(
         Ok(()),
         client.can_do_crypto(CheckType::Use, attributes.clone())
@@ -80,13 +82,14 @@ fn key_size_check() {
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
-    attributes.bits = 256;
+    // Supported ECC key size
     assert_eq!(
         Ok(()),
         client.can_do_crypto(CheckType::Use, attributes.clone())
     );
 
     attributes.bits = 1024;
+    // Usupported ECC key size
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Use, attributes.clone())
@@ -168,7 +171,7 @@ fn use_check() {
             hash_alg: Hash::Sha256.into(),
         });
 
-    // Can't use RSA key with unsupported permitted algorithm
+    // Can't use RSA key with unsupported algorithm
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Use, attributes)
@@ -198,6 +201,20 @@ fn generate_check() {
         Ok(()),
         client.can_do_crypto(CheckType::Generate, attributes.clone())
     );
+
+    attributes.policy.permitted_algorithms = Algorithm::None;
+    // Can generate ECC key pair without an algorithm defined
+    assert_eq!(
+        Ok(()),
+        client.can_do_crypto(CheckType::Generate, attributes.clone())
+    );
+
+    attributes.bits = 1024;
+    // Can't generate wrong size ECC key pair
+    assert_eq!(
+        Err(ResponseStatus::PsaErrorNotSupported),
+        client.can_do_crypto(CheckType::Generate, attributes.clone())
+    );
 }
 
 #[test]
@@ -222,6 +239,16 @@ fn import_check() {
     // Can't import ECC key pair
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
+        client.can_do_crypto(CheckType::Import, attributes.clone())
+    );
+
+    attributes.policy.permitted_algorithms = Algorithm::None;
+    attributes.key_type = Type::EccPublicKey {
+        curve_family: EccFamily::SecpR1,
+    };
+    // Can import public ECC key without an algorithm defined
+    assert_eq!(
+        Ok(()),
         client.can_do_crypto(CheckType::Import, attributes.clone())
     );
 }

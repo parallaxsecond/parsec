@@ -1,3 +1,6 @@
+// Copyright 2021 Contributors to the Parsec project.
+// SPDX-License-Identifier: Apache-2.0
+
 #![allow(trivial_numeric_casts)]
 use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
@@ -19,21 +22,22 @@ impl CanDoCrypto for Provider {
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto_internal for PKCS11 provider");
-        let attributes = op.attributes;
-        match attributes.key_type {
+
+        // Check attributes compatibility with the provider
+        match op.attributes.key_type {
             Type::RsaKeyPair | Type::RsaPublicKey => Ok(can_do_crypto::Result {}),
             Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
-                let _ = utils::ec_params(curve_family, attributes.bits).map_err(|_| {
+                let _ = utils::ec_params(curve_family, op.attributes.bits).map_err(|_| {
                     info!(
                         "Unsupported EC curve family {} or key size {}",
-                        curve_family, attributes.bits
+                        curve_family, op.attributes.bits
                     );
                     PsaErrorNotSupported
                 })?;
                 Ok(can_do_crypto::Result)
             }
             _ => {
-                info!("Unsupported key type {:?}", attributes.key_type);
+                info!("Unsupported key type {:?}", op.attributes.key_type);
                 Err(PsaErrorNotSupported)
             }
         }
