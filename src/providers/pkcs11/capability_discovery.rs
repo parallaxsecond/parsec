@@ -1,70 +1,50 @@
-#![allow(unused, trivial_numeric_casts)]
+// Copyright 2021 Contributors to the Parsec project.
+// SPDX-License-Identifier: Apache-2.0
+
+#![allow(trivial_numeric_casts)]
 use super::{utils, Provider};
 use crate::authenticators::ApplicationName;
+use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::pkcs11::to_response_status;
-use cryptoki::types::mechanism::Mechanism;
-use cryptoki::types::mechanism::MechanismInfo;
-use cryptoki::types::mechanism::MechanismType;
+use cryptoki::types::mechanism::{Mechanism, MechanismInfo, MechanismType};
 use cryptoki::types::Ulong;
-use log::info;
+use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
-use parsec_interface::operations::can_do_crypto::CheckType;
-use parsec_interface::operations::psa_algorithm::Algorithm;
-use parsec_interface::operations::psa_key_attributes::Attributes;
-use parsec_interface::operations::psa_key_attributes::EccFamily;
-use parsec_interface::operations::psa_key_attributes::Type;
-use parsec_interface::requests::ResponseStatus::{InvalidEncoding, PsaErrorNotSupported};
+use parsec_interface::operations::psa_key_attributes::{Attributes, Type};
+use parsec_interface::requests::ResponseStatus::PsaErrorNotSupported;
 use parsec_interface::requests::Result;
 use std::convert::TryFrom;
-use std::ops::Deref;
 
-impl Provider {
-    pub(super) fn can_do_crypto_internal(
+impl CanDoCrypto for Provider {
+    fn can_do_crypto_internal(
         &self,
         _app_name: ApplicationName,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        let attributes = op.attributes;
-        match attributes.key_type {
+        trace!("can_do_crypto_internal for PKCS11 provider");
+
+        // Check attributes compatibility with the provider
+        match op.attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => Ok(can_do_crypto::Result {}),
             Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
-                let _ = utils::ec_params(curve_family, attributes.bits).map_err(|_| {
+                let _ = utils::ec_params(curve_family, op.attributes.bits).map_err(|_| {
                     info!(
                         "Unsupported EC curve family {} or key size {}",
-                        curve_family, attributes.bits
+                        curve_family, op.attributes.bits
                     );
                     PsaErrorNotSupported
                 })?;
+                Ok(can_do_crypto::Result)
             }
-            Type::RsaKeyPair | Type::RsaPublicKey => (),
             _ => {
-                info!("Unsupported key type {:?}", attributes.key_type);
-                return Err(PsaErrorNotSupported);
+                info!("Unsupported key type {:?}", op.attributes.key_type);
+                Err(PsaErrorNotSupported)
             }
         }
-        match op.check_type {
-            CheckType::Generate => return self.generate_check(attributes),
-            CheckType::Import => return self.import_check(attributes),
-            CheckType::Use => return self.use_check(attributes),
-            CheckType::Derive => return Provider::derive_check(attributes),
-        };
     }
 
-    fn use_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        if attributes.policy.permitted_algorithms == Algorithm::None {
-            info!("No algorithm defined for the operation");
-            return Err(PsaErrorNotSupported);
-        }
-        if !(attributes.policy.usage_flags.decrypt()
-            || attributes.policy.usage_flags.encrypt()
-            || attributes.policy.usage_flags.sign_hash()
-            || attributes.policy.usage_flags.sign_message()
-            || attributes.policy.usage_flags.verify_hash()
-            || attributes.policy.usage_flags.verify_message())
-        {
-            info!("No usage flags defined for the operation");
-            return Err(PsaErrorNotSupported);
-        }
-        attributes.compatible_with_alg(attributes.policy.permitted_algorithms)?;
+    fn use_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+        trace!("use_check_internal for PKCS11 provider");
 
         let supported_mechanisms: Vec<MechanismType> = self
             .backend
@@ -102,39 +82,28 @@ impl Provider {
                 return Err(PsaErrorNotSupported);
             }
         }
-        return Ok(can_do_crypto::Result {});
+        Ok(can_do_crypto::Result)
     }
 
-    fn derive_check(attributes: Attributes) -> Result<can_do_crypto::Result> {
-        info!("Derive check type is not supported");
-        return Err(PsaErrorNotSupported);
-    }
-
-    fn generate_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+    fn generate_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+        trace!("generate_check_internal for PKCS11 provider");
         match attributes.key_type {
-            Type::RsaKeyPair | Type::EccKeyPair { .. } => (),
+            Type::RsaKeyPair | Type::EccKeyPair { .. } => Ok(can_do_crypto::Result),
             _ => {
                 info!("Unsupported key type {:?}", attributes.key_type);
-                return Err(PsaErrorNotSupported);
+                Err(PsaErrorNotSupported)
             }
         }
-        if attributes.policy.permitted_algorithms != Algorithm::None {
-            return self.use_check(attributes);
-        }
-        return Ok(can_do_crypto::Result);
     }
 
-    fn import_check(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+    fn import_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
+        trace!("import_check_internal for PKCS11 provider");
         match attributes.key_type {
-            Type::RsaPublicKey | Type::EccPublicKey { .. } => (),
+            Type::RsaPublicKey | Type::EccPublicKey { .. } => Ok(can_do_crypto::Result),
             _ => {
                 info!("Unsupported key type {:?}", attributes.key_type);
-                return Err(PsaErrorNotSupported);
+                Err(PsaErrorNotSupported)
             }
         }
-        if attributes.policy.permitted_algorithms != Algorithm::None {
-            return self.use_check(attributes);
-        }
-        return Ok(can_do_crypto::Result);
     }
 }
