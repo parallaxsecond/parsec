@@ -1,16 +1,17 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use log::trace;
 use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
-// Default test attributes for ECC public key.
+// Default test attributes for ECC key pair.
 fn get_default_ecc_attrs() -> Attributes {
     Attributes {
         lifetime: Lifetime::Persistent,
-        key_type: Type::EccPublicKey {
+        key_type: Type::EccKeyPair {
             curve_family: EccFamily::SecpR1,
         },
         bits: 256,
@@ -23,11 +24,11 @@ fn get_default_ecc_attrs() -> Attributes {
     }
 }
 
-// Default test attributes for RSA public key.
+// Default test attributes for RSA key pair.
 fn get_default_rsa_attrs() -> Attributes {
     Attributes {
         lifetime: Lifetime::Persistent,
-        key_type: Type::RsaPublicKey,
+        key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
             usage_flags: UsageFlags::default(),
@@ -37,6 +38,167 @@ fn get_default_rsa_attrs() -> Attributes {
                 },
             ),
         },
+    }
+}
+
+#[test]
+// Checks for the "Asymmetric encryption algorithms" table on
+// https://parallaxsecond.github.io/parsec-book/parsec_client/operations/service_api_coverage.html
+fn rsa_encrypt_use_check() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::CanDoCrypto) {
+        return;
+    }
+
+    let all_algs = vec![
+        AsymmetricEncryption::RsaPkcs1v15Crypt {},
+        AsymmetricEncryption::RsaOaep {
+            hash_alg: Hash::Sha256.into(),
+        },
+    ];
+
+    #[cfg(any(
+        feature = "tpm-provider",
+        feature = "pkcs11-provider",
+        feature = "mbed-crypto-provider"
+    ))]
+    let supported_algs = all_algs.clone();
+
+    #[cfg(any(
+        feature = "cryptoauthlib-provider",
+        feature = "trusted-service-provider",
+    ))]
+    let supported_algs = vec![];
+
+    let mut attributes = get_default_rsa_attrs();
+    let _ = attributes.policy.usage_flags.set_encrypt();
+
+    // Check use RSA key pair with all encrypt algorithms
+    for alg in all_algs.iter() {
+        trace!("Testing {:?} algorithm", alg);
+        let result = if supported_algs.contains(alg) {
+            Ok(())
+        } else {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        };
+        attributes.policy.permitted_algorithms = (*alg).into();
+        assert_eq!(
+            result,
+            client.can_do_crypto(CheckType::Generate, attributes.clone())
+        );
+    }
+}
+
+#[test]
+// Checks for the "Elliptic curve families" table on
+// https://parallaxsecond.github.io/parsec-book/parsec_client/operations/service_api_coverage.html
+fn ecc_curve_use_check() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::CanDoCrypto) {
+        return;
+    }
+
+    let all_curves = vec![
+        EccFamily::SecpK1,
+        EccFamily::SecpR1,
+        EccFamily::SectK1,
+        EccFamily::SectR1,
+        EccFamily::BrainpoolPR1,
+        EccFamily::Frp,
+        EccFamily::Montgomery,
+    ];
+
+    #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
+    let supported_curves = all_curves.clone();
+
+    #[cfg(any(
+        feature = "tpm-provider",
+        feature = "pkcs11-provider",
+        feature = "cryptoauthlib-provider"
+    ))]
+    let supported_curves = vec![EccFamily::SecpR1];
+
+    let mut attributes = get_default_ecc_attrs();
+    let _ = attributes.policy.usage_flags.set_sign_hash();
+
+    // Check use ECC key pair with all curves
+    for curve in all_curves.iter() {
+        trace!("Testing {:?} curve", curve);
+        let result = if supported_curves.contains(curve) {
+            Ok(())
+        } else {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        };
+        attributes.key_type = Type::EccKeyPair {
+            curve_family: *curve,
+        };
+        assert_eq!(
+            result,
+            client.can_do_crypto(CheckType::Generate, attributes.clone())
+        );
+    }
+}
+
+#[test]
+// Checks for the "Hash algorithms" table on
+// https://parallaxsecond.github.io/parsec-book/parsec_client/operations/service_api_coverage.html
+fn hash_use_check() {
+    let mut client = TestClient::new();
+    if !client.is_operation_supported(Opcode::CanDoCrypto) {
+        return;
+    }
+
+    let all_hashes = vec![
+        Hash::Ripemd160,
+        Hash::Sha224,
+        Hash::Sha256,
+        Hash::Sha384,
+        Hash::Sha512,
+        Hash::Sha512_224,
+        Hash::Sha512_256,
+        Hash::Sha3_224,
+        Hash::Sha3_256,
+        Hash::Sha3_384,
+        Hash::Sha3_512,
+    ];
+
+    #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
+    let supported_hashes = all_hashes.clone();
+
+    #[cfg(feature = "tpm-provider")]
+    let supported_hashes = vec![
+        Hash::Sha256,
+        Hash::Sha384,
+        Hash::Sha512,
+        Hash::Sha3_256,
+        Hash::Sha3_384,
+        Hash::Sha3_512,
+    ];
+    #[cfg(feature = "pkcs11-provider")]
+    let supported_hashes = vec![Hash::Sha224, Hash::Sha256, Hash::Sha384, Hash::Sha512];
+
+    #[cfg(feature = "cryptoauthlib-provider")]
+    let supported_hashes = vec![Hash::Sha256];
+
+    let mut attributes = get_default_rsa_attrs();
+    let _ = attributes.policy.usage_flags.set_sign_hash();
+
+    // Check use RSA key pair with all hashes
+    for hash in all_hashes.iter() {
+        trace!("Testing {:?} hash", hash);
+        let result = if supported_hashes.contains(hash) {
+            Ok(())
+        } else {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        };
+        attributes.policy.permitted_algorithms = AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: (*hash).into(),
+        }
+        .into();
+        assert_eq!(
+            result,
+            client.can_do_crypto(CheckType::Generate, attributes.clone())
+        );
     }
 }
 
@@ -187,15 +349,17 @@ fn generate_check() {
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_encrypt();
+    attributes.key_type = Type::EccPublicKey {
+        curve_family: EccFamily::SecpR1,
+    };
     // Can't generate ECC public key only
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Generate, attributes.clone())
     );
 
-    attributes.key_type = Type::EccKeyPair {
-        curve_family: EccFamily::SecpR1,
-    };
+    let mut attributes = get_default_ecc_attrs();
+    let _ = attributes.policy.usage_flags.set_encrypt();
     // Can generate ECC key pair
     assert_eq!(
         Ok(()),
@@ -226,26 +390,22 @@ fn import_check() {
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_encrypt();
-
-    // Can import ECC public key
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Import, attributes.clone())
-    );
-
-    attributes.key_type = Type::EccKeyPair {
-        curve_family: EccFamily::SecpR1,
-    };
     // Can't import ECC key pair
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Import, attributes.clone())
     );
 
-    attributes.policy.permitted_algorithms = Algorithm::None;
     attributes.key_type = Type::EccPublicKey {
         curve_family: EccFamily::SecpR1,
     };
+    // Can import ECC public key
+    assert_eq!(
+        Ok(()),
+        client.can_do_crypto(CheckType::Import, attributes.clone())
+    );
+
+    attributes.policy.permitted_algorithms = Algorithm::None;
     // Can import public ECC key without an algorithm defined
     assert_eq!(
         Ok(()),

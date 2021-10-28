@@ -10,6 +10,7 @@ use cryptoki::types::mechanism::{Mechanism, MechanismInfo, MechanismType};
 use cryptoki::types::Ulong;
 use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
+use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::{Attributes, Type};
 use parsec_interface::requests::ResponseStatus::PsaErrorNotSupported;
 use parsec_interface::requests::Result;
@@ -25,7 +26,21 @@ impl CanDoCrypto for Provider {
 
         // Check attributes compatibility with the provider
         match op.attributes.key_type {
-            Type::RsaKeyPair | Type::RsaPublicKey => Ok(can_do_crypto::Result {}),
+            Type::RsaKeyPair | Type::RsaPublicKey => {
+                // Check for supported Hash for RSA PKCS#1 v1.5 signature algorithm.
+                match op.attributes.policy.permitted_algorithms {
+                    Algorithm::AsymmetricSignature(
+                        alg @ AsymmetricSignature::RsaPkcs1v15Sign { .. },
+                    ) => {
+                        let _ = utils::digest_info(alg, vec![0, 1]).map_err(|_| {
+                            info!("Unsupported Hash in signature algorithm {:?}", alg);
+                            PsaErrorNotSupported
+                        })?;
+                    }
+                    _ => (),
+                }
+                Ok(can_do_crypto::Result {})
+            }
             Type::EccKeyPair { curve_family } | Type::EccPublicKey { curve_family } => {
                 let _ = utils::ec_params(curve_family, op.attributes.bits).map_err(|_| {
                     info!(

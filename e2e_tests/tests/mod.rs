@@ -30,5 +30,7 @@
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 
+#[cfg(feature = "all-providers")]
 mod all_providers;
+#[cfg(not(feature = "all-providers"))]
 mod per_provider;
