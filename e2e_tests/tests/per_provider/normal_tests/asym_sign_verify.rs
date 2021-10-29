@@ -230,7 +230,10 @@ fn sign_hash_not_permitted() -> Result<()> {
     let hash = hasher.finalize().to_vec();
 
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_message().set_verify_hash().set_verify_message();
+    let _ = usage_flags
+        .set_sign_message()
+        .set_verify_hash()
+        .set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
@@ -270,7 +273,10 @@ fn sign_hash_not_permitted_ecc() -> Result<()> {
     let hash = hasher.finalize().to_vec();
 
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_message().set_verify_hash().set_verify_message();
+    let _ = usage_flags
+        .set_sign_message()
+        .set_verify_hash()
+        .set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -412,7 +418,10 @@ fn verify_hash_not_permitted_rsa() -> Result<()> {
     let hash = hasher.finalize().to_vec();
 
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_message().set_sign_hash().set_verify_message();
+    let _ = usage_flags
+        .set_sign_message()
+        .set_sign_hash()
+        .set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
@@ -455,7 +464,10 @@ fn verify_hash_not_permitted_ecc() -> Result<()> {
     let hash = hasher.finalize().to_vec();
 
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_message().set_sign_hash().set_verify_message();
+    let _ = usage_flags
+        .set_sign_message()
+        .set_sign_hash()
+        .set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {

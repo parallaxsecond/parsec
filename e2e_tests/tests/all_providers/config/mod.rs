@@ -217,7 +217,12 @@ fn allow_export() {
 
     let mut client = TestClient::new();
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_hash().set_verify_hash().set_sign_message().set_verify_message().set_export();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_verify_hash()
+        .set_sign_message()
+        .set_verify_message()
+        .set_export();
     assert_eq!(
         client
             .generate_key(

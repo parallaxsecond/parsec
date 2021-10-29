@@ -199,7 +199,11 @@ fn try_generate_asymmetric_public_key() {
     let mut client = TestClient::new();
     let key_name = String::from("try_generate_asymmetric_public_key");
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_hash().set_sign_message().set_verify_hash().set_verify_message();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_sign_message()
+        .set_verify_hash()
+        .set_verify_message();
     let err = client
         .generate_key(
             key_name,

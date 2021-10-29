@@ -121,7 +121,10 @@ fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
 
     let key_name = String::from("import_and_export_ecc_public_key_by_export_key_fn");
     let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_export().set_verify_message().set_verify_hash();
+    let _ = usage_flags
+        .set_export()
+        .set_verify_message()
+        .set_verify_hash();
     client.import_key(
         key_name.clone(),
         Attributes {
