@@ -92,7 +92,13 @@ impl Provider {
                     }
                     Err(error) => {
                         error!("aead_encrypt failed CAL error {}.", error);
-                        Err(ResponseStatus::PsaErrorGenericError)
+                        match error {
+                            rust_cryptoauthlib::AtcaStatus::AtcaInvalidSize
+                            | rust_cryptoauthlib::AtcaStatus::AtcaInvalidId
+                            | rust_cryptoauthlib::AtcaStatus::AtcaBadParam =>
+                                Err(ResponseStatus::PsaErrorInvalidArgument),
+                            _ => Err(ResponseStatus::PsaErrorGenericError),
+                        }
                     }
                 }
             }
@@ -141,7 +147,14 @@ impl Provider {
                         }
                         Err(error) => {
                             error!("aead_decrypt error {}", error);
-                            Err(ResponseStatus::PsaErrorGenericError)
+                            match error {
+                                rust_cryptoauthlib::AtcaStatus::AtcaInvalidSize
+                                | rust_cryptoauthlib::AtcaStatus::AtcaInvalidId
+                                | rust_cryptoauthlib::AtcaStatus::AtcaBadParam =>
+                                    Err(ResponseStatus::PsaErrorInvalidArgument),
+                                _ => Err(ResponseStatus::PsaErrorGenericError),
+                            }
+                            
                         }
                     }
                 } else {

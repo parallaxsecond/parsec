@@ -13,10 +13,8 @@ const NONCE: [u8; 13] = [
     0x48, 0xc0, 0x90, 0x69, 0x30, 0x56, 0x1e, 0x0a, 0xb0, 0xef, 0x4c, 0xd9, 0x72,
 ];
 
-#[cfg(feature = "cryptoauthlib-provider")]
 const NONCE_TOO_SHORT: [u8; 4] = [0x48, 0xc0, 0x90, 0x69];
 
-#[cfg(feature = "cryptoauthlib-provider")]
 const NONCE_TOO_LONG: [u8; 16] = [
     0x48, 0xc0, 0x90, 0x69, 0x30, 0x56, 0x1e, 0x0a, 0xb0, 0xef, 0x4c, 0xd9, 0x72, 0x1a, 0x1b, 0x1c,
 ];
@@ -258,7 +256,6 @@ fn aead_encrypt_ccm_encrypt_decrypt() {
     assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_ccm_encrypt_decrypt_shortened_tag() {
     let key_name = String::from("aead_encrypt_ccm_encrypt_decrypt_shortened_tag");
@@ -278,35 +275,55 @@ fn aead_encrypt_ccm_encrypt_decrypt_shortened_tag() {
             },
         )
         .unwrap();
-    let ciphertext = client
-        .aead_encrypt_message(
-            key_name.clone(),
-            Aead::AeadWithShortenedTag {
-                aead_alg: AeadWithDefaultLengthTag::Ccm,
-                tag_length: 16,
-            },
-            &NONCE,
-            &ADDITIONAL_DATA,
-            &PLAINTEXT,
-        )
-        .unwrap();
-    let plaintext = client
-        .aead_decrypt_message(
-            key_name,
-            Aead::AeadWithShortenedTag {
-                aead_alg: AeadWithDefaultLengthTag::Ccm,
-                tag_length: 16,
-            },
-            &NONCE,
-            &ADDITIONAL_DATA,
-            &ciphertext,
-        )
-        .unwrap();
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    {
+        assert_eq!(
+            client
+                .aead_encrypt_message(
+                    key_name.clone(),
+                    Aead::AeadWithShortenedTag {
+                        aead_alg: AeadWithDefaultLengthTag::Ccm,
+                        tag_length: 16,
+                    },
+                    &NONCE,
+                    &ADDITIONAL_DATA,
+                    &PLAINTEXT,
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotPermitted
+        );
+    }
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        let ciphertext = client
+            .aead_encrypt_message(
+                key_name.clone(),
+                Aead::AeadWithShortenedTag {
+                    aead_alg: AeadWithDefaultLengthTag::Ccm,
+                    tag_length: 16,
+                },
+                &NONCE,
+                &ADDITIONAL_DATA,
+                &PLAINTEXT,
+            )
+            .unwrap();
+        let plaintext = client
+            .aead_decrypt_message(
+                key_name,
+                Aead::AeadWithShortenedTag {
+                    aead_alg: AeadWithDefaultLengthTag::Ccm,
+                    tag_length: 16,
+                },
+                &NONCE,
+                &ADDITIONAL_DATA,
+                &ciphertext,
+            )
+            .unwrap();
 
-    assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
+        assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
+    }
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_ccm_encrypt_nonce_too_short() {
     let key_name = String::from("aead_encrypt_ccm_encrypt_nonce_too_short");
@@ -331,11 +348,10 @@ fn aead_encrypt_ccm_encrypt_nonce_too_short() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_ccm_encrypt_nonce_too_long() {
     let key_name = String::from("aead_encrypt_ccm_encrypt_nonce_too_long");
@@ -360,11 +376,10 @@ fn aead_encrypt_ccm_encrypt_nonce_too_long() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_ccm_encrypt_tag_length_too_short() {
     let key_name = String::from("aead_encrypt_ccm_encrypt_tag_length_too_short");
@@ -395,11 +410,10 @@ fn aead_encrypt_ccm_encrypt_tag_length_too_short() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_ccm_encrypt_tag_length_too_long() {
     let key_name = String::from("aead_encrypt_ccm_encrypt_tag_length_too_long");
@@ -430,7 +444,7 @@ fn aead_encrypt_ccm_encrypt_tag_length_too_long() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
@@ -576,7 +590,6 @@ fn aead_encrypt_gcm_encrypt_decrypt() {
     assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_decrypt_shortened_tag() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_decrypt_shortened_tag");
@@ -596,35 +609,55 @@ fn aead_encrypt_gcm_encrypt_decrypt_shortened_tag() {
             },
         )
         .unwrap();
-    let ciphertext = client
-        .aead_encrypt_message(
-            key_name.clone(),
-            Aead::AeadWithShortenedTag {
-                aead_alg: AeadWithDefaultLengthTag::Gcm,
-                tag_length: 16,
-            },
-            &NONCE,
-            &ADDITIONAL_DATA,
-            &PLAINTEXT,
-        )
-        .unwrap();
-    let plaintext = client
-        .aead_decrypt_message(
-            key_name,
-            Aead::AeadWithShortenedTag {
-                aead_alg: AeadWithDefaultLengthTag::Gcm,
-                tag_length: 16,
-            },
-            &NONCE,
-            &ADDITIONAL_DATA,
-            &ciphertext,
-        )
-        .unwrap();
+    #[cfg(not(feature = "cryptoauthlib-provider"))]
+    {
+        assert_eq!(
+            client
+                .aead_encrypt_message(
+                    key_name.clone(),
+                    Aead::AeadWithShortenedTag {
+                        aead_alg: AeadWithDefaultLengthTag::Gcm,
+                        tag_length: 16,
+                    },
+                    &NONCE,
+                    &ADDITIONAL_DATA,
+                    &PLAINTEXT,
+                )
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotPermitted
+        );
+    }
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        let ciphertext = client
+            .aead_encrypt_message(
+                key_name.clone(),
+                Aead::AeadWithShortenedTag {
+                    aead_alg: AeadWithDefaultLengthTag::Gcm,
+                    tag_length: 16,
+                },
+                &NONCE,
+                &ADDITIONAL_DATA,
+                &PLAINTEXT,
+            )
+            .unwrap();
+        let plaintext = client
+            .aead_decrypt_message(
+                key_name,
+                Aead::AeadWithShortenedTag {
+                    aead_alg: AeadWithDefaultLengthTag::Gcm,
+                    tag_length: 16,
+                },
+                &NONCE,
+                &ADDITIONAL_DATA,
+                &ciphertext,
+            )
+            .unwrap();
 
-    assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
+        assert_eq!(&PLAINTEXT[..], plaintext.as_slice());
+    }
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_nonce_too_short() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_nonce_too_short");
@@ -639,6 +672,7 @@ fn aead_encrypt_gcm_encrypt_nonce_too_short() {
             Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
         )
         .unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
     assert_eq!(
         client
             .aead_encrypt_message(
@@ -649,11 +683,10 @@ fn aead_encrypt_gcm_encrypt_nonce_too_short() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_nonce_too_long() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_nonce_too_long");
@@ -668,6 +701,7 @@ fn aead_encrypt_gcm_encrypt_nonce_too_long() {
             Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
         )
         .unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
     assert_eq!(
         client
             .aead_encrypt_message(
@@ -678,11 +712,10 @@ fn aead_encrypt_gcm_encrypt_nonce_too_long() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_tag_length_too_short() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_tag_length_too_short");
@@ -700,6 +733,7 @@ fn aead_encrypt_gcm_encrypt_tag_length_too_short() {
             },
         )
         .unwrap();
+    #[cfg(feature = "cryptoauthlib-provider")]
     assert_eq!(
         client
             .aead_encrypt_message(
@@ -713,11 +747,10 @@ fn aead_encrypt_gcm_encrypt_tag_length_too_short() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
 
-#[cfg(feature = "cryptoauthlib-provider")]
 #[test]
 fn aead_encrypt_gcm_encrypt_tag_length_too_long() {
     let key_name = String::from("aead_encrypt_gcm_encrypt_tag_length_too_long");
@@ -748,6 +781,6 @@ fn aead_encrypt_gcm_encrypt_tag_length_too_long() {
                 &PLAINTEXT,
             )
             .unwrap_err(),
-        ResponseStatus::PsaErrorGenericError
+        ResponseStatus::PsaErrorInvalidArgument
     );
 }
