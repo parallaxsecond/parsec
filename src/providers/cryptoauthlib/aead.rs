@@ -95,8 +95,9 @@ impl Provider {
                         match error {
                             rust_cryptoauthlib::AtcaStatus::AtcaInvalidSize
                             | rust_cryptoauthlib::AtcaStatus::AtcaInvalidId
-                            | rust_cryptoauthlib::AtcaStatus::AtcaBadParam =>
-                                Err(ResponseStatus::PsaErrorInvalidArgument),
+                            | rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
+                                Err(ResponseStatus::PsaErrorInvalidArgument)
+                            }
                             _ => Err(ResponseStatus::PsaErrorGenericError),
                         }
                     }
@@ -150,11 +151,11 @@ impl Provider {
                             match error {
                                 rust_cryptoauthlib::AtcaStatus::AtcaInvalidSize
                                 | rust_cryptoauthlib::AtcaStatus::AtcaInvalidId
-                                | rust_cryptoauthlib::AtcaStatus::AtcaBadParam =>
-                                    Err(ResponseStatus::PsaErrorInvalidArgument),
+                                | rust_cryptoauthlib::AtcaStatus::AtcaBadParam => {
+                                    Err(ResponseStatus::PsaErrorInvalidArgument)
+                                }
                                 _ => Err(ResponseStatus::PsaErrorGenericError),
                             }
-                            
                         }
                     }
                 } else {
