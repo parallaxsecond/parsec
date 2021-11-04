@@ -1,6 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::RawKeyAgreement;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
@@ -59,7 +60,7 @@ fn key_agreement_not_supported() {
 
 #[test]
 fn simple_raw_key_agreement() {
-    let key_name = String::from("simple_raw_key_agreement");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaRawKeyAgreement) {
@@ -76,7 +77,7 @@ fn simple_raw_key_agreement() {
 
 #[test]
 fn raw_key_agreement_secpr1() {
-    let key_name = String::from("raw_key_agreement_secpr1");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaRawKeyAgreement) {
@@ -95,7 +96,7 @@ fn raw_key_agreement_secpr1() {
 
 #[test]
 fn raw_key_agreement_brainpoolpr1() {
-    let key_name = String::from("raw_key_agreement_brainpoolr1");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaRawKeyAgreement) {
@@ -118,8 +119,8 @@ fn raw_key_agreement_brainpoolpr1() {
 
 #[test]
 fn raw_key_agreement_two_generated_parties() {
-    let key_name_1 = String::from("key_1");
-    let key_name_2 = String::from("key_2");
+    let key_name_1 = auto_test_keyname!("1"); 
+    let key_name_2 = auto_test_keyname!("2");
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaRawKeyAgreement) {

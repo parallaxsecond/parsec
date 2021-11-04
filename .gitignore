@@ -24,3 +24,4 @@ mappings/
 
 # TPM simulator state file
 NVChip
+.devcontainer

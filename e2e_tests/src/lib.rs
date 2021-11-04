@@ -26,6 +26,7 @@ use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatu
 use parsec_client::error::Error;
 use std::collections::HashSet;
 
+
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
 pub struct TestClient {
@@ -1046,4 +1047,23 @@ impl Drop for TestClient {
             }
         }
     }
+}
+
+
+
+#[macro_export]
+// Create a name unique to the calling function for key names in tests.  Can supply one or more suffixes which will be 
+// appended to the root name if more than one key is required in a test.
+macro_rules! auto_test_keyname {
+    ($( $x:expr ),*) => {
+        {
+            let mut s = String::from( stdext::function_name!());
+            $(
+                s.push_str("_");
+                s.push_str($x);
+            )*
+            s
+    
+        }
+    };
 }

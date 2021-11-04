@@ -1,6 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
@@ -91,7 +92,7 @@ fn pkcs11_verify_software() {
     reload_service();
 
     let mut client = TestClient::new();
-    let key_name = String::from("pkcs11_verify_software");
+    let key_name = auto_test_keyname!();
 
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
@@ -115,7 +116,7 @@ fn pkcs11_verify_software_ecc() {
     reload_service();
 
     let mut client = TestClient::new();
-    let key_name = String::from("pkcs11_verify_software_ecc");
+    let key_name = auto_test_keyname!();
 
     let mut hasher = Sha256::new();
     hasher.update(b"Bob wrote this message.");
@@ -140,7 +141,7 @@ fn pkcs11_encrypt_software() {
     reload_service();
 
     let mut client = TestClient::new();
-    let key_name = String::from("pkcs11_verify_software");
+    let key_name = auto_test_keyname!();
     let plaintext_msg = [
         0x69, 0x3E, 0xDB, 0x1B, 0x22, 0x79, 0x03, 0xF4, 0xC0, 0xBF, 0xD6, 0x91, 0x76, 0x37, 0x84,
         0xA2, 0x94, 0x8E, 0x92, 0x50, 0x35, 0xC2, 0x8C, 0x5C, 0x3C, 0xCA, 0xFE, 0x18, 0xE8, 0x81,
@@ -258,7 +259,7 @@ fn ts_pkcs11_cross() {
     set_config("ts_pkcs11_cross.toml");
     reload_service();
 
-    let key_name = String::from("ts_pkcs11_sign_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign(ProviderId::TrustedService, key_name.clone());
     import_and_verify(
         &mut client,
@@ -268,7 +269,7 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 
-    let key_name_ecc = String::from("ts_pkcs11_sign_cross_ecc");
+    let key_name_ecc = auto_test_keyname!("ecc");
     let (mut client, pub_key, signature) =
         setup_sign_ecc(ProviderId::TrustedService, key_name_ecc.clone());
     import_and_verify_ecc(
@@ -279,7 +280,7 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 
-    let key_name = String::from("pkcs11_ts_sign_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign(ProviderId::Pkcs11, key_name.clone());
     import_and_verify(
         &mut client,
@@ -289,7 +290,7 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 
-    let key_name_ecc = String::from("pkcs11_ts_sign_cross_ecc");
+    let key_name_ecc = auto_test_keyname!("ts","ecc");
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Pkcs11, key_name_ecc.clone());
     import_and_verify_ecc(
         &mut client,

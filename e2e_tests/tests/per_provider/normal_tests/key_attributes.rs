@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_imports)]
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
@@ -15,7 +16,7 @@ use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatu
 #[test]
 fn wrong_type() {
     let mut client = TestClient::new();
-    let key_name = String::from("wrong_type");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return;
     }
@@ -63,7 +64,7 @@ fn wrong_type() {
 #[test]
 fn wrong_usage_flags() {
     let mut client = TestClient::new();
-    let key_name = String::from("wrong_usage_flags");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return;
     }
@@ -150,7 +151,7 @@ fn wrong_usage_flags() {
 #[test]
 fn wrong_permitted_algorithm() {
     let mut client = TestClient::new();
-    let key_name = String::from("wrong_permitted_algorithm");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return;
     }
@@ -207,7 +208,7 @@ fn wrong_permitted_algorithm() {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 fn no_usage_flag_set() {
     let mut client = TestClient::new();
-    let key_name = String::from("no_usage_flag_set");
+    let key_name = auto_test_keyname!();
     let key_type = Type::RsaKeyPair;
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {

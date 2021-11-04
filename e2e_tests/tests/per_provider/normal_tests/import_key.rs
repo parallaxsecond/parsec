@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_imports, unused)]
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Opcode;
@@ -91,7 +92,7 @@ fn example_modulus_1024() -> Vec<u8> {
 #[test]
 fn import_rsa_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -102,7 +103,7 @@ fn import_rsa_key() -> Result<()> {
 #[test]
 fn import_ecc_key() {
     let mut client = TestClient::new();
-    let key_name = String::from("import_key_ecc");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return;
     }
@@ -121,7 +122,7 @@ fn import_ecc_key() {
 #[test]
 fn create_and_import_rsa_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("create_and_import_rsa_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -139,7 +140,7 @@ fn create_and_import_rsa_key() -> Result<()> {
 #[test]
 fn create_and_import_ecc_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("create_and_import_ecc_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -157,7 +158,7 @@ fn create_and_import_ecc_key() -> Result<()> {
 #[test]
 fn import_rsa_key_twice() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_rsa_key_twice");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -175,7 +176,7 @@ fn import_rsa_key_twice() -> Result<()> {
 #[test]
 fn import_ecc_key_twice() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_ecc_key_twice");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -194,7 +195,7 @@ fn import_ecc_key_twice() -> Result<()> {
 #[test]
 fn check_format_import1() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -215,7 +216,7 @@ fn check_format_import2() -> Result<()> {
     // If the bits field of the key attributes is zero, the operation should still work.
     // The size of the key is always taken from the data parameter.
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import2");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -265,7 +266,7 @@ fn check_format_import3() -> Result<()> {
     // If the bits field of the key attributes is different that the size of the key parsed
     // from the data parameter, the operation should fail.
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import3");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -318,7 +319,7 @@ fn check_format_import_ecc() -> Result<()> {
     // If the bits field of the key attributes is zero, the operation should still work.
     // The size of the key is always taken from the data parameter.
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import_ecc");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -358,7 +359,7 @@ fn check_format_import_ecc2() -> Result<()> {
     // If the bits field of the key attributes is different that the size of the key parsed
     // from the data parameter, the operation should fail.
     let mut client = TestClient::new();
-    let key_name = String::from("check_format_import_ecc2");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -400,7 +401,7 @@ fn check_format_import_ecc2() -> Result<()> {
 #[test]
 fn failed_imported_key_should_be_removed() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("failed_imported_key_should_be_removed_notpm");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -449,7 +450,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
 // #[test]
 // fn import_key_pair() {
 //     let mut client = TestClient::new();
-//     let key_name = String::from("failed_imported_key_should_be_removed");
+//     let key_name = auto_test_keyname!();
 
 //     client
 //         .import_key(
@@ -487,7 +488,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
 #[test]
 fn import_ecc_private_key() {
     let mut client = TestClient::new();
-    let key_name = String::from("import_ecc_private_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return;
     }
