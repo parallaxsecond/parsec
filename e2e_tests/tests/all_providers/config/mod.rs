@@ -280,7 +280,7 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 
-    let key_name = auto_test_keyname!();
+    let key_name = auto_test_keyname!("ts");
     let (mut client, pub_key, signature) = setup_sign(ProviderId::Pkcs11, key_name.clone());
     import_and_verify(
         &mut client,
