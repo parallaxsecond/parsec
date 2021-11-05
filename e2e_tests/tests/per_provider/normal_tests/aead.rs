@@ -1,6 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::{Aead, AeadWithDefaultLengthTag};
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
@@ -73,7 +74,7 @@ fn aead_not_supported() {
 
 #[test]
 fn simple_aead_encrypt_ccm() {
-    let key_name = String::from("simple_aead_encrypt_ccm");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAeadEncrypt) {
@@ -94,7 +95,7 @@ fn simple_aead_encrypt_ccm() {
 
 #[test]
 fn aead_encrypt_ccm_encrypt() {
-    let key_name = String::from("aead_encrypt_ccm_encrypt");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadEncrypt) {
         return;
@@ -116,7 +117,7 @@ fn aead_encrypt_ccm_encrypt() {
 
 #[test]
 fn aead_encrypt_ccm_encrypt_not_equal() {
-    let key_name = String::from("aead_encrypt_ccm_encrypt_not_equal");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadEncrypt) {
         return;
@@ -138,7 +139,7 @@ fn aead_encrypt_ccm_encrypt_not_equal() {
 
 #[test]
 fn aead_encrypt_ccm_decrypt() {
-    let key_name = String::from("aead_decrypt_ccm_decrypt");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadDecrypt) {
         return;
@@ -162,7 +163,7 @@ fn aead_encrypt_ccm_decrypt() {
 
 #[test]
 fn aead_encrypt_ccm_decrypt_not_equal() {
-    let key_name = String::from("aead_decrypt_ccm_encrypt_not_equal");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadDecrypt) {
         return;
@@ -184,7 +185,7 @@ fn aead_encrypt_ccm_decrypt_not_equal() {
 
 #[test]
 fn aead_encrypt_ccm_encrypt_decrypt() {
-    let key_name = String::from("aead_decrypt_ccm_encrypt_decrypt");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaAeadDecrypt) {
         return;

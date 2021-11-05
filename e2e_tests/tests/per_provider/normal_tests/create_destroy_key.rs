@@ -1,15 +1,16 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
+
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 use picky_asn1_x509::RsaPublicKey;
-
 #[test]
 fn create_and_destroy() {
     let mut client = TestClient::new();
     client.do_not_destroy_keys();
-    let key_name = String::from("create_and_destroy");
+    let key_name = auto_test_keyname!();
 
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return;
@@ -28,7 +29,7 @@ fn create_and_destroy() {
 fn create_and_destroy_ecc() {
     let mut client = TestClient::new();
     client.do_not_destroy_keys();
-    let key_name = String::from("create_and_destroy_ecc");
+    let key_name = auto_test_keyname!();
 
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return;
@@ -43,7 +44,7 @@ fn create_and_destroy_ecc() {
 #[test]
 fn create_twice() {
     let mut client = TestClient::new();
-    let key_name = String::from("create_twice");
+    let key_name = auto_test_keyname!();
 
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return;
@@ -72,7 +73,7 @@ fn create_twice() {
 #[test]
 fn destroy_without_create() {
     let mut client = TestClient::new();
-    let key_name = String::from("destroy_without_create");
+    let key_name = auto_test_keyname!();
 
     if !client.is_operation_supported(Opcode::PsaDestroyKey) {
         return;
@@ -88,7 +89,7 @@ fn destroy_without_create() {
 fn create_destroy_and_operation() {
     let mut client = TestClient::new();
     let hash = vec![0xDE; 32];
-    let key_name = String::from("create_destroy_and_operation");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return;
     }
@@ -110,8 +111,8 @@ fn create_destroy_and_operation() {
 #[test]
 fn create_destroy_twice() {
     let mut client = TestClient::new();
-    let key_name = String::from("create_destroy_twice_1");
-    let key_name_2 = String::from("create_destroy_twice_2");
+    let key_name = auto_test_keyname!();
+    let key_name_2 = auto_test_keyname!("2");
 
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return;
@@ -142,7 +143,7 @@ fn generate_public_rsa_check_modulus() {
     // As stated in the operation page, the public exponent of RSA key pair should be 65537
     // (0x010001).
     let mut client = TestClient::new();
-    let key_name = String::from("generate_public_rsa_check_modulus");
+    let key_name = auto_test_keyname!();
 
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return;
@@ -168,7 +169,7 @@ fn generate_public_rsa_check_modulus() {
 #[test]
 fn failed_created_key_should_be_removed() {
     let mut client = TestClient::new();
-    let key_name = String::from("failed_created_key_should_be_removed");
+    let key_name = auto_test_keyname!();
     const GARBAGE_IMPORT_DATA: [u8; 1] = [48];
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return;
@@ -197,7 +198,7 @@ fn try_generate_asymmetric_public_key() {
     };
 
     let mut client = TestClient::new();
-    let key_name = String::from("try_generate_asymmetric_public_key");
+    let key_name = auto_test_keyname!();
     let err = client
         .generate_key(
             key_name,
