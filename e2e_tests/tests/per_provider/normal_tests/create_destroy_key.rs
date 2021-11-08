@@ -198,6 +198,12 @@ fn try_generate_asymmetric_public_key() {
     };
 
     let mut client = TestClient::new();
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_sign_message()
+        .set_verify_hash()
+        .set_verify_message();
     let key_name = auto_test_keyname!();
     let err = client
         .generate_key(
@@ -207,18 +213,7 @@ fn try_generate_asymmetric_public_key() {
                 key_type: Type::RsaPublicKey,
                 bits: 1024,
                 policy: Policy {
-                    usage_flags: UsageFlags {
-                        sign_hash: true,
-                        verify_hash: true,
-                        sign_message: true,
-                        verify_message: true,
-                        export: false,
-                        encrypt: false,
-                        decrypt: false,
-                        cache: false,
-                        copy: false,
-                        derive: false,
-                    },
+                    usage_flags,
                     permitted_algorithms: Algorithm::AsymmetricSignature(
                         AsymmetricSignature::RsaPkcs1v15Sign {
                             hash_alg: Hash::Sha256.into(),

@@ -225,24 +225,14 @@ fn check_format_import2() -> Result<()> {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
-
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaPublicKey,
         bits: 0,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -275,24 +265,14 @@ fn check_format_import3() -> Result<()> {
         modulus: IntegerAsn1::from_bytes_be_unsigned(vec![0xDE; 1024]),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
-
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaPublicKey,
         bits: 1023,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -324,6 +304,8 @@ fn check_format_import_ecc() -> Result<()> {
         return Ok(());
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccPublicKey {
@@ -331,18 +313,7 @@ fn check_format_import_ecc() -> Result<()> {
         },
         bits: 0,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -364,6 +335,8 @@ fn check_format_import_ecc2() -> Result<()> {
         return Ok(());
     }
 
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccPublicKey {
@@ -371,18 +344,7 @@ fn check_format_import_ecc2() -> Result<()> {
         },
         bits: 224,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
@@ -410,25 +372,15 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
         modulus: IntegerAsn1::from_bytes_be_unsigned(example_modulus_1024()),
         public_exponent: IntegerAsn1::from_bytes_be_unsigned(vec![0x01, 0x00, 0x01]),
     };
-
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_verify_hash().set_verify_message();
     let attributes = Attributes {
         lifetime: Lifetime::Persistent,
         // Not supported
         key_type: Type::Aes,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: false,
-                verify_hash: true,
-                sign_message: false,
-                verify_message: true,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -451,7 +403,12 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
 // fn import_key_pair() {
 //     let mut client = TestClient::new();
 //     let key_name = auto_test_keyname!();
-
+//     let mut usage_flags: UsageFlags = Default::default();
+//     let _ = usage_flags
+//         .set_sign_hash()
+//         .set_sign_message()
+//         .set_verify_hash()
+//         .set_verify_message();
 //     client
 //         .import_key(
 //             key_name,
@@ -460,18 +417,7 @@ fn failed_imported_key_should_be_removed() -> Result<()> {
 //                 key_type: Type::RsaKeyPair,
 //                 bits: 1024,
 //                 policy: Policy {
-//                     usage_flags: UsageFlags {
-//                         export: false,
-//                         copy: false,
-//                         cache: false,
-//                         encrypt: false,
-//                         decrypt: false,
-//                         sign_message: true,
-//                         sign_hash: true,
-//                         verify_message: true,
-//                         verify_hash: true,
-//                         derive: false,
-//                     },
+//                     usage_flags,
 //                     permitted_algorithms: Algorithm::AsymmetricSignature(
 //                         AsymmetricSignature::RsaPkcs1v15Sign {
 //                             hash_alg: Hash::Sha256.into(),

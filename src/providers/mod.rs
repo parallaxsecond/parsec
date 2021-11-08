@@ -12,6 +12,8 @@ use std::collections::HashSet;
 
 pub mod core;
 
+pub mod crypto_capability;
+
 #[cfg(feature = "pkcs11-provider")]
 //TODO: To remove when #301 is merged
 #[allow(clippy::all)]
@@ -31,11 +33,11 @@ pub mod trusted_service;
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    delete_client, list_authenticators, list_clients, list_keys, list_opcodes, list_providers,
-    ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
-    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
-    psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash,
-    psa_sign_message, psa_verify_hash, psa_verify_message,
+    can_do_crypto, delete_client, list_authenticators, list_clients, list_keys, list_opcodes,
+    list_providers, ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
+    psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
+    psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key,
+    psa_raw_key_agreement, psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -294,6 +296,16 @@ pub trait Provide {
         _op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
         trace!("psa_verify_message ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    ///Check if the crypto operation is supported by provider.
+    fn can_do_crypto(
+        &self,
+        _app_name: ApplicationName,
+        _op: can_do_crypto::Operation,
+    ) -> Result<can_do_crypto::Result> {
+        trace!("can_do_crypto main ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

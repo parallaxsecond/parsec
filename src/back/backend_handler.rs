@@ -278,6 +278,20 @@ impl BackEndHandler {
                 trace!("psa_verify_message egress");
                 self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
             }
+            NativeOperation::CanDoCrypto(op_can_do_crypto) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .can_do_crypto(app.into(), op_can_do_crypto));
+                trace!("can_do_crypto egress");
+                self.result_to_response(NativeResult::CanDoCrypto(result), header)
+            }
+            _ => {
+                // This default arm should be removed
+                // when all operation defind in Parsec-interface are implemented in the match.
+                trace!("Not yet implemented operation");
+                Response::from_request_header(header, ResponseStatus::OpcodeDoesNotExist)
+            }
         }
     }
 }

@@ -217,6 +217,13 @@ fn allow_export() {
     reload_service();
 
     let mut client = TestClient::new();
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_verify_hash()
+        .set_sign_message()
+        .set_verify_message()
+        .set_export();
     assert_eq!(
         client
             .generate_key(
@@ -226,19 +233,7 @@ fn allow_export() {
                     key_type: Type::RsaKeyPair,
                     bits: 1024,
                     policy: Policy {
-                        usage_flags: UsageFlags {
-                            sign_hash: true,
-                            verify_hash: true,
-                            sign_message: true,
-                            verify_message: true,
-                            // Should not be allowed by configuration
-                            export: true,
-                            encrypt: false,
-                            decrypt: false,
-                            cache: false,
-                            copy: false,
-                            derive: false,
-                        },
+                        usage_flags,
                         permitted_algorithms: Algorithm::AsymmetricSignature(
                             AsymmetricSignature::RsaPkcs1v15Sign {
                                 hash_alg: Hash::Sha256.into(),

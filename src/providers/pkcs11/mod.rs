@@ -7,6 +7,7 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::providers::crypto_capability::CanDoCrypto;
 use cryptoki::types::locking::CInitializeArgs;
 use cryptoki::types::session::{Session, UserType};
 use cryptoki::types::slot_token::Slot;
@@ -14,11 +15,11 @@ use cryptoki::types::Flags;
 use cryptoki::Pkcs11;
 use derivative::Derivative;
 use log::{error, info, trace, warn};
-use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
-    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
-    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    can_do_crypto, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
+    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
+use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, SecretString};
 use std::collections::HashSet;
@@ -35,11 +36,12 @@ type LocalIdStore = HashSet<u32>;
 
 mod asym_encryption;
 mod asym_sign;
+mod capability_discovery;
 mod key_management;
 mod key_metadata;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 8] = [
+const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -48,6 +50,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaExportPublicKey,
     Opcode::PsaAsymmetricDecrypt,
     Opcode::PsaAsymmetricEncrypt,
+    Opcode::CanDoCrypto,
 ];
 
 /// Provider for Public Key Cryptography Standard #11
@@ -336,6 +339,17 @@ impl Provide for Provider {
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
         self.psa_asymmetric_decrypt_internal(app_name, op)
+    }
+
+    /// Check if the crypto operation is supported by PKCS11 provider
+    /// by using CanDoCrypto trait.
+    fn can_do_crypto(
+        &self,
+        app_name: ApplicationName,
+        op: can_do_crypto::Operation,
+    ) -> Result<can_do_crypto::Result> {
+        trace!("can_do_crypto PKCS11 ingress");
+        self.can_do_crypto_main(app_name, op)
     }
 }
 

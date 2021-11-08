@@ -7,13 +7,14 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::KeyInfoManagerClient;
+use crate::providers::crypto_capability::CanDoCrypto;
 use derivative::Derivative;
 use log::{info, trace};
-use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
-    psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key,
-    psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    can_do_crypto, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
+    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
+use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::ErrorKind;
@@ -28,10 +29,11 @@ use zeroize::Zeroize;
 
 mod asym_encryption;
 mod asym_sign;
+mod capability_discovery;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 8] = [
+const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -40,6 +42,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaExportPublicKey,
     Opcode::PsaAsymmetricDecrypt,
     Opcode::PsaAsymmetricEncrypt,
+    Opcode::CanDoCrypto,
 ];
 
 const ROOT_KEY_SIZE: u16 = 2048;
@@ -187,6 +190,17 @@ impl Provide for Provider {
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
         self.psa_asymmetric_decrypt_internal(app_name, op)
+    }
+
+    /// Check if the crypto operation is supported by TPM provider
+    /// by using CanDoCrypto trait.
+    fn can_do_crypto(
+        &self,
+        app_name: ApplicationName,
+        op: can_do_crypto::Operation,
+    ) -> Result<can_do_crypto::Result> {
+        trace!("can_do_crypto TPM ingress");
+        self.can_do_crypto_main(app_name, op)
     }
 }
 

@@ -135,23 +135,14 @@ fn check_export_rsa_public_possible() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_hash();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
         bits: 1024,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(
                 AsymmetricSignature::RsaPkcs1v15Sign {
                     hash_alg: Hash::Sha256.into(),
@@ -176,6 +167,8 @@ fn check_export_ecc_public_possible() -> Result<()> {
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags.set_sign_hash();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -183,18 +176,7 @@ fn check_export_ecc_public_possible() -> Result<()> {
         },
         bits: 256,
         policy: Policy {
-            usage_flags: UsageFlags {
-                sign_hash: true,
-                verify_hash: false,
-                sign_message: false,
-                verify_message: false,
-                export: false,
-                encrypt: false,
-                decrypt: false,
-                cache: false,
-                copy: false,
-                derive: false,
-            },
+            usage_flags,
             permitted_algorithms: Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                 hash_alg: Hash::Sha256.into(),
             }),
