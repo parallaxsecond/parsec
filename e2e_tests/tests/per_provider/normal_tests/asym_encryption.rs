@@ -3,6 +3,7 @@
 #![allow(unused, dead_code)]
 
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
@@ -73,7 +74,7 @@ fn asym_encrypt_not_supported() {
 
 #[test]
 fn simple_asym_encrypt_rsa_pkcs() {
-    let key_name = String::from("simple_asym_encrypt_rsa_pkcs");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
@@ -94,7 +95,7 @@ fn simple_asym_encrypt_rsa_pkcs() {
 #[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn simple_asym_encrypt_rsa_oaep() {
-    let key_name = String::from("simple_asym_encrypt_rsa_oaep");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
@@ -116,7 +117,7 @@ fn simple_asym_encrypt_rsa_oaep() {
 #[cfg(feature = "pkcs11-provider")]
 #[test]
 fn simple_asym_encrypt_rsa_oaep_pkcs11() {
-    let key_name = String::from("simple_asym_encrypt_rsa_oaep_pkcs11");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     client
@@ -146,7 +147,7 @@ fn simple_asym_encrypt_rsa_oaep_pkcs11() {
 #[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn simple_asym_decrypt_oaep_with_salt() {
-    let key_name = String::from("simple_asym_decrypt_oaep_with_salt");
+    let key_name = auto_test_keyname!();
     let salt = String::from("some random label").as_bytes().to_vec();
     let mut client = TestClient::new();
 
@@ -174,7 +175,7 @@ fn simple_asym_decrypt_oaep_with_salt() {
 
 #[test]
 fn asym_encrypt_no_key() {
-    let key_name = String::from("asym_encrypt_no_key");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
@@ -189,7 +190,7 @@ fn asym_encrypt_no_key() {
 
 #[test]
 fn asym_decrypt_no_key() {
-    let key_name = String::from("asym_decrypt_no_key");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
@@ -204,7 +205,7 @@ fn asym_decrypt_no_key() {
 
 #[test]
 fn asym_encrypt_wrong_algorithm() {
-    let key_name = String::from("asym_encrypt_wrong_algorithm");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
@@ -222,7 +223,7 @@ fn asym_encrypt_wrong_algorithm() {
 
 #[test]
 fn asym_encrypt_and_decrypt_rsa_pkcs() {
-    let key_name = String::from("asym_encrypt_and_decrypt_rsa_pkcs");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt)
@@ -245,8 +246,8 @@ fn asym_encrypt_and_decrypt_rsa_pkcs() {
 
 #[test]
 fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
-    let key_name_1 = String::from("asym_encrypt_and_decrypt_rsa_pkcs_different_keys_1");
-    let key_name_2 = String::from("asym_encrypt_and_decrypt_rsa_pkcs_different_keys_2");
+    let key_name_1 = auto_test_keyname!("1");
+    let key_name_2 = auto_test_keyname!("2");
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt)
@@ -271,7 +272,7 @@ fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
 
 #[test]
 fn asym_encrypt_verify_decrypt_with_rsa_crate() {
-    let key_name = String::from("asym_encrypt_verify_decrypt_with_rsa_crate");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
@@ -308,7 +309,7 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate() {
 #[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
-    let key_name = String::from("asym_encrypt_verify_decrypt_with_rsa_crate_oaep");
+    let key_name = auto_test_keyname!();
     let label = String::from("encryption label");
     let mut client = TestClient::new();
 
@@ -344,7 +345,7 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
 #[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn asym_verify_decrypt_with_internet() {
-    let key_name = String::from("asym_derify_decrypt_with_pick");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     // Check if decrypt is supported
@@ -364,7 +365,7 @@ fn asym_verify_decrypt_with_internet() {
 
 #[test]
 fn asym_encrypt_not_permitted() {
-    let key_name = String::from("asym_encrypt_not_permitted");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt) {
@@ -393,7 +394,7 @@ fn asym_encrypt_not_permitted() {
 
 #[test]
 fn asym_decrypt_not_permitted() {
-    let key_name = String::from("asym_decrypt_not_permitted");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {

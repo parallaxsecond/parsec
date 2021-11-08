@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::RawRequestClient;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::requests::request::RawHeader;
 use parsec_client::core::interface::requests::{
@@ -161,7 +162,7 @@ fn mangled_list_providers() {
 #[test]
 fn sign_verify_with_provider_discovery() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("sign_verify_with_provider_discovery");
+    let key_name = auto_test_keyname!();
     client.generate_rsa_sign_key(key_name)
 }
 

@@ -3,6 +3,7 @@
 #![allow(unused_imports, unused)]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Opcode;
@@ -14,7 +15,7 @@ use picky_asn1_x509::RsaPublicKey;
 #[test]
 fn export_rsa_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("export_rsa_public_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -29,7 +30,7 @@ fn export_rsa_public_key() -> Result<()> {
 #[test]
 fn export_ecc_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("export_ecc_public_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -43,7 +44,7 @@ fn export_ecc_public_key() -> Result<()> {
 #[test]
 fn export_without_create() {
     let mut client = TestClient::new();
-    let key_name = String::from("export_without_create");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return;
     }
@@ -57,7 +58,7 @@ fn export_without_create() {
 #[test]
 fn import_and_export_rsa_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_and_export_rsa_public_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -82,7 +83,7 @@ fn import_and_export_rsa_public_key() -> Result<()> {
 #[test]
 fn import_and_export_ecc_public_key_by_export_public_key_fn() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_and_export_ecc_public_key_by_export_public_key_fn");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -96,7 +97,7 @@ fn import_and_export_ecc_public_key_by_export_public_key_fn() -> Result<()> {
 #[test]
 fn check_public_rsa_export_format() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("check_public_rsa_export_format");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -130,7 +131,7 @@ fn check_public_ecc_export_format() -> Result<()> {
 fn check_export_rsa_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
     let mut client = TestClient::new();
-    let key_name = String::from("check_export_rsa_public_possible");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -162,7 +163,7 @@ fn check_export_rsa_public_possible() -> Result<()> {
 fn check_export_ecc_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
     let mut client = TestClient::new();
-    let key_name = String::from("check_export_ecc_public_possible");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -193,7 +194,7 @@ fn check_export_ecc_public_possible() -> Result<()> {
 #[test]
 fn import_and_export_ecc_public_key() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("import_and_export_ecc_public_key");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
@@ -209,7 +210,7 @@ fn import_and_export_ecc_public_key() -> Result<()> {
 #[test]
 fn check_public_ecc_export_format2() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("check_public_ecc_export_format");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
         return Ok(());
     }
