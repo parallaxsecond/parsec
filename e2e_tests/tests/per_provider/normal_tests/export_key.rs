@@ -3,6 +3,7 @@
 #![allow(unused_imports, unused)]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
@@ -46,7 +47,7 @@ fn export_key() -> Result<()> {
 
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_export();
-    let key_name = String::from("export_key");
+    let key_name = auto_test_keyname!();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
@@ -76,7 +77,7 @@ fn export_without_create() {
         return;
     }
 
-    let key_name = String::from("export_without_create");
+    let key_name = auto_test_keyname!();
     let status = client
         .export_key(key_name)
         .expect_err("Key should not exist.");
@@ -92,7 +93,7 @@ fn import_and_export_rsa_public_key() -> Result<()> {
         return Ok(());
     }
 
-    let key_name = String::from("import_and_export_rsa_public_key");
+    let key_name = auto_test_keyname!();
     let key_data = vec![
         48, 129, 137, 2, 129, 129, 0, 153, 165, 220, 135, 89, 101, 254, 229, 28, 33, 138, 247, 20,
         102, 253, 217, 247, 246, 142, 107, 51, 40, 179, 149, 45, 117, 254, 236, 161, 109, 16, 81,
@@ -119,12 +120,12 @@ fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
         return Ok(());
     }
 
-    let key_name = String::from("import_and_export_ecc_public_key_by_export_key_fn");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags
         .set_export()
         .set_verify_message()
         .set_verify_hash();
+    let key_name = auto_test_keyname!();
     client.import_key(
         key_name.clone(),
         Attributes {
@@ -158,9 +159,9 @@ fn check_rsa_export_format() -> Result<()> {
         return Ok(());
     }
 
-    let key_name = String::from("check_public_rsa_export_format");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_export();
+    let key_name = auto_test_keyname!();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::RsaKeyPair,
@@ -193,9 +194,9 @@ fn check_export_rsa_possible() -> Result<()> {
         return Ok(());
     }
 
-    let key_name = String::from("check_export_rsa_possible");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_export();
+    let key_name = auto_test_keyname!();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -227,8 +228,8 @@ fn check_export_rsa_not_possible() {
         return;
     }
 
-    let key_name = String::from("check_export_rsa_not_possible");
     let usage_flags: UsageFlags = Default::default();
+    let key_name = auto_test_keyname!();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -261,8 +262,8 @@ fn check_export_ecc_not_possible() {
         return;
     }
 
-    let key_name = String::from("check_export_ecc_not_possible");
     let usage_flags: UsageFlags = Default::default();
+    let key_name = auto_test_keyname!();
 
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
@@ -295,9 +296,9 @@ fn export_ecc_private_key() {
         return;
     }
 
-    let key_name = String::from("export_ecc_private_key");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_export();
+    let key_name = auto_test_keyname!();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -328,9 +329,9 @@ fn export_ecc_private_key_not_possible() {
         return;
     }
 
-    let key_name = String::from("export_ecc_private_key_not_possible");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_export();
+    let key_name = auto_test_keyname!();
     let key_attributes = Attributes {
         lifetime: Lifetime::Persistent,
         key_type: Type::EccKeyPair {
@@ -362,9 +363,9 @@ fn export_rsa_private_key_matches_import() {
         return;
     }
 
-    let key_name = String::from("export_rsa_private_key_matches_import");
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_encrypt().set_decrypt().set_export();
+    let key_name = auto_test_keyname!();
 
     let decoded_key = base64::decode(PRIVATE_KEY).unwrap();
     client

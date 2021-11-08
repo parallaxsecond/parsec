@@ -1,6 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::requests::{ProviderId, Result};
 
 const HASH: [u8; 32] = [
@@ -112,7 +113,7 @@ fn verify_encrypt(
 
 #[test]
 fn tpm_sign_cross() {
-    let key_name = String::from("tpm_sign_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign(ProviderId::Tpm, key_name.clone());
 
     // Mbed Crypto
@@ -136,7 +137,7 @@ fn tpm_sign_cross() {
 
 #[test]
 fn tpm_sign_cross_ecc() {
-    let key_name = String::from("tpm_sign_cross_ecc");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Tpm, key_name.clone());
 
     // Mbed Crypto
@@ -160,7 +161,7 @@ fn tpm_sign_cross_ecc() {
 
 #[test]
 fn pkcs11_sign_cross() {
-    let key_name = String::from("pkcs11_sign_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign(ProviderId::Pkcs11, key_name.clone());
 
     // Mbed Crypto
@@ -178,7 +179,7 @@ fn pkcs11_sign_cross() {
 
 #[test]
 fn pkcs11_sign_cross_ecc() {
-    let key_name = String::from("pkcs11_sign_cross_ecc");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Pkcs11, key_name.clone());
 
     // Mbed Crypto
@@ -193,7 +194,7 @@ fn pkcs11_sign_cross_ecc() {
 
 #[test]
 fn mbed_crypto_sign_cross() {
-    let key_name = String::from("mbed_crypto_sign_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign(ProviderId::MbedCrypto, key_name.clone());
 
     // Mbed Crypto
@@ -211,7 +212,7 @@ fn mbed_crypto_sign_cross() {
 
 #[test]
 fn mbed_crypto_sign_cross_ecc() {
-    let key_name = String::from("mbed_crypto_sign_cross_ecc");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::MbedCrypto, key_name.clone());
 
     // Mbed Crypto
@@ -226,7 +227,7 @@ fn mbed_crypto_sign_cross_ecc() {
 
 #[test]
 fn tpm_asym_encr_cross() {
-    let key_name = String::from("tpm_asym_encr_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key) = setup_asym_encr(ProviderId::Tpm, key_name.clone());
 
     // Mbed Crypto
@@ -252,7 +253,7 @@ fn tpm_asym_encr_cross() {
 #[ignore = "https://github.com/parallaxsecond/parsec/issues/251"]
 #[test]
 fn pkcs11_asym_encr_cross() {
-    let key_name = String::from("pkcs11_asym_encr_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key) = setup_asym_encr(ProviderId::Pkcs11, key_name.clone());
 
     // Mbed Crypto
@@ -283,7 +284,7 @@ fn pkcs11_asym_encr_cross() {
 #[ignore = "https://github.com/parallaxsecond/parsec/issues/251"]
 #[test]
 fn mbed_crypto_asym_encr_cross() {
-    let key_name = String::from("mbed_crypto_asym_encr_cross");
+    let key_name = auto_test_keyname!();
     let (mut client, pub_key) = setup_asym_encr(ProviderId::MbedCrypto, key_name.clone());
 
     // Pkcs11

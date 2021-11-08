@@ -16,6 +16,7 @@ log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
 env_logger = "0.8.3"
+stdext = "0.3.1"
 
 [dev-dependencies]
 ring = "0.16.20"

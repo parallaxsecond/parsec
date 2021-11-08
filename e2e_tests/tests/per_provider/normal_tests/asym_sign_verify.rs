@@ -1,6 +1,7 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
@@ -14,7 +15,7 @@ const HASH: [u8; 32] = [
 
 #[test]
 fn asym_sign_no_key() {
-    let key_name = String::from("asym_sign_no_key");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return;
@@ -27,7 +28,7 @@ fn asym_sign_no_key() {
 
 #[test]
 fn asym_verify_no_key() {
-    let key_name = String::from("asym_verify_no_key");
+    let key_name = auto_test_keyname!();
     let signature = vec![0xDE, 0xAD, 0xBE, 0xEF];
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaVerifyHash) {
@@ -42,7 +43,7 @@ fn asym_verify_no_key() {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
-    let key_name = String::from("asym_sign_and_verify_rsa_pkcs");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return Ok(());
@@ -60,7 +61,7 @@ fn asym_sign_and_verify_rsa_pkcs() -> Result<()> {
 
 #[test]
 fn asym_verify_fail_ecc_sha256() -> Result<()> {
-    let key_name = String::from("asym_verify_fail_ecc_sha256");
+    let key_name = auto_test_keyname!();
     let signature = vec![0xff; 64];
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -88,7 +89,7 @@ fn asym_verify_fail_ecc_sha256() -> Result<()> {
 #[test]
 fn only_verify_from_internet() -> Result<()> {
     let mut client = TestClient::new();
-    let key_name = String::from("only_verify_from_internet");
+    let key_name = auto_test_keyname!();
     if !client.is_operation_supported(Opcode::PsaImportKey) {
         return Ok(());
     }
@@ -173,7 +174,7 @@ fn private_sign_public_verify() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn simple_sign_hash_rsa_sha256() -> Result<()> {
-    let key_name = String::from("simple_sign_hash_rsa_sha256");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -194,7 +195,7 @@ fn simple_sign_hash_rsa_sha256() -> Result<()> {
 
 #[test]
 fn simple_sign_hash_ecdsa_sha256() -> Result<()> {
-    let key_name = String::from("simple_sign_hash_ecdsa_sha256");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -216,7 +217,7 @@ fn simple_sign_hash_ecdsa_sha256() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn sign_hash_not_permitted() -> Result<()> {
-    let key_name = String::from("sign_hash_not_permitted");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -259,7 +260,7 @@ fn sign_hash_not_permitted() -> Result<()> {
 
 #[test]
 fn sign_hash_not_permitted_ecc() -> Result<()> {
-    let key_name = String::from("sign_hash_not_permitted_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -303,7 +304,7 @@ fn sign_hash_not_permitted_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn sign_hash_bad_format_rsa_sha256() -> Result<()> {
-    let key_name = String::from("sign_hash_bad_format_rsa_sha256");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -329,7 +330,7 @@ fn sign_hash_bad_format_rsa_sha256() -> Result<()> {
 #[cfg(not(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider")))]
 #[test]
 fn sign_hash_bad_format_ecdsa_sha256() -> Result<()> {
-    let key_name = String::from("sign_hash_bad_format_ecdsa_sha256");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaGenerateKey) {
         return Ok(());
@@ -356,7 +357,7 @@ fn sign_hash_bad_format_ecdsa_sha256() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn simple_verify_hash_rsa() -> Result<()> {
-    let key_name = String::from("simple_verify_hash_rsa");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return Ok(());
@@ -379,7 +380,7 @@ fn simple_verify_hash_rsa() -> Result<()> {
 
 #[test]
 fn simple_verify_hash_ecc() -> Result<()> {
-    let key_name = String::from("simple_verify_hash_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     if !client.is_operation_supported(Opcode::PsaSignHash) {
         return Ok(());
@@ -403,7 +404,7 @@ fn simple_verify_hash_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn verify_hash_not_permitted_rsa() -> Result<()> {
-    let key_name = String::from("verify_hash_not_permitted_rsa");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -449,7 +450,7 @@ fn verify_hash_not_permitted_rsa() -> Result<()> {
 
 #[test]
 fn verify_hash_not_permitted_ecc() -> Result<()> {
-    let key_name = String::from("verify_hash_not_permitted_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -496,7 +497,7 @@ fn verify_hash_not_permitted_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn verify_hash_bad_format_rsa() -> Result<()> {
-    let key_name = String::from("verify_hash_bad_format_rsa");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -530,7 +531,7 @@ fn verify_hash_bad_format_rsa() -> Result<()> {
 #[cfg(not(any(feature = "trusted-service-provider", feature = "mbed-crypto-provider")))]
 #[test]
 fn verify_hash_bad_format_ecc() -> Result<()> {
-    let key_name = String::from("verify_hash_bad_format_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -565,7 +566,7 @@ fn verify_hash_bad_format_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn fail_verify_hash_rsa() -> Result<()> {
-    let key_name = String::from("fail_verify_hash_rsa");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -593,7 +594,7 @@ fn fail_verify_hash_rsa() -> Result<()> {
 
 #[test]
 fn fail_verify_hash_ecc() -> Result<()> {
-    let key_name = String::from("fail_verify_hash_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -622,7 +623,7 @@ fn fail_verify_hash_ecc() -> Result<()> {
 #[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn fail_verify_hash2_rsa() -> Result<()> {
-    let key_name = String::from("fail_verify_hash2_rsa");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -650,7 +651,7 @@ fn fail_verify_hash2_rsa() -> Result<()> {
 
 #[test]
 fn fail_verify_hash2_ecc() -> Result<()> {
-    let key_name = String::from("fail_verify_hash2_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignHash) {
@@ -681,7 +682,7 @@ fn fail_verify_hash2_ecc() -> Result<()> {
 fn asym_verify_with_rsa_crate() {
     use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
 
-    let key_name = String::from("asym_verify_with_rsa_crate");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaExportPublicKey) {
@@ -715,7 +716,7 @@ fn asym_verify_with_rsa_crate() {
 fn verify_with_ring() {
     use ring::signature::{self, UnparsedPublicKey};
 
-    let key_name = String::from("verify_with_ring");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     let message = b"Bob wrote this message.";
@@ -737,7 +738,7 @@ fn verify_with_ring() {
 fn verify_ecc_with_ring() {
     use ring::signature::{self, UnparsedPublicKey};
 
-    let key_name = String::from("verify_ecc_with_ring");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     let message = b"Bob wrote this message.";
 
@@ -759,7 +760,7 @@ fn verify_ecc_with_ring() {
 
 #[test]
 fn sign_verify_hash_ecc() {
-    let key_name = String::from("sign_verify_hash_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaVerifyHash) {
@@ -784,7 +785,7 @@ fn sign_verify_hash_ecc() {
 
 #[test]
 fn sign_verify_message_ecc() {
-    let key_name = String::from("sign_verify_message_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaVerifyMessage) {
@@ -807,7 +808,7 @@ fn sign_verify_message_ecc() {
 
 #[test]
 fn sign_message_not_permitted() {
-    let key_name = String::from("sign_message_not_permitted");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaSignMessage) {
@@ -846,7 +847,7 @@ fn sign_message_not_permitted() {
 
 #[test]
 fn verify_message_not_permitted() {
-    let key_name = String::from("verify_message_not_permitted");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaVerifyMessage)
@@ -893,7 +894,7 @@ fn verify_message_not_permitted() {
 #[cfg(feature = "tpm-provider")]
 #[test]
 fn wildcard_hash_not_supported() {
-    let key_name = String::from("sign_verify_ecc");
+    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_sign_hash().set_verify_hash();
