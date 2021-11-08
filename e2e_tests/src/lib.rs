@@ -45,8 +45,8 @@ use parsec_client::core::interface::operations::list_authenticators::Authenticat
 use parsec_client::core::interface::operations::list_keys::KeyInfo;
 use parsec_client::core::interface::operations::list_providers::ProviderInfo;
 use parsec_client::core::interface::operations::psa_algorithm::{
-    Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricEncryption, AsymmetricSignature, Hash,
-    KeyAgreement, RawKeyAgreement,
+    Aead, AeadWithDefaultLengthTag, Algorithm, AsymmetricEncryption, AsymmetricSignature, Cipher,
+    Hash, KeyAgreement, RawKeyAgreement,
 };
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
@@ -383,6 +383,19 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
         encryption_alg: Aead,
+    ) -> Result<()> {
+        let mut attributes = TestClient::default_encrypt_aes_attrs();
+        attributes.bits = 0;
+        attributes.policy.permitted_algorithms = encryption_alg.into();
+        self.import_key(key_name, attributes, data)
+    }
+
+    /// Import an AES key.
+    pub fn import_aes_key_cipher(
+        &mut self,
+        key_name: String,
+        data: Vec<u8>,
+        encryption_alg: Cipher,
     ) -> Result<()> {
         let mut attributes = TestClient::default_encrypt_aes_attrs();
         attributes.bits = 0;
@@ -759,6 +772,28 @@ impl TestClient {
                 additional_data,
                 ciphertext,
             )
+            .map_err(convert_error)
+    }
+
+    pub fn cipher_encrypt_message(
+        &mut self,
+        key_name: String,
+        alg: Cipher,
+        plaintext: &[u8],
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_cipher_encrypt(key_name, alg, plaintext)
+            .map_err(convert_error)
+    }
+
+    pub fn cipher_decrypt_message(
+        &mut self,
+        key_name: String,
+        alg: Cipher,
+        ciphertext: &[u8],
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .psa_cipher_decrypt(key_name, alg, ciphertext)
             .map_err(convert_error)
     }
 

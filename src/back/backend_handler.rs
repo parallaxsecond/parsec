@@ -284,6 +284,22 @@ impl BackEndHandler {
                 trace!("psa_verify_message egress");
                 self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
             }
+            NativeOperation::PsaCipherEncrypt(op_cipher_encrypt) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_cipher_encrypt(app.into(), op_cipher_encrypt));
+                trace!("op_cipher_encrypt egress");
+                self.result_to_response(NativeResult::PsaCipherEncrypt(result), header)
+            }
+            NativeOperation::PsaCipherDecrypt(op_cipher_decrypt) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_cipher_decrypt(app.into(), op_cipher_decrypt));
+                trace!("psa_cipher_decrypt egress");
+                self.result_to_response(NativeResult::PsaCipherDecrypt(result), header)
+            }
             NativeOperation::CanDoCrypto(op_can_do_crypto) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
