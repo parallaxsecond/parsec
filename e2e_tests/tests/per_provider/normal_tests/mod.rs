@@ -13,5 +13,6 @@ mod generate_random;
 mod hash;
 mod import_key;
 mod key_agreement;
+mod key_attestation;
 mod key_attributes;
 mod ping;

@@ -308,6 +308,7 @@ unsafe fn get_provider(
         ProviderConfig::Tpm {
             tcti,
             owner_hierarchy_auth,
+            endorsement_hierarchy_auth,
             skip_if_no_tpm,
             ..
         } => {
@@ -333,13 +334,16 @@ unsafe fn get_provider(
                 };
             }
 
-            Ok(Some(Arc::new(
-                TpmProviderBuilder::new()
-                    .with_key_info_store(kim_factory.build_client(ProviderId::Tpm))
-                    .with_tcti(tcti)
-                    .with_owner_hierarchy_auth(owner_hierarchy_auth.clone())
-                    .build()?,
-            )))
+            let mut builder = TpmProviderBuilder::new()
+                .with_key_info_store(kim_factory.build_client(ProviderId::Tpm))
+                .with_tcti(tcti)
+                .with_owner_hierarchy_auth(owner_hierarchy_auth.clone());
+            if endorsement_hierarchy_auth.is_some() {
+                builder = builder.with_endorsement_hierarchy_auth(
+                    endorsement_hierarchy_auth.as_ref().unwrap().clone(),
+                );
+            }
+            Ok(Some(Arc::new(builder.build()?)))
         }
         #[cfg(feature = "cryptoauthlib-provider")]
         ProviderConfig::CryptoAuthLib {

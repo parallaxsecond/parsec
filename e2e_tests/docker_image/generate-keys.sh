@@ -22,6 +22,7 @@ sleep 5
 tpm2_startup -c -T mssim
 sleep 2
 tpm2_changeauth -c owner tpm_pass -T mssim
+tpm2_changeauth -c endorsement endorsement_pass -T mssim
 cd /tmp/create_keys/parsec/e2e_tests
 SLOT_NUMBER=`softhsm2-util --show-slots | head -n2 | tail -n1 | cut -d " " -f 2`
 find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
