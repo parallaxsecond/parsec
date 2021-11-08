@@ -23,11 +23,13 @@ const EXPECTED_OUTPUT_SECPR1: [u8; 32] = [
     0x2f, 0xef, 0x8e, 0x9e, 0xce, 0x7d, 0xce, 0x03, 0x81, 0x24, 0x64, 0xd0, 0x4b, 0x94, 0x42, 0xde,
 ];
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const OUR_KEY_DATA_BRAINPOOL_R1: [u8; 32] = [
     0x81, 0xdb, 0x1e, 0xe1, 0x00, 0x15, 0x0f, 0xf2, 0xea, 0x33, 0x8d, 0x70, 0x82, 0x71, 0xbe, 0x38,
     0x30, 0x0c, 0xb5, 0x42, 0x41, 0xd7, 0x99, 0x50, 0xf7, 0x7b, 0x06, 0x30, 0x39, 0x80, 0x4f, 0x1d,
 ];
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const PEER_PUBLIC_KEY_BRAINPOOL_R1: [u8; 65] = [
     0x04, 0x8d, 0x2d, 0x68, 0x8c, 0x6c, 0xf9, 0x3e, 0x11, 0x60, 0xad, 0x04, 0xcc, 0x44, 0x29, 0x11,
     0x7d, 0xc2, 0xc4, 0x18, 0x25, 0xe1, 0xe9, 0xfc, 0xa0, 0xad, 0xdd, 0x34, 0xe6, 0xf1, 0xb3, 0x9f,
@@ -36,6 +38,7 @@ const PEER_PUBLIC_KEY_BRAINPOOL_R1: [u8; 65] = [
     0x6a,
 ];
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 const EXPECTED_OUTPUT_BRAINPOOL_R1: [u8; 32] = [
     0x89, 0xaf, 0xc3, 0x9d, 0x41, 0xd3, 0xb3, 0x27, 0x81, 0x4b, 0x80, 0x94, 0x0b, 0x04, 0x25, 0x90,
     0xf9, 0x65, 0x56, 0xec, 0x91, 0xe6, 0xae, 0x79, 0x39, 0xbc, 0xe3, 0x1f, 0x3a, 0x18, 0xbf, 0x2b,
@@ -84,6 +87,13 @@ fn raw_key_agreement_secpr1() {
         return;
     }
 
+    // Section needed for crytpoauthlib as first ECC slot has unusual access behavior
+    // and user need to be aware of that.
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        let key_name_0 = auto_test_keyname!("0");
+        client.generate_ecc_pair_secp_r1_key(key_name_0).unwrap();
+    }
     client
         .import_ecc_pair_secp_r1_key(key_name.clone(), OUR_KEY_DATA_SECPR1.to_vec())
         .unwrap();
@@ -94,6 +104,7 @@ fn raw_key_agreement_secpr1() {
     assert_eq!(&EXPECTED_OUTPUT_SECPR1, shared_secret.as_slice());
 }
 
+#[cfg(not(feature = "cryptoauthlib-provider"))]
 #[test]
 fn raw_key_agreement_brainpoolpr1() {
     let key_name = auto_test_keyname!();
@@ -127,6 +138,13 @@ fn raw_key_agreement_two_generated_parties() {
         return;
     }
 
+    // Section needed for crytpoauthlib as first ECC slot has unusual access behavior
+    // and user need to be aware of that.
+    #[cfg(feature = "cryptoauthlib-provider")]
+    {
+        let key_name_0 = auto_test_keyname!("0");
+        client.generate_ecc_pair_secp_r1_key(key_name_0).unwrap();
+    }
     client
         .generate_ecc_pair_secp_r1_key(key_name_1.clone())
         .unwrap();
@@ -143,5 +161,6 @@ fn raw_key_agreement_two_generated_parties() {
     let shared_secret_2_then_1 = client
         .raw_key_agreement(RawKeyAgreement::Ecdh, key_name_2, &public_key_1)
         .unwrap();
+
     assert_eq!(shared_secret_1_then_2, shared_secret_2_then_1);
 }

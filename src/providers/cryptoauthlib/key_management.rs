@@ -327,7 +327,7 @@ fn get_calib_key_type(attributes: &Attributes) -> Result<rust_cryptoauthlib::Key
             if attributes.bits == 256 || attributes.bits == 0 {
                 Ok(rust_cryptoauthlib::KeyType::P256EccKey)
             } else {
-                Err(ResponseStatus::PsaErrorNotSupported)
+                Err(ResponseStatus::PsaErrorInvalidArgument)
             }
         }
         _ => Err(ResponseStatus::PsaErrorNotSupported),
