@@ -15,7 +15,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", branch = "can-do-crypto" }
+parsec-interface = { git = "https://github.com/parallaxsecond/parsec-interface-rs", rev = "9173f06b46ce583983b0df36a51fcb268ea818cd" }
 rand = { version = "0.8.3", features = ["small_rng"], optional = true }
 base64 = "0.13.0"
 uuid = "0.8.2"
