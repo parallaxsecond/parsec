@@ -27,7 +27,6 @@ use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatu
 use parsec_client::error::Error;
 use std::collections::HashSet;
 
-
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
 pub struct TestClient {
@@ -123,210 +122,164 @@ impl TestClient {
         Ok(random_bytes)
     }
 
-    /// Generate a 1024 bits RSA key pair.
-    /// The key can only be used for signing/verifying with the RSA PKCS 1v15 signing algorithm with SHA-256 and exporting its public part.
-    pub fn generate_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags
-            .set_sign_hash()
-            .set_verify_hash()
-            .set_sign_message()
-            .set_verify_message();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Algorithm::AsymmetricSignature(
-                        AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256.into(),
-                        },
-                    ),
-                },
+    // Default test attributes for RSA key pair.
+    fn default_rsa_attrs() -> Attributes {
+        Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::RsaKeyPair,
+            bits: 1024,
+            policy: Policy {
+                usage_flags: UsageFlags::default(),
+                permitted_algorithms: Algorithm::AsymmetricSignature(
+                    AsymmetricSignature::RsaPkcs1v15Sign {
+                        hash_alg: Hash::Sha256.into(),
+                    },
+                ),
             },
-        )
+        }
     }
 
-    pub fn generate_long_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags
+    // Test attributes for RSA signature key pair.
+    fn default_sign_rsa_attrs() -> Attributes {
+        let mut attributes = TestClient::default_rsa_attrs();
+        let _ = attributes
+            .policy
+            .usage_flags
             .set_sign_hash()
             .set_verify_hash()
             .set_sign_message()
             .set_verify_message();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 2048,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Algorithm::AsymmetricSignature(
-                        AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256.into(),
-                        },
-                    ),
-                },
-            },
-        )
+        attributes
+    }
+
+    // Test attributes for RSA encryption key pair.
+    fn default_encrypt_rsa_attrs() -> Attributes {
+        let mut attributes = TestClient::default_rsa_attrs();
+        let _ = attributes.policy.usage_flags.set_encrypt().set_decrypt();
+        attributes.policy.permitted_algorithms = AsymmetricEncryption::RsaPkcs1v15Crypt.into();
+        attributes
+    }
+
+    /// Generate a 1024 bits signature RSA key pair.
+    /// The key can only be used for signing/verifying with the RSA PKCS 1v15 signing algorithm with SHA-256 and exporting its public part.
+    pub fn generate_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
+        self.generate_key(key_name, TestClient::default_sign_rsa_attrs())
+    }
+
+    /// Generate a 2048 bits RSA signature key pair.
+    pub fn generate_long_rsa_sign_key(&mut self, key_name: String) -> Result<()> {
+        let mut attributes = TestClient::default_sign_rsa_attrs();
+        attributes.bits = 2048;
+        self.generate_key(key_name, attributes)
     }
 
     pub fn generate_rsa_encryption_keys_rsapkcs1v15crypt(
         &mut self,
         key_name: String,
     ) -> Result<()> {
+        self.generate_key(key_name, TestClient::default_encrypt_rsa_attrs())
+    }
+
+    // Test attributes for AES encryption key.
+    fn default_encrypt_aes_attrs() -> Attributes {
         let mut usage_flags: UsageFlags = Default::default();
         let _ = usage_flags.set_encrypt().set_decrypt();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
-                },
+        Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::Aes,
+            bits: 192,
+            policy: Policy {
+                usage_flags,
+                permitted_algorithms: Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm)
+                    .into(),
             },
-        )
+        }
     }
 
     pub fn generate_aes_keys_ccm(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::Aes,
-                bits: 192,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Aead::AeadWithDefaultLengthTag(
-                        AeadWithDefaultLengthTag::Ccm,
-                    )
-                    .into(),
-                },
-            },
-        )
+        self.generate_key(key_name, TestClient::default_encrypt_aes_attrs())
     }
 
     pub fn generate_rsa_encryption_keys_rsaoaep_sha256(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricEncryption::RsaOaep {
-                        hash_alg: Hash::Sha256,
-                    }
-                    .into(),
-                },
-            },
-        )
+        let mut attributes = TestClient::default_encrypt_rsa_attrs();
+        attributes.policy.permitted_algorithms = AsymmetricEncryption::RsaOaep {
+            hash_alg: Hash::Sha256,
+        }
+        .into();
+        self.generate_key(key_name, attributes)
     }
 
     #[allow(deprecated)]
     pub fn generate_rsa_encryption_keys_rsaoaep_sha1(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricEncryption::RsaOaep {
-                        hash_alg: Hash::Sha1,
-                    }
-                    .into(),
-                },
+        let mut attributes = TestClient::default_encrypt_rsa_attrs();
+        attributes.policy.permitted_algorithms = AsymmetricEncryption::RsaOaep {
+            hash_alg: Hash::Sha1,
+        }
+        .into();
+        self.generate_key(key_name, attributes)
+    }
+
+    // Default attributes for ECC key pair with ECDSA and SHA256 hash.
+    fn default_ecc_attrs() -> Attributes {
+        Attributes {
+            lifetime: Lifetime::Persistent,
+            key_type: Type::EccKeyPair {
+                curve_family: EccFamily::SecpR1,
             },
-        )
+            bits: 256,
+            policy: Policy {
+                usage_flags: UsageFlags::default(),
+                permitted_algorithms: AsymmetricSignature::Ecdsa {
+                    hash_alg: Hash::Sha256.into(),
+                }
+                .into(),
+            },
+        }
+    }
+
+    fn default_sign_ecc_attrs() -> Attributes {
+        let mut attributes = TestClient::default_ecc_attrs();
+        let _ = attributes
+            .policy
+            .usage_flags
+            .set_sign_hash()
+            .set_verify_hash()
+            .set_sign_message()
+            .set_verify_message();
+        attributes
     }
 
     pub fn generate_ecc_key_pair_secpk1_deterministic_ecdsa_sha256(
         &mut self,
         key_name: String,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags
-            .set_sign_hash()
-            .set_verify_hash()
-            .set_sign_message();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::EccKeyPair {
-                    curve_family: EccFamily::SecpK1,
-                },
-                bits: 256,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricSignature::DeterministicEcdsa {
-                        hash_alg: Hash::Sha256.into(),
-                    }
-                    .into(),
-                },
-            },
-        )
+        let mut attributes = TestClient::default_sign_ecc_attrs();
+        attributes.key_type = Type::EccKeyPair {
+            curve_family: EccFamily::SecpK1,
+        };
+        attributes.policy.permitted_algorithms = AsymmetricSignature::DeterministicEcdsa {
+            hash_alg: Hash::Sha256.into(),
+        }
+        .into();
+        self.generate_key(key_name, attributes)
     }
 
     pub fn generate_ecc_key_pair_secpr1_ecdsa_sha256(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags
-            .set_sign_hash()
-            .set_verify_hash()
-            .set_sign_message()
-            .set_verify_message();
-        self.generate_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::EccKeyPair {
-                    curve_family: EccFamily::SecpR1,
-                },
-                bits: 256,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricSignature::Ecdsa {
-                        hash_alg: Hash::Sha256.into(),
-                    }
-                    .into(),
-                },
-            },
-        )
+        self.generate_key(key_name, TestClient::default_sign_ecc_attrs())
+    }
+
+    fn default_ecdn_ecc_attrs() -> Attributes {
+        let mut attributes = TestClient::default_ecc_attrs();
+        attributes.lifetime = Lifetime::Volatile;
+        attributes.policy.permitted_algorithms = KeyAgreement::Raw(RawKeyAgreement::Ecdh).into();
+        let _ = attributes.policy.usage_flags.set_derive();
+        attributes
     }
 
     /// Generate ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn generate_ecc_pair_secp_r1_key(&mut self, key_name: String) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_derive();
-        let attributes = Attributes {
-            key_type: Type::EccKeyPair {
-                curve_family: EccFamily::SecpR1,
-            },
-            bits: 256,
-            lifetime: Lifetime::Volatile,
-            policy: Policy {
-                usage_flags,
-                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
-            },
-        };
-        self.generate_key(key_name, attributes)
+        self.generate_key(key_name, TestClient::default_ecdn_ecc_attrs())
     }
 
     /// Imports and creates a key with specific attributes.
@@ -357,21 +310,7 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaKeyPair,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
-                },
-            },
-            data,
-        )
+        self.import_key(key_name, TestClient::default_encrypt_rsa_attrs(), data)
     }
 
     pub fn import_rsa_public_key_for_encryption(
@@ -379,87 +318,36 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt().set_verify_message();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaPublicKey,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricEncryption::RsaPkcs1v15Crypt.into(),
-                },
-            },
-            data,
-        )
+        let mut attributes = TestClient::default_encrypt_rsa_attrs();
+        attributes.key_type = Type::RsaPublicKey;
+        self.import_key(key_name, attributes, data)
     }
 
     /// Import a 1024 bit RSA public key.
     /// The key can only be used for verifying with the RSA PKCS 1v15 signing algorithm with SHA-256.
     pub fn import_rsa_public_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_verify_hash().set_verify_message();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaPublicKey,
-                bits: 1024,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Algorithm::AsymmetricSignature(
-                        AsymmetricSignature::RsaPkcs1v15Sign {
-                            hash_alg: Hash::Sha256.into(),
-                        },
-                    ),
-                },
-            },
-            data,
-        )
+        let mut attributes = TestClient::default_rsa_attrs();
+        let _ = attributes
+            .policy
+            .usage_flags
+            .set_verify_hash()
+            .set_verify_message();
+        attributes.key_type = Type::RsaPublicKey;
+        self.import_key(key_name, attributes, data)
     }
 
     /// Import an AES key.
     /// The key can only be used for AEAD encryption and decryption with the CCM algorithm
     pub fn import_aes_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::Aes,
-                bits: 0,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: Aead::AeadWithDefaultLengthTag(
-                        AeadWithDefaultLengthTag::Ccm,
-                    )
-                    .into(),
-                },
-            },
-            data,
-        )
+        let mut attributes = TestClient::default_encrypt_aes_attrs();
+        attributes.bits = 0;
+        self.import_key(key_name, attributes, data)
     }
 
     /// Import ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn import_ecc_pair_secp_r1_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_derive();
-        let attributes = Attributes {
-            key_type: Type::EccKeyPair {
-                curve_family: EccFamily::SecpR1,
-            },
-            bits: 256,
-            lifetime: Lifetime::Volatile,
-            policy: Policy {
-                usage_flags,
-                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
-            },
-        };
-        self.import_key(key_name, attributes, data)
+        self.import_key(key_name, TestClient::default_ecdn_ecc_attrs(), data)
     }
 
     /// Import ECC key pair with Brainpool PR1 curve family..
@@ -492,26 +380,16 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_verify_hash().set_verify_message();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::EccPublicKey {
-                    curve_family: EccFamily::SecpR1,
-                },
-                bits: 256,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricSignature::Ecdsa {
-                        hash_alg: Hash::Sha256.into(),
-                    }
-                    .into(),
-                },
-            },
-            data,
-        )
+        let mut attributes = TestClient::default_ecc_attrs();
+        let _ = attributes
+            .policy
+            .usage_flags
+            .set_verify_hash()
+            .set_verify_message();
+        attributes.key_type = Type::EccPublicKey {
+            curve_family: EccFamily::SecpR1,
+        };
+        self.import_key(key_name, attributes, data)
     }
 
     pub fn import_ecc_key_pair_secpr1_ecdsa_sha256(
@@ -519,30 +397,7 @@ impl TestClient {
         key_name: String,
         data: Vec<u8>,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags
-            .set_sign_hash()
-            .set_sign_message()
-            .set_verify_hash()
-            .set_verify_message();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::EccKeyPair {
-                    curve_family: EccFamily::SecpR1,
-                },
-                bits: 256,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: AsymmetricSignature::Ecdsa {
-                        hash_alg: Hash::Sha256.into(),
-                    }
-                    .into(),
-                },
-            },
-            data,
-        )
+        self.import_key(key_name, TestClient::default_sign_ecc_attrs(), data)
     }
 
     /// Exports a key
@@ -851,7 +706,13 @@ impl TestClient {
         ciphertext: &[u8],
     ) -> Result<Vec<u8>> {
         self.basic_client
-            .psa_aead_decrypt(&key_name, encryption_alg, nonce, additional_data, ciphertext)
+            .psa_aead_decrypt(
+                &key_name,
+                encryption_alg,
+                nonce,
+                additional_data,
+                ciphertext,
+            )
             .map_err(convert_error)
     }
 
@@ -947,10 +808,8 @@ impl Drop for TestClient {
     }
 }
 
-
-
 #[macro_export]
-// Create a name unique to the calling function for key names in tests.  Can supply one or more suffixes which will be 
+// Create a name unique to the calling function for key names in tests.  Can supply one or more suffixes which will be
 // appended to the root name if more than one key is required in a test.
 macro_rules! auto_test_keyname {
     ($( $x:expr ),*) => {
@@ -961,7 +820,7 @@ macro_rules! auto_test_keyname {
                 s.push_str($x);
             )*
             s
-    
+
         }
     };
 }
