@@ -140,7 +140,7 @@ impl TestClient {
     }
 
     // Test attributes for RSA signature key pair.
-    fn default_sign_rsa_attrs() -> Attributes {
+    pub fn default_sign_rsa_attrs() -> Attributes {
         let mut attributes = TestClient::default_rsa_attrs();
         let _ = attributes
             .policy
@@ -153,7 +153,7 @@ impl TestClient {
     }
 
     // Test attributes for RSA encryption key pair.
-    fn default_encrypt_rsa_attrs() -> Attributes {
+    pub fn default_encrypt_rsa_attrs() -> Attributes {
         let mut attributes = TestClient::default_rsa_attrs();
         let _ = attributes.policy.usage_flags.set_encrypt().set_decrypt();
         attributes.policy.permitted_algorithms = AsymmetricEncryption::RsaPkcs1v15Crypt.into();
@@ -237,7 +237,7 @@ impl TestClient {
         }
     }
 
-    fn default_sign_ecc_attrs() -> Attributes {
+    pub fn default_sign_ecc_attrs() -> Attributes {
         let mut attributes = TestClient::default_ecc_attrs();
         let _ = attributes
             .policy
