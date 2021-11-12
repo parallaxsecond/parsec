@@ -26,7 +26,6 @@ fn export_rsa_public_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn export_ecc_public_key() -> Result<()> {
     let mut client = TestClient::new();
@@ -79,7 +78,6 @@ fn import_and_export_rsa_public_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_and_export_ecc_public_key_by_export_public_key_fn() -> Result<()> {
     let mut client = TestClient::new();
@@ -109,7 +107,6 @@ fn check_public_rsa_export_format() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn check_public_ecc_export_format() -> Result<()> {
     let mut client = TestClient::new();
@@ -158,7 +155,6 @@ fn check_export_rsa_public_possible() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
 fn check_export_ecc_public_possible() -> Result<()> {
     // Exporting a public key is always permitted
@@ -190,7 +186,6 @@ fn check_export_ecc_public_possible() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "tpm-provider"))]
 #[test]
 fn import_and_export_ecc_public_key() -> Result<()> {
     let mut client = TestClient::new();

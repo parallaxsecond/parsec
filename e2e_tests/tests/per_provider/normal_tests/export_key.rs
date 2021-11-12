@@ -111,7 +111,6 @@ fn import_and_export_rsa_public_key() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
 fn import_and_export_ecc_public_key_by_export_key_fn() -> Result<()> {
     let mut client = TestClient::new();
@@ -253,7 +252,6 @@ fn check_export_rsa_not_possible() {
     assert_eq!(_exported_key, ResponseStatus::PsaErrorNotPermitted);
 }
 
-#[cfg(any(feature = "mbed-crypto-provider", feature = "cryptoauthlib-provider"))]
 #[test]
 fn check_export_ecc_not_possible() {
     let mut client = TestClient::new();

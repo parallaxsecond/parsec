@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused, dead_code)]
 
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
@@ -340,9 +341,6 @@ fn asym_encrypt_verify_decrypt_with_rsa_crate_oaep() {
 }
 
 /// Uses key pair generated online to decrypt a message that has been pre-encrypted
-// PKCS 11 does not support important key pairs
-// TPM does not support importing "general use keys"
-#[cfg(not(any(feature = "pkcs11-provider", feature = "tpm-provider")))]
 #[test]
 fn asym_verify_decrypt_with_internet() {
     let key_name = auto_test_keyname!();
@@ -350,6 +348,14 @@ fn asym_verify_decrypt_with_internet() {
 
     // Check if decrypt is supported
     if !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt) {
+        return;
+    }
+
+    // Check if provider supports RSA key pair import
+    if client.is_operation_supported(Opcode::CanDoCrypto)
+        && (client.can_do_crypto(CheckType::Import, TestClient::default_encrypt_rsa_attrs())
+            == Err(ResponseStatus::PsaErrorNotSupported))
+    {
         return;
     }
 

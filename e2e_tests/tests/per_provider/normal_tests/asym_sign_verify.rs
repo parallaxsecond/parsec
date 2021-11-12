@@ -1,7 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
+use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
 use parsec_client::core::interface::requests::Result;
@@ -137,7 +138,6 @@ fn only_verify_from_internet() -> Result<()> {
     client.verify_with_rsa_sha256(key_name, digest, signature)
 }
 
-#[cfg(not(any(feature = "tpm-provider", feature = "pkcs11-provider",)))]
 #[test]
 fn private_sign_public_verify() -> Result<()> {
     use crate::per_provider::normal_tests::import_key::{ECC_PRIVATE_KEY, ECC_PUBLIC_KEY};
@@ -147,6 +147,14 @@ fn private_sign_public_verify() -> Result<()> {
     let mut client = TestClient::new();
 
     if !client.is_operation_supported(Opcode::PsaVerifyHash) {
+        return Ok(());
+    }
+
+    // Check if provider supports ECC key pair import
+    if client.is_operation_supported(Opcode::CanDoCrypto)
+        && (client.can_do_crypto(CheckType::Import, TestClient::default_sign_ecc_attrs())
+            == Err(ResponseStatus::PsaErrorNotSupported))
+    {
         return Ok(());
     }
 
@@ -891,33 +899,22 @@ fn verify_message_not_permitted() {
     assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
 }
 
-#[cfg(feature = "tpm-provider")]
 #[test]
 fn wildcard_hash_not_supported() {
-    let key_name = auto_test_keyname!();
     let mut client = TestClient::new();
-    let mut usage_flags: UsageFlags = Default::default();
-    let _ = usage_flags.set_sign_hash().set_verify_hash();
 
-    assert_eq!(
-        client
-            .generate_key(
-                key_name,
-                Attributes {
-                    lifetime: Lifetime::Persistent,
-                    key_type: Type::RsaKeyPair,
-                    bits: 1024,
-                    policy: Policy {
-                        usage_flags,
-                        permitted_algorithms: Algorithm::AsymmetricSignature(
-                            AsymmetricSignature::RsaPkcs1v15Sign {
-                                hash_alg: SignHash::Any,
-                            },
-                        ),
-                    },
-                }
-            )
-            .unwrap_err(),
-        ResponseStatus::PsaErrorNotSupported
-    );
+    let mut attributes = TestClient::default_sign_rsa_attrs();
+    attributes.policy.permitted_algorithms =
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
+            hash_alg: SignHash::Any,
+        });
+
+    if client.is_operation_supported(Opcode::CanDoCrypto) {
+        assert_eq!(
+            client
+                .can_do_crypto(CheckType::Generate, attributes)
+                .unwrap_err(),
+            ResponseStatus::PsaErrorNotSupported
+        );
+    }
 }
