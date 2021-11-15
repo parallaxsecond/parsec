@@ -193,7 +193,6 @@ impl TestClient {
                 usage_flags,
                 permitted_algorithms: Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm)
                     .into(),
-                },
             },
         }
     }
@@ -358,21 +357,10 @@ impl TestClient {
         data: Vec<u8>,
         encryption_alg: Aead,
     ) -> Result<()> {
-        let mut usage_flags: UsageFlags = Default::default();
-        let _ = usage_flags.set_encrypt().set_decrypt();
-        self.import_key(
-            key_name,
-            Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::Aes,
-                bits: 0,
-                policy: Policy {
-                    usage_flags,
-                    permitted_algorithms: encryption_alg.into(),
-                },
-            },
-            data,
-        )
+        let mut attributes = TestClient::default_encrypt_aes_attrs();
+        attributes.bits = 0;
+        attributes.policy.permitted_algorithms = encryption_alg.into();
+        self.import_key(key_name, attributes, data)
     }
 
     /// Import ECC key pair with secp R1 curve family.
