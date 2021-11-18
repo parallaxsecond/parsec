@@ -1804,7 +1804,7 @@ dependencies = [
 [[package]]
 name = "tss-esapi"
 version = "7.0.0-alpha.1"
-source = "git+https://github.com/ionut-arm/rust-tss-esapi.git?branch=tkc-activate-cred#d574d3cb9b0f6ed9fb6bffdebeb28fea06553917"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi.git?rev=62fb9b7b05b1e607518ae127406f3b85991205b9#62fb9b7b05b1e607518ae127406f3b85991205b9"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1823,7 +1823,7 @@ dependencies = [
 [[package]]
 name = "tss-esapi-sys"
 version = "0.2.0"
-source = "git+https://github.com/ionut-arm/rust-tss-esapi.git?branch=tkc-activate-cred#d574d3cb9b0f6ed9fb6bffdebeb28fea06553917"
+source = "git+https://github.com/parallaxsecond/rust-tss-esapi.git?rev=62fb9b7b05b1e607518ae127406f3b85991205b9#62fb9b7b05b1e607518ae127406f3b85991205b9"
 dependencies = [
  "pkg-config",
  "target-lexicon",
