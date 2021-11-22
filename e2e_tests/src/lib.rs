@@ -27,6 +27,7 @@ use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatu
 use parsec_client::error::Error;
 use std::collections::HashSet;
 
+
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
 pub struct TestClient {
@@ -279,7 +280,20 @@ impl TestClient {
     /// Generate ECC key pair with secp R1 curve family.
     /// The key can only be used for key agreement with Ecdh algorithm.
     pub fn generate_ecc_pair_secp_r1_key(&mut self, key_name: String) -> Result<()> {
-        self.generate_key(key_name, TestClient::default_ecdn_ecc_attrs())
+        let mut usage_flags: UsageFlags = Default::default();
+        let _ = usage_flags.set_derive();
+        let attributes = Attributes {
+            key_type: Type::EccKeyPair {
+                curve_family: EccFamily::SecpR1,
+            },
+            bits: 256,
+            lifetime: Lifetime::Volatile,
+            policy: Policy {
+                usage_flags,
+                permitted_algorithms: KeyAgreement::Raw(RawKeyAgreement::Ecdh).into(),
+            },
+        };
+        self.generate_key(key_name, attributes)
     }
 
     /// Imports and creates a key with specific attributes.
@@ -337,10 +351,15 @@ impl TestClient {
     }
 
     /// Import an AES key.
-    /// The key can only be used for AEAD encryption and decryption with the CCM algorithm
-    pub fn import_aes_key(&mut self, key_name: String, data: Vec<u8>) -> Result<()> {
+    pub fn import_aes_key(
+        &mut self,
+        key_name: String,
+        data: Vec<u8>,
+        encryption_alg: Aead,
+    ) -> Result<()> {
         let mut attributes = TestClient::default_encrypt_aes_attrs();
         attributes.bits = 0;
+        attributes.policy.permitted_algorithms = encryption_alg.into();
         self.import_key(key_name, attributes, data)
     }
 
@@ -807,6 +826,8 @@ impl Drop for TestClient {
         }
     }
 }
+
+
 
 #[macro_export]
 // Create a name unique to the calling function for key names in tests.  Can supply one or more suffixes which will be
