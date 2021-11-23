@@ -11,8 +11,9 @@ use crate::providers::crypto_capability::CanDoCrypto;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::{
-    can_do_crypto, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
-    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    attest_key, can_do_crypto, prepare_key_attestation, psa_asymmetric_decrypt,
+    psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key, psa_generate_key,
+    psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
@@ -30,6 +31,7 @@ use zeroize::Zeroize;
 mod asym_encryption;
 mod asym_sign;
 mod capability_discovery;
+mod key_attestation;
 mod key_management;
 mod utils;
 
@@ -202,6 +204,24 @@ impl Provide for Provider {
         trace!("can_do_crypto TPM ingress");
         self.can_do_crypto_main(app_name, op)
     }
+
+    fn prepare_key_attestation(
+        &self,
+        app_name: ApplicationName,
+        op: prepare_key_attestation::Operation,
+    ) -> Result<prepare_key_attestation::Result> {
+        trace!("prepare_key_attestation ingress");
+        self.prepare_key_attestation_internal(app_name, op)
+    }
+
+    fn attest_key(
+        &self,
+        app_name: ApplicationName,
+        op: attest_key::Operation,
+    ) -> Result<attest_key::Result> {
+        trace!("attest_key ingress");
+        self.attest_key_internal(app_name, op)
+    }
 }
 
 impl Drop for Provider {
@@ -222,6 +242,7 @@ pub struct ProviderBuilder {
     key_info_store: Option<KeyInfoManagerClient>,
     tcti: Option<String>,
     owner_hierarchy_auth: Option<String>,
+    endorsement_hierarchy_auth: Option<String>,
 }
 
 impl ProviderBuilder {
@@ -231,6 +252,7 @@ impl ProviderBuilder {
             key_info_store: None,
             tcti: None,
             owner_hierarchy_auth: None,
+            endorsement_hierarchy_auth: None,
         }
     }
 
@@ -248,15 +270,25 @@ impl ProviderBuilder {
         self
     }
 
-    /// Specify the owner hierary authentication to use
+    /// Specify the owner hierarchy authentication to use
     pub fn with_owner_hierarchy_auth(mut self, owner_hierarchy_auth: String) -> ProviderBuilder {
         self.owner_hierarchy_auth = Some(owner_hierarchy_auth);
 
         self
     }
 
-    fn get_hierarchy_auth(&mut self) -> std::io::Result<Vec<u8>> {
-        match self.owner_hierarchy_auth.take() {
+    /// Specify the endorsement hierarchy authentication to use
+    pub fn with_endorsement_hierarchy_auth(
+        mut self,
+        endorsement_hierarchy_auth: String,
+    ) -> ProviderBuilder {
+        self.endorsement_hierarchy_auth = Some(endorsement_hierarchy_auth);
+
+        self
+    }
+
+    fn get_hierarchy_auth(&mut self, mut auth: Option<String>) -> std::io::Result<Vec<u8>> {
+        match auth.take() {
             None => Err(std::io::Error::new(
                 ErrorKind::InvalidData,
                 "missing owner hierarchy auth",
@@ -323,7 +355,8 @@ impl ProviderBuilder {
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
     pub unsafe fn build(mut self) -> std::io::Result<Provider> {
-        let hierarchy_auth = self.get_hierarchy_auth()?;
+        let owner_auth_unparsed = self.owner_hierarchy_auth.take();
+        let owner_auth = self.get_hierarchy_auth(owner_auth_unparsed)?;
         let default_cipher = self.find_default_context_cipher()?;
         let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
             std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
@@ -333,23 +366,28 @@ impl ProviderBuilder {
         })?;
         self.tcti.zeroize();
         self.owner_hierarchy_auth.zeroize();
+        let mut builder = tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
+            .with_tcti(tcti)
+            .with_root_key_size(ROOT_KEY_SIZE)
+            .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
+            .with_hierarchy_auth(Hierarchy::Owner, owner_auth)
+            .with_root_hierarchy(Hierarchy::Owner)
+            .with_session_hash_alg(HashingAlgorithm::Sha256)
+            .with_default_context_cipher(default_cipher);
+        if self.endorsement_hierarchy_auth.is_some() {
+            let endorsement_auth_unparsed = self.endorsement_hierarchy_auth.take();
+            let endorsement_auth = self.get_hierarchy_auth(endorsement_auth_unparsed)?;
+            builder = builder.with_hierarchy_auth(Hierarchy::Endorsement, endorsement_auth);
+            self.endorsement_hierarchy_auth.zeroize();
+        }
         Ok(Provider::new(
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,
-            tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
-                .with_tcti(tcti)
-                .with_root_key_size(ROOT_KEY_SIZE)
-                .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
-                .with_hierarchy_auth(hierarchy_auth)
-                .with_hierarchy(Hierarchy::Owner)
-                .with_session_hash_alg(HashingAlgorithm::Sha256)
-                .with_default_context_cipher(default_cipher)
-                .build()
-                .map_err(|e| {
-                    format_error!("Error creating TSS Transient Object Context", e);
-                    std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
-                })?,
+            builder.build().map_err(|e| {
+                format_error!("Error creating TSS Transient Object Context", e);
+                std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
+            })?,
         ))
     }
 }

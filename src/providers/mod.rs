@@ -33,11 +33,12 @@ pub mod trusted_service;
 
 use crate::authenticators::ApplicationName;
 use parsec_interface::operations::{
-    can_do_crypto, delete_client, list_authenticators, list_clients, list_keys, list_opcodes,
-    list_providers, ping, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
-    psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
-    psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key,
-    psa_raw_key_agreement, psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
+    attest_key, can_do_crypto, delete_client, list_authenticators, list_clients, list_keys,
+    list_opcodes, list_providers, ping, prepare_key_attestation, psa_aead_decrypt,
+    psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
+    psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random, psa_hash_compare,
+    psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash, psa_sign_message,
+    psa_verify_hash, psa_verify_message,
 };
 use parsec_interface::requests::{ResponseStatus, Result};
 
@@ -306,6 +307,26 @@ pub trait Provide {
         _op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto main ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Prepare a key attestation operation.
+    fn prepare_key_attestation(
+        &self,
+        _app_name: ApplicationName,
+        _op: prepare_key_attestation::Operation,
+    ) -> Result<prepare_key_attestation::Result> {
+        trace!("prepare_key_attestation ingress");
+        Err(ResponseStatus::PsaErrorNotSupported)
+    }
+
+    /// Attest a key.
+    fn attest_key(
+        &self,
+        _app_name: ApplicationName,
+        _op: attest_key::Operation,
+    ) -> Result<attest_key::Result> {
+        trace!("attest_key ingress");
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 }

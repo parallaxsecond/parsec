@@ -154,6 +154,14 @@ key_info_manager = "on-disk-manager"
 # e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
 # provided, the value is considered to be a string.
 #owner_hierarchy_auth = "password"
+# (Optional) Authentication value for performing operations on the TPM Endorsement Hierarchy. The string can
+# be empty, however we strongly suggest that you use a secure passcode.
+# This authentication value is used for operations that rely on keys stored in the Endorsement Hierarchy, e.g.
+# key attestation using the default Endorsement Key.
+# To align with TPM tooling, PARSEC allows "endorsement_hierarchy_auth" to have a prefix indicating a string value,
+# e.g. "str:password", or to represent a string version of a hex value, e.g. "hex:1a2b3c". If no prefix is
+# provided, the value is considered to be a string.
+#endorsement_hierarchy_auth = "password"
 # (Optional) Allows the service to still start without this provider if there is no TPM on the system. The priority list of providers will be as if this provider was commented out.
 #skip_if_no_tpm = false
 

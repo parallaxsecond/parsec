@@ -286,6 +286,21 @@ impl BackEndHandler {
                 trace!("can_do_crypto egress");
                 self.result_to_response(NativeResult::CanDoCrypto(result), header)
             }
+            NativeOperation::PrepareKeyAttestation(op_prepare_key_attestation) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .prepare_key_attestation(app.into(), op_prepare_key_attestation));
+                trace!("prepare_key_attestation egress");
+                self.result_to_response(NativeResult::PrepareKeyAttestation(result), header)
+            }
+            NativeOperation::AttestKey(op_attest_key) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result =
+                    unwrap_or_else_return!(self.provider.attest_key(app.into(), op_attest_key));
+                trace!("attest_key egress");
+                self.result_to_response(NativeResult::AttestKey(result), header)
+            }
             _ => {
                 // This default arm should be removed
                 // when all operation defind in Parsec-interface are implemented in the match.

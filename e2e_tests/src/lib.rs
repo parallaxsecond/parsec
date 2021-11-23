@@ -6,6 +6,7 @@ pub mod stress;
 
 pub use raw_request::RawRequestClient;
 
+pub use parsec_client;
 pub use parsec_client::core::request_client::RequestClient;
 pub use parsec_client::error;
 
@@ -803,6 +804,26 @@ impl TestClient {
     pub fn can_do_crypto(&self, check_type: CheckType, attributes: Attributes) -> Result<()> {
         self.basic_client
             .can_do_crypto(check_type, attributes)
+            .map_err(convert_error)
+    }
+
+    pub fn prepare_activate_credential(
+        &self,
+        key_name: String,
+    ) -> Result<parsec_client::core::basic_client::PrepareActivateCredential> {
+        self.basic_client
+            .prepare_activate_credential(key_name, None)
+            .map_err(convert_error)
+    }
+
+    pub fn activate_credential(
+        &self,
+        key_name: String,
+        credential: Vec<u8>,
+        secret: Vec<u8>,
+    ) -> Result<Vec<u8>> {
+        self.basic_client
+            .activate_credential_attestation(key_name, None, credential, secret)
             .map_err(convert_error)
     }
 }

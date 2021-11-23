@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.123", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust", rev = "9e7dd111e77afa9168c1bff84963125057568b6f", features = ["testing", "spiffe-auth"] }
+parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust", rev = "119664eac501c7f1d207f03905311a0634db13a6", features = ["testing", "spiffe-auth"] }
 log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
@@ -27,6 +27,7 @@ num_cpus = "1.13.0"
 picky-asn1-der = "0.2.4"
 picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
+tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi.git", rev = "62fb9b7b05b1e607518ae127406f3b85991205b9" }
 
 [features]
 mbed-crypto-provider = []

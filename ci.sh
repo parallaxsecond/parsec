@@ -12,6 +12,7 @@ cleanup () {
     stop_service
     # Stop tpm_server if running
     if [ -n "$TPM_SRV_PID" ]; then kill $TPM_SRV_PID || true; fi
+    if [ -n "$TPM_MC_SRV_PID" ]; then kill $TPM_MC_SRV_PID || true; fi
     # Remove the slot_number line added earlier
     find e2e_tests -name "*toml" -not -name "Cargo.toml" -exec sed -i 's/^slot_number =.*/# slot_number/' {} \;
     # Remove fake mapping and temp files
@@ -163,6 +164,16 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_
     # The -c flag is not used because some keys were created in the TPM via the generate-keys.sh
     # script. Ownership has already been taken with "tpm_pass".
     tpm2_startup -T mssim
+
+    # Start and configure TPM server for MakeCredential
+    TPM_MC_PORT=4321
+    mkdir -p /tmp/mc_tpm
+    pushd /tmp/mc_tpm
+    tpm_server -port $TPM_MC_PORT &
+    TPM_MC_SRV_PID=$!
+    sleep 5
+    tpm2_startup -c -T mssim:port=$TPM_MC_PORT
+    popd
 fi
 
 if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
