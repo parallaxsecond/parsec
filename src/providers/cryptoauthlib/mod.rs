@@ -18,12 +18,13 @@ use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 use parsec_interface::operations::{
-    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
-    psa_hash_compare, psa_hash_compute, psa_import_key, psa_sign_hash, psa_sign_message,
-    psa_verify_hash, psa_verify_message,
+    psa_aead_decrypt, psa_aead_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
+    psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key,
+    psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
 };
 
 mod access_keys;
+mod aead;
 mod asym_sign;
 mod generate_random;
 mod hash;
@@ -206,6 +207,8 @@ impl Provider {
                     && self.supported_opcodes.insert(Opcode::PsaVerifyMessage)
                     && self.supported_opcodes.insert(Opcode::PsaExportPublicKey)
                     && self.supported_opcodes.insert(Opcode::PsaExportKey)
+                    && self.supported_opcodes.insert(Opcode::PsaAeadEncrypt)
+                    && self.supported_opcodes.insert(Opcode::PsaAeadDecrypt)
                 {
                     Some(())
                 } else {
@@ -409,6 +412,32 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_export_key_internal(app_name, op)
+        }
+    }
+
+    fn psa_aead_encrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_aead_encrypt::Operation,
+    ) -> Result<psa_aead_encrypt::Result> {
+        trace!("psa_aead_encrypt ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaAeadEncrypt) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_aead_encrypt_internal(app_name, op)
+        }
+    }
+
+    fn psa_aead_decrypt(
+        &self,
+        app_name: ApplicationName,
+        op: psa_aead_decrypt::Operation,
+    ) -> Result<psa_aead_decrypt::Result> {
+        trace!("psa_aead_decrypt ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaAeadDecrypt) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_aead_decrypt_internal(app_name, op)
         }
     }
 }
