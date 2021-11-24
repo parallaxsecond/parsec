@@ -28,7 +28,6 @@ use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatu
 use parsec_client::error::Error;
 use std::collections::HashSet;
 
-
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
 pub struct TestClient {
@@ -811,8 +810,16 @@ impl TestClient {
         &self,
         key_name: String,
     ) -> Result<parsec_client::core::basic_client::PrepareActivateCredential> {
+        self.prepare_activate_credential_with_key(key_name, None)
+    }
+
+    pub fn prepare_activate_credential_with_key(
+        &self,
+        key_name: String,
+        attesting_key: Option<String>,
+    ) -> Result<parsec_client::core::basic_client::PrepareActivateCredential> {
         self.basic_client
-            .prepare_activate_credential(key_name, None)
+            .prepare_activate_credential(key_name, attesting_key)
             .map_err(convert_error)
     }
 
@@ -822,8 +829,18 @@ impl TestClient {
         credential: Vec<u8>,
         secret: Vec<u8>,
     ) -> Result<Vec<u8>> {
+        self.activate_credential_with_key(key_name, None, credential, secret)
+    }
+
+    pub fn activate_credential_with_key(
+        &self,
+        key_name: String,
+        attesting_key: Option<String>,
+        credential: Vec<u8>,
+        secret: Vec<u8>,
+    ) -> Result<Vec<u8>> {
         self.basic_client
-            .activate_credential_attestation(key_name, None, credential, secret)
+            .activate_credential_attestation(key_name, attesting_key, credential, secret)
             .map_err(convert_error)
     }
 }
@@ -847,8 +864,6 @@ impl Drop for TestClient {
         }
     }
 }
-
-
 
 #[macro_export]
 // Create a name unique to the calling function for key names in tests.  Can supply one or more suffixes which will be

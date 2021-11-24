@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
@@ -285,7 +285,7 @@ fn ts_pkcs11_cross() {
         signature.clone(),
     );
 
-    let key_name_ecc = auto_test_keyname!("ts","ecc");
+    let key_name_ecc = auto_test_keyname!("ts", "ecc");
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::Pkcs11, key_name_ecc.clone());
     import_and_verify_ecc(
         &mut client,
@@ -309,6 +309,16 @@ fn no_user_pin() {
 #[test]
 fn no_slot_number() {
     set_config("no_slot_number.toml");
+    // The service should still start, without the slot number.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
+
+#[test]
+fn no_endorsement_auth() {
+    set_config("no_endorsement_auth.toml");
     // The service should still start, without the slot number.
     reload_service();
 
