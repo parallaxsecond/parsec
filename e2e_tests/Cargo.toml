@@ -28,6 +28,7 @@ picky-asn1-der = "0.2.4"
 picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
 tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi.git", rev = "62fb9b7b05b1e607518ae127406f3b85991205b9" }
+serial_test = "0.5.1"
 
 [features]
 mbed-crypto-provider = []
