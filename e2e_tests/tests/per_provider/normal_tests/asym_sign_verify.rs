@@ -735,7 +735,7 @@ fn verify_with_ring() {
     let mut hasher = Sha256::new();
     hasher.update(message);
     let hash = hasher.finalize().to_vec();
-    let signature = client.sign_with_rsa_sha256(key_name, hash.clone()).unwrap();
+    let signature = client.sign_with_rsa_sha256(key_name, hash).unwrap();
 
     let pk = UnparsedPublicKey::new(&signature::RSA_PKCS1_2048_8192_SHA256, pub_key);
     pk.verify(message, &signature).unwrap();
@@ -759,7 +759,7 @@ fn verify_ecc_with_ring() {
     hasher.update(message);
     let hash = hasher.finalize().to_vec();
     let signature = client
-        .sign_with_ecdsa_sha256(key_name, hash.clone())
+        .sign_with_ecdsa_sha256(key_name, hash)
         .unwrap();
 
     let pk = UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, pub_key);
@@ -787,7 +787,7 @@ fn sign_verify_hash_ecc() {
         .sign_with_ecdsa_sha256(key_name.clone(), hash.clone())
         .unwrap();
     client
-        .verify_with_ecdsa_sha256(key_name.clone(), hash, signature)
+        .verify_with_ecdsa_sha256(key_name, hash, signature)
         .unwrap();
 }
 
@@ -810,7 +810,7 @@ fn sign_verify_message_ecc() {
         .sign_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec())
         .unwrap();
     client
-        .verify_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec(), signature)
+        .verify_msg_with_ecdsa_sha256(key_name, msg.to_vec(), signature)
         .unwrap();
 }
 
@@ -847,7 +847,7 @@ fn sign_message_not_permitted() {
         .unwrap();
 
     let error = client
-        .sign_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec())
+        .sign_msg_with_ecdsa_sha256(key_name, msg.to_vec())
         .unwrap_err();
 
     assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
@@ -893,7 +893,7 @@ fn verify_message_not_permitted() {
         .unwrap();
 
     let error = client
-        .verify_msg_with_ecdsa_sha256(key_name.clone(), msg.to_vec(), signature)
+        .verify_msg_with_ecdsa_sha256(key_name, msg.to_vec(), signature)
         .unwrap_err();
 
     assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);

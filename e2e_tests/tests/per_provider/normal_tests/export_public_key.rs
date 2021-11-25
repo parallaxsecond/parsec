@@ -116,10 +116,10 @@ fn check_public_ecc_export_format() -> Result<()> {
     let private_key_name = String::from("check_public_ecc_export_format_prv");
     client.generate_ecc_key_pair_secpr1_ecdsa_sha256(private_key_name.clone())?;
     let public_key_name = String::from("check_public_ecc_export_format_pub");
-    let public_key = client.export_public_key(private_key_name.clone())?;
+    let public_key = client.export_public_key(private_key_name)?;
 
     // That should not fail if the bytes are in the expected format.
-    client.import_ecc_public_secp_r1_ecdsa_sha256_key(public_key_name.clone(), public_key)?;
+    client.import_ecc_public_secp_r1_ecdsa_sha256_key(public_key_name, public_key)?;
     Ok(())
 }
 

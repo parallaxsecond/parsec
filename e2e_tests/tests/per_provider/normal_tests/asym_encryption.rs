@@ -393,7 +393,7 @@ fn asym_encrypt_not_permitted() {
     client.generate_key(key_name.clone(), attributes).unwrap();
 
     let error = client
-        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name, PLAINTEXT_MESSAGE.to_vec())
         .unwrap_err();
     assert_eq!(error, ResponseStatus::PsaErrorNotPermitted);
 }

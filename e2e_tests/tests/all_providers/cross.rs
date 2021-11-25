@@ -186,9 +186,9 @@ fn pkcs11_sign_cross_ecc() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::MbedCrypto,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 }
 
@@ -219,9 +219,9 @@ fn mbed_crypto_sign_cross_ecc() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::Pkcs11,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 }
 

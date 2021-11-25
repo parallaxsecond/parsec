@@ -1,5 +1,32 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+#![deny(
+    nonstandard_style,
+    const_err,
+    dead_code,
+    improper_ctypes,
+    non_shorthand_field_patterns,
+    no_mangle_generic_items,
+    overflowing_literals,
+    path_statements,
+    patterns_in_fns_without_body,
+    private_in_public,
+    unconditional_recursion,
+    unused,
+    unused_allocation,
+    unused_comparisons,
+    unused_parens,
+    while_true,
+    missing_debug_implementations,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications,
+    unused_results,
+    missing_copy_implementations
+)]
+// This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
 pub mod raw_request;
 pub mod stress;
@@ -100,7 +127,7 @@ impl TestClient {
     /// Creates a key with specific attributes.
     pub fn generate_key(&mut self, key_name: String, attributes: Attributes) -> Result<()> {
         self.basic_client
-            .psa_generate_key(&key_name.clone(), attributes)
+            .psa_generate_key(&key_name, attributes)
             .map_err(convert_error)?;
 
         let provider = self.provider();
@@ -304,7 +331,7 @@ impl TestClient {
         data: Vec<u8>,
     ) -> Result<()> {
         self.basic_client
-            .psa_import_key(&key_name.clone(), &data, attributes)
+            .psa_import_key(&key_name, &data, attributes)
             .map_err(convert_error)?;
 
         let provider = self.provider();
@@ -436,7 +463,7 @@ impl TestClient {
     /// Destroys a key.
     pub fn destroy_key(&mut self, key_name: String) -> Result<()> {
         self.basic_client
-            .psa_destroy_key(&key_name.clone())
+            .psa_destroy_key(&key_name)
             .map_err(convert_error)?;
 
         let provider = self.provider();

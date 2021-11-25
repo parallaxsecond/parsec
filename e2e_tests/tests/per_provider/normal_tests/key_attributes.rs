@@ -188,6 +188,6 @@ fn no_usage_flag_set() {
     };
 
     client
-        .generate_key(key_name.clone(), key_attributes)
+        .generate_key(key_name, key_attributes)
         .unwrap();
 }
