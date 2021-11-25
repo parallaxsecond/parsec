@@ -298,7 +298,7 @@ if rustup component list | grep -q fmt; then
 fi
 if rustup component list | grep -q clippy; then
     cargo clippy --all-targets $FEATURES -- -D clippy::all -D clippy::cargo
-    cargo clippy --all-targets &TEST_FEATURES --manifest-path e2e_tests/Cargo.toml -- -D clippy::all -D clippy::cargo
+    cargo clippy --all-targets $TEST_FEATURES --manifest-path e2e_tests/Cargo.toml -- -D clippy::all -D clippy::cargo
 fi
 
 echo "Unit, doc and integration tests"
