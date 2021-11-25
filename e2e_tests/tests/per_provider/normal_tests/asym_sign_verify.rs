@@ -758,9 +758,7 @@ fn verify_ecc_with_ring() {
     let mut hasher = Sha256::new();
     hasher.update(message);
     let hash = hasher.finalize().to_vec();
-    let signature = client
-        .sign_with_ecdsa_sha256(key_name, hash)
-        .unwrap();
+    let signature = client.sign_with_ecdsa_sha256(key_name, hash).unwrap();
 
     let pk = UnparsedPublicKey::new(&signature::ECDSA_P256_SHA256_FIXED, pub_key);
     pk.verify(message, &signature).unwrap();

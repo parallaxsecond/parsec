@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::{Aead, AeadWithDefaultLengthTag};
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 

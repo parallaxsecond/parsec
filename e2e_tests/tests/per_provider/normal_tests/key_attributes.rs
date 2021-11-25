@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_imports)]
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::{
     Algorithm, AsymmetricSignature, Hash,
 };
@@ -187,7 +187,5 @@ fn no_usage_flag_set() {
         },
     };
 
-    client
-        .generate_key(key_name, key_attributes)
-        .unwrap();
+    client.generate_key(key_name, key_attributes).unwrap();
 }
