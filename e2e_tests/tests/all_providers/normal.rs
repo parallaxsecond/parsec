@@ -1,8 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use e2e_tests::auto_test_keyname;
 use e2e_tests::RawRequestClient;
 use e2e_tests::TestClient;
-use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::requests::request::RawHeader;
 use parsec_client::core::interface::requests::{
@@ -106,6 +106,8 @@ fn list_opcodes() {
 
     let mut crypto_providers_tpm = HashSet::from_iter(common_opcodes.clone());
     let _ = crypto_providers_tpm.insert(Opcode::CanDoCrypto);
+    let _ = crypto_providers_tpm.insert(Opcode::AttestKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PrepareKeyAttestation);
 
     let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes.clone());
     let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);

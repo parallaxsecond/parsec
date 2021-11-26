@@ -70,8 +70,8 @@ impl Provider {
 
         Ok(prepare_key_attestation::Result::ActivateCredential {
             name: params.name.into(),
-            attesting_key_pub: params.public.into(),
-            public: utils::ek_pub_key_to_bytes(params.attesting_key_pub)?.into(),
+            attesting_key_pub: utils::ek_pub_key_to_bytes(params.attesting_key_pub)?.into(),
+            public: params.public.into(),
         })
     }
 

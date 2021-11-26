@@ -35,7 +35,7 @@ mod key_attestation;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 9] = [
+const SUPPORTED_OPCODES: [Opcode; 11] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -45,6 +45,8 @@ const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaAsymmetricDecrypt,
     Opcode::PsaAsymmetricEncrypt,
     Opcode::CanDoCrypto,
+    Opcode::AttestKey,
+    Opcode::PrepareKeyAttestation,
 ];
 
 const ROOT_KEY_SIZE: u16 = 2048;
