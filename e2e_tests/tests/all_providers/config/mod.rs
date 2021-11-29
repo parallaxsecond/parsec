@@ -319,9 +319,34 @@ fn no_slot_number() {
 #[test]
 fn no_endorsement_auth() {
     set_config("no_endorsement_auth.toml");
-    // The service should still start, without the slot number.
+    // The service should still start, without the Endorsement auth.
     reload_service();
 
     let mut client = TestClient::new();
     let _ = client.ping().unwrap();
+}
+
+#[test]
+fn activate_cred_no_auth() {
+    set_config("no_endorsement_auth.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let key_name = auto_test_keyname!();
+    client.generate_rsa_sign_key(key_name.clone()).unwrap();
+
+    // Both preparing for and executing an ActivateCredential should
+    // lead to a bad auth being used to generate the EK, hence "generic error"
+    assert_eq!(
+        client
+            .prepare_activate_credential(key_name.clone())
+            .unwrap_err(),
+        ResponseStatus::PsaErrorGenericError
+    );
+    assert_eq!(
+        client
+            .activate_credential_with_key(key_name, None, vec![0x33; 16], vec![0x22; 16])
+            .unwrap_err(),
+        ResponseStatus::PsaErrorGenericError
+    );
 }

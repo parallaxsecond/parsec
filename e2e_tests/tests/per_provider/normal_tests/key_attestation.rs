@@ -126,6 +126,7 @@ mod activate_credential {
     }
 
     #[test]
+    #[serial]
     fn activate_credential_bad_data() {
         let key_name = auto_test_keyname!();
         let mut client = TestClient::new();
@@ -135,12 +136,29 @@ mod activate_credential {
         client
             .generate_rsa_sign_key(key_name.clone())
             .expect("Failed to generate key");
+        let prep_activ_cred = client
+            .prepare_activate_credential(key_name.clone())
+            .expect("Failed to get parameters for MakeCredential");
 
-        let _error = client
-            .activate_credential(key_name, vec![0xDE; 52], vec![0xAD; 256])
+        let (cred, secret) = make_credential(prep_activ_cred);
+
+        // Wrong `secret` value
+        let error = client
+            .activate_credential(key_name.clone(), vec![0xDE; 52], vec![0xAD; 256])
             .unwrap_err();
-        // TODO: https://github.com/parallaxsecond/parsec/issues/539#issuecomment-978021705
-        // Figure out what error code we should expect here
+        assert_eq!(error, ResponseStatus::PsaErrorInvalidArgument);
+
+        // Wrong `credential` size (after decryption)
+        let error = client
+            .activate_credential(key_name.clone(), vec![0xDE; 52], secret)
+            .unwrap_err();
+        assert_eq!(error, ResponseStatus::PsaErrorInvalidArgument);
+
+        // Wrong `secret` value
+        let error = client
+            .activate_credential(key_name, cred, vec![0xAD; 256])
+            .unwrap_err();
+        assert_eq!(error, ResponseStatus::PsaErrorInvalidArgument);
     }
 
     #[test]

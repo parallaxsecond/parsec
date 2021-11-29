@@ -7,6 +7,8 @@ use parsec_interface::operations::{attest_key, prepare_key_attestation};
 use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::zeroize::Zeroizing;
 use std::convert::TryFrom;
+use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
+use tss_esapi::Error;
 use tss_esapi::{abstraction::transient::ObjectWrapper, structures::Auth};
 
 impl Provider {
@@ -65,7 +67,7 @@ impl Provider {
             .get_make_cred_params(attested_key, None)
             .map_err(|e| {
                 format_error!("Failed to get MakeCredential parameters", e);
-                utils::to_response_status(e)
+                key_attest_response_status(e)
             })?;
 
         Ok(prepare_key_attestation::Result::ActivateCredential {
@@ -141,11 +143,32 @@ impl Provider {
             )
             .map_err(|e| {
                 format_error!("Failed to activate credential", e);
-                utils::to_response_status(e)
+                key_attest_response_status(e)
             })?;
 
         Ok(attest_key::Result::ActivateCredential {
             credential: credential.into(),
         })
+    }
+}
+
+fn key_attest_response_status(error: Error) -> ResponseStatus {
+    match error {
+        Error::Tss2Error(e) => match e.kind() {
+            Some(Tss2ResponseCodeKind::BadAuth) => {
+                error!("Wrong authentication value for attesting key");
+                ResponseStatus::PsaErrorGenericError
+            }
+            Some(Tss2ResponseCodeKind::Value) => {
+                error!("Wrong parameter value for key attestation");
+                ResponseStatus::PsaErrorInvalidArgument
+            }
+            Some(Tss2ResponseCodeKind::Size) => {
+                error!("Wrong parameter size for key attestation");
+                ResponseStatus::PsaErrorInvalidArgument
+            }
+            _ => utils::to_response_status(error),
+        },
+        _ => utils::to_response_status(error),
     }
 }
