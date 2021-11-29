@@ -345,7 +345,7 @@ fn activate_cred_no_auth() {
     );
     assert_eq!(
         client
-            .activate_credential_with_key(key_name_1, None, vec![0x33; 16], vec![0x22; 16])
+            .activate_credential_with_key(key_name, None, vec![0x33; 16], vec![0x22; 16])
             .unwrap_err(),
         ResponseStatus::PsaErrorGenericError
     );
