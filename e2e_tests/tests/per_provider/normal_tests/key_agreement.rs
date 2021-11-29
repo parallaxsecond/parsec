@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::RawKeyAgreement;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
@@ -119,7 +119,7 @@ fn raw_key_agreement_brainpoolpr1() {
 
 #[test]
 fn raw_key_agreement_two_generated_parties() {
-    let key_name_1 = auto_test_keyname!("1"); 
+    let key_name_1 = auto_test_keyname!("1");
     let key_name_2 = auto_test_keyname!("2");
     let mut client = TestClient::new();
 

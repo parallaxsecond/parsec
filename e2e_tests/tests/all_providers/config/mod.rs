@@ -259,9 +259,9 @@ fn ts_pkcs11_cross() {
     import_and_verify(
         &mut client,
         ProviderId::Pkcs11,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 
     let key_name_ecc = auto_test_keyname!("ecc");
@@ -270,9 +270,9 @@ fn ts_pkcs11_cross() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::Pkcs11,
-        key_name_ecc.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name_ecc,
+        pub_key,
+        signature,
     );
 
     let key_name = auto_test_keyname!("ts");
@@ -280,9 +280,9 @@ fn ts_pkcs11_cross() {
     import_and_verify(
         &mut client,
         ProviderId::TrustedService,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 
     let key_name_ecc = auto_test_keyname!("ts", "ecc");
@@ -290,9 +290,9 @@ fn ts_pkcs11_cross() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::TrustedService,
-        key_name_ecc.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name_ecc,
+        pub_key,
+        signature,
     );
 }
 

@@ -109,7 +109,7 @@ fn list_opcodes() {
     let _ = crypto_providers_tpm.insert(Opcode::AttestKey);
     let _ = crypto_providers_tpm.insert(Opcode::PrepareKeyAttestation);
 
-    let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes.clone());
+    let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes);
     let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);
 
     let crypto_providers_mbed_crypto = HashSet::from_iter(mbed_crypto_opcodes);

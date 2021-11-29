@@ -53,7 +53,7 @@ fn rsa_encrypt_use_check() {
     let all_algs = vec![
         AsymmetricEncryption::RsaPkcs1v15Crypt {},
         AsymmetricEncryption::RsaOaep {
-            hash_alg: Hash::Sha256.into(),
+            hash_alg: Hash::Sha256,
         },
     ];
 
@@ -84,7 +84,7 @@ fn rsa_encrypt_use_check() {
         attributes.policy.permitted_algorithms = (*alg).into();
         assert_eq!(
             result,
-            client.can_do_crypto(CheckType::Generate, attributes.clone())
+            client.can_do_crypto(CheckType::Generate, attributes)
         );
     }
 }
@@ -134,7 +134,7 @@ fn ecc_curve_use_check() {
         };
         assert_eq!(
             result,
-            client.can_do_crypto(CheckType::Generate, attributes.clone())
+            client.can_do_crypto(CheckType::Generate, attributes)
         );
     }
 }
@@ -197,7 +197,7 @@ fn hash_use_check() {
         .into();
         assert_eq!(
             result,
-            client.can_do_crypto(CheckType::Generate, attributes.clone())
+            client.can_do_crypto(CheckType::Generate, attributes)
         );
     }
 }
@@ -232,29 +232,23 @@ fn key_size_check() {
     // Unsupported RSA key size
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
+        client.can_do_crypto(CheckType::Use, attributes)
     );
 
     attributes.bits = 2048;
     // Supported RSA key size
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
     // Supported ECC key size
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.bits = 1024;
     // Usupported ECC key size
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
+        client.can_do_crypto(CheckType::Use, attributes)
     );
 }
 
@@ -269,55 +263,37 @@ fn use_check() {
     // Can't use a key without any usage flag defined
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
+        client.can_do_crypto(CheckType::Use, attributes)
     );
 
     let _ = attributes.policy.usage_flags.set_sign_hash();
     // Can use ECC key with sign_hash usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.policy.usage_flags = UsageFlags::default();
     let _ = attributes.policy.usage_flags.set_sign_message();
     // Can use ECC key with sign_message usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.policy.usage_flags = UsageFlags::default();
     let _ = attributes.policy.usage_flags.set_verify_hash();
     // Can use ECC key with verify_hash usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.policy.usage_flags = UsageFlags::default();
     let _ = attributes.policy.usage_flags.set_verify_message();
     // Can use ECC key with verify_message usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.policy.usage_flags = UsageFlags::default();
     let _ = attributes.policy.usage_flags.set_decrypt();
     // Can use ECC key with decrypt usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     attributes.policy.usage_flags = UsageFlags::default();
     let _ = attributes.policy.usage_flags.set_encrypt();
     // Can use ECC key with encrypt usage flag
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Use, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Use, attributes));
 
     let mut attributes = get_default_rsa_attrs();
     let _ = attributes.policy.usage_flags.set_encrypt();
@@ -355,7 +331,7 @@ fn generate_check() {
     // Can't generate ECC public key only
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Generate, attributes.clone())
+        client.can_do_crypto(CheckType::Generate, attributes)
     );
 
     let mut attributes = get_default_ecc_attrs();
@@ -363,21 +339,21 @@ fn generate_check() {
     // Can generate ECC key pair
     assert_eq!(
         Ok(()),
-        client.can_do_crypto(CheckType::Generate, attributes.clone())
+        client.can_do_crypto(CheckType::Generate, attributes)
     );
 
     attributes.policy.permitted_algorithms = Algorithm::None;
     // Can generate ECC key pair without an algorithm defined
     assert_eq!(
         Ok(()),
-        client.can_do_crypto(CheckType::Generate, attributes.clone())
+        client.can_do_crypto(CheckType::Generate, attributes)
     );
 
     attributes.bits = 1024;
     // Can't generate wrong size ECC key pair
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Generate, attributes.clone())
+        client.can_do_crypto(CheckType::Generate, attributes)
     );
 }
 
@@ -393,22 +369,16 @@ fn import_check() {
     // Can't import ECC key pair
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
-        client.can_do_crypto(CheckType::Import, attributes.clone())
+        client.can_do_crypto(CheckType::Import, attributes)
     );
 
     attributes.key_type = Type::EccPublicKey {
         curve_family: EccFamily::SecpR1,
     };
     // Can import ECC public key
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Import, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Import, attributes));
 
     attributes.policy.permitted_algorithms = Algorithm::None;
     // Can import public ECC key without an algorithm defined
-    assert_eq!(
-        Ok(()),
-        client.can_do_crypto(CheckType::Import, attributes.clone())
-    );
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Import, attributes));
 }

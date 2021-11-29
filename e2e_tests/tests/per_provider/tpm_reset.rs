@@ -21,9 +21,9 @@ fn before_tpm_reset() {
     let rsa_key_name = String::from(RSA_KEY_NAME);
     let ecc_key_name = String::from(ECC_KEY_NAME);
 
-    client.generate_rsa_sign_key(rsa_key_name.clone()).unwrap();
+    client.generate_rsa_sign_key(rsa_key_name).unwrap();
     client
-        .generate_ecc_key_pair_secpr1_ecdsa_sha256(ecc_key_name.clone())
+        .generate_ecc_key_pair_secpr1_ecdsa_sha256(ecc_key_name)
         .unwrap();
 }
 

@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::{Aead, AeadWithDefaultLengthTag};
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 
@@ -323,7 +323,7 @@ fn aead_encrypt_ccm_encrypt_nonce_too_short() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm),
                 &NONCE_TOO_SHORT,
                 &ADDITIONAL_DATA,
@@ -351,7 +351,7 @@ fn aead_encrypt_ccm_encrypt_nonce_too_long() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Ccm),
                 &NONCE_TOO_LONG,
                 &ADDITIONAL_DATA,
@@ -382,7 +382,7 @@ fn aead_encrypt_ccm_encrypt_tag_length_too_short() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithShortenedTag {
                     aead_alg: AeadWithDefaultLengthTag::Ccm,
                     tag_length: 3
@@ -416,7 +416,7 @@ fn aead_encrypt_ccm_encrypt_tag_length_too_long() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithShortenedTag {
                     aead_alg: AeadWithDefaultLengthTag::Ccm,
                     tag_length: 17
@@ -642,7 +642,7 @@ fn aead_encrypt_gcm_encrypt_nonce_too_short() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
                 &NONCE_TOO_SHORT,
                 &ADDITIONAL_DATA,
@@ -673,7 +673,7 @@ fn aead_encrypt_gcm_encrypt_nonce_too_long() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithDefaultLengthTag(AeadWithDefaultLengthTag::Gcm),
                 &NONCE_TOO_LONG,
                 &ADDITIONAL_DATA,
@@ -707,7 +707,7 @@ fn aead_encrypt_gcm_encrypt_tag_length_too_short() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithShortenedTag {
                     aead_alg: AeadWithDefaultLengthTag::Gcm,
                     tag_length: 11
@@ -741,7 +741,7 @@ fn aead_encrypt_gcm_encrypt_tag_length_too_long() {
     assert_eq!(
         client
             .aead_encrypt_message(
-                key_name.clone(),
+                key_name,
                 Aead::AeadWithShortenedTag {
                     aead_alg: AeadWithDefaultLengthTag::Gcm,
                     tag_length: 17

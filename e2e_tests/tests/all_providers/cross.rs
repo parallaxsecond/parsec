@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::TestClient;
 use e2e_tests::auto_test_keyname;
+use e2e_tests::TestClient;
 use parsec_client::core::interface::requests::{ProviderId, Result};
 
 const HASH: [u8; 32] = [
@@ -186,9 +186,9 @@ fn pkcs11_sign_cross_ecc() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::MbedCrypto,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 }
 
@@ -219,9 +219,9 @@ fn mbed_crypto_sign_cross_ecc() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::Pkcs11,
-        key_name.clone(),
-        pub_key.clone(),
-        signature.clone(),
+        key_name,
+        pub_key,
+        signature,
     );
 }
 
