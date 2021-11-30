@@ -9,6 +9,13 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     let header = ts_include_dir.clone() + "/components/service/locator/interface/service_locator.h";
     let encoding_header = ts_include_dir.clone() + "/protocols/rpc/common/packed-c/encoding.h";
 
+    if !Path::new(&header).exists() {
+        return Err(Error::new(
+            ErrorKind::Other,
+            "Trusted Services Locator header is missing. Have you run 'git submodule update --init'?",
+        ));
+    }
+
     println!("cargo:rerun-if-changed={}", header);
 
     let bindings = bindgen::Builder::default()
@@ -67,8 +74,8 @@ fn generate_proto_sources(contract_dir: String) -> Result<()> {
 #[cfg(feature = "trusted-service-provider")]
 fn main() -> Result<()> {
     {
-        generate_proto_sources(String::from("trusted-services-vendor/protocols"))?;
         generate_ts_bindings(String::from("trusted-services-vendor"))?;
+        generate_proto_sources(String::from("trusted-services-vendor/protocols"))?;
     }
 
     Ok(())

@@ -88,6 +88,7 @@ fn list_opcodes() {
         Opcode::PsaAsymmetricEncrypt,
     ];
     let mut mbed_crypto_opcodes = vec![
+        Opcode::CanDoCrypto,
         Opcode::PsaHashCompute,
         Opcode::PsaHashCompare,
         Opcode::PsaRawKeyAgreement,

@@ -60,14 +60,12 @@ fn rsa_encrypt_use_check() {
     #[cfg(any(
         feature = "tpm-provider",
         feature = "pkcs11-provider",
-        feature = "mbed-crypto-provider"
+        feature = "mbed-crypto-provider",
+        feature = "trusted-service-provider",
     ))]
     let supported_algs = all_algs.clone();
 
-    #[cfg(any(
-        feature = "cryptoauthlib-provider",
-        feature = "trusted-service-provider",
-    ))]
+    #[cfg(feature = "cryptoauthlib-provider")]
     let supported_algs = vec![];
 
     let mut attributes = get_default_rsa_attrs();
@@ -99,36 +97,53 @@ fn ecc_curve_use_check() {
     }
 
     let all_curves = vec![
-        EccFamily::SecpK1,
-        EccFamily::SecpR1,
-        EccFamily::SectK1,
-        EccFamily::SectR1,
-        EccFamily::BrainpoolPR1,
-        EccFamily::Frp,
-        EccFamily::Montgomery,
+        (EccFamily::SecpR1, 256),
+        (EccFamily::SecpR1, 512), // Unsupported size
+        (EccFamily::SecpK1, 256),
+        (EccFamily::SecpK1, 512), // Unsupported size
+        (EccFamily::SectK1, 409),
+        (EccFamily::SectK1, 512), // Unsupported size
+        (EccFamily::SectR1, 409),
+        (EccFamily::SectR1, 512), // Unsupported size
+        (EccFamily::BrainpoolPR1, 256),
+        (EccFamily::BrainpoolPR1, 560), // Unsupported size
+        (EccFamily::Frp, 256),          // Unsupported curve family
+        (EccFamily::Montgomery, 448),
+        (EccFamily::Montgomery, 512), // Unsupported size
     ];
 
     #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
-    let supported_curves = all_curves.clone();
+    let supported_curves = vec![
+        (EccFamily::SecpR1, 256),
+        (EccFamily::SecpK1, 256),
+        (EccFamily::SectK1, 409),
+        (EccFamily::SectR1, 409),
+        (EccFamily::BrainpoolPR1, 256),
+        // This curve is not supported yet
+        // https://github.com/parallaxsecond/parsec-book/issues/139
+        //        (EccFamily::Frp, 256),
+        (EccFamily::Montgomery, 448),
+    ];
 
     #[cfg(any(
         feature = "tpm-provider",
         feature = "pkcs11-provider",
         feature = "cryptoauthlib-provider"
     ))]
-    let supported_curves = vec![EccFamily::SecpR1];
+    let supported_curves = vec![(EccFamily::SecpR1, 256)];
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
 
     // Check use ECC key pair with all curves
-    for curve in all_curves.iter() {
-        trace!("Testing {:?} curve", curve);
-        let result = if supported_curves.contains(curve) {
+    for (curve, bits) in all_curves.iter() {
+        trace!("Testing {:?} curve with {} size", curve, bits);
+        let result = if supported_curves.contains(&(*curve, *bits)) {
             Ok(())
         } else {
             Err(ResponseStatus::PsaErrorNotSupported)
         };
+        attributes.bits = *bits;
         attributes.key_type = Type::EccKeyPair {
             curve_family: *curve,
         };
@@ -366,11 +381,14 @@ fn import_check() {
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_encrypt();
-    // Can't import ECC key pair
+    // Some providers can't import ECC key pair
+    #[cfg(not(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",)))]
     assert_eq!(
         Err(ResponseStatus::PsaErrorNotSupported),
         client.can_do_crypto(CheckType::Import, attributes)
     );
+    #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
+    assert_eq!(Ok(()), client.can_do_crypto(CheckType::Import, attributes));
 
     attributes.key_type = Type::EccPublicKey {
         curve_family: EccFamily::SecpR1,

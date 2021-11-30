@@ -5,13 +5,14 @@
 //! This provider is backed by a crypto Trusted Service deployed in TrustZone
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::Provide;
 use context::Context;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    list_clients, list_keys, psa_destroy_key, psa_export_key, psa_export_public_key,
+    can_do_crypto, list_clients, list_keys, psa_destroy_key, psa_export_key, psa_export_public_key,
     psa_generate_key, psa_generate_random, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderId, Result};
@@ -20,12 +21,13 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 use uuid::Uuid;
 mod asym_sign;
+mod capability_discovery;
 mod context;
 mod error;
 mod generate_random;
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 8] = [
+const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaDestroyKey,
     Opcode::PsaGenerateKey,
     Opcode::PsaSignHash,
@@ -34,6 +36,7 @@ const SUPPORTED_OPCODES: [Opcode; 8] = [
     Opcode::PsaExportPublicKey,
     Opcode::PsaExportKey,
     Opcode::PsaGenerateRandom,
+    Opcode::CanDoCrypto,
 ];
 
 /// Trusted Service provider structure
@@ -210,6 +213,15 @@ impl Provide for Provider {
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         self.psa_verify_hash_internal(app_name, op)
+    }
+
+    fn can_do_crypto(
+        &self,
+        app_name: ApplicationName,
+        op: can_do_crypto::Operation,
+    ) -> Result<can_do_crypto::Result> {
+        trace!("can_do_crypto trusted-services ingress");
+        self.can_do_crypto_main(app_name, op)
     }
 }
 
