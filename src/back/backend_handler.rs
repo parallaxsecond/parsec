@@ -323,12 +323,6 @@ impl BackEndHandler {
                 trace!("attest_key egress");
                 self.result_to_response(NativeResult::AttestKey(result), header)
             }
-            _ => {
-                // This default arm should be removed
-                // when all operation defind in Parsec-interface are implemented in the match.
-                trace!("Not yet implemented operation");
-                Response::from_request_header(header, ResponseStatus::OpcodeDoesNotExist)
-            }
         }
     }
 }
