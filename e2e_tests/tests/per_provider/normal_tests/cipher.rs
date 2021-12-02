@@ -83,7 +83,7 @@ fn cipher_encrypt_decrypt_cfb() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::Cfb, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::Cfb, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT, plaintext.as_slice());
@@ -111,7 +111,7 @@ fn cipher_encrypt_decrypt_ctr() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::Ctr, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::Ctr, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT, plaintext.as_slice());
@@ -139,7 +139,7 @@ fn cipher_encrypt_decrypt_ofb() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::Ofb, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::Ofb, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT, plaintext.as_slice());
@@ -167,7 +167,7 @@ fn cipher_encrypt_decrypt_ecb() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::EcbNoPadding, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::EcbNoPadding, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT, plaintext.as_slice());
@@ -192,11 +192,7 @@ fn cipher_encrypt_ecb_invalid_data_size() {
 
     assert_eq!(
         client
-            .cipher_encrypt_message(
-                key_name.clone(),
-                Cipher::EcbNoPadding,
-                &invalid_plaintext[..],
-            )
+            .cipher_encrypt_message(key_name, Cipher::EcbNoPadding, &invalid_plaintext[..])
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -217,12 +213,12 @@ fn cipher_decrypt_ecb_invalid_data_size() {
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::EcbNoPadding)
         .unwrap();
 
-    let invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
+    let mut invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
     let mut ciphertext = IV.to_vec();
-    ciphertext.append(&mut invalid_plaintext.clone());
+    ciphertext.append(&mut invalid_plaintext);
     assert_eq!(
         client
-            .cipher_decrypt_message(key_name.clone(), Cipher::EcbNoPadding, &ciphertext[..])
+            .cipher_decrypt_message(key_name, Cipher::EcbNoPadding, &ciphertext[..])
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -250,7 +246,7 @@ fn cipher_encrypt_decrypt_cbc() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::CbcNoPadding, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::CbcNoPadding, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT, plaintext.as_slice());
@@ -275,11 +271,7 @@ fn cipher_encrypt_cbc_invalid_data_size() {
 
     assert_eq!(
         client
-            .cipher_encrypt_message(
-                key_name.clone(),
-                Cipher::CbcNoPadding,
-                &invalid_plaintext[..],
-            )
+            .cipher_encrypt_message(key_name, Cipher::CbcNoPadding, &invalid_plaintext[..])
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -300,12 +292,12 @@ fn cipher_decrypt_cbc_invalid_data_size() {
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::CbcNoPadding)
         .unwrap();
 
-    let invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
+    let mut invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
     let mut ciphertext = IV.to_vec();
-    ciphertext.append(&mut invalid_plaintext.clone());
+    ciphertext.append(&mut invalid_plaintext);
     assert_eq!(
         client
-            .cipher_decrypt_message(key_name.clone(), Cipher::CbcNoPadding, &ciphertext[..])
+            .cipher_decrypt_message(key_name, Cipher::CbcNoPadding, &ciphertext[..])
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -338,7 +330,7 @@ fn cipher_encrypt_decrypt_cbc_pkcs7() {
         .unwrap();
 
     let plaintext = client
-        .cipher_decrypt_message(key_name.clone(), Cipher::CbcPkcs7, &ciphertext)
+        .cipher_decrypt_message(key_name, Cipher::CbcPkcs7, &ciphertext)
         .unwrap();
 
     assert_eq!(&PLAINTEXT[..INVALID_DATA_SIZE], plaintext.as_slice());
@@ -360,12 +352,12 @@ fn cipher_decrypt_cbc_pkcs7_invalid_data_size() {
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::CbcPkcs7)
         .unwrap();
 
-    let invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
+    let mut invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
     let mut ciphertext = IV.to_vec();
-    ciphertext.append(&mut invalid_plaintext.clone());
+    ciphertext.append(&mut invalid_plaintext);
     assert_eq!(
         client
-            .cipher_decrypt_message(key_name.clone(), Cipher::CbcPkcs7, &ciphertext[..],)
+            .cipher_decrypt_message(key_name, Cipher::CbcPkcs7, &ciphertext[..],)
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -390,7 +382,7 @@ fn cipher_encrypt_empty_data() {
 
     assert_eq!(
         client
-            .cipher_encrypt_message(key_name.clone(), Cipher::Cfb, &empty_plaintext[..],)
+            .cipher_encrypt_message(key_name, Cipher::Cfb, &empty_plaintext[..],)
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
@@ -415,7 +407,7 @@ fn cipher_decrypt_empty_data() {
 
     assert_eq!(
         client
-            .cipher_encrypt_message(key_name.clone(), Cipher::Cfb, &empty_ciphertext[..],)
+            .cipher_encrypt_message(key_name, Cipher::Cfb, &empty_ciphertext[..],)
             .unwrap_err(),
         ResponseStatus::PsaErrorInvalidArgument
     );
