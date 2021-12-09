@@ -22,7 +22,11 @@ impl Provider {
             prepare_key_attestation::Operation::ActivateCredential {
                 attested_key_name,
                 attesting_key_name,
-            } => self.prepare_activate_credential(application_identity, attested_key_name, attesting_key_name),
+            } => self.prepare_activate_credential(
+                application_identity,
+                attested_key_name,
+                attesting_key_name,
+            ),
             _ => {
                 error!("Key attestation mechanism is not supported");
                 Err(ResponseStatus::PsaErrorNotSupported)

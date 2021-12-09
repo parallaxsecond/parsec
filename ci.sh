@@ -125,7 +125,7 @@ while [ "$#" -gt 0 ]; do
             fi
             PROVIDER_NAME=$1
 
-            # If running anything but cargo-check, copy config
+            # Copy provider specific config, unless CI is running `cargo-check` or `sqlite-kim` CI
             if [ "$PROVIDER_NAME" != "cargo-check" ] && [ "$PROVIDER_NAME" != "sqlite-kim" ]; then
                 cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
             elif [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
