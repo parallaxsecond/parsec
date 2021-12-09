@@ -16,7 +16,7 @@ impl CanDoCrypto for Provider {
         _app_name: ApplicationName,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto_internal for TPM provider");
+        trace!("can_do_crypto_internal");
 
         // Check attributes compatibility with the provider
         match op.attributes.key_type {
@@ -37,7 +37,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn use_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("use_check_internal for TPM provider");
+        trace!("use_check_internal");
 
         let _ = utils::parsec_to_tpm_params(attributes).map_err(|_| PsaErrorNotSupported)?;
 
@@ -47,7 +47,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn generate_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("generate_check_internal for TPM provider");
+        trace!("generate_check_internal");
         match attributes.key_type {
             Type::RsaKeyPair | Type::EccKeyPair { .. } => Ok(can_do_crypto::Result),
             _ => {
@@ -58,7 +58,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn import_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("import_check_internal for TPM provider");
+        trace!("import_check_internal");
         match attributes.key_type {
             Type::RsaPublicKey | Type::EccPublicKey { .. } => Ok(can_do_crypto::Result),
             _ => {

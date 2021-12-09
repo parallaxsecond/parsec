@@ -16,7 +16,7 @@ impl CanDoCrypto for Provider {
         _app_name: ApplicationName,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto_internal for TS provider");
+        trace!("can_do_crypto_internal");
 
         // Check if psa-crypto can convert the attributes into PSA structure
         // The conversion includes some validity checks.
@@ -29,7 +29,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn use_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("use_check_internal for TS provider");
+        trace!("use_check_internal");
 
         let _ = Provider::check_key_size(attributes, false).map_err(|_| {
             info!("Unsupported key size {}", attributes.bits);
@@ -40,7 +40,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn generate_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("generate_check_internal for TS provider");
+        trace!("generate_check_internal");
 
         let _ = Provider::check_key_size(attributes, false).map_err(|_| {
             info!("Unsupported key size {}", attributes.bits);
@@ -63,7 +63,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn import_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("import_check_internal for TS provider");
+        trace!("import_check_internal");
 
         let _ = Provider::check_key_size(attributes, true).map_err(|_| {
             info!("Unsupported key size {}", attributes.bits);

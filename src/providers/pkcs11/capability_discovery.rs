@@ -22,7 +22,7 @@ impl CanDoCrypto for Provider {
         _app_name: ApplicationName,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto_internal for PKCS11 provider");
+        trace!("can_do_crypto_internal");
 
         // Check attributes compatibility with the provider
         match op.attributes.key_type {
@@ -59,7 +59,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn use_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("use_check_internal for PKCS11 provider");
+        trace!("use_check_internal");
 
         let supported_mechanisms: Vec<MechanismType> = self
             .backend
@@ -101,7 +101,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn generate_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("generate_check_internal for PKCS11 provider");
+        trace!("generate_check_internal");
         match attributes.key_type {
             Type::RsaKeyPair | Type::EccKeyPair { .. } => Ok(can_do_crypto::Result),
             _ => {
@@ -112,7 +112,7 @@ impl CanDoCrypto for Provider {
     }
 
     fn import_check_internal(&self, attributes: Attributes) -> Result<can_do_crypto::Result> {
-        trace!("import_check_internal for PKCS11 provider");
+        trace!("import_check_internal");
         match attributes.key_type {
             Type::RsaPublicKey | Type::EccPublicKey { .. } => Ok(can_do_crypto::Result),
             _ => {
