@@ -12,6 +12,11 @@ const CIPHER_IV_SIZE: usize = 16;
 const CIPHER_CTR_SIZE: u8 = 4;
 
 impl Provider {
+    /// Check if given Cipher Algorithm need generated initialization vector to run
+    pub(super) fn algorithm_need_iv(&self, alg: &Cipher) -> bool {
+        !matches!(alg, Cipher::EcbNoPadding)
+    }
+
     /// Convert Cipher Algorithm type from parsec to rust_cryptoauthlib type
     pub(super) fn get_cipher_algorithm(
         &self,
@@ -67,11 +72,15 @@ impl Provider {
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
         op.validate(key_attributes)?;
 
-        let generated_iv = self.generate_iv()?;
-        let cipher_param = rust_cryptoauthlib::CipherParam {
-            iv: Some(generated_iv[..].try_into()?),
+        let mut cipher_param = rust_cryptoauthlib::CipherParam {
             ..Default::default()
         };
+        let mut generated_iv = vec![0u8; 0];
+        if self.algorithm_need_iv(&op.alg) {
+            generated_iv = self.generate_iv()?;
+            cipher_param.iv = Some(generated_iv[..].try_into()?);
+        }
+
         let mut plaintext = op.plaintext.to_vec();
         let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
 
@@ -82,9 +91,8 @@ impl Provider {
         );
         match result {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
-                let mut generated_iv_as_vec = generated_iv;
-                generated_iv_as_vec.append(&mut plaintext);
-                let ciphertext = zeroize::Zeroizing::new(generated_iv_as_vec);
+                generated_iv.append(&mut plaintext);
+                let ciphertext = zeroize::Zeroizing::new(generated_iv);
                 Ok(psa_cipher_encrypt::Result { ciphertext })
             }
             rust_cryptoauthlib::AtcaStatus::AtcaInvalidSize
@@ -108,19 +116,23 @@ impl Provider {
         let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
         op.validate(key_attributes)?;
 
-        let mut op_iv = op.ciphertext.to_vec();
-        if op_iv.len() < CIPHER_IV_SIZE {
-            error!(
-                "Cipher decryption failed: given ciphertext is too short to contain initialization vector."
-            );
-            return Err(ResponseStatus::PsaErrorInvalidArgument);
-        }
-        let mut ciphertext = op_iv.split_off(CIPHER_IV_SIZE);
-
-        let cipher_param = rust_cryptoauthlib::CipherParam {
-            iv: Some(op_iv[..].try_into()?),
+        let mut cipher_param = rust_cryptoauthlib::CipherParam {
             ..Default::default()
         };
+        let mut ciphertext = op.ciphertext.to_vec();
+
+        if self.algorithm_need_iv(&op.alg) {
+            if ciphertext.len() < CIPHER_IV_SIZE {
+                error!(
+                    "Cipher decryption failed: given ciphertext is too short to contain initialization vector."
+                );
+                return Err(ResponseStatus::PsaErrorInvalidArgument);
+            }
+            let mut iv = ciphertext;
+            ciphertext = iv.split_off(CIPHER_IV_SIZE);
+            cipher_param.iv = Some(iv[..].try_into()?);
+        }
+
         let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
 
         let result = self.device.cipher_decrypt(
