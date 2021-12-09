@@ -6,15 +6,16 @@
 use super::Provide;
 use crate::authenticators::ApplicationName;
 use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::providers::crypto_capability::CanDoCrypto;
 use derivative::Derivative;
 use log::{error, trace};
-use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::operations::{
-    psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
-    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
-    psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash,
-    psa_verify_hash,
+    can_do_crypto, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
+    psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
+    psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key,
+    psa_raw_key_agreement, psa_sign_hash, psa_verify_hash,
 };
+use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use psa_crypto::types::{key, status};
 use std::collections::HashSet;
@@ -28,12 +29,13 @@ use uuid::Uuid;
 mod aead;
 mod asym_encryption;
 mod asym_sign;
+mod capability_discovery;
 mod generate_random;
 mod hash;
 mod key_agreement;
 pub(super) mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 15] = [
+const SUPPORTED_OPCODES: [Opcode; 16] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -49,6 +51,7 @@ const SUPPORTED_OPCODES: [Opcode; 15] = [
     Opcode::PsaHashCompute,
     Opcode::PsaRawKeyAgreement,
     Opcode::PsaGenerateRandom,
+    Opcode::CanDoCrypto,
 ];
 
 /// Mbed Crypto provider structure
@@ -312,6 +315,15 @@ impl Provide for Provider {
     ) -> Result<psa_generate_random::Result> {
         trace!("psa_generate_random ingress");
         self.psa_generate_random_internal(op)
+    }
+
+    fn can_do_crypto(
+        &self,
+        app_name: ApplicationName,
+        op: can_do_crypto::Operation,
+    ) -> Result<can_do_crypto::Result> {
+        trace!("can_do_crypto ingress");
+        self.can_do_crypto_main(app_name, op)
     }
 }
 
