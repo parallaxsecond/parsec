@@ -45,20 +45,11 @@ impl Provider {
         let random_op = psa_generate_random::Operation {
             size: CIPHER_IV_SIZE,
         };
-        let zero_iv = vec![0u8; CIPHER_IV_SIZE];
         let random_bytes = self
             .psa_generate_random_internal(random_op)?
             .random_bytes
             .to_vec();
-        match random_bytes != zero_iv {
-            true => Ok(random_bytes),
-            false => {
-                error!(
-                    "Cipher encryption failed: could not generate non-zero initialization vector"
-                );
-                Err(ResponseStatus::PsaErrorInsufficientEntropy)
-            }
-        }
+        Ok(random_bytes)
     }
 
     pub(super) fn psa_cipher_encrypt_internal(

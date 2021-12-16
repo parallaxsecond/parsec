@@ -45,7 +45,9 @@ impl Provider {
                     if loop_count < 3 {
                         continue;
                     } else {
-                        return Err(ResponseStatus::PsaErrorInsufficientEntropy);
+                        let err = ResponseStatus::PsaErrorInsufficientEntropy;
+                        format_error!("Bytes generation failed ", err);
+                        return Err(err);
                     }
                 }
             }
