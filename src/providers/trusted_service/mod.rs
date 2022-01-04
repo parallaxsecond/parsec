@@ -233,11 +233,11 @@ impl Provide for Provider {
 
     fn can_do_crypto(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto ingress");
-        self.can_do_crypto_main(app_name, op)
+        self.can_do_crypto_main(application_identity, op)
     }
 }
 
