@@ -581,7 +581,7 @@ impl OnDiskKeyInfoManagerBuilder {
         self
     }
 
-    /// Add a mappings directory path to the builder
+    /// Add an authentication type to the builder
     pub fn with_auth_type(mut self, default_auth_type: AuthType) -> OnDiskKeyInfoManagerBuilder {
         self.auth_type = Some(default_auth_type);
 

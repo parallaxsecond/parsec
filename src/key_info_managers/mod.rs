@@ -109,11 +109,6 @@ impl KeyIdentity {
     pub fn provider(&self) -> &ProviderIdentity {
         &self.provider
     }
-
-    /// Get the app name
-    pub fn app_name(&self) -> &String {
-        self.application.name()
-    }
 }
 
 /// Converts the error string returned by the ManageKeyInfo methods to
@@ -255,7 +250,6 @@ impl KeyInfoManagerClient {
 
         key_info_manager_impl
             .get_all(self.provider_identity.clone())
-            // .map(|vec| vec.into_iter().cloned().collect())
             .map_err(to_response_status)
     }
 
@@ -341,7 +335,7 @@ impl KeyInfoManagerClient {
         }
     }
 
-    /// Returns a Vec of ApplicationName of clients having keys in the provider.
+    /// Returns a Vec<ApplicationIdentity> of clients that have keys in this provider.
     ///
     /// # Errors
     ///
@@ -365,8 +359,8 @@ impl KeyInfoManagerClient {
         Ok(clients)
     }
 
-    /// Returns a Vec of the KeyInfo objects corresponding to the given application name and
-    /// provider ID.
+    /// Returns a Vec of the KeyInfo objects corresponding to the given ApplicationIdentity,
+    /// and the KIM client ProviderIdentity.
     ///
     /// # Errors
     ///
