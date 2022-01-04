@@ -4,6 +4,7 @@ use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use log::error;
+use parsec_interface::operations::psa_key_attributes::{Attributes, Type};
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -35,7 +36,7 @@ impl Provider {
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
-        let key_attributes = op.attributes;
+        let key_attributes = Provider::check_key_size(op.attributes, false)?;
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
@@ -73,7 +74,7 @@ impl Provider {
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
-        let key_attributes = op.attributes;
+        let key_attributes = Provider::check_key_size(op.attributes, true)?;
         let key_data = op.data;
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
@@ -104,6 +105,30 @@ impl Provider {
             Err(error) => {
                 format_error!("Import key status: ", error);
                 Err(error.into())
+            }
+        }
+    }
+
+    /// Check if key size is correct for the key type
+    pub fn check_key_size(attributes: Attributes, is_import: bool) -> Result<Attributes> {
+        // For some operations like import 0 size is permitted
+        if is_import && attributes.bits == 0 {
+            return Ok(attributes);
+        }
+        match attributes.key_type {
+            Type::RsaKeyPair | Type::RsaPublicKey => match attributes.bits {
+                1024 | 2048 | 4096 => Ok(attributes),
+                _ => {
+                    error!(
+                        "Requested RSA key size is not supported ({})",
+                        attributes.bits
+                    );
+                    Err(ResponseStatus::PsaErrorInvalidArgument)
+                }
+            },
+            _ => {
+                // We don't (yet?) implement checks for other key types
+                Ok(attributes)
             }
         }
     }

@@ -363,7 +363,7 @@ impl Provide for Provider {
         app_name: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto PKCS11 ingress");
+        trace!("can_do_crypto ingress");
         self.can_do_crypto_main(app_name, op)
     }
 }
