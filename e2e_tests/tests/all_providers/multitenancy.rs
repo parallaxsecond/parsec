@@ -12,6 +12,10 @@ use parsec_client::core::interface::requests::{ProviderId, ResponseStatus};
 //
 // client1 will be configured as an admin.
 
+fn get_key_name(provider: &ProviderId) -> String {
+    format!("{}-multitenant", provider)
+}
+
 #[test]
 fn client1_before() {
     // Create one key on each provider
@@ -19,16 +23,15 @@ fn client1_before() {
     client.do_not_destroy_keys();
     client.set_default_auth(Some("client1".to_string()));
 
-    let key = String::from("multitenant");
-
     for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
-        client.generate_rsa_sign_key(key.clone()).unwrap();
+        client
+            .generate_rsa_sign_key(get_key_name(provider))
+            .unwrap();
     }
 
     let clients = client.list_clients().unwrap();
-    // One client already exists from the key mappings test.
-    assert_eq!(clients.len(), 2);
+    assert_eq!(clients.len(), 1);
 }
 
 #[test]
@@ -37,8 +40,6 @@ fn client2() {
     client.do_not_destroy_keys();
     client.set_default_auth(Some("client2".to_string()));
 
-    let key = String::from("multitenant");
-
     // Try to list those keys
     let keys = client.list_keys().unwrap();
     assert!(keys.is_empty());
@@ -46,15 +47,19 @@ fn client2() {
     for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
         assert_eq!(
-            client.export_public_key(key.clone()).unwrap_err(),
+            client
+                .export_public_key(get_key_name(provider))
+                .unwrap_err(),
             ResponseStatus::PsaErrorDoesNotExist
         );
         assert_eq!(
-            client.destroy_key(key.clone()).unwrap_err(),
+            client.destroy_key(get_key_name(provider)).unwrap_err(),
             ResponseStatus::PsaErrorDoesNotExist
         );
-        client.generate_rsa_sign_key(key.clone()).unwrap();
-        client.destroy_key(key.clone()).unwrap();
+        client
+            .generate_rsa_sign_key(get_key_name(provider))
+            .unwrap();
+        client.destroy_key(get_key_name(provider)).unwrap();
     }
 
     assert_eq!(
@@ -81,23 +86,23 @@ fn client1_after() {
     assert_eq!(keys.len(), 3);
 
     // Destroy the keys
-    let key = String::from("multitenant");
     for provider in [ProviderId::MbedCrypto, ProviderId::Pkcs11, ProviderId::Tpm].iter() {
         client.set_provider(*provider);
-        client.destroy_key(key.clone()).unwrap();
+        client.destroy_key(get_key_name(provider)).unwrap();
     }
 
     client
         .generate_rsa_sign_key("client1-key".to_string())
         .unwrap();
     let mut clients = client.list_clients().unwrap();
-    assert_eq!(clients.len(), 3);
-    client.delete_client(clients.remove(0)).unwrap();
-    let mut clients = client.list_clients().unwrap();
     assert_eq!(clients.len(), 2);
     client.delete_client(clients.remove(0)).unwrap();
-    let clients = client.list_clients().unwrap();
+    let keys = client.list_keys().unwrap();
+    assert_eq!(keys.len(), 0);
+
+    let mut clients = client.list_clients().unwrap();
     assert_eq!(clients.len(), 1);
+    client.delete_client(clients.remove(0)).unwrap();
     let keys = client.list_keys().unwrap();
     assert_eq!(keys.len(), 0);
 }

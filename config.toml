@@ -84,12 +84,24 @@ auth_type = "UnixPeerCredentials"
 # Defined as an array of tables: https://github.com/toml-lang/toml#user-content-array-of-tables
 [[key_manager]]
 # (Required) Name of the key info manager. Used to tie providers to the manager supporting them.
-name = "on-disk-manager"
+name = "sqlite-manager"
 
 # (Required) Type of key info manager to be used.
-manager_type = "OnDisk"
+# Possible values: "SQLite", "OnDisk"
+# NOTE: The SQLite KIM is now the recommended type, with the OnDisk KIM to be deprecated at some
+# point in the future.
+manager_type = "SQLite"
 
-# Path to the location where the mapping will be persisted (in this case, the filesystem path)
+# Path to the location where the database will be persisted
+#store_path = "/var/lib/parsec/kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
+
+# Example of OnDisk Key Info Manager configuration
+#[[key_manager]]
+# (Required) Name of the key info manager.
+#name = "on-disk-manager"
+# (Required) Type of key info manager to be used.
+#manager_type = "OnDisk"
+# Path to the location where the mappings will be persisted (in this case, the filesystem path)
 #store_path = "/var/lib/parsec/mappings"
 
 # (Required) Provider configurations.
@@ -120,7 +132,7 @@ provider_type = "MbedCrypto"
 # Crypto library by default within the working directory of the service, NOT in the same location
 # as the mappings mentioned previously. If you want the keys to be persisted across reboots, ensure
 # that the working directory is not temporary.
-key_info_manager = "on-disk-manager"
+key_info_manager = "sqlite-manager"
 
 # Example of a PKCS 11 provider configuration
 #[[provider]]
@@ -134,7 +146,7 @@ key_info_manager = "on-disk-manager"
 # (Optional) The name of the provider
 # name = "pkcs11-provider"
 #provider_type = "Pkcs11"
-#key_info_manager = "on-disk-manager"
+#key_info_manager = "sqlite-manager"
 # (Required for this provider) Path to the location of the dynamic library loaded by this provider.
 # For the PKCS 11 provider, this library implements the PKCS 11 API on the target platform.
 #library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
@@ -164,7 +176,7 @@ key_info_manager = "on-disk-manager"
 # (Optional) The name of the provider
 # name = "tpm-provider"
 #provider_type = "Tpm"
-#key_info_manager = "on-disk-manager"
+#key_info_manager = "sqlite-manager"
 # (Required) TPM TCTI device to use with this provider. The string can include configuration values - if no
 # configuration value is given, the defaults are used. Options are:
 # - "device": uses a TPM device available as a file node; path can be given as a configuration string,
@@ -207,7 +219,7 @@ key_info_manager = "on-disk-manager"
 # (Optional) The name of the provider
 # name = "cryptoauthlib-provider"
 #provider_type = "CryptoAuthLib"
-#key_info_manager = "on-disk-manager"
+#key_info_manager = "sqlite-manager"
 ##########
 # (Required) Interface for ATCA device
 #   Supported values: "i2c", "test-interface"
@@ -271,4 +283,4 @@ key_info_manager = "on-disk-manager"
 #provider_type = "TrustedService"
 
 # (Required) Name of key info manager that will support this provider.
-#key_info_manager = "on-disk-manager"
+#key_info_manager = "sqlite-manager"

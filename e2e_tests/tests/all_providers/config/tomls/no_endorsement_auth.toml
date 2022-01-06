@@ -18,12 +18,12 @@ socket_path = "/tmp/parsec.sock"
 auth_type = "Direct"
 
 [[key_manager]]
-name = "on-disk-manager"
-manager_type = "OnDisk"
-store_path = "./mappings"
+name = "sqlite-manager"
+manager_type = "SQLite"
+database_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
 
 [[provider]]
 provider_type = "Tpm"
-key_info_manager = "on-disk-manager"
+key_info_manager = "sqlite-manager"
 tcti = "mssim:host=127.0.0.1,port=2321"
 owner_hierarchy_auth = "hex:74706d5f70617373" # "tpm_pass" in hex

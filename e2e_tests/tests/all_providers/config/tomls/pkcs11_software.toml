@@ -18,13 +18,13 @@ socket_path = "/tmp/parsec.sock"
 auth_type = "Direct"
 
 [[key_manager]]
-name = "on-disk-manager"
-manager_type = "OnDisk"
-store_path = "./mappings"
+name = "sqlite-manager"
+manager_type = "SQLite"
+database_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
 
 [[provider]]
 provider_type = "Pkcs11"
-key_info_manager = "on-disk-manager"
+key_info_manager = "sqlite-manager"
 library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
 user_pin = "123456"
 software_public_operations = true
