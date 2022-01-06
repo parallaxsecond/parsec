@@ -1,23 +1,27 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::{utils, Provider};
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
-use parsec_interface::requests::{ProviderId, Result};
+use parsec_interface::requests::Result;
 use std::convert::TryInto;
 use std::ops::Deref;
 
 impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
 
-        let password_context = self.get_key_ctx(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context = self.get_key_ctx(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         let mut esapi_context = self
             .esapi_context
@@ -63,13 +67,17 @@ impl Provider {
 
     pub(super) fn psa_asymmetric_decrypt_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
-        let key_triple = KeyTriple::new(app_name, ProviderId::Tpm, op.key_name.clone());
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            op.key_name.clone(),
+        );
 
-        let password_context = self.get_key_ctx(&key_triple)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let password_context = self.get_key_ctx(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         let mut esapi_context = self
             .esapi_context

@@ -2,9 +2,36 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Structures for the Parsec configuration file
 
+#[cfg(feature = "cryptoauthlib-provider")]
+use crate::providers::cryptoauthlib::Provider as CryptoAuthLibProvider;
+#[cfg(feature = "mbed-crypto-provider")]
+use crate::providers::mbed_crypto::Provider as MbedCryptoProvider;
+#[cfg(feature = "pkcs11-provider")]
+use crate::providers::pkcs11::Provider as Pkcs11Provider;
+#[cfg(feature = "tpm-provider")]
+use crate::providers::tpm::Provider as TpmProvider;
+#[cfg(feature = "trusted-service-provider")]
+use crate::providers::trusted_service::Provider as TrustedServiceProvider;
+#[cfg(not(all(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "tpm-provider",
+    feature = "cryptoauthlib-provider",
+    feature = "trusted-service-provider"
+)))]
+use log::error;
 use log::LevelFilter;
 use parsec_interface::requests::ProviderId;
 use serde::Deserialize;
+use std::io::Error;
+#[cfg(not(all(
+    feature = "mbed-crypto-provider",
+    feature = "pkcs11-provider",
+    feature = "tpm-provider",
+    feature = "cryptoauthlib-provider",
+    feature = "trusted-service-provider"
+)))]
+use std::io::ErrorKind;
 use zeroize::Zeroize;
 
 /// Core settings
@@ -84,6 +111,8 @@ impl Admin {
 pub enum KeyInfoManagerType {
     /// KeyInfoManager storing the mappings on disk
     OnDisk,
+    /// KeyInfoManager for storing mappings within a SQLite database on disk.
+    SQLite,
 }
 
 /// KeyInfoManager configuration
@@ -93,8 +122,10 @@ pub struct KeyInfoManagerConfig {
     pub name: String,
     /// Type of the KeyInfoManager
     pub manager_type: KeyInfoManagerType,
-    /// Path used to store the mappings
+    /// Path used to store the OnDiskKeyInfoManager mappings
     pub store_path: Option<String>,
+    /// File path where the SQLite database should be stored when using SQLiteKeyInfoManager
+    pub sqlite_db_path: Option<String>,
 }
 
 /// Provider configuration structure
@@ -108,11 +139,15 @@ pub struct KeyInfoManagerConfig {
 pub enum ProviderConfig {
     /// Mbed Crypto provider configuration
     MbedCrypto {
+        /// The name of the provider
+        name: Option<String>,
         /// Name of the Key Info Manager to use
         key_info_manager: String,
     },
     /// PKCS 11 provider configuration
     Pkcs11 {
+        /// The name of the provider
+        name: Option<String>,
         /// Name of the Key Info Manager to use
         key_info_manager: String,
         /// Path of the PKCS 11 library
@@ -128,6 +163,8 @@ pub enum ProviderConfig {
     },
     /// TPM provider configuration
     Tpm {
+        /// The name of the provider
+        name: Option<String>,
         /// Name of the Key Info Manager to use
         key_info_manager: String,
         /// TCTI to use with the provider
@@ -142,6 +179,8 @@ pub enum ProviderConfig {
     },
     /// Microchip CryptoAuthentication Library provider configuration
     CryptoAuthLib {
+        /// The name of the provider
+        name: Option<String>,
         /// Name of the Key Info Manager to use
         key_info_manager: String,
         /// ATECC Device type
@@ -163,6 +202,8 @@ pub enum ProviderConfig {
     },
     /// Trusted Service provider configuration
     TrustedService {
+        /// The name of the provider
+        name: Option<String>,
         /// Name of Key Info Manager to use
         key_info_manager: String,
     },
@@ -202,6 +243,43 @@ impl ProviderConfig {
             ProviderConfig::Tpm { .. } => ProviderId::Tpm,
             ProviderConfig::CryptoAuthLib { .. } => ProviderId::CryptoAuthLib,
             ProviderConfig::TrustedService { .. } => ProviderId::TrustedService,
+        }
+    }
+    /// Get the name of the Provider
+    /// If there is not one set, use the default.
+    pub fn provider_name(&self) -> Result<String, Error> {
+        match *self {
+            #[cfg(feature = "mbed-crypto-provider")]
+            ProviderConfig::MbedCrypto { ref name, .. } => Ok(name
+                .clone()
+                .unwrap_or_else(|| String::from(MbedCryptoProvider::DEFAULT_PROVIDER_NAME))),
+            #[cfg(feature = "pkcs11-provider")]
+            ProviderConfig::Pkcs11 { ref name, .. } => Ok(name
+                .clone()
+                .unwrap_or_else(|| String::from(Pkcs11Provider::DEFAULT_PROVIDER_NAME))),
+            #[cfg(feature = "tpm-provider")]
+            ProviderConfig::Tpm { ref name, .. } => Ok(name
+                .clone()
+                .unwrap_or_else(|| String::from(TpmProvider::DEFAULT_PROVIDER_NAME))),
+            #[cfg(feature = "cryptoauthlib-provider")]
+            ProviderConfig::CryptoAuthLib { ref name, .. } => Ok(name
+                .clone()
+                .unwrap_or_else(|| String::from(CryptoAuthLibProvider::DEFAULT_PROVIDER_NAME))),
+            #[cfg(feature = "trusted-service-provider")]
+            ProviderConfig::TrustedService { ref name, .. } => Ok(name
+                .clone()
+                .unwrap_or_else(|| String::from(TrustedServiceProvider::DEFAULT_PROVIDER_NAME))),
+            #[cfg(not(all(
+                feature = "mbed-crypto-provider",
+                feature = "pkcs11-provider",
+                feature = "tpm-provider",
+                feature = "cryptoauthlib-provider",
+                feature = "trusted-service-provider"
+            )))]
+            _ => {
+                error!("Provider chosen in the configuration was not compiled in Parsec binary.");
+                Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
+            }
         }
     }
 }

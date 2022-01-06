@@ -5,9 +5,10 @@
 //! Provider allowing clients to use hardware or software TPM 2.0 implementations
 //! for their Parsec operations.
 use super::Provide;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyInfoManagerClient;
 use crate::providers::crypto_capability::CanDoCrypto;
+use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::{
@@ -63,6 +64,9 @@ const AUTH_HEX_PREFIX: &str = "hex:";
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
+
     // The Mutex is needed both because interior mutability is needed to the ESAPI Context
     // structure that is shared between threads and because two threads are not allowed the same
     // ESAPI context simultaneously.
@@ -74,12 +78,23 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for tpm provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "tpm-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "1e4954a4-ff21-46d3-ab0c-661eeb667e1d";
+
     // Creates and initialise a new instance of TpmProvider.
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         esapi_context: tss_esapi::TransientKeyContext,
     ) -> Provider {
         Provider {
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             esapi_context: Mutex::new(esapi_context),
             key_info_store,
         }
@@ -91,7 +106,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
-            uuid: Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").or(Err(ResponseStatus::InvalidEncoding))?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification."),
             vendor: String::from("Trusted Computing Group (TCG)"),
             version_maj: 0,
@@ -103,12 +118,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -119,110 +134,110 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
-        self.psa_verify_hash_internal(app_name, op)
+        self.psa_verify_hash_internal(application_identity, op)
     }
 
     fn psa_asymmetric_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         trace!("psa_asymmetric_encrypt ingress");
-        self.psa_asymmetric_encrypt_internal(app_name, op)
+        self.psa_asymmetric_encrypt_internal(application_identity, op)
     }
 
     fn psa_asymmetric_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
-        self.psa_asymmetric_decrypt_internal(app_name, op)
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 
     /// Check if the crypto operation is supported by TPM provider
     /// by using CanDoCrypto trait.
     fn can_do_crypto(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
-        trace!("can_do_crypto ingress");
-        self.can_do_crypto_main(app_name, op)
+        trace!("can_do_crypto TPM ingress");
+        self.can_do_crypto_main(application_identity, op)
     }
 
     fn prepare_key_attestation(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: prepare_key_attestation::Operation,
     ) -> Result<prepare_key_attestation::Result> {
         trace!("prepare_key_attestation ingress");
-        self.prepare_key_attestation_internal(app_name, op)
+        self.prepare_key_attestation_internal(application_identity, op)
     }
 
     fn attest_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: attest_key::Operation,
     ) -> Result<attest_key::Result> {
         trace!("attest_key ingress");
-        self.attest_key_internal(app_name, op)
+        self.attest_key_internal(application_identity, op)
     }
 }
 
@@ -240,6 +255,7 @@ impl Drop for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     tcti: Option<String>,
@@ -251,11 +267,19 @@ impl ProviderBuilder {
     /// Create a new TPM provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             tcti: None,
             owner_hierarchy_auth: None,
             endorsement_hierarchy_auth: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -383,6 +407,9 @@ impl ProviderBuilder {
             self.endorsement_hierarchy_auth.zeroize();
         }
         Ok(Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
             })?,

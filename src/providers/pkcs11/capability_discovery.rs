@@ -3,7 +3,7 @@
 
 #![allow(trivial_numeric_casts)]
 use super::{utils, Provider};
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::pkcs11::to_response_status;
 use cryptoki::types::mechanism::{Mechanism, MechanismInfo, MechanismType};
@@ -19,7 +19,7 @@ use std::convert::TryFrom;
 impl CanDoCrypto for Provider {
     fn can_do_crypto_internal(
         &self,
-        _app_name: ApplicationName,
+        _application_identity: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto_internal");

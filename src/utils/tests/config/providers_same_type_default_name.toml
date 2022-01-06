@@ -1,0 +1,25 @@
+[core_settings]
+# The CI already timestamps the logs
+log_timestamp = false
+log_error_details = true
+
+[listener]
+listener_type = "DomainSocket"
+timeout = 200 # in milliseconds
+socket_path = "/tmp/parsec.sock"
+
+[authenticator]
+auth_type = "Direct"
+
+[[key_manager]]
+name = "on-disk-manager"
+manager_type = "OnDisk"
+store_path = "./mappings"
+
+[[provider]]
+provider_type = "TrustedService"
+key_info_manager = "on-disk-manager"
+
+[[provider]]
+provider_type = "TrustedService"
+key_info_manager = "on-disk-manager"

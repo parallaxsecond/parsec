@@ -6,7 +6,7 @@
 //! aiding clients in discovering the capabilities offered by their underlying
 //! platform.
 use super::Provide;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::{
@@ -49,6 +49,14 @@ pub struct Provider {
     prov_list: Vec<Arc<dyn Provide + Send + Sync>>,
 }
 
+impl Provider {
+    /// The default provider name for cryptoauthlib provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "core-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "47049873-2a43-4845-9d72-831eab668784";
+}
+
 impl Provide for Provider {
     fn list_opcodes(&self, op: list_opcodes::Operation) -> Result<list_opcodes::Result> {
         trace!("list_opcodes ingress");
@@ -80,7 +88,7 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
@@ -93,7 +101,7 @@ impl Provide for Provider {
                 "unknown".to_string()
             };
             let mut result = provider
-                .list_keys(app_name.clone(), _op)
+                .list_keys(application_identity, _op)
                 .unwrap_or_else(|e| {
                     error!("list_keys failed on provider {} with {}", id, e);
                     list_keys::Result { keys: Vec::new() }
@@ -128,7 +136,11 @@ impl Provide for Provider {
         Ok(list_clients::Result { clients })
     }
 
-    fn delete_client(&self, op: delete_client::Operation) -> Result<delete_client::Result> {
+    fn delete_client(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: delete_client::Operation,
+    ) -> Result<delete_client::Result> {
         trace!("delete_client ingress");
 
         let client = op.client;
@@ -142,7 +154,10 @@ impl Provide for Provider {
             // Currently Parsec only stores keys, we delete all of them.
             let keys = provider
                 .list_keys(
-                    ApplicationName::from_name(client.clone()),
+                    &ApplicationIdentity::new(
+                        client.clone(),
+                        *application_identity.authenticator_id(),
+                    ),
                     list_keys::Operation {},
                 )
                 .unwrap_or_else(|e| {
@@ -154,7 +169,10 @@ impl Provide for Provider {
                 let key_name = key.name;
                 let _ = provider
                     .psa_destroy_key(
-                        ApplicationName::from_name(client.clone()),
+                        &ApplicationIdentity::new(
+                            client.clone(),
+                            *application_identity.authenticator_id(),
+                        ),
                         psa_destroy_key::Operation { key_name },
                     )
                     .unwrap_or_else(|e| {

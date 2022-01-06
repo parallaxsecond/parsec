@@ -5,9 +5,10 @@
 //! This provider allows clients to access any PKCS 11 compliant device
 //! through the Parsec interface.
 use super::Provide;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::crypto_capability::CanDoCrypto;
+use crate::providers::ProviderIdentity;
 use cryptoki::types::locking::CInitializeArgs;
 use cryptoki::types::session::{Session, UserType};
 use cryptoki::types::slot_token::Slot;
@@ -61,6 +62,8 @@ const SUPPORTED_OPCODES: [Opcode; 9] = [
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Provider {
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     local_ids: RwLock<LocalIdStore>,
@@ -73,11 +76,18 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for pkcs11 provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "pkcs11-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "30e39502-eba6-4d60-a4af-c518b7f5e38f";
+
     /// Creates and initialise a new instance of Pkcs11Provider.
     /// Checks if there are not more keys stored in the Key Info Manager than in the PKCS 11 library
     /// and if there are, delete them. Adds Key IDs currently in use in the local IDs store.
     /// Returns `None` if the initialisation failed.
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         backend: Pkcs11,
         slot_number: Slot,
@@ -95,6 +105,10 @@ impl Provider {
 
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             local_ids: RwLock::new(HashSet::new()),
             backend,
@@ -108,31 +122,32 @@ impl Provider {
                 .local_ids
                 .write()
                 .expect("Local ID lock poisoned");
-            let mut to_remove: Vec<KeyTriple> = Vec::new();
-            // Go through all PKCS 11 key triple to key info mappings and check if they are still
+            let mut to_remove: Vec<KeyIdentity> = Vec::new();
+            // Go through all PKCS 11 key identities to key info mappings and check if they are still
             // present.
             // Delete those who are not present and add to the local_store the ones present.
             match pkcs11_provider.key_info_store.get_all() {
-                Ok(key_triples) => {
+                Ok(key_identities) => {
                     let session = pkcs11_provider.new_session().ok()?;
 
-                    for key_triple in key_triples.iter().cloned() {
-                        let key_id = match pkcs11_provider.key_info_store.get_key_id(&key_triple) {
+                    for key_identity in key_identities.iter().cloned() {
+                        let key_id = match pkcs11_provider.key_info_store.get_key_id(&key_identity)
+                        {
                             Ok(id) => id,
                             Err(ResponseStatus::PsaErrorDoesNotExist) => {
-                                error!("Stored key info missing for key triple {}.", key_triple);
+                                error!("Stored key info missing for KeyIdentity {}.", key_identity);
                                 continue;
                             }
                             Err(e) => {
                                 format_error!(
                                     format!(
-                                        "Stored key info invalid for key triple {}.",
-                                        key_triple
+                                        "Stored key info invalid for KeyIdentity {}.",
+                                        key_identity
                                     ),
                                     e
                                 );
 
-                                to_remove.push(key_triple.clone());
+                                to_remove.push(key_identity.clone());
                                 continue;
                             }
                         };
@@ -142,7 +157,7 @@ impl Provider {
                                 if crate::utils::GlobalConfig::log_error_details() {
                                     warn!(
                                         "Key {} found in the PKCS 11 library, adding it.",
-                                        key_triple
+                                        key_identity
                                     );
                                 } else {
                                     warn!("Key found in the PKCS 11 library, adding it.");
@@ -153,12 +168,12 @@ impl Provider {
                                 if crate::utils::GlobalConfig::log_error_details() {
                                     warn!(
                                         "Key {} not found in the PKCS 11 library, deleting it.",
-                                        key_triple
+                                        key_identity
                                     );
                                 } else {
                                     warn!("Key not found in the PKCS 11 library, deleting it.");
                                 }
-                                to_remove.push(key_triple.clone());
+                                to_remove.push(key_identity.clone());
                             }
                             Err(e) => {
                                 format_error!("Error finding key objects", e);
@@ -172,10 +187,10 @@ impl Provider {
                     return None;
                 }
             };
-            for key_triple in to_remove.iter() {
+            for key_identity in to_remove.iter() {
                 if pkcs11_provider
                     .key_info_store
-                    .remove_key_info(&key_triple)
+                    .remove_key_info(&key_identity)
                     .is_err()
                 {
                     return None;
@@ -221,7 +236,7 @@ impl Provide for Provider {
         Ok((
             ProviderInfo {
                 // Assigned UUID for this provider: 30e39502-eba6-4d60-a4af-c518b7f5e38f
-                uuid: Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f")
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)
                     .or(Err(ResponseStatus::InvalidEncoding))?,
                 description: String::from(
                     "PKCS #11 provider, interfacing with a PKCS #11 library.",
@@ -238,12 +253,12 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         trace!("list_keys ingress");
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -254,98 +269,98 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
-        self.psa_generate_key_internal(app_name, op)
+        self.psa_generate_key_internal(application_identity, op)
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
-        self.psa_import_key_internal(app_name, op)
+        self.psa_import_key_internal(application_identity, op)
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
-        self.psa_export_public_key_internal(app_name, op)
+        self.psa_export_public_key_internal(application_identity, op)
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
-        self.psa_destroy_key_internal(app_name, op)
+        self.psa_destroy_key_internal(application_identity, op)
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
-        self.psa_sign_hash_internal(app_name, op)
+        self.psa_sign_hash_internal(application_identity, op)
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         if self.software_public_operations {
             trace!("software_psa_verify_hash ingress");
-            self.software_psa_verify_hash_internal(app_name, op)
+            self.software_psa_verify_hash_internal(application_identity, op)
         } else {
             trace!("pkcs11_psa_verify_hash ingress");
-            self.psa_verify_hash_internal(app_name, op)
+            self.psa_verify_hash_internal(application_identity, op)
         }
     }
 
     fn psa_asymmetric_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_encrypt::Operation,
     ) -> Result<psa_asymmetric_encrypt::Result> {
         if self.software_public_operations {
             trace!("software_psa_asymmetric_encrypt ingress");
-            self.software_psa_asymmetric_encrypt_internal(app_name, op)
+            self.software_psa_asymmetric_encrypt_internal(application_identity, op)
         } else {
             trace!("psa_asymmetric_encrypt ingress");
-            self.psa_asymmetric_encrypt_internal(app_name, op)
+            self.psa_asymmetric_encrypt_internal(application_identity, op)
         }
     }
 
     fn psa_asymmetric_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_asymmetric_decrypt::Operation,
     ) -> Result<psa_asymmetric_decrypt::Result> {
         trace!("psa_asymmetric_decrypt ingress");
-        self.psa_asymmetric_decrypt_internal(app_name, op)
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 
     /// Check if the crypto operation is supported by PKCS11 provider
     /// by using CanDoCrypto trait.
     fn can_do_crypto(
         &self,
-        app_name: ApplicationName,
+        app_name: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto ingress");
@@ -361,6 +376,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     pkcs11_library_path: Option<String>,
@@ -374,6 +390,7 @@ impl ProviderBuilder {
     /// Create a new Pkcs11Provider builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             pkcs11_library_path: None,
             slot_number: None,
@@ -381,6 +398,13 @@ impl ProviderBuilder {
             software_public_operations: None,
             allow_export: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -488,6 +512,9 @@ impl ProviderBuilder {
         };
 
         Ok(Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,

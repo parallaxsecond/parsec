@@ -19,8 +19,9 @@ tags
 # Git patch files
 *.patch
 
-# Parsec key info mappings directory
+# Parsec key info mappings directories
 mappings/
+kim-mappings/
 
 # TPM simulator state file
 NVChip

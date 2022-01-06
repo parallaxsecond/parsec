@@ -9,7 +9,7 @@
 //!
 //! Currently, the stringified UID is used as the application name.
 
-use super::{AdminList, Application, Authenticate};
+use super::{AdminList, Application, ApplicationIdentity, Authenticate};
 use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
 use log::error;
@@ -89,7 +89,13 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
         if uid == expected_uid {
             let app_name = uid.to_string();
             let is_admin = self.admins.is_admin(&app_name);
-            Ok(Application::new(app_name, is_admin))
+            Ok(Application {
+                identity: ApplicationIdentity {
+                    name: app_name,
+                    authenticator_id: AuthType::UnixPeerCredentials,
+                },
+                is_admin,
+            })
         } else {
             error!("Declared UID in authentication request does not match the process's UID.");
             Err(ResponseStatus::AuthenticationError)
@@ -101,7 +107,6 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
 mod test {
     use super::super::Authenticate;
     use super::UnixPeerCredentialsAuthenticator;
-    use crate::authenticators::ApplicationName;
     use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
     use parsec_interface::requests::request::RequestAuth;
@@ -134,15 +139,12 @@ mod test {
             pid: None,
         });
 
-        let auth_name = authenticator
+        let application = authenticator
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(
-            auth_name.get_name(),
-            &ApplicationName::from_name(get_current_uid().to_string())
-        );
-        assert!(!auth_name.is_admin);
+        assert_eq!(application.identity.name, get_current_uid().to_string());
+        assert!(!application.is_admin);
     }
 
     #[test]
@@ -241,15 +243,12 @@ mod test {
             pid: None,
         });
 
-        let auth_name = authenticator
+        let application = authenticator
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(
-            auth_name.get_name(),
-            &ApplicationName::from_name(get_current_uid().to_string())
-        );
-        assert!(auth_name.is_admin);
+        assert_eq!(application.identity.name, get_current_uid().to_string());
+        assert!(application.is_admin);
     }
 
     #[test]

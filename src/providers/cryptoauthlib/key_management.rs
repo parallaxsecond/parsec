@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::key_slot::KeySlotStatus;
 use super::Provider;
-use crate::authenticators::ApplicationName;
+use crate::authenticators::ApplicationIdentity;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
 use parsec_interface::operations::{
@@ -15,13 +15,15 @@ use zeroize::Zeroizing;
 impl Provider {
     pub(super) fn psa_generate_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), key_name);
 
-        self.key_info_store.does_not_exist(&key_triple)?;
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         if op.attributes.key_type.is_public_key() {
             error!("A public key type can not be generated.");
@@ -45,11 +47,11 @@ impl Provider {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
                 match self
                     .key_info_store
-                    .insert_key_info(key_triple, &slot_id, key_attributes)
+                    .insert_key_info(key_identity, &slot_id, key_attributes)
                 {
                     Ok(()) => Ok(psa_generate_key::Result {}),
                     Err(error) => {
-                        error!("Insert key triple to KeyInfoManager failed. {}", error);
+                        error!("Insert KeyIdentity to KeyInfoManager failed. {}", error);
                         self.key_slots
                             .set_slot_status(slot_id as usize, KeySlotStatus::Free)
                             .ok()
@@ -75,14 +77,16 @@ impl Provider {
 
     pub(super) fn psa_destroy_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
-        let key_id = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), key_name);
+        let key_id = self.key_info_store.get_key_id::<u8>(&key_identity)?;
 
-        match self.key_info_store.remove_key_info(&key_triple) {
+        match self.key_info_store.remove_key_info(&key_identity) {
             Ok(_) => {
                 match self
                     .key_slots
@@ -96,7 +100,7 @@ impl Provider {
                 Ok(psa_destroy_key::Result {})
             }
             Err(error) => {
-                warn!("Key {} removal reported : - {}", key_triple, error);
+                warn!("Key {} removal reported : - {}", key_identity, error);
                 Err(error)
             }
         }
@@ -104,12 +108,14 @@ impl Provider {
 
     pub(super) fn psa_import_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         let key_name = op.key_name;
-        let key_triple = self.key_info_store.get_key_triple(app_name, key_name);
-        self.key_info_store.does_not_exist(&key_triple)?;
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), key_name);
+        self.key_info_store.does_not_exist(&key_identity)?;
 
         let key_attributes = op.attributes;
         let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
@@ -130,12 +136,12 @@ impl Provider {
             rust_cryptoauthlib::AtcaStatus::AtcaSuccess => {
                 match self
                     .key_info_store
-                    .insert_key_info(key_triple, &slot_id, key_attributes)
+                    .insert_key_info(key_identity, &slot_id, key_attributes)
                 {
                     Ok(()) => return Ok(psa_import_key::Result {}),
                     Err(error) => {
                         // This is very bad.
-                        error!("Insert key triple to KeyInfoManager failed. {}", error);
+                        error!("Insert KeyIdentity to KeyInfoManager failed. {}", error);
                         // Let the function mark the slot as free later on,
                         // just in case things get better somehow.
                         ResponseStatus::PsaErrorStorageFailure
@@ -172,11 +178,13 @@ impl Provider {
 
     pub(super) fn psa_export_public_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
-        let key_triple = self.key_info_store.get_key_triple(app_name, op.key_name);
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), op.key_name);
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         match key_attributes.key_type {
             Type::EccPublicKey {
@@ -185,7 +193,7 @@ impl Provider {
             | Type::EccKeyPair {
                 curve_family: EccFamily::SecpR1,
             } => {
-                let slot_number = self.key_info_store.get_key_id(&key_triple)?;
+                let slot_number = self.key_info_store.get_key_id(&key_identity)?;
                 let mut raw_public_key = Vec::new();
                 let result = self.device.get_public_key(slot_number, &mut raw_public_key);
                 match result {
@@ -208,11 +216,13 @@ impl Provider {
 
     pub(super) fn psa_export_key_internal(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
-        let key_triple = self.key_info_store.get_key_triple(app_name, op.key_name);
-        let key_attributes = self.key_info_store.get_key_attributes(&key_triple)?;
+        let key_identity = self
+            .key_info_store
+            .get_key_identity(application_identity.clone(), op.key_name);
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         if !key_attributes.is_exportable() {
             return Err(ResponseStatus::PsaErrorNotPermitted);
@@ -228,7 +238,7 @@ impl Provider {
             | Type::EccPublicKey {
                 curve_family: EccFamily::SecpR1,
             } => {
-                let slot_number = self.key_info_store.get_key_id::<u8>(&key_triple)?;
+                let slot_number = self.key_info_store.get_key_id::<u8>(&key_identity)?;
                 let mut raw_key = Vec::new();
                 let result = self.device.export_key(key_type, &mut raw_key, slot_number);
                 match result {

@@ -5,9 +5,10 @@
 //! This provider implements Parsec operations using CryptoAuthentication
 //! Library backed by the ATECCx08 cryptochip.
 use super::Provide;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::{KeyInfoManagerClient, KeyTriple};
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
+use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{error, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -39,6 +40,8 @@ pub struct Provider {
     #[derivative(Debug = "ignore")]
     device: rust_cryptoauthlib::AteccDevice,
     provider_id: ProviderId,
+    // The identity of the provider including uuid & name.
+    provider_identity: ProviderIdentity,
     #[derivative(Debug = "ignore")]
     key_info_store: KeyInfoManagerClient,
     key_slots: KeySlotStorage,
@@ -46,8 +49,15 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// The default provider name for cryptoauthlib provider
+    pub const DEFAULT_PROVIDER_NAME: &'static str = "cryptoauthlib-provider";
+
+    /// The UUID for this provider
+    pub const PROVIDER_UUID: &'static str = "b8ba81e2-e9f7-4bdd-b096-a29d0019960c";
+
     /// Creates and initialises an instance of CryptoAuthLibProvider
     fn new(
+        provider_name: String,
         key_info_store: KeyInfoManagerClient,
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
         access_key_file_name: Option<String>,
@@ -73,6 +83,10 @@ impl Provider {
         cryptoauthlib_provider = Provider {
             device,
             provider_id: ProviderId::CryptoAuthLib,
+            provider_identity: ProviderIdentity {
+                name: provider_name,
+                uuid: String::from(Self::PROVIDER_UUID),
+            },
             key_info_store,
             key_slots: KeySlotStorage::new(),
             supported_opcodes: HashSet::new(),
@@ -100,49 +114,49 @@ impl Provider {
         // Validate key info store against hardware configuration.
         // Delete invalid entries or invalid mappings.
         // Mark the slots free/busy appropriately.
-        let mut to_remove: Vec<KeyTriple> = Vec::new();
+        let mut to_remove: Vec<KeyIdentity> = Vec::new();
         match cryptoauthlib_provider.key_info_store.get_all() {
-            Ok(key_triples) => {
-                for key_triple in key_triples.iter().cloned() {
+            Ok(key_identities) => {
+                for key_identity in key_identities.iter().cloned() {
                     match cryptoauthlib_provider
                         .key_info_store
-                        .does_not_exist(&key_triple)
+                        .does_not_exist(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
-                            warn!("Error getting the Key ID for triple:\n{}\n(error: {}), continuing...",
-                                key_triple,
+                            warn!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
+                                key_identity,
                                 err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
                     let key_info_id = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_id::<u8>(&key_triple)
+                        .get_key_id::<u8>(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
                             warn!(
-                                "Could not get key info id for key triple {:?} because {}",
-                                key_triple, err
+                                "Could not get key info id for KeyIdentity {:?} because {}",
+                                key_identity, err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
                     let key_info_attributes = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_attributes(&key_triple)
+                        .get_key_attributes(&key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
                             warn!(
-                                "Could not get key attributes for key triple {:?} because {}",
-                                key_triple, err
+                                "Could not get key attributes for KeyIdentity {:?} because {}",
+                                key_identity, err
                             );
-                            to_remove.push(key_triple.clone());
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     };
@@ -151,10 +165,12 @@ impl Provider {
                         .key_validate_and_mark_busy(key_info_id, &key_info_attributes)
                     {
                         Ok(None) => (),
-                        Ok(Some(warning)) => warn!("{} for key triple {:?}", warning, key_triple),
+                        Ok(Some(warning)) => {
+                            warn!("{} for KeyIdentity {:?}", warning, key_identity)
+                        }
                         Err(err) => {
-                            warn!("{} for key triple {:?}", err, key_triple);
-                            to_remove.push(key_triple.clone());
+                            warn!("{} for KeyIdentity {:?}", err, key_identity);
+                            to_remove.push(key_identity.clone());
                             continue;
                         }
                     }
@@ -165,10 +181,10 @@ impl Provider {
                 return None;
             }
         };
-        for key_triple in to_remove.iter() {
+        for key_identity in to_remove.iter() {
             if let Err(err) = cryptoauthlib_provider
                 .key_info_store
-                .remove_key_info(key_triple)
+                .remove_key_info(key_identity)
             {
                 error!("Key Info Manager error: {}", err);
                 return None;
@@ -231,7 +247,7 @@ impl Provide for Provider {
         trace!("describe ingress");
         Ok((ProviderInfo {
             // Assigned UUID for this provider: b8ba81e2-e9f7-4bdd-b096-a29d0019960c
-            uuid: Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").or(Err(ResponseStatus::InvalidEncoding))?,
+            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
             description: String::from("User space hardware provider, utilizing MicrochipTech CryptoAuthentication Library for ATECCx08 chips"),
             vendor: String::from("Arm"),
             version_maj: 0,
@@ -243,11 +259,11 @@ impl Provide for Provider {
 
     fn list_keys(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         _op: list_keys::Operation,
     ) -> Result<list_keys::Result> {
         Ok(list_keys::Result {
-            keys: self.key_info_store.list_keys(&app_name)?,
+            keys: self.key_info_store.list_keys(application_identity)?,
         })
     }
 
@@ -257,7 +273,7 @@ impl Provide for Provider {
                 .key_info_store
                 .list_clients()?
                 .into_iter()
-                .map(|app_name| app_name.to_string())
+                .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
     }
@@ -300,144 +316,144 @@ impl Provide for Provider {
 
     fn psa_generate_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
         trace!("psa_generate_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaGenerateKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_generate_key_internal(app_name, op)
+            self.psa_generate_key_internal(application_identity, op)
         }
     }
 
     fn psa_destroy_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_destroy_key::Operation,
     ) -> Result<psa_destroy_key::Result> {
         trace!("psa_destroy_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaDestroyKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_destroy_key_internal(app_name, op)
+            self.psa_destroy_key_internal(application_identity, op)
         }
     }
 
     fn psa_import_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         trace!("psa_import_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaImportKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_import_key_internal(app_name, op)
+            self.psa_import_key_internal(application_identity, op)
         }
     }
 
     fn psa_sign_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         trace!("psa_sign_hash ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaSignHash) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_sign_hash_internal(app_name, op)
+            self.psa_sign_hash_internal(application_identity, op)
         }
     }
 
     fn psa_verify_hash(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         trace!("psa_verify_hash ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaVerifyHash) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_verify_hash_internal(app_name, op)
+            self.psa_verify_hash_internal(application_identity, op)
         }
     }
 
     fn psa_sign_message(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_sign_message::Operation,
     ) -> Result<psa_sign_message::Result> {
         trace!("psa_sign_message ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaSignMessage) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_sign_message_internal(app_name, op)
+            self.psa_sign_message_internal(application_identity, op)
         }
     }
 
     fn psa_verify_message(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_verify_message::Operation,
     ) -> Result<psa_verify_message::Result> {
         trace!("psa_verify_message ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaVerifyMessage) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_verify_message_internal(app_name, op)
+            self.psa_verify_message_internal(application_identity, op)
         }
     }
 
     fn psa_export_public_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_public_key::Operation,
     ) -> Result<psa_export_public_key::Result> {
         trace!("psa_export_public_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaExportPublicKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_export_public_key_internal(app_name, op)
+            self.psa_export_public_key_internal(application_identity, op)
         }
     }
 
     fn psa_export_key(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_export_key::Operation,
     ) -> Result<psa_export_key::Result> {
         trace!("psa_export_key ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaExportKey) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_export_key_internal(app_name, op)
+            self.psa_export_key_internal(application_identity, op)
         }
     }
 
     fn psa_aead_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_encrypt::Operation,
     ) -> Result<psa_aead_encrypt::Result> {
         trace!("psa_aead_encrypt ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaAeadEncrypt) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_aead_encrypt_internal(app_name, op)
+            self.psa_aead_encrypt_internal(application_identity, op)
         }
     }
 
     fn psa_aead_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_aead_decrypt::Operation,
     ) -> Result<psa_aead_decrypt::Result> {
         trace!("psa_aead_decrypt ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaAeadDecrypt) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_aead_decrypt_internal(app_name, op)
+            self.psa_aead_decrypt_internal(application_identity, op)
         }
     }
 }
@@ -446,6 +462,7 @@ impl Provide for Provider {
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
 pub struct ProviderBuilder {
+    provider_name: Option<String>,
     #[derivative(Debug = "ignore")]
     key_info_store: Option<KeyInfoManagerClient>,
     device_type: Option<String>,
@@ -462,6 +479,7 @@ impl ProviderBuilder {
     /// Create a new CryptoAuthLib builder
     pub fn new() -> ProviderBuilder {
         ProviderBuilder {
+            provider_name: None,
             key_info_store: None,
             device_type: None,
             iface_type: None,
@@ -472,6 +490,13 @@ impl ProviderBuilder {
             baud: None,
             access_key_file_name: None,
         }
+    }
+
+    /// Add a provider name
+    pub fn with_provider_name(mut self, provider_name: String) -> ProviderBuilder {
+        self.provider_name = Some(provider_name);
+
+        self
     }
 
     /// Add a KeyInfo manager
@@ -585,6 +610,9 @@ impl ProviderBuilder {
             None => return Err(Error::new(ErrorKind::InvalidData, "Missing inteface type")),
         };
         Provider::new(
+            self.provider_name.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
+            })?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             iface_cfg,

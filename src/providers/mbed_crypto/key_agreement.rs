@@ -1,10 +1,10 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::Provider;
-use crate::authenticators::ApplicationName;
-use crate::key_info_managers::KeyTriple;
+use crate::authenticators::ApplicationIdentity;
+use crate::key_info_managers::KeyIdentity;
 use parsec_interface::operations::psa_raw_key_agreement;
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
+use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::Secret;
 use psa_crypto::operations::key_agreement;
 use psa_crypto::types::key;
@@ -12,13 +12,17 @@ use psa_crypto::types::key;
 impl Provider {
     pub(super) fn psa_raw_key_agreement(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_raw_key_agreement::Operation,
     ) -> Result<psa_raw_key_agreement::Result> {
         let key_name = op.private_key_name.clone();
 
-        let key_triple = KeyTriple::new(app_name, ProviderId::MbedCrypto, key_name);
-        let key_id = self.key_info_store.get_key_id(&key_triple)?;
+        let key_identity = KeyIdentity::new(
+            application_identity.clone(),
+            self.provider_identity.clone(),
+            key_name,
+        );
+        let key_id = self.key_info_store.get_key_id(&key_identity)?;
         let _guard = self
             .key_handle_mutex
             .lock()
