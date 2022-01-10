@@ -194,8 +194,8 @@ git submodule update --init
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
     rustup toolchain install 1.57.0
-    PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
-    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*,src/authenticators/jwt_svid_authenticator/*"
+    PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
     cargo +1.57.0 install cargo-tarpaulin
@@ -214,6 +214,8 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
         if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
             cp /tmp/*.psa_its .
+        elif [ "$PROVIDER_NAME" = "trusted-service" ]; then
+            rm -f ./*.psa_its
         fi
 
         # Start service
