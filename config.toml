@@ -144,7 +144,7 @@ key_info_manager = "sqlite-manager"
 # ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
 # ⚠
 # (Optional) The name of the provider
-# name = "pkcs11-provider"
+#name = "pkcs11-provider"
 #provider_type = "Pkcs11"
 #key_info_manager = "sqlite-manager"
 # (Required for this provider) Path to the location of the dynamic library loaded by this provider.
@@ -174,7 +174,7 @@ key_info_manager = "sqlite-manager"
 # ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
 # ⚠
 # (Optional) The name of the provider
-# name = "tpm-provider"
+#name = "tpm-provider"
 #provider_type = "Tpm"
 #key_info_manager = "sqlite-manager"
 # (Required) TPM TCTI device to use with this provider. The string can include configuration values - if no
@@ -217,7 +217,7 @@ key_info_manager = "sqlite-manager"
 # ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
 # ⚠
 # (Optional) The name of the provider
-# name = "cryptoauthlib-provider"
+#name = "cryptoauthlib-provider"
 #provider_type = "CryptoAuthLib"
 #key_info_manager = "sqlite-manager"
 ##########
@@ -278,7 +278,7 @@ key_info_manager = "sqlite-manager"
 # ⚠ WARNING: Changing provider name after use will lead to loss of existing keys.
 # ⚠
 # (Optional) The name of the provider
-# name = "trusted-service-provider"
+#name = "trusted-service-provider"
 # (Required) Type of provider.
 #provider_type = "TrustedService"
 
