@@ -193,11 +193,12 @@ fi
 git submodule update --init
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    rustup toolchain install 1.51.0
-    PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
-    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*,src/authenticators/jwt_svid_authenticator/*"
+    rustup toolchain install 1.57.0
+    PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
+    UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
-    cargo +1.51.0 install cargo-tarpaulin
+    cargo +1.57.0 install cargo-tarpaulin
 
     mkdir -p reports
 
@@ -205,6 +206,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         # Set up run
         PROVIDER_NAME=$provider
         TEST_FEATURES="--features=$provider-provider"
+        UNIT_TEST_FEATURES="$UNIT_TEST_FEATURES,$provider-provider"
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
@@ -212,10 +214,12 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
         if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
             cp /tmp/*.psa_its .
+        elif [ "$PROVIDER_NAME" = "trusted-service" ]; then
+            rm -f ./*.psa_its
         fi
 
         # Start service
-        RUST_LOG=info cargo +1.51.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+        RUST_LOG=info cargo +1.57.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
             --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
             --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
@@ -228,8 +232,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
     # Run unit tests
     mkdir -p reports/unit
-    cargo +1.51.0 tarpaulin --tests --out Xml --features="all-providers,unix-peer-credentials-authenticator,direct-authenticator" \
-        --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
+    cargo +1.57.0 tarpaulin --tests --out Xml --features=$UNIT_TEST_FEATURES --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
     exit 0
 fi
