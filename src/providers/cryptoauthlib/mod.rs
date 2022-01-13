@@ -385,27 +385,27 @@ impl Provide for Provider {
 
     fn psa_cipher_encrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_cipher_encrypt::Operation,
     ) -> Result<psa_cipher_encrypt::Result> {
         trace!("psa_cipher_encrypt ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaCipherEncrypt) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_cipher_encrypt_internal(app_name, op)
+            self.psa_cipher_encrypt_internal(application_identity, op)
         }
     }
 
     fn psa_cipher_decrypt(
         &self,
-        app_name: ApplicationName,
+        application_identity: &ApplicationIdentity,
         op: psa_cipher_decrypt::Operation,
     ) -> Result<psa_cipher_decrypt::Result> {
         trace!("psa_cipher_decrypt ingress");
         if !self.supported_opcodes.contains(&Opcode::PsaCipherDecrypt) {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
-            self.psa_cipher_decrypt_internal(app_name, op)
+            self.psa_cipher_decrypt_internal(application_identity, op)
         }
     }
 

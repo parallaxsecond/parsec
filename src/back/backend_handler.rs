@@ -288,7 +288,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_cipher_encrypt(app.into(), op_cipher_encrypt));
+                    .psa_cipher_encrypt(app.identity(), op_cipher_encrypt));
                 trace!("op_cipher_encrypt egress");
                 self.result_to_response(NativeResult::PsaCipherEncrypt(result), header)
             }
@@ -296,7 +296,7 @@ impl BackEndHandler {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
                     .provider
-                    .psa_cipher_decrypt(app.into(), op_cipher_decrypt));
+                    .psa_cipher_decrypt(app.identity(), op_cipher_decrypt));
                 trace!("psa_cipher_decrypt egress");
                 self.result_to_response(NativeResult::PsaCipherDecrypt(result), header)
             }

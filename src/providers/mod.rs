@@ -350,7 +350,7 @@ pub trait Provide {
     /// Encrypt a short message with a symmetric cipher.
     fn psa_cipher_encrypt(
         &self,
-        _app_name: ApplicationName,
+        _application_identity: &ApplicationIdentity,
         _op: psa_cipher_encrypt::Operation,
     ) -> Result<psa_cipher_encrypt::Result> {
         trace!("psa_cipher_encrypt ingress");
@@ -360,7 +360,7 @@ pub trait Provide {
     /// Decrypt a short message with a symmetric cipher.
     fn psa_cipher_decrypt(
         &self,
-        _app_name: ApplicationName,
+        _application_identity: &ApplicationIdentity,
         _op: psa_cipher_decrypt::Operation,
     ) -> Result<psa_cipher_decrypt::Result> {
         trace!("psa_cipher_decrypt ingress");
