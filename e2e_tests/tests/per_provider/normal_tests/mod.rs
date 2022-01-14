@@ -6,6 +6,7 @@ mod asym_sign_verify;
 mod auth;
 mod basic;
 mod capability_discovery;
+mod cipher;
 mod create_destroy_key;
 mod export_key;
 mod export_public_key;

@@ -42,7 +42,7 @@ where PROVIDER_NAME can be one of:
     - cryptoauthlib
     - all
     - coverage
-    - sqlite-kim
+    - on-disk-kim
 "
 }
 
@@ -106,6 +106,25 @@ run_key_mappings_tests() {
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
 }
 
+setup_mappings() {
+    # Add the Docker image's mappings in this Parsec service for the key mappings
+    # test.
+    # The key mappings test in e2e_tests/tests/per_provider/key_mappings.rs will try
+    # to use the key generated via the generate-keys.sh script in the test image.
+    cp -r /tmp/mappings/ .
+    # Add the fake mappings for the key mappings test as well. The test will check that
+    # those keys have successfully been deleted.
+    # TODO: add fake mappings for the Trusted Service and CryptoAuthLib providers.
+    cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
+    # As Mbed Crypto saves its keys on the current directory we need to move them
+    # as well.
+    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+        cp /tmp/*.psa_its .
+    fi
+
+    reload_service
+}
+
 # Parse arguments
 NO_CARGO_CLEAN=
 NO_STRESS_TEST=
@@ -119,20 +138,21 @@ while [ "$#" -gt 0 ]; do
         --no-stress-test )
             NO_STRESS_TEST="True"
         ;;
-        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all | cargo-check | sqlite-kim)
+        mbed-crypto | pkcs11 | tpm | trusted-service | cryptoauthlib | all | cargo-check | on-disk-kim)
             if [ -n "$PROVIDER_NAME" ]; then
                 error_msg "Only one provider name must be given"
             fi
             PROVIDER_NAME=$1
 
-            # Copy provider specific config, unless CI is running `cargo-check` or `sqlite-kim` CI
-            if [ "$PROVIDER_NAME" != "cargo-check" ] && [ "$PROVIDER_NAME" != "sqlite-kim" ]; then
+            # Copy provider specific config, unless CI is running `cargo-check` or `on-disk-kim` CI
+            if [ "$PROVIDER_NAME" != "cargo-check" ] && [ "$PROVIDER_NAME" != "on-disk-kim" ]; then
                 cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
-            elif [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
-                cp $(pwd)/e2e_tests/provider_cfg/all/sqlite-kim-all-providers.toml $CONFIG_PATH
+            elif [ "$PROVIDER_NAME" = "on-disk-kim" ]; then
+                PROVIDER_NAME=all
+                cp $(pwd)/e2e_tests/provider_cfg/all/on-disk-kim-all-providers.toml $CONFIG_PATH
             fi
 
-            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ]; then
                 FEATURES="--features=all-providers,all-authenticators"
                 TEST_FEATURES="--features=all-providers"
             else
@@ -157,7 +177,7 @@ fi
 
 trap cleanup EXIT
 
-if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
 	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
     cp /tmp/NVChip .
     # Start and configure TPM server
@@ -179,7 +199,7 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
     pushd e2e_tests
     # This command suppose that the slot created by the container will be the first one that appears
     # when printing all the available slots.
@@ -193,11 +213,12 @@ fi
 git submodule update --init
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    rustup toolchain install 1.51.0
-    PROVIDERS="mbed-crypto tpm pkcs11" # trusted-service not supported because of a segfault when the service stops; see: https://github.com/parallaxsecond/parsec/issues/349
-    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/providers/trusted_service/*,src/authenticators/jwt_svid_authenticator/*"
+    rustup toolchain install 1.57.0
+    PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
+    EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
+    UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
-    cargo +1.51.0 install cargo-tarpaulin
+    cargo +1.57.0 install cargo-tarpaulin
 
     mkdir -p reports
 
@@ -205,6 +226,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         # Set up run
         PROVIDER_NAME=$provider
         TEST_FEATURES="--features=$provider-provider"
+        UNIT_TEST_FEATURES="$UNIT_TEST_FEATURES,$provider-provider"
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
@@ -212,10 +234,12 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
         if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
             cp /tmp/*.psa_its .
+        elif [ "$PROVIDER_NAME" = "trusted-service" ]; then
+            rm -f ./*.psa_its
         fi
 
         # Start service
-        RUST_LOG=info cargo +1.51.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+        RUST_LOG=info cargo +1.57.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
             --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
             --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
@@ -228,13 +252,12 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
     # Run unit tests
     mkdir -p reports/unit
-    cargo +1.51.0 tarpaulin --tests --out Xml --features="all-providers,unix-peer-credentials-authenticator,direct-authenticator" \
-        --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
+    cargo +1.57.0 tarpaulin --tests --out Xml --features=$UNIT_TEST_FEATURES --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
     exit 0
 fi
 
-if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
+if [ "$PROVIDER_NAME" = "all" ]; then
     # Start SPIRE server and agent
     pushd /tmp/spire-0.11.1
     ./bin/spire-server run -config conf/server/server.conf &
@@ -250,22 +273,6 @@ if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
 		    -spiffeID spiffe://example.org/parsec-client-2 -selector unix:uid:$(id -u parsec-client-2)
     sleep 5
     popd
-fi
-
-# Test the SQLite KIM
-if [ "$PROVIDER_NAME" = "sqlite-kim" ]; then
-    echo "Start Parsec for end-to-end tests with sqlite-kim"
-    RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
-    # Sleep time needed to make sure Parsec is ready before launching the tests.
-    wait_for_service
-
-    echo "Execute all-providers sqlite-kim normal tests"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::normal
-
-    echo "Shutdown Parsec"
-    stop_service
-
-    exit 0
 fi
 
 echo "Build test"
@@ -326,21 +333,6 @@ RUST_BACKTRACE=1 cargo test $FEATURES
 # Removing any mappings left over from integration tests
 rm -rf mappings/
 
-# Add the Docker image's mappings in this Parsec service for the key mappings
-# test.
-# The key mappings test in e2e_tests/tests/per_provider/key_mappings.rs will try
-# to use the key generated via the generate-keys.sh script in the test image.
-cp -r /tmp/mappings/ .
-# Add the fake mappings for the key mappings test as well. The test will check that
-# those keys have successfully been deleted.
-# TODO: add fake mappings for the Trusted Service and CryptoAuthLib providers.
-cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-# As Mbed Crypto saves its keys on the current directory we need to move them
-# as well.
-if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-    cp /tmp/*.psa_its .
-fi
-
 echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
 # Sleep time needed to make sure Parsec is ready before launching the tests.
@@ -349,6 +341,9 @@ wait_for_service
 if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers normal tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::normal
+
+    echo "Execute all-providers cross tests"
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::cross
 
     echo "Execute all-providers multi-tenancy tests"
     # Needed because parsec-client-1 and 2 write to those locations owned by root
@@ -360,6 +355,7 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
     su -c "PATH=\"/home/parsec-client-2/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-2 all_providers::multitenancy::client2" parsec-client-2
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_after" parsec-client-1
+
     # Change the authentication method
     sed -i 's/^\(auth_type\s*=\s*\).*$/\1\"UnixPeerCredentials\"/' $CONFIG_PATH
     reload_service
@@ -380,6 +376,8 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers config tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::config -- --test-threads=1
 else
+    setup_mappings
+
     # Per provider tests
     run_normal_tests
     run_old_e2e_tests
