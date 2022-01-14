@@ -15,6 +15,8 @@ const PLAINTEXT_MESSAGE: [u8; 32] = [
 ];
 
 pub fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
+    let key_name = get_key_name(key_name, provider);
+
     let mut client = TestClient::new();
     client.set_provider(provider);
     client.generate_rsa_sign_key(key_name.clone()).unwrap();
@@ -29,6 +31,8 @@ pub fn setup_sign(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8
 }
 
 pub fn setup_sign_ecc(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>, Vec<u8>) {
+    let key_name = get_key_name(key_name, provider);
+
     let mut client = TestClient::new();
     client.set_provider(provider);
     client
@@ -45,6 +49,8 @@ pub fn setup_sign_ecc(provider: ProviderId, key_name: String) -> (TestClient, Ve
 }
 
 fn setup_asym_encr(provider: ProviderId, key_name: String) -> (TestClient, Vec<u8>) {
+    let key_name = get_key_name(key_name, provider);
+
     let mut client = TestClient::new();
     client.set_provider(provider);
     client
@@ -63,6 +69,8 @@ pub fn import_and_verify(
     pub_key: Vec<u8>,
     signature: Vec<u8>,
 ) {
+    let key_name = get_key_name(key_name, provider);
+
     client.set_provider(provider);
     client
         .import_rsa_public_key(key_name.clone(), pub_key)
@@ -79,6 +87,8 @@ pub fn import_and_verify_ecc(
     pub_key: Vec<u8>,
     signature: Vec<u8>,
 ) {
+    let key_name = get_key_name(key_name, provider);
+
     client.set_provider(provider);
     client
         .import_ecc_public_secp_r1_ecdsa_sha256_key(key_name.clone(), pub_key)
@@ -94,6 +104,8 @@ fn import_and_encrypt(
     key_name: String,
     pub_key: Vec<u8>,
 ) -> Result<Vec<u8>> {
+    let key_name = get_key_name(key_name, provider);
+
     client.set_provider(provider);
     client
         .import_rsa_public_key_for_encryption(key_name.clone(), pub_key)
@@ -107,8 +119,14 @@ fn verify_encrypt(
     key_name: String,
     ciphertext: Vec<u8>,
 ) -> Result<Vec<u8>> {
+    let key_name = get_key_name(key_name, provider);
+
     client.set_provider(provider);
     client.asymmetric_decrypt_message_with_rsapkcs1v15(key_name, ciphertext)
+}
+
+pub fn get_key_name(base_name: String, provider: ProviderId) -> String {
+    format!("{}-{}", provider, base_name)
 }
 
 #[test]
