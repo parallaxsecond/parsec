@@ -190,6 +190,8 @@ impl AteccKeySlot {
             }
             // Cipher
             Algorithm::Cipher(Cipher::CbcPkcs7)
+            | Algorithm::Cipher(Cipher::CbcNoPadding)
+            | Algorithm::Cipher(Cipher::EcbNoPadding)
             | Algorithm::Cipher(Cipher::Ctr)
             | Algorithm::Cipher(Cipher::Cfb)
             | Algorithm::Cipher(Cipher::Ofb) => {

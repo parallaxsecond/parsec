@@ -284,6 +284,22 @@ impl BackEndHandler {
                 trace!("psa_verify_message egress");
                 self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
             }
+            NativeOperation::PsaCipherEncrypt(op_cipher_encrypt) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_cipher_encrypt(app.identity(), op_cipher_encrypt));
+                trace!("op_cipher_encrypt egress");
+                self.result_to_response(NativeResult::PsaCipherEncrypt(result), header)
+            }
+            NativeOperation::PsaCipherDecrypt(op_cipher_decrypt) => {
+                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
+                let result = unwrap_or_else_return!(self
+                    .provider
+                    .psa_cipher_decrypt(app.identity(), op_cipher_decrypt));
+                trace!("psa_cipher_decrypt egress");
+                self.result_to_response(NativeResult::PsaCipherDecrypt(result), header)
+            }
             NativeOperation::CanDoCrypto(op_can_do_crypto) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result = unwrap_or_else_return!(self
@@ -306,12 +322,6 @@ impl BackEndHandler {
                     unwrap_or_else_return!(self.provider.attest_key(app.identity(), op_attest_key));
                 trace!("attest_key egress");
                 self.result_to_response(NativeResult::AttestKey(result), header)
-            }
-            _ => {
-                // This default arm should be removed
-                // when all operation defind in Parsec-interface are implemented in the match.
-                trace!("Not yet implemented operation");
-                Response::from_request_header(header, ResponseStatus::OpcodeDoesNotExist)
             }
         }
     }
