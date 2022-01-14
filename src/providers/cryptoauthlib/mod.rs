@@ -19,14 +19,16 @@ use std::io::{Error, ErrorKind};
 use uuid::Uuid;
 
 use parsec_interface::operations::{
-    psa_aead_decrypt, psa_aead_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
-    psa_generate_key, psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key,
-    psa_sign_hash, psa_sign_message, psa_verify_hash, psa_verify_message,
+    psa_aead_decrypt, psa_aead_encrypt, psa_cipher_decrypt, psa_cipher_encrypt, psa_destroy_key,
+    psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random, psa_hash_compare,
+    psa_hash_compute, psa_import_key, psa_sign_hash, psa_sign_message, psa_verify_hash,
+    psa_verify_message,
 };
 
 mod access_keys;
 mod aead;
 mod asym_sign;
+mod cipher;
 mod generate_random;
 mod hash;
 mod key_management;
@@ -219,6 +221,8 @@ impl Provider {
                     && self.supported_opcodes.insert(Opcode::PsaImportKey)
                     && self.supported_opcodes.insert(Opcode::PsaSignHash)
                     && self.supported_opcodes.insert(Opcode::PsaVerifyHash)
+                    && self.supported_opcodes.insert(Opcode::PsaCipherEncrypt)
+                    && self.supported_opcodes.insert(Opcode::PsaCipherDecrypt)
                     && self.supported_opcodes.insert(Opcode::PsaSignMessage)
                     && self.supported_opcodes.insert(Opcode::PsaVerifyMessage)
                     && self.supported_opcodes.insert(Opcode::PsaExportPublicKey)
@@ -376,6 +380,32 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_verify_hash_internal(application_identity, op)
+        }
+    }
+
+    fn psa_cipher_encrypt(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: psa_cipher_encrypt::Operation,
+    ) -> Result<psa_cipher_encrypt::Result> {
+        trace!("psa_cipher_encrypt ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaCipherEncrypt) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_cipher_encrypt_internal(application_identity, op)
+        }
+    }
+
+    fn psa_cipher_decrypt(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: psa_cipher_decrypt::Operation,
+    ) -> Result<psa_cipher_decrypt::Result> {
+        trace!("psa_cipher_decrypt ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaCipherDecrypt) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_cipher_decrypt_internal(application_identity, op)
         }
     }
 
