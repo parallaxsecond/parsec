@@ -97,7 +97,8 @@ run_old_e2e_tests() {
         # /tmp/parsec/parsec.sock. This can not be created in the Dockerfile as this is where
         # the repository is checked out.
         ln -s /tmp/parsec.sock /tmp/parsec/parsec.sock
-        RUST_BACKTRACE=1 cargo test --manifest-path /tmp/old_e2e_tests/Cargo.toml normal_tests -- --skip asym_verify_fail
+        RUST_BACKTRACE=1 cargo test --manifest-path /tmp/old_e2e_tests/Cargo.toml normal_tests -- \
+            --skip asym_verify_fail --skip per_provider::normal_tests::asym_sign_verify::fail_verify_hash
     fi
 }
 
