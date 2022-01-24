@@ -495,7 +495,11 @@ impl Provide for Provider {
         op: psa_raw_key_agreement::Operation,
     ) -> Result<psa_raw_key_agreement::Result> {
         trace!("psa_raw_key_agreement ingress");
-        self.psa_raw_key_agreement_internal(application_identity, op)
+        if !self.supported_opcodes.contains(&Opcode::PsaRawKeyAgreement) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_raw_key_agreement_internal(application_identity, op)
+        }
     }
 }
 

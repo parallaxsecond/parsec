@@ -52,7 +52,7 @@ fn key_agreement_not_supported() {
             client
                 .raw_key_agreement(
                     RawKeyAgreement::Ecdh,
-                    String::from("some key"),
+                    String::from("some key name"),
                     &PEER_PUBLIC_KEY_SECPR1
                 )
                 .unwrap_err(),
@@ -87,13 +87,14 @@ fn raw_key_agreement_secpr1() {
         return;
     }
 
-    // Section needed for crytpoauthlib as first ECC slot has unusual access behavior
+    // Section needed for crytpoauthlib if first slot is configured as ECC because it has has unusual access behavior
     // and user need to be aware of that.
+    // Use this section only if first slot is configured as ECC.
     #[cfg(feature = "cryptoauthlib-provider")]
     {
         let key_name_0 = auto_test_keyname!("0");
         client.generate_ecc_pair_secp_r1_key(key_name_0).unwrap();
-    }
+    } // end of section
     client
         .import_ecc_pair_secp_r1_key(key_name.clone(), OUR_KEY_DATA_SECPR1.to_vec())
         .unwrap();
@@ -138,13 +139,14 @@ fn raw_key_agreement_two_generated_parties() {
         return;
     }
 
-    // Section needed for crytpoauthlib as first ECC slot has unusual access behavior
+    // Section needed for crytpoauthlib if first slot is configured as ECC because it has has unusual access behavior
     // and user need to be aware of that.
+    // Use this section only if first slot is configured as ECC.
     #[cfg(feature = "cryptoauthlib-provider")]
     {
         let key_name_0 = auto_test_keyname!("0");
         client.generate_ecc_pair_secp_r1_key(key_name_0).unwrap();
-    }
+    } // end of section
     client
         .generate_ecc_pair_secp_r1_key(key_name_1.clone())
         .unwrap();
