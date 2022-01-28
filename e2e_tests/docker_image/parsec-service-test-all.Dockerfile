@@ -31,10 +31,10 @@ RUN rm -rf tpm2-tss
 # Download and install TPM 2.0 Tools verison 4.1.1
 RUN git clone https://github.com/tpm2-software/tpm2-tools.git --branch 4.1.1
 RUN cd tpm2-tools \
-    && ./bootstrap \
-    && ./configure --prefix=/usr \
-    && make -j$(nproc) \
-    && make install
+	&& ./bootstrap \
+	&& ./configure --prefix=/usr \
+	&& make -j$(nproc) \
+	&& make install
 RUN rm -rf tpm2-tools
 
 # Download and install software TPM
@@ -48,7 +48,7 @@ RUN mkdir -p $ibmtpm_name \
 WORKDIR $ibmtpm_name/src
 RUN sed -i 's/-DTPM_NUVOTON/-DTPM_NUVOTON $(CFLAGS)/' makefile
 RUN CFLAGS="-DNV_MEMORY_SIZE=32768 -DMIN_EVICT_OBJECTS=7" make -j$(nproc) \
-&& cp tpm_server /usr/local/bin
+	&& cp tpm_server /usr/local/bin
 RUN rm -rf $ibmtpm_name/src $ibmtpm_name
 
 # Download and install SoftHSMv2
@@ -90,7 +90,7 @@ RUN git config --global user.email "some@email.com"
 RUN git config --global user.name "Parsec Team"
 RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
 	&& cd trusted-services \
-	&& git reset --hard c1cf9120e4ab0b359a27176b079769b9a7e6bb87
+	&& git reset --hard d5cc32b531e41cf19f37bf3c9bf299ebfcd25cb0
 # Install correct python dependencies
 RUN pip3 install -r trusted-services/requirements.txt
 RUN cd trusted-services/deployments/libts/linux-pc/ \

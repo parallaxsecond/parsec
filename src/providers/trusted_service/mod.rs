@@ -12,8 +12,9 @@ use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
 use parsec_interface::operations::{
-    can_do_crypto, list_clients, list_keys, psa_destroy_key, psa_export_key, psa_export_public_key,
-    psa_generate_key, psa_generate_random, psa_import_key, psa_sign_hash, psa_verify_hash,
+    can_do_crypto, list_clients, list_keys, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
+    psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
+    psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::requests::{Opcode, ProviderId, Result};
 use psa_crypto::types::key;
@@ -21,6 +22,7 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
 use uuid::Uuid;
 
+mod asym_encryption;
 mod asym_sign;
 mod capability_discovery;
 mod context;
@@ -28,7 +30,7 @@ mod error;
 mod generate_random;
 mod key_management;
 
-const SUPPORTED_OPCODES: [Opcode; 9] = [
+const SUPPORTED_OPCODES: [Opcode; 11] = [
     Opcode::PsaDestroyKey,
     Opcode::PsaGenerateKey,
     Opcode::PsaSignHash,
@@ -38,6 +40,8 @@ const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaExportKey,
     Opcode::PsaGenerateRandom,
     Opcode::CanDoCrypto,
+    Opcode::PsaAsymmetricEncrypt,
+    Opcode::PsaAsymmetricDecrypt,
 ];
 /// Trusted Service provider structure
 ///
@@ -238,6 +242,24 @@ impl Provide for Provider {
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto ingress");
         self.can_do_crypto_main(application_identity, op)
+    }
+
+    fn psa_asymmetric_encrypt(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: psa_asymmetric_encrypt::Operation,
+    ) -> Result<psa_asymmetric_encrypt::Result> {
+        trace!("psa_asymmetric_encrypt ingress");
+        self.psa_asymmetric_encrypt_internal(application_identity, op)
+    }
+
+    fn psa_asymmetric_decrypt(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: psa_asymmetric_decrypt::Operation,
+    ) -> Result<psa_asymmetric_decrypt::Result> {
+        trace!("psa_asymmetric_decrypt ingress");
+        self.psa_asymmetric_decrypt_internal(application_identity, op)
     }
 }
 
