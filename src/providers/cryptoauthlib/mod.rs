@@ -21,8 +21,8 @@ use uuid::Uuid;
 use parsec_interface::operations::{
     psa_aead_decrypt, psa_aead_encrypt, psa_cipher_decrypt, psa_cipher_encrypt, psa_destroy_key,
     psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random, psa_hash_compare,
-    psa_hash_compute, psa_import_key, psa_sign_hash, psa_sign_message, psa_verify_hash,
-    psa_verify_message,
+    psa_hash_compute, psa_import_key, psa_raw_key_agreement, psa_sign_hash, psa_sign_message,
+    psa_verify_hash, psa_verify_message,
 };
 
 mod access_keys;
@@ -31,6 +31,7 @@ mod asym_sign;
 mod cipher;
 mod generate_random;
 mod hash;
+mod key_agreement;
 mod key_management;
 mod key_slot;
 mod key_slot_storage;
@@ -229,6 +230,7 @@ impl Provider {
                     && self.supported_opcodes.insert(Opcode::PsaExportKey)
                     && self.supported_opcodes.insert(Opcode::PsaAeadEncrypt)
                     && self.supported_opcodes.insert(Opcode::PsaAeadDecrypt)
+                    && self.supported_opcodes.insert(Opcode::PsaRawKeyAgreement)
                 {
                     Some(())
                 } else {
@@ -484,6 +486,19 @@ impl Provide for Provider {
             Err(ResponseStatus::PsaErrorNotSupported)
         } else {
             self.psa_aead_decrypt_internal(application_identity, op)
+        }
+    }
+
+    fn psa_raw_key_agreement(
+        &self,
+        application_identity: &ApplicationIdentity,
+        op: psa_raw_key_agreement::Operation,
+    ) -> Result<psa_raw_key_agreement::Result> {
+        trace!("psa_raw_key_agreement ingress");
+        if !self.supported_opcodes.contains(&Opcode::PsaRawKeyAgreement) {
+            Err(ResponseStatus::PsaErrorNotSupported)
+        } else {
+            self.psa_raw_key_agreement_internal(application_identity, op)
         }
     }
 }

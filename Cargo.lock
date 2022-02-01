@@ -203,9 +203,9 @@ dependencies = [
 
 [[package]]
 name = "cmake"
-version = "0.1.46"
+version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7b858541263efe664aead4a5209a4ae5c5d2811167d4ed4ee0944503f8d2089"
+checksum = "eb6210b637171dfba4cda12e579ac6dc73f5165ad56133e5d72ef3131f320855"
 dependencies = [
  "cc",
 ]
@@ -218,9 +218,9 @@ checksum = "9d6f2aa4d0537bcc1c74df8755072bd31c1ef1a3a1b85a68e8404a8c353b7b8b"
 
 [[package]]
 name = "cryptoauthlib-sys"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee9c99c924afcb60a4f907db3d420eecb072b3f2221dcdacfeffbbc89b958445"
+checksum = "da232dd4f06ee4600b33a455bb17fcc6c2c3a54ee7fd60496d3a73668a6cb6e4"
 dependencies = [
  "cmake",
 ]
@@ -1409,9 +1409,9 @@ dependencies = [
 
 [[package]]
 name = "rust-cryptoauthlib"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08b110ac2053e631a19ccf047b66e41f4cfed8f7403d6b120347bcbd51d06623"
+checksum = "e3461c815b0e56c5de80c76f5e0b691b2ed220bd1ae49949b607cfffc9f5e734"
 dependencies = [
  "cryptoauthlib-sys",
  "lazy_static",
