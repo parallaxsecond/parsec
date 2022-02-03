@@ -422,7 +422,7 @@ unsafe fn get_provider(
         }
         #[cfg(feature = "trusted-service-provider")]
         ProviderConfig::TrustedService { .. } => {
-            info!("Creating a TPM Provider.");
+            info!("Creating a Trusted Service Provider.");
             let provider_identity = ProviderIdentity::new(
                 TrustedServiceProvider::PROVIDER_UUID.to_string(),
                 config.provider_name()?,
