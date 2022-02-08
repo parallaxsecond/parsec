@@ -27,6 +27,7 @@ use ts_protobuf::GetOpcode;
     unused_qualifications
 )]
 pub mod ts_binding {
+    #![allow(deref_nullptr)]
     include!(concat!(env!("OUT_DIR"), "/ts_bindings.rs"));
 }
 
