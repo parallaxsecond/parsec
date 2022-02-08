@@ -96,7 +96,7 @@ RUN pip3 install -r trusted-services/requirements.txt
 RUN cd trusted-services/deployments/libts/linux-pc/ \
 	&& cmake . \
 	&& make \
-	&& cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
+	&& cp libts.so* nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
 RUN rm -rf trusted-services
 
 # Create a new token in a new slot. The slot number assigned will be random
