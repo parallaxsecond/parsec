@@ -56,6 +56,8 @@ opcode_impl!(ImportKeyIn, ImportKeyOut, ImportKey);
 opcode_impl!(ExportPublicKeyIn, ExportPublicKeyOut, ExportPublicKey);
 opcode_impl!(ExportKeyIn, ExportKeyOut, ExportKey);
 opcode_impl!(GenerateRandomIn, GenerateRandomOut, GenerateRandom);
+opcode_impl!(AsymmetricDecryptIn, AsymmetricDecryptOut, AsymmetricDecrypt);
+opcode_impl!(AsymmetricEncryptIn, AsymmetricEncryptOut, AsymmetricEncrypt);
 
 impl Drop for ImportKeyIn {
     fn drop(&mut self) {

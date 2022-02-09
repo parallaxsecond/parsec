@@ -126,6 +126,9 @@ setup_mappings() {
     reload_service
 }
 
+# Use the newest version of the Rust toolchain
+rustup update
+
 # Parse arguments
 NO_CARGO_CLEAN=
 NO_STRESS_TEST=
@@ -288,7 +291,6 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # - openSUSE Tumbleweed
     # - openSUSE Leap 15.3
     # The oldest is currently in openSUSE Leap 15.3 and is 1.53.0.
-    rustup update
 
     rustup toolchain install 1.53.0
     # The "jwt-svid-authenticator" can not be compiled on 1.53.0

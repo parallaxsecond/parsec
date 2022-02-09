@@ -178,6 +178,8 @@ pub enum WrapperError {
     CallBufferNull,
     /// serialization or deserialization of protobuf message failed
     FailedPbConversion,
+    /// invalid operation status value
+    InvalidOpStatus,
     /// a parameter passed to the function was invalid
     InvalidParam,
 }
@@ -195,6 +197,9 @@ impl fmt::Display for WrapperError {
             ),
             WrapperError::InvalidParam => {
                 write!(f, "a parameter passed to the function was invalid")
+            }
+            WrapperError::InvalidOpStatus => {
+                write!(f, "the RPC layer returned an invalid operation status")
             }
         }
     }

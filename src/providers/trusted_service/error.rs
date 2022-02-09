@@ -26,7 +26,8 @@ impl From<WrapperError> for ResponseStatus {
             WrapperError::CallBufferNull
             | WrapperError::CallHandleNull
             | WrapperError::FailedPbConversion
-            | WrapperError::InvalidParam => ResponseStatus::PsaErrorCommunicationFailure,
+            | WrapperError::InvalidParam
+            | WrapperError::InvalidOpStatus => ResponseStatus::PsaErrorCommunicationFailure,
         }
     }
 }

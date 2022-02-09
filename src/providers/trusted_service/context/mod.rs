@@ -3,7 +3,7 @@
 use error::{Error, WrapperError};
 use log::{error, info, trace};
 use prost::Message;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::{c_void, CString};
 use std::io::{self};
 use std::ptr::null_mut;
@@ -27,9 +27,11 @@ use ts_protobuf::GetOpcode;
     unused_qualifications
 )]
 pub mod ts_binding {
+    #![allow(deref_nullptr)]
     include!(concat!(env!("OUT_DIR"), "/ts_bindings.rs"));
 }
 
+mod asym_encryption;
 mod asym_sign;
 pub mod error;
 mod generate_random;
@@ -158,7 +160,11 @@ impl Context {
                 &mut resp_buf_size,
             )
         };
-        Error::from_status_opstatus(status, opstatus).map_err(|e| {
+        Error::from_status_opstatus(
+            status,
+            i32::try_from(opstatus).map_err(|_| Error::Wrapper(WrapperError::InvalidOpStatus))?,
+        )
+        .map_err(|e| {
             unsafe { rpc_caller_end(self.rpc_caller, call_handle) };
             e
         })?;

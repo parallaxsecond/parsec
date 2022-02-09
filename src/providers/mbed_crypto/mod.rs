@@ -149,13 +149,10 @@ impl Provider {
                 }
             };
             for key_identity in to_remove.iter() {
-                if mbed_crypto_provider
+                mbed_crypto_provider
                     .key_info_store
                     .remove_key_info(key_identity)
-                    .is_err()
-                {
-                    return None;
-                }
+                    .ok()?;
             }
         }
         mbed_crypto_provider.id_counter.store(max_key_id, Relaxed);
