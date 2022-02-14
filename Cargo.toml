@@ -26,7 +26,7 @@ toml = "0.5.8"
 serde = { version = "1.0.123", features = ["derive"] }
 env_logger = "0.8.3"
 log = { version = "0.4.14", features = ["serde"] }
-cryptoki = { version = "0.2.0", optional = true, features = ["psa-crypto-conversions"] }
+cryptoki = { version = "0.2.1", optional = true, features = ["psa-crypto-conversions"] }
 picky-asn1-der = { version = "<=0.2.4", optional = true }
 picky-asn1 = { version = ">=0.3.1, <=0.3.1", optional = true }
 tss-esapi = { version = "7.0.0", optional = true }
