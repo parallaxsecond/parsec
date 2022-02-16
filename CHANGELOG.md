@@ -1,5 +1,73 @@
 # Changelog
 
+## [1.0.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc1) (2022-02-16)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.8.1...1.0.0-rc1)
+
+**Implemented enhancements:**
+
+- `parsec.service` hardening [\#569](https://github.com/parallaxsecond/parsec/issues/569)
+- Implement `CryptoCanDo` for the Trusted Services and Mbed Crypto providers [\#543](https://github.com/parallaxsecond/parsec/issues/543)
+- Implement CryptoCanDo for TPM provider [\#542](https://github.com/parallaxsecond/parsec/issues/542)
+- Refactor the PKCS11 CryptoCanDo implementation [\#541](https://github.com/parallaxsecond/parsec/issues/541)
+- Implement ActivateCredential key attestation [\#539](https://github.com/parallaxsecond/parsec/issues/539)
+- Making the SQLiteKIM the default [\#531](https://github.com/parallaxsecond/parsec/issues/531)
+- Create a new KeyInfoManager based on SQLite [\#424](https://github.com/parallaxsecond/parsec/issues/424)
+- Add support for other cryptographic services in the Trusted Service provider [\#341](https://github.com/parallaxsecond/parsec/issues/341)
+- Add system emulation tests for TS provider [\#304](https://github.com/parallaxsecond/parsec/issues/304)
+- Add support for importing ECC public key in the TPM provider [\#170](https://github.com/parallaxsecond/parsec/issues/170)
+- Add asymmetric encryption to TS provider [\#580](https://github.com/parallaxsecond/parsec/pull/580) ([ionut-arm](https://github.com/ionut-arm))
+- Change dependency revision for TSS crate [\#579](https://github.com/parallaxsecond/parsec/pull/579) ([ionut-arm](https://github.com/ionut-arm))
+- Add systemd hardening options [\#572](https://github.com/parallaxsecond/parsec/pull/572) ([ionut-arm](https://github.com/ionut-arm))
+- Make SQLite KIM default [\#570](https://github.com/parallaxsecond/parsec/pull/570) ([ionut-arm](https://github.com/ionut-arm))
+- Feature sqlite kim [\#566](https://github.com/parallaxsecond/parsec/pull/566) ([ionut-arm](https://github.com/ionut-arm))
+- Add error handling to ActivateCredential [\#562](https://github.com/parallaxsecond/parsec/pull/562) ([ionut-arm](https://github.com/ionut-arm))
+- Add ActivateCredential tests and fixes [\#560](https://github.com/parallaxsecond/parsec/pull/560) ([ionut-arm](https://github.com/ionut-arm))
+- Activate credential [\#558](https://github.com/parallaxsecond/parsec/pull/558) ([ionut-arm](https://github.com/ionut-arm))
+- Expand support for importing public keys for TPM [\#540](https://github.com/parallaxsecond/parsec/pull/540) ([ionut-arm](https://github.com/ionut-arm))
+- \[CryptoAuthLib provider\] PsaAeadEncrypt and PsaAeadDecrypt implemented [\#536](https://github.com/parallaxsecond/parsec/pull/536) ([TomaszPawelecGL](https://github.com/TomaszPawelecGL))
+
+**Fixed bugs:**
+
+- Disable test from old E2E suite [\#574](https://github.com/parallaxsecond/parsec/issues/574)
+- Errors in validating ECC key bits in PKCS11 provider [\#545](https://github.com/parallaxsecond/parsec/issues/545)
+- UnixDomainSocket connection returns error from server [\#528](https://github.com/parallaxsecond/parsec/issues/528)
+- Fuzz Testing & Nightly Cargo udeps are failing due to prost-derive [\#514](https://github.com/parallaxsecond/parsec/issues/514)
+- TPM Provider does not persist generated keys accross reboot [\#504](https://github.com/parallaxsecond/parsec/issues/504)
+- Issue with PKCS11 backend with Nitrokey HSM [\#380](https://github.com/parallaxsecond/parsec/issues/380)
+- Skip flakey test [\#577](https://github.com/parallaxsecond/parsec/pull/577) ([ionut-arm](https://github.com/ionut-arm))
+- Fix codecov build [\#573](https://github.com/parallaxsecond/parsec/pull/573) ([ionut-arm](https://github.com/ionut-arm))
+- Fix handling of `bits` in PKCS11 imports [\#546](https://github.com/parallaxsecond/parsec/pull/546) ([ionut-arm](https://github.com/ionut-arm))
+
+**Closed issues:**
+
+- Stable 0.8.1 release depends on tss-esapi alpha  [\#527](https://github.com/parallaxsecond/parsec/issues/527)
+- Create E2E tests for SQLite KIM [\#516](https://github.com/parallaxsecond/parsec/issues/516)
+- Switch to dynamic key names in tests [\#453](https://github.com/parallaxsecond/parsec/issues/453)
+- Add capabilities discovery operations [\#426](https://github.com/parallaxsecond/parsec/issues/426)
+
+**Merged pull requests:**
+
+- Bump bindgen dependency version [\#582](https://github.com/parallaxsecond/parsec/pull/582) ([ionut-arm](https://github.com/ionut-arm))
+- Bump SQLite dependency [\#581](https://github.com/parallaxsecond/parsec/pull/581) ([ionut-arm](https://github.com/ionut-arm))
+- \[CryptoAuthLib provider\] PsaRawKeyAgreement operation implementation [\#578](https://github.com/parallaxsecond/parsec/pull/578) ([akazimierskigl](https://github.com/akazimierskigl))
+- Implement can-do-crypto for TS and mbed-crypto providers [\#565](https://github.com/parallaxsecond/parsec/pull/565) ([anta5010](https://github.com/anta5010))
+- Add error message if submodule not initialised [\#564](https://github.com/parallaxsecond/parsec/pull/564) ([ionut-arm](https://github.com/ionut-arm))
+- \[CryptoAuthLib provider\] PsaCipherEncrypt and PsaCipherDecrypt implementation [\#563](https://github.com/parallaxsecond/parsec/pull/563) ([akazimierskigl](https://github.com/akazimierskigl))
+- Add clippy and fmt checkt to e2e\_tests [\#561](https://github.com/parallaxsecond/parsec/pull/561) ([ionut-arm](https://github.com/ionut-arm))
+- Re-factor e2e tests to use common key attributes functions [\#556](https://github.com/parallaxsecond/parsec/pull/556) ([anta5010](https://github.com/anta5010))
+- Merge can-do-crypto branch into main [\#555](https://github.com/parallaxsecond/parsec/pull/555) ([anta5010](https://github.com/anta5010))
+- Merge main branch changes into can-do crypto [\#554](https://github.com/parallaxsecond/parsec/pull/554) ([anta5010](https://github.com/anta5010))
+- Jn9e9/issue453 [\#552](https://github.com/parallaxsecond/parsec/pull/552) ([jn9e9](https://github.com/jn9e9))
+- e2e CanDoCrypto tests for Hashes, ECC curves and Crypto algorithms [\#551](https://github.com/parallaxsecond/parsec/pull/551) ([anta5010](https://github.com/anta5010))
+- Implement CanDoCrypto trait and use it for PKCS11 and TPM providers [\#550](https://github.com/parallaxsecond/parsec/pull/550) ([anta5010](https://github.com/anta5010))
+- Use ec\_params for can-do-crypto checks instead of hard-coded values [\#549](https://github.com/parallaxsecond/parsec/pull/549) ([anta5010](https://github.com/anta5010))
+- Small refactor of PKCS11 CryptoCanDo [\#548](https://github.com/parallaxsecond/parsec/pull/548) ([anta5010](https://github.com/anta5010))
+- Merge origin/main into can-do-crypto  [\#547](https://github.com/parallaxsecond/parsec/pull/547) ([anta5010](https://github.com/anta5010))
+- Increase the MSRV to 1.53.0 [\#535](https://github.com/parallaxsecond/parsec/pull/535) ([hug-dev](https://github.com/hug-dev))
+- Update the CHANGELOG file with 0.8.1 [\#533](https://github.com/parallaxsecond/parsec/pull/533) ([hug-dev](https://github.com/hug-dev))
+- Added the CanDoCrypto operation as well as fixing some of the other test scripts. [\#522](https://github.com/parallaxsecond/parsec/pull/522) ([Kakemone](https://github.com/Kakemone))
+
 ## [0.8.1](https://github.com/parallaxsecond/parsec/tree/0.8.1) (2021-09-17)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.8.0...0.8.1)
