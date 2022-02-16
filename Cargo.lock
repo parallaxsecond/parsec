@@ -90,18 +90,14 @@ dependencies = [
  "bitflags",
  "cexpr 0.4.0",
  "clang-sys",
- "clap",
- "env_logger 0.8.4",
  "lazy_static",
  "lazycell",
- "log",
  "peeking_take_while",
  "proc-macro2",
  "quote",
  "regex",
  "rustc-hash",
  "shlex 0.1.1",
- "which 3.1.1",
 ]
 
 [[package]]
@@ -124,7 +120,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex 1.1.0",
- "which 4.2.2",
+ "which",
 ]
 
 [[package]]
@@ -1303,7 +1299,7 @@ dependencies = [
  "prost",
  "prost-types",
  "tempfile",
- "which 4.2.2",
+ "which",
 ]
 
 [[package]]
@@ -1349,11 +1345,11 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.9.1"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "132bd26d57c55c7ae89114422ad0d95472a0620e99ed49ce00a418011535c9be"
+checksum = "d4d15edb7b3a473ea58bd77673c297229224c20068b8d6a1658f05e38f686b92"
 dependencies = [
- "bindgen 0.57.0",
+ "bindgen 0.59.2",
  "cc",
  "cmake",
  "walkdir",
@@ -2117,15 +2113,6 @@ checksum = "38eb105f1c59d9eaa6b5cdc92b859d85b926e82cb2e0945cd0c9259faa6fe9fb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "which"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
-dependencies = [
- "libc",
 ]
 
 [[package]]
