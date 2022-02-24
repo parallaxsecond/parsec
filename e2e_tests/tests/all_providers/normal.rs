@@ -15,7 +15,7 @@ use std::iter::FromIterator;
 fn list_providers() {
     let mut client = TestClient::new();
     let providers = client.list_providers().expect("list providers failed");
-    assert_eq!(providers.len(), 5);
+    assert_eq!(providers.len(), 4);
     let uuids: HashSet<Uuid> = providers.iter().map(|p| p.uuid).collect();
     // Core provider
     assert!(uuids.contains(&Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()));
@@ -25,8 +25,9 @@ fn list_providers() {
     assert!(uuids.contains(&Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()));
     // TPM provider
     assert!(uuids.contains(&Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()));
-    // CryptoAuthLib provider
-    assert!(uuids.contains(&Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()));
+    // CAL provider and hardware abstraction crate are unmaintained; See #585
+    // // CryptoAuthLib provider
+    // assert!(uuids.contains(&Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()));
 }
 
 #[test]
@@ -45,12 +46,13 @@ fn list_providers_order_respected() {
         providers[2].uuid,
         Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()
     );
+    // CAL provider and hardware abstraction crate are unmaintained; See #585
+    // assert_eq!(
+    //     providers[3].uuid,
+    //     Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()
+    // );
     assert_eq!(
         providers[3].uuid,
-        Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()
-    );
-    assert_eq!(
-        providers[4].uuid,
         Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()
     );
 }
@@ -101,9 +103,10 @@ fn list_opcodes() {
 
     let core_provider_opcodes = HashSet::from_iter(core_opcodes);
 
-    let mut crypto_providers_cal = HashSet::new();
-    // Not that much to be tested with test-interface
-    let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
+    // CAL provider and hardware abstraction crate are unmaintained; See #585
+    // let mut crypto_providers_cal = HashSet::new();
+    // // Not that much to be tested with test-interface
+    // let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
 
     let mut crypto_providers_tpm = HashSet::from_iter(common_opcodes.clone());
     let _ = crypto_providers_tpm.insert(Opcode::CanDoCrypto);
@@ -139,12 +142,13 @@ fn list_opcodes() {
             .expect("list providers failed"),
         crypto_providers_mbed_crypto
     );
-    assert_eq!(
-        client
-            .list_opcodes(ProviderId::CryptoAuthLib)
-            .expect("list providers failed"),
-        crypto_providers_cal
-    );
+    // CAL provider and hardware abstraction crate are unmaintained; See #585
+    // assert_eq!(
+    //     client
+    //         .list_opcodes(ProviderId::CryptoAuthLib)
+    //         .expect("list providers failed"),
+    //     crypto_providers_cal
+    // );
 }
 
 #[cfg(feature = "testing")]

@@ -34,14 +34,15 @@ user_pin = "123456"
 # The slot_number mandatory field is going to replace the following line with a valid number
 # slot_number
 
-[[provider]]
-provider_type = "CryptoAuthLib"
-key_info_manager = "sqlite-manager"
-device_type = "always-success"
-iface_type = "test-interface"
-wake_delay = 1500
-rx_retries = 20
-# i2c parameters for i2c-pseudo proxy
-slave_address = 0xc0
-bus = 1
-baud = 400000
+# CAL provider and hardware abstraction crate are unmaintained; See #585
+# [[provider]]
+# provider_type = "CryptoAuthLib"
+# key_info_manager = "sqlite-manager"
+# device_type = "always-success"
+# iface_type = "test-interface"
+# wake_delay = 1500
+# rx_retries = 20
+# # i2c parameters for i2c-pseudo proxy
+# slave_address = 0xc0
+# bus = 1
+# baud = 400000
