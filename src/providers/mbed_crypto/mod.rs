@@ -115,10 +115,10 @@ impl Provider {
             // Delete those who are not present and add to the local_store the ones present.
             match mbed_crypto_provider.key_info_store.get_all() {
                 Ok(key_identities) => {
-                    for key_identity in key_identities.iter().cloned() {
+                    for key_identity in key_identities.iter() {
                         let key_id = match mbed_crypto_provider
                             .key_info_store
-                            .get_key_id(&key_identity)
+                            .get_key_id(key_identity)
                         {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
