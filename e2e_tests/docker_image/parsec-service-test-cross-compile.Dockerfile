@@ -2,6 +2,26 @@
 # SPDX-License-Identifier: Apache-2.0
 FROM ghcr.io/parallaxsecond/parsec-service-test-all
 
+# Install aarch64-none-linux-gnu cross compilation toolchain
+RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz?revision=61c3be5d-5175-4db6-9030-b565aae9f766 -O aarch64-gcc.tar.xz
+RUN tar --strip-components=1 -C /usr/ -xvf aarch64-gcc.tar.xz
+RUN rm aarch64-gcc.tar.xz
+
+# Install Trusted Services lib compiled for aarch64
+# Setup git config for patching dependencies
+RUN git config --global user.email "some@email.com"
+RUN git config --global user.name "Parsec Team"
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
+    && cd trusted-services \
+    && git reset --hard 389b50624f25dae860bbbf8b16f75b32f1589c8d
+# Install correct python dependencies
+RUN pip3 install -r trusted-services/requirements.txt
+RUN cd trusted-services/deployments/libts/arm-linux/ \
+    && cmake . \
+    && make \
+    && cp libts.so* /usr/local/lib/
+RUN rm -rf trusted-services
+
 # Install cross-compilers
 RUN apt install -y gcc-multilib
 RUN apt install -y gcc-arm-linux-gnueabihf

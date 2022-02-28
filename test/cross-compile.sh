@@ -22,7 +22,9 @@ cargo build --features "pkcs11-provider, mbed-crypto-provider, tpm-provider, uni
 
 export SYSROOT=/tmp/aarch64-linux-gnu
 export RUSTFLAGS="-lcrypto -L/tmp/aarch64-linux-gnu/lib"
-cargo build --features "pkcs11-provider, mbed-crypto-provider, tpm-provider, unix-peer-credentials-authenticator, direct-authenticator" --target aarch64-unknown-linux-gnu
+# Pull in the TS code
+git submodule update --init
+cargo build --features "pkcs11-provider, mbed-crypto-provider, tpm-provider, trusted-service-provider, unix-peer-credentials-authenticator, direct-authenticator" --target aarch64-unknown-linux-gnu
 
 # This is needed because for some reason the i686/i386 libs aren't picked up if we don't toss them around just before...
 apt install -y libc6-dev-i386-amd64-cross
