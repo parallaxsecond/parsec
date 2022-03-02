@@ -127,9 +127,8 @@ fn create_and_import_rsa_key() -> Result<()> {
         return Ok(());
     }
 
-    let status;
     client.generate_rsa_sign_key(key_name.clone())?;
-    status = client
+    let status = client
         .import_rsa_public_key(key_name, KEY_DATA.to_vec())
         .expect_err("Key should have already existed");
     assert_eq!(status, ResponseStatus::PsaErrorAlreadyExists);

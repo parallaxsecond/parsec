@@ -95,8 +95,8 @@ impl Provider {
             // Delete those who are not present and add to the local_store the ones present.
             match ts_provider.key_info_store.get_all() {
                 Ok(key_identities) => {
-                    for key_identity in key_identities.iter().cloned() {
-                        let key_id = match ts_provider.key_info_store.get_key_id(&key_identity) {
+                    for key_identity in key_identities.iter() {
+                        let key_id = match ts_provider.key_info_store.get_key_id(key_identity) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
                                 error!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...", key_identity, response_status);

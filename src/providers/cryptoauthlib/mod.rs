@@ -65,9 +65,6 @@ impl Provider {
         atca_iface: rust_cryptoauthlib::AtcaIfaceCfg,
         access_key_file_name: Option<String>,
     ) -> Option<Provider> {
-        // This will be returned when everything succeedes
-        let mut cryptoauthlib_provider: Provider;
-
         // First define communication channel with the device then set it up
         let device = match rust_cryptoauthlib::setup_atecc_device(atca_iface) {
             Ok(dev) => dev,
@@ -83,7 +80,7 @@ impl Provider {
             return None;
         }
 
-        cryptoauthlib_provider = Provider {
+        let mut cryptoauthlib_provider = Provider {
             device,
             provider_id: ProviderId::CryptoAuthLib,
             provider_identity: ProviderIdentity {
@@ -120,10 +117,10 @@ impl Provider {
         let mut to_remove: Vec<KeyIdentity> = Vec::new();
         match cryptoauthlib_provider.key_info_store.get_all() {
             Ok(key_identities) => {
-                for key_identity in key_identities.iter().cloned() {
+                for key_identity in key_identities.iter() {
                     match cryptoauthlib_provider
                         .key_info_store
-                        .does_not_exist(&key_identity)
+                        .does_not_exist(key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
@@ -137,7 +134,7 @@ impl Provider {
                     };
                     let key_info_id = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_id::<u8>(&key_identity)
+                        .get_key_id::<u8>(key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
@@ -151,7 +148,7 @@ impl Provider {
                     };
                     let key_info_attributes = match cryptoauthlib_provider
                         .key_info_store
-                        .get_key_attributes(&key_identity)
+                        .get_key_attributes(key_identity)
                     {
                         Ok(x) => x,
                         Err(err) => {
