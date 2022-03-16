@@ -10,7 +10,7 @@ use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result;
 use picky_asn1::wrapper::ObjectIdentifierAsn1;
 use picky_asn1_x509::{
-    algorithm_identifier::ECParameters, AlgorithmIdentifier, DigestInfo, SHAVariant,
+    algorithm_identifier::EcParameters, AlgorithmIdentifier, DigestInfo, ShaVariant,
 };
 use std::convert::TryInto;
 
@@ -104,16 +104,16 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
     let oid = match alg {
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha224),
-        } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_224),
+        } => AlgorithmIdentifier::new_sha(ShaVariant::SHA2_224),
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha256),
-        } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_256),
+        } => AlgorithmIdentifier::new_sha(ShaVariant::SHA2_256),
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha384),
-        } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_384),
+        } => AlgorithmIdentifier::new_sha(ShaVariant::SHA2_384),
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha512),
-        } => AlgorithmIdentifier::new_sha(SHAVariant::SHA2_512),
+        } => AlgorithmIdentifier::new_sha(ShaVariant::SHA2_512),
         _ => return Err(ResponseStatus::PsaErrorNotSupported),
     };
     picky_asn1_der::to_vec(&DigestInfo {
@@ -124,8 +124,8 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
     .map_err(|_| ResponseStatus::PsaErrorGenericError)
 }
 
-pub fn ec_params(ecc_family: EccFamily, bits: usize) -> Result<ECParameters> {
-    Ok(ECParameters::NamedCurve(match (ecc_family, bits) {
+pub fn ec_params(ecc_family: EccFamily, bits: usize) -> Result<EcParameters> {
+    Ok(EcParameters::NamedCurve(match (ecc_family, bits) {
         // The following "unwrap()" should be ok, as they cover constant conversions
         (EccFamily::SecpR1, 192) => {
             ObjectIdentifierAsn1(String::from("1.2.840.10045.3.1.1").try_into().unwrap())

@@ -8,7 +8,7 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::{ResponseStatus, Result};
 use picky_asn1::wrapper::IntegerAsn1;
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::RsaPublicKey;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use tss_esapi::abstraction::transient::{KeyMaterial, KeyParams};
@@ -212,7 +212,7 @@ pub fn adjust_attributes_key_bits(
     // * private keys currently not supported
     match attributes.key_type {
         Type::RsaPublicKey => {
-            let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|err| {
+            let public_key: RsaPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|err| {
                 format_error!("Could not deserialise key elements", err);
                 ResponseStatus::PsaErrorInvalidArgument
             })?;
@@ -292,7 +292,7 @@ pub fn convert_curve_to_tpm(key_attributes: Attributes) -> Result<EccCurve> {
 
 pub fn pub_key_to_bytes(pub_key: PublicKey, key_attributes: Attributes) -> Result<Vec<u8>> {
     match pub_key {
-        PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RSAPublicKey {
+        PublicKey::Rsa(key) => picky_asn1_der::to_vec(&RsaPublicKey {
             modulus: IntegerAsn1::from_bytes_be_unsigned(key),
             public_exponent: IntegerAsn1::from_bytes_be_signed(PUBLIC_EXPONENT_BYTES.to_vec()),
         })
@@ -328,7 +328,7 @@ fn elliptic_curve_point_to_octet_string(mut x: Vec<u8>, mut y: Vec<u8>) -> Vec<u
 pub fn bytes_to_pub_key(key_data: Vec<u8>, key_attributes: &Attributes) -> Result<PublicKey> {
     match key_attributes.key_type {
         Type::RsaPublicKey => {
-            let public_key: RSAPublicKey =
+            let public_key: RsaPublicKey =
                 picky_asn1_der::from_bytes(&key_data).map_err(|err| {
                     format_error!("Could not deserialise key elements", err);
                     ResponseStatus::PsaErrorInvalidArgument
@@ -463,9 +463,9 @@ pub fn parsec_to_tpm_signature(
     })
 }
 
-/// Validates an RSAPublicKey against the attributes we expect. Returns ok on success, otherwise
+/// Validates an RsaPublicKey against the attributes we expect. Returns ok on success, otherwise
 /// returns an error.
-fn validate_rsa_public_key(public_key: &RSAPublicKey, attributes: &Attributes) -> Result<()> {
+fn validate_rsa_public_key(public_key: &RsaPublicKey, attributes: &Attributes) -> Result<()> {
     if public_key.modulus.is_negative() || public_key.public_exponent.is_negative() {
         error!("Only positive modulus and public exponent are supported.");
         return Err(ResponseStatus::PsaErrorInvalidArgument);

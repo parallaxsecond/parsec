@@ -986,6 +986,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oid"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c19903c598813dba001b53beeae59bb77ad4892c5c1b9b3500ce4293a0d06c2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "oid-registry"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1132,7 +1141,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90e3f783e3e499bdb8e66d2a48c9da561fc369f96853eb83fb31e28931e4a492"
 dependencies = [
- "oid",
+ "oid 0.1.1",
  "serde",
  "serde_bytes",
 ]
@@ -1150,12 +1159,12 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.4.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8501e799b4c18bac0a6e74672126b1826df41178dcf076eec9ddefd93edcb11"
+checksum = "f3033675030de806aba1d5470949701b7c9f1dbf77e3bb17bd12e5f945e560ba"
 dependencies = [
- "base64 0.12.3",
- "oid",
+ "base64 0.13.0",
+ "oid 0.2.1",
  "picky-asn1",
  "picky-asn1-der",
  "serde",

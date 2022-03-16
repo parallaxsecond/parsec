@@ -15,7 +15,7 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::{IntegerAsn1, OctetStringAsn1};
-use picky_asn1_x509::RSAPublicKey;
+use picky_asn1_x509::RsaPublicKey;
 use std::convert::{TryFrom, TryInto};
 
 impl Provider {
@@ -264,8 +264,8 @@ impl Provider {
         bits: usize,
         template: &mut Vec<Attribute>,
     ) -> Result<()> {
-        let public_key: RSAPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|e| {
-            format_error!("Failed to parse RSAPublicKey data", e);
+        let public_key: RsaPublicKey = picky_asn1_der::from_bytes(key_data).map_err(|e| {
+            format_error!("Failed to parse RsaPublicKey data", e);
             ResponseStatus::PsaErrorInvalidArgument
         })?;
 
@@ -418,7 +418,7 @@ impl Provider {
             return Err(ResponseStatus::PsaErrorCommunicationFailure);
         };
 
-        let key = RSAPublicKey {
+        let key = RsaPublicKey {
             modulus,
             public_exponent,
         };
