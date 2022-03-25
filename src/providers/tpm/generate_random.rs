@@ -1,5 +1,6 @@
 // Copyright 2022 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::utils;
 use super::Provider;
 use parsec_interface::operations::psa_generate_random;
 use parsec_interface::requests::Result;
@@ -19,12 +20,12 @@ impl Provider {
         let random_bytes = esapi_context
             .as_mut()
             .execute_without_session(|esapi_context| esapi_context.get_random(size))
-            .expect("Failed to get random bytes")
-            .value()
-            .to_vec();
-
+            .map_err(|e| {
+                format_error!("Failed to get random bytes", e);
+                utils::to_response_status(e)
+            })?;
         Ok(psa_generate_random::Result {
-            random_bytes: random_bytes.into(),
+            random_bytes: random_bytes.value().to_vec().into(),
         })
     }
 }
