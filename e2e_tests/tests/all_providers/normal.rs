@@ -111,6 +111,7 @@ fn list_opcodes() {
     let mut crypto_providers_tpm = HashSet::from_iter(common_opcodes.clone());
     let _ = crypto_providers_tpm.insert(Opcode::CanDoCrypto);
     let _ = crypto_providers_tpm.insert(Opcode::AttestKey);
+    let _ = crypto_providers_tpm.insert(Opcode::PsaGenerateRandom);
     let _ = crypto_providers_tpm.insert(Opcode::PrepareKeyAttestation);
 
     let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes);
