@@ -1,6 +1,32 @@
 # Changelog
 
-## [1.0.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc1) (2022-02-16)
+## [1.0.0](https://github.com/parallaxsecond/parsec/tree/1.0.0) (2022-03-21)
+
+### [1.0.0-rc3](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc3) (2022-03-21)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0...1.0.0-rc3)
+
+**Fixed bugs:**
+
+- Cargo audit failing [\#544](https://github.com/parallaxsecond/parsec/issues/544)
+
+**Merged pull requests:**
+
+- Prepare for Release Candidate 3 [\#592](https://github.com/parallaxsecond/parsec/pull/592) ([ionut-arm](https://github.com/ionut-arm))
+
+### [1.0.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc2) (2022-03-02)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0-rc1...1.0.0-rc2)
+
+**Implemented enhancements:**
+
+- Updates for Release Candidate 2 [\#584](https://github.com/parallaxsecond/parsec/pull/584) ([ionut-arm](https://github.com/ionut-arm))
+
+**Closed issues:**
+
+- Update the Parsec Book to include SQLiteKeyInfoManager [\#532](https://github.com/parallaxsecond/parsec/issues/532)
+
+### [1.0.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc1) (2022-02-16)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.8.1...1.0.0-rc1)
 
@@ -41,6 +67,7 @@
 
 **Closed issues:**
 
+- Align with stable TSS crate [\#567](https://github.com/parallaxsecond/parsec/issues/567)
 - Stable 0.8.1 release depends on tss-esapi alpha  [\#527](https://github.com/parallaxsecond/parsec/issues/527)
 - Create E2E tests for SQLite KIM [\#516](https://github.com/parallaxsecond/parsec/issues/516)
 - Switch to dynamic key names in tests [\#453](https://github.com/parallaxsecond/parsec/issues/453)
@@ -48,6 +75,7 @@
 
 **Merged pull requests:**
 
+- Update Changelog and service version no. [\#583](https://github.com/parallaxsecond/parsec/pull/583) ([ionut-arm](https://github.com/ionut-arm))
 - Bump bindgen dependency version [\#582](https://github.com/parallaxsecond/parsec/pull/582) ([ionut-arm](https://github.com/ionut-arm))
 - Bump SQLite dependency [\#581](https://github.com/parallaxsecond/parsec/pull/581) ([ionut-arm](https://github.com/ionut-arm))
 - \[CryptoAuthLib provider\] PsaRawKeyAgreement operation implementation [\#578](https://github.com/parallaxsecond/parsec/pull/578) ([akazimierskigl](https://github.com/akazimierskigl))
@@ -266,7 +294,7 @@
 **Fixed bugs:**
 
 - Move the spiffe related features in its own branch [\#327](https://github.com/parallaxsecond/parsec/issues/327)
-- Resolve default implementation issue for `list\_keys` in `Provide` [\#312](https://github.com/parallaxsecond/parsec/issues/312)
+- Resolve default implementation issue for `list_keys` in `Provide` [\#312](https://github.com/parallaxsecond/parsec/issues/312)
 - ListKeys should only be callable on the Core provider [\#310](https://github.com/parallaxsecond/parsec/issues/310)
 - Service should not start if some components weren't built successfully [\#297](https://github.com/parallaxsecond/parsec/issues/297)
 - No changelog for the releases [\#278](https://github.com/parallaxsecond/parsec/issues/278)
@@ -369,7 +397,7 @@
 - Import private key support for TPM provider [\#243](https://github.com/parallaxsecond/parsec/pull/243) ([joechrisellis](https://github.com/joechrisellis))
 - Allow software operations in PKCS11 provider [\#241](https://github.com/parallaxsecond/parsec/pull/241) ([ionut-arm](https://github.com/ionut-arm))
 - Improve key metadata handling [\#240](https://github.com/parallaxsecond/parsec/pull/240) ([ionut-arm](https://github.com/ionut-arm))
-- Add support for `psa\_generate\_random` operation for MbedCrypto provider [\#208](https://github.com/parallaxsecond/parsec/pull/208) ([joechrisellis](https://github.com/joechrisellis))
+- Add support for `psa_generate_random` operation for MbedCrypto provider [\#208](https://github.com/parallaxsecond/parsec/pull/208) ([joechrisellis](https://github.com/joechrisellis))
 
 **Fixed bugs:**
 
@@ -377,7 +405,7 @@
 - Fix attribute conversion in PKCS11 provider [\#254](https://github.com/parallaxsecond/parsec/pull/254) ([ionut-arm](https://github.com/ionut-arm))
 - Fix sign attribute in PKCS11 [\#252](https://github.com/parallaxsecond/parsec/pull/252) ([ionut-arm](https://github.com/ionut-arm))
 - Add Uuid from the interface directly [\#242](https://github.com/parallaxsecond/parsec/pull/242) ([hug-dev](https://github.com/hug-dev))
-- Add `buffer\_size\_limit` config option for providers [\#233](https://github.com/parallaxsecond/parsec/pull/233) ([joechrisellis](https://github.com/joechrisellis))
+- Add `buffer_size_limit` config option for providers [\#233](https://github.com/parallaxsecond/parsec/pull/233) ([joechrisellis](https://github.com/joechrisellis))
 
 **Security fixes:**
 
