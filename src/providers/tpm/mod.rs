@@ -14,7 +14,7 @@ use log::{info, trace};
 use parsec_interface::operations::{
     attest_key, can_do_crypto, prepare_key_attestation, psa_asymmetric_decrypt,
     psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key, psa_generate_key,
-    psa_import_key, psa_sign_hash, psa_verify_hash,
+    psa_generate_random, psa_import_key, psa_sign_hash, psa_verify_hash,
 };
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
@@ -32,12 +32,14 @@ use zeroize::Zeroize;
 mod asym_encryption;
 mod asym_sign;
 mod capability_discovery;
+mod generate_random;
 mod key_attestation;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 11] = [
+const SUPPORTED_OPCODES: [Opcode; 12] = [
     Opcode::PsaGenerateKey,
+    Opcode::PsaGenerateRandom,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
     Opcode::PsaVerifyHash,
@@ -137,6 +139,14 @@ impl Provide for Provider {
                 .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
+    }
+
+    fn psa_generate_random(
+        &self,
+        op: psa_generate_random::Operation,
+    ) -> Result<psa_generate_random::Result> {
+        trace!("psa_generate_random ingress");
+        self.psa_generate_random_internal(op)
     }
 
     fn psa_generate_key(
