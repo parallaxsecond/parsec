@@ -444,9 +444,14 @@ impl Provider {
             // See ECPoint in [SEC1](https://www.secg.org/sec1-v2.pdf). PKCS11 mandates using
             // [ANSI X9.62 ECPoint](https://cryptsoft.com/pkcs11doc/v220/group__SEC__12__3__3__ECDSA__PUBLIC__KEY__OBJECTS.html),
             // however SEC1 is an equivalent spec.
-            let key_data: OctetStringAsn1 = picky_asn1_der::from_bytes(&data)
-                .map_err(|_| ResponseStatus::PsaErrorGenericError)?;
-            Ok(key_data.0)
+            let parsed_data = picky_asn1_der::from_bytes::<OctetStringAsn1>(&data);
+            match parsed_data {
+                Ok(key_data) => Ok(key_data.0),
+                // Some PKCS#11 implementations provide the EC_POINT as raw bytes and fail to wrap in ASN.1 OctetString as
+                // mandated by the spec. If the ASN.1 parse fails, then we assume that the raw bytes are the EC_POINT data,
+                // and return those instead of failing, trading off strictness for broader interoperability.
+                Err(_) => Ok(data),
+            }
         } else {
             error!("Expected to find modulus attribute.");
             Err(ResponseStatus::PsaErrorCommunicationFailure)
