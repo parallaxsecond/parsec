@@ -17,3 +17,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Nicolas Stalder (@nickray)
 * Edmund Grimley Evans (@egrimley-arm)
 * Matt Davis (@MattDavis00)
+* Mohamed Omar Asaker (@mohamedasaker-arm)

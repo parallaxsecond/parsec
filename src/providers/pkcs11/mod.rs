@@ -381,6 +381,7 @@ pub struct ProviderBuilder {
     key_info_store: Option<KeyInfoManagerClient>,
     pkcs11_library_path: Option<String>,
     slot_number: Option<u64>,
+    serial_number: Option<String>,
     user_pin: Option<SecretString>,
     software_public_operations: Option<bool>,
     allow_export: Option<bool>,
@@ -394,6 +395,7 @@ impl ProviderBuilder {
             key_info_store: None,
             pkcs11_library_path: None,
             slot_number: None,
+            serial_number: None,
             user_pin: None,
             software_public_operations: None,
             allow_export: None,
@@ -425,6 +427,12 @@ impl ProviderBuilder {
     pub fn with_slot_number(mut self, slot_number: Option<u64>) -> ProviderBuilder {
         self.slot_number = slot_number;
 
+        self
+    }
+
+    /// Specify the token serial number used
+    pub fn with_serial_number(mut self, serial_number: Option<String>) -> ProviderBuilder {
+        self.serial_number = serial_number;
         self
     }
 
@@ -479,27 +487,75 @@ impl ProviderBuilder {
                 Error::new(ErrorKind::InvalidData, "error initializing PKCS 11 context")
             })?;
 
-        let slot_number = match self.slot_number {
-            Some(i) => {
-                let slot = Slot::try_from(i).or_else(|_| {
+        let slots = backend.get_slots_with_initialized_token().map_err(|e| {
+            format_error!(
+                "Failed retrieving a valid slot with an initialized token",
+                e
+            );
+            Error::new(
+                ErrorKind::InvalidData,
+                "Failed retrieving a valid slot with an initialized token",
+            )
+        })?;
+        let slot_number = match (self.serial_number, self.slot_number) {
+            (Some(serial_number), _given_slot) => {
+                let mut slot = None;
+                for current_slot in slots {
+                    let current_token = backend.get_token_info(current_slot).map_err(|e| {
+                        format_error!("Failed retrieving token info", e);
+                        Error::new(ErrorKind::InvalidData, "Failed retrieving token info")
+                    })?;
+                    let sn =
+                        String::from_utf8(current_token.serialNumber.to_vec()).map_err(|e| {
+                            format_error!("Failed retrieving token serial number", e);
+                            Error::new(
+                                ErrorKind::InvalidData,
+                                "Failed retrieving token serial number",
+                            )
+                        })?;
+                    if sn == serial_number {
+                        slot = Some(current_slot);
+                        break;
+                    }
+                }
+                match slot {
+                    Some(slot) => {
+                        if let Some(slot_number) = _given_slot {
+                            if slot.id() != slot_number {
+                                warn!("Provided slot number mismatch!");
+                                warn!("Token is attached to slot {}", slot.id())
+                            }
+                        }
+                        slot
+                    }
+                    None => {
+                        return Err(Error::new(
+                            ErrorKind::InvalidData,
+                            "No token with the provided serial number",
+                        ))
+                    }
+                }
+            }
+            (None, Some(slot_number)) => {
+                let slot = Slot::try_from(slot_number).or_else(|_| {
                     Err(Error::new(
                         ErrorKind::InvalidData,
                         "cannot convert slot value",
                     ))
                 })?;
+                if !slots.contains(&slot) {
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        "No availble slot with the given number",
+                    ));
+                }
+                warn!(
+                    "Slot number {} will be used. However, It is preferred to use serial_number as the slot number might change during replug or OS reboot.",
+                    slot_number
+                );
                 slot
             }
-            None => {
-                let slots = backend.get_slots_with_initialized_token().map_err(|e| {
-                    format_error!(
-                        "Failed retrieving a valid slot with an initialized token",
-                        e
-                    );
-                    Error::new(
-                        ErrorKind::InvalidData,
-                        "failed retrieving a valid slot with an initialized token",
-                    )
-                })?;
+            (None, None) => {
                 if slots.len() == 1 {
                     slots[0]
                 } else {

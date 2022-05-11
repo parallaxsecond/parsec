@@ -154,6 +154,8 @@ pub enum ProviderConfig {
         library_path: String,
         /// Slot number to use
         slot_number: Option<u64>,
+        /// Token serial number to use
+        serial_number: Option<String>,
         /// User Pin
         user_pin: Option<String>,
         /// Control whether public key operations are performed in software
