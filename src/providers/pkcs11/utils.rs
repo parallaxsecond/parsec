@@ -1,8 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use cryptoki::types::function::RvError;
-use cryptoki::types::object::Attribute;
-use cryptoki::Error;
+use cryptoki::error::{Error, RvError};
+use cryptoki::object::Attribute;
 use log::error;
 use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::*;

@@ -5,7 +5,7 @@ use super::KeyPairType;
 use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
-use cryptoki::types::mechanism::Mechanism;
+use cryptoki::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};

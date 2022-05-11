@@ -9,11 +9,10 @@ use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
-use cryptoki::types::locking::CInitializeArgs;
-use cryptoki::types::session::{Session, UserType};
-use cryptoki::types::slot_token::Slot;
-use cryptoki::types::Flags;
-use cryptoki::Pkcs11;
+use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::error::{Error as Pkcs11Error, RvError};
+use cryptoki::session::{Session, SessionFlags, UserType};
+use cryptoki::slot::Slot;
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::{
@@ -72,7 +71,7 @@ pub struct Provider {
     slot_number: Slot,
     software_public_operations: bool,
     allow_export: bool,
-    need_login: bool,
+    user_pin: Option<SecretString>,
 }
 
 impl Provider {
@@ -95,14 +94,6 @@ impl Provider {
         software_public_operations: bool,
         allow_export: bool,
     ) -> Option<Provider> {
-        let need_login = if let Some(pin) = user_pin {
-            backend.set_pin(slot_number, pin.expose_secret()).ok()?;
-            true
-        } else {
-            warn!("No user pin has been set in the configuration file, sessions will not be logged in.");
-            false
-        };
-
         #[allow(clippy::mutex_atomic)]
         let pkcs11_provider = Provider {
             provider_identity: ProviderIdentity {
@@ -115,7 +106,7 @@ impl Provider {
             slot_number,
             software_public_operations,
             allow_export,
-            need_login,
+            user_pin,
         };
         {
             let mut local_ids_handle = pkcs11_provider
@@ -214,7 +205,7 @@ impl Provider {
     // * logged in if the pin is set
     // * set on the slot in the provider
     fn new_session(&self) -> Result<Session> {
-        let mut flags = Flags::new();
+        let mut flags = SessionFlags::new();
         let _ = flags.set_rw_session(true).set_serial_session(true);
 
         let session = self
@@ -222,8 +213,20 @@ impl Provider {
             .open_session_no_callback(self.slot_number, flags)
             .map_err(to_response_status)?;
 
-        if self.need_login {
-            session.login(UserType::User).map_err(to_response_status)?;
+        if self.user_pin.is_some() {
+            session
+                .login(
+                    UserType::User,
+                    Some(self.user_pin.as_ref().unwrap().expose_secret()),
+                )
+                .or_else(|e| {
+                    if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn) = e {
+                        Ok(())
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(to_response_status)?;
         }
 
         Ok(session)
@@ -360,11 +363,11 @@ impl Provide for Provider {
     /// by using CanDoCrypto trait.
     fn can_do_crypto(
         &self,
-        app_name: &ApplicationIdentity,
+        application_identity: &ApplicationIdentity,
         op: can_do_crypto::Operation,
     ) -> Result<can_do_crypto::Result> {
         trace!("can_do_crypto ingress");
-        self.can_do_crypto_main(app_name, op)
+        self.can_do_crypto_main(application_identity, op)
     }
 }
 

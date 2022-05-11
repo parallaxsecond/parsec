@@ -255,16 +255,15 @@ dependencies = [
 
 [[package]]
 name = "cryptoki"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a393de6688192bc237c6c948493aebccbede43e0cc239a74e14f34dfb400c43"
+checksum = "503aa2bd88796da9bc6baf2c47696da40f135721b3d6680c7c6cee0b7d1f7a59"
 dependencies = [
  "cryptoki-sys",
  "derivative",
  "libloading",
  "log",
  "psa-crypto",
- "secrecy",
 ]
 
 [[package]]

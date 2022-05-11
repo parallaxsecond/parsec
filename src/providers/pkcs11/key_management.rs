@@ -4,9 +4,9 @@ use super::utils::to_response_status;
 use super::{utils, KeyPairType, Provider};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
-use cryptoki::types::mechanism::{Mechanism, MechanismType};
-use cryptoki::types::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
-use cryptoki::types::session::Session;
+use cryptoki::mechanism::{Mechanism, MechanismType};
+use cryptoki::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
+use cryptoki::session::Session;
 use log::{error, info, trace};
 use parsec_interface::operations::psa_key_attributes::{EccFamily, Id, Lifetime, Type};
 use parsec_interface::operations::{
