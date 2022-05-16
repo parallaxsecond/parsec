@@ -498,20 +498,17 @@ impl ProviderBuilder {
             )
         })?;
         let slot_number = match (self.serial_number, self.slot_number) {
-            (Some(serial_number), _given_slot) => {
+            (Some(serial_number), given_slot) => {
                 let mut slot = None;
                 for current_slot in slots {
                     let current_token = backend.get_token_info(current_slot).map_err(|e| {
-                        format_error!("Failed retrieving token info", e);
-                        Error::new(ErrorKind::InvalidData, "Failed retrieving token info")
+                        format_error!("Failed parsing token info", e);
+                        Error::new(ErrorKind::InvalidData, "Failed parsing token info")
                     })?;
                     let sn =
                         String::from_utf8(current_token.serialNumber.to_vec()).map_err(|e| {
-                            format_error!("Failed retrieving token serial number", e);
-                            Error::new(
-                                ErrorKind::InvalidData,
-                                "Failed retrieving token serial number",
-                            )
+                            format_error!("Failed parsing token serial number", e);
+                            Error::new(ErrorKind::InvalidData, "Failed parsing token serial number")
                         })?;
                     if sn == serial_number {
                         slot = Some(current_slot);
@@ -520,7 +517,7 @@ impl ProviderBuilder {
                 }
                 match slot {
                     Some(slot) => {
-                        if let Some(slot_number) = _given_slot {
+                        if let Some(slot_number) = given_slot {
                             if slot.id() != slot_number {
                                 warn!("Provided slot number mismatch!");
                                 warn!("Token is attached to slot {}", slot.id())
@@ -546,7 +543,7 @@ impl ProviderBuilder {
                 if !slots.contains(&slot) {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
-                        "No availble slot with the given number",
+                        "No available slot with the given number",
                     ));
                 }
                 warn!(
