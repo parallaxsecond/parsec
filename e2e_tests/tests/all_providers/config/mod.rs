@@ -309,9 +309,40 @@ fn no_user_pin() {
 }
 
 #[test]
-fn no_slot_number() {
-    set_config("no_slot_number.toml");
-    // The service should still start, without the slot number.
+fn no_serial_or_slot_number() {
+    set_config("no_serial_or_slot_number.toml");
+    // The service should still start, without the serial number or the slot number.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
+
+#[test]
+fn slot_number_only() {
+    set_config("slot_number_only.toml");
+    // The service should still start, using the slot number only.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
+
+#[test]
+fn serial_number_only() {
+    set_config("serial_number_only.toml");
+    // The service should still start, using the serial number only.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
+
+#[test]
+fn slot_numbers_mismatch() {
+    set_config("slot_numbers_mismatch.toml");
+    // The service should still start, while the slot number that has
+    // the token of interest doesn't match the slot number in configuration.
     reload_service();
 
     let mut client = TestClient::new();

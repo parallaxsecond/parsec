@@ -319,6 +319,7 @@ unsafe fn get_provider(
         ProviderConfig::Pkcs11 {
             library_path,
             slot_number,
+            serial_number,
             user_pin,
             software_public_operations,
             allow_export,
@@ -335,6 +336,7 @@ unsafe fn get_provider(
                     .with_provider_name(config.provider_name()?)
                     .with_pkcs11_library_path(library_path.clone())
                     .with_slot_number(*slot_number)
+                    .with_serial_number(serial_number.clone())
                     .with_user_pin(user_pin.clone())
                     .with_software_public_operations(*software_public_operations)
                     .with_allow_export(*allow_export)
