@@ -6,7 +6,7 @@ use super::{utils, Provider};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::pkcs11::to_response_status;
-use cryptoki::types::mechanism::{Mechanism, MechanismInfo, MechanismType};
+use cryptoki::mechanism::{Mechanism, MechanismInfo, MechanismType};
 use cryptoki::types::Ulong;
 use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
