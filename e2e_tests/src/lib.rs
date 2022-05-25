@@ -54,6 +54,10 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
 use parsec_client::core::interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_client::error::Error;
 use std::collections::HashSet;
+use std::env;
+use std::sync::Once;
+
+static INIT: Once = Once::new();
 
 /// Client structure automatically choosing a provider and high-level operation functions.
 #[derive(Debug)]
@@ -81,6 +85,13 @@ impl TestClient {
         {
             env_logger::try_init();
         }
+
+        INIT.call_once(|| {
+            //Check if the environment variable is set, if not use default path
+            if Err(env::VarError::NotPresent) == env::var("PARSEC_SERVICE_ENDPOINT") {
+                env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+            }
+        });
 
         TestClient {
             basic_client: BasicClient::new(Some(String::from("root"))).unwrap(),
