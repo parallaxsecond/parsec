@@ -1,0 +1,23 @@
+# See https://parallaxsecond.github.io/parsec-book/parsec_service/configuration.html for a full
+# example.
+
+[core_settings]
+log_level = "info"
+allow_root = true
+
+[listener]
+listener_type = "DomainSocket"
+timeout = 200 # in milliseconds
+socket_path = "./parsec.sock"
+
+[authenticator]
+auth_type = "UnixPeerCredentials"
+
+[[key_manager]]
+name = "sqlite-manager"
+manager_type = "SQLite"
+sqlite_db_path = "./sqlite-key-info-manager.sqlite3"
+
+[[provider]]
+provider_type = "MbedCrypto"
+key_info_manager = "sqlite-manager"
