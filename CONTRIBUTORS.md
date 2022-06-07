@@ -18,3 +18,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Edmund Grimley Evans (@egrimley-arm)
 * Matt Davis (@MattDavis00)
 * Mohamed Omar Asaker (@mohamedasaker-arm)
+* Gowtham Suresh Kumar (@gowthamsk-arm)

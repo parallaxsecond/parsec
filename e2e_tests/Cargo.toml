@@ -17,6 +17,7 @@ log = "0.4.14"
 rand = "0.7.3"
 env_logger = "0.8.3"
 stdext = "0.3.1"
+tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi.git", rev = "62fb9b7b05b1e607518ae127406f3b85991205b9", optional = true }
 
 [dev-dependencies]
 ring = "0.16.20"
@@ -27,12 +28,11 @@ num_cpus = "1.13.0"
 picky-asn1-der = "0.2.4"
 picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
-tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi.git", rev = "62fb9b7b05b1e607518ae127406f3b85991205b9" }
 serial_test = "0.5.1"
 
 [features]
 mbed-crypto-provider = []
-tpm-provider = []
+tpm-provider = ["tss-esapi"]
 pkcs11-provider = []
 cryptoauthlib-provider = []
 trusted-service-provider = []
