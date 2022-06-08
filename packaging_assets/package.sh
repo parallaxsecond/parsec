@@ -13,7 +13,7 @@ JOBS_NUMBER=1
 SCRIPT_PATH=$(realpath $0)
 ASSETS_DIR=$(dirname $SCRIPT_PATH)
 PARSEC_DIR=$(dirname $ASSETS_DIR)
-VERSION=$(cargo metadata --format-version=1 --no-deps --offline | python3 -c "import sys, json; data=json.load(sys.stdin); print([pkg['version'] for pkg in data['packages'] if pkg['name'] == 'parsec-service'][0])")
+VERSION=$(cargo metadata --format-version=1 --no-deps --offline | jq -r '.packages[0].version')
 
 # Usage
 USAGE_STR=\
@@ -34,24 +34,24 @@ do
     esac
 done
 
-check_mandatory_flags() {
-    echo "Checking mandatoy flags..."
+check_version() {
+    echo "Checking version"
     if [ -z "$VERSION" ];then
-            echo 'Missing the version please run with -h for help' >&2
+            echo "Couldn't extract the version!" >&2
             exit 1
     fi
 }
 
 check_release_tag() {
-    CURRENT_TAG=$(git name-rev --tags HEAD | cut -d " " -f 2)
-    LATTEST_TAG=$(git tag | tail -n 1)
+    CURRENT_TAG=$(git name-rev --tags HEAD | cut -d "/" -f 2)
+    LATTEST_TAG=$(git tag --sort=committerdate | tail -1)
     if [ -z "$LATTEST_TAG" ];then
         echo "Warning:No tags"
     fi
     if [ "$LATTEST_TAG" == "$CURRENT_TAG" ]; then
         echo "Packaging release tag: $LATTEST_TAG"
     else
-        echo "Warning: The current HEAD isn't tagged"
+        echo "Warning: The current HEAD does't match the latest tagged"
         echo "Warning: Please checkout the latest tag : $LATTEST_TAG"
         read  -n 1 -p "Do you want to continue anyway [y/n]?" choice
         if [ "$choice" != "y" ]; then
@@ -63,16 +63,12 @@ check_release_tag() {
 cleanup()
 {
     echo "Clean up"
-    rm -rf $WORK_DIR/$PACKAGE_DIR
     rm -rf $WORK_DIR
 }
 
 pre_package() {
     # Construct package name
     PACKAGE_DIR=quickstart-$VERSION-${OS}_$ARCH
-
-    # Create a temp work directory
-    mkdir -p $WORK_DIR
 
     # Create a temp work directory for parsec service
     mkdir -p $WORK_DIR/parsec
@@ -93,6 +89,11 @@ build_parsec_tool() {
     echo "Building Parsec-tool"
 
     git clone https://github.com/parallaxsecond/parsec-tool $WORK_DIR/parsec-tool
+
+    cd $WORK_DIR/parsec-tool
+    git checkout $(git tag --sort=committerdate | tail -1)
+    cd -
+
     cargo build -j $JOBS_NUMBER --release --manifest-path $WORK_DIR/parsec-tool/Cargo.toml
 }
 
@@ -112,7 +113,7 @@ echo "Packaging started..."
 
 trap cleanup EXIT
 
-check_mandatory_flags
+check_version
 check_release_tag
 cleanup
 pre_package
