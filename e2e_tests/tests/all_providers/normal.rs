@@ -88,6 +88,8 @@ fn list_opcodes() {
         Opcode::PsaExportPublicKey,
         Opcode::PsaAsymmetricDecrypt,
         Opcode::PsaAsymmetricEncrypt,
+        Opcode::CanDoCrypto,
+        Opcode::PsaGenerateRandom,
     ];
     let mut mbed_crypto_opcodes = vec![
         Opcode::CanDoCrypto,
@@ -109,13 +111,10 @@ fn list_opcodes() {
     // let _ = crypto_providers_cal.insert(Opcode::PsaGenerateRandom);
 
     let mut crypto_providers_tpm = HashSet::from_iter(common_opcodes.clone());
-    let _ = crypto_providers_tpm.insert(Opcode::CanDoCrypto);
     let _ = crypto_providers_tpm.insert(Opcode::AttestKey);
-    let _ = crypto_providers_tpm.insert(Opcode::PsaGenerateRandom);
     let _ = crypto_providers_tpm.insert(Opcode::PrepareKeyAttestation);
 
-    let mut crypto_providers_hsm = HashSet::from_iter(common_opcodes);
-    let _ = crypto_providers_hsm.insert(Opcode::CanDoCrypto);
+    let crypto_providers_hsm = HashSet::from_iter(common_opcodes);
 
     let crypto_providers_mbed_crypto = HashSet::from_iter(mbed_crypto_opcodes);
 

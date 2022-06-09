@@ -17,7 +17,8 @@ use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::{
     can_do_crypto, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
-    psa_export_public_key, psa_generate_key, psa_import_key, psa_sign_hash, psa_verify_hash,
+    psa_export_public_key, psa_generate_key, psa_generate_random, psa_import_key, psa_sign_hash,
+    psa_verify_hash,
 };
 use parsec_interface::operations::{list_clients, list_keys, list_providers::ProviderInfo};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
@@ -37,11 +38,12 @@ type LocalIdStore = HashSet<u32>;
 mod asym_encryption;
 mod asym_sign;
 mod capability_discovery;
+mod generate_random;
 mod key_management;
 mod key_metadata;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 9] = [
+const SUPPORTED_OPCODES: [Opcode; 10] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaDestroyKey,
     Opcode::PsaSignHash,
@@ -51,6 +53,7 @@ const SUPPORTED_OPCODES: [Opcode; 9] = [
     Opcode::PsaAsymmetricDecrypt,
     Opcode::PsaAsymmetricEncrypt,
     Opcode::CanDoCrypto,
+    Opcode::PsaGenerateRandom,
 ];
 
 /// Provider for Public Key Cryptography Standard #11
@@ -275,6 +278,14 @@ impl Provide for Provider {
                 .map(|application_identity| application_identity.name().clone())
                 .collect(),
         })
+    }
+
+    fn psa_generate_random(
+        &self,
+        op: psa_generate_random::Operation,
+    ) -> Result<psa_generate_random::Result> {
+        trace!("psa_generate_random ingress");
+        self.psa_generate_random_internal(op)
     }
 
     fn psa_generate_key(
