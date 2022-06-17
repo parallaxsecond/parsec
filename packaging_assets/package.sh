@@ -5,6 +5,9 @@
 
 # Create a quickstart package
 
+# Avoid silent failures
+set -euf -o pipefail
+
 ARCH="x86"
 OS="linux"
 PACKAGE_PATH=$(pwd)
