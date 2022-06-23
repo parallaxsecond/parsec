@@ -7,7 +7,7 @@ use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::ProviderIdentity;
 use crate::utils::config::KeyInfoManagerType;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::{error, info};
 use num_traits::FromPrimitive;
 use parsec_interface::operations::psa_key_attributes::Attributes;
@@ -66,7 +66,8 @@ impl SQLiteKeyInfoManager {
         // Create directory if it does not already exist
         let mut directory_path = database_path.clone();
         let _ = directory_path.pop();
-        fs::create_dir_all(&directory_path)?;
+        fs::create_dir_all(&directory_path)
+            .with_context(|| format!("create directory {:?}", directory_path))?;
         // Connect to or create database at set path
         let conn = Connection::open(&database_path)?;
         let mut key_store = HashMap::new();

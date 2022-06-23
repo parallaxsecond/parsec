@@ -456,7 +456,16 @@ impl OnDiskKeyInfoManager {
         let provider_dir_path = self.mappings_dir_path.join(app_name).join(prov);
         let key_name_file_path = provider_dir_path.join(key_name);
         // Will ignore if they already exist.
-        fs::create_dir_all(&provider_dir_path)?;
+        fs::create_dir_all(&provider_dir_path).map_err(|e| {
+            format_error!(
+                format!(
+                    "Failed to create provider directory as {:?}",
+                    &provider_dir_path
+                ),
+                e
+            );
+            e
+        })?;
 
         if key_name_file_path.exists() {
             fs::remove_file(&key_name_file_path)?;
