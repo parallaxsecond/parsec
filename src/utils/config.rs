@@ -279,7 +279,7 @@ impl ProviderConfig {
                 feature = "trusted-service-provider"
             )))]
             _ => {
-                error!("Provider chosen in the configuration was not compiled in Parsec binary.");
+                error!("Provider ({:?}) chosen in the configuration was not compiled in Parsec binary.", self);
                 Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
             }
         }
