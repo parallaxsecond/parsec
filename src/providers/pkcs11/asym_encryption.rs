@@ -5,9 +5,11 @@ use super::KeyPairType;
 use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
+use cryptoki::error::Error;
+use cryptoki::error::RvError;
 use cryptoki::mechanism::Mechanism;
 use log::{info, trace};
-use parsec_interface::operations::psa_algorithm::Algorithm;
+use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
@@ -70,7 +72,25 @@ impl Provider {
         Ok(psa_asymmetric_decrypt::Result {
             plaintext: session
                 .decrypt(&mech, key, &op.ciphertext)
-                .map_err(to_response_status)?
+                .map_err(|e| {
+                    // If the algorithm is RSA with PKCS#1 v1.5 padding and we get CKR_ENCRYPTED_DATA_INVALID back,
+                    // it means the padding has been deemed invalid and we should let the caller know
+                    // about that. This allows clients to mitigate attacks that leverage padding
+                    // oracles a la Bleichenbacher.
+                    // See https://cryptosense.com/blog/why-pkcs1v1-5-encryption-should-be-put-out-of-our-misery
+                    // for more details.
+                    if let Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaPkcs1v15Crypt) =
+                        key_attributes.policy.permitted_algorithms
+                    {
+                        match e {
+                            Error::Pkcs11(RvError::EncryptedDataInvalid) => {
+                                return ResponseStatus::PsaErrorInvalidPadding
+                            }
+                            _ => (),
+                        }
+                    }
+                    to_response_status(e)
+                })?
                 .into(),
         })
     }

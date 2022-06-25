@@ -266,9 +266,10 @@ fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
     let ciphertext = client
         .asymmetric_encrypt_message_with_rsapkcs1v15(key_name_1, PLAINTEXT_MESSAGE.to_vec())
         .unwrap();
-    let _res = client
+    let res = client
         .asymmetric_decrypt_message_with_rsapkcs1v15(key_name_2, ciphertext)
         .unwrap_err();
+    assert_eq!(res, ResponseStatus::PsaErrorInvalidPadding);
 }
 
 #[test]
