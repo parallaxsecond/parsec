@@ -152,6 +152,7 @@ key_info_manager = "sqlite-manager"
 #library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
 # (Optional) PKCS 11 serial number of the token that will be used by Parsec.
 # If the token serial number is entered, then the slot that has the provided serial number will be used. Otherwise, if both `serial_number` and `slot_number` are given but do not match, a warning is issued and serial number takes precedence.
+# Note: Matching the serial_number done after trimming the leading and trailing whitespaces for serial numbers shorter than 16 charachter.
 #serial_number = "0123456789abcdef"
 # (Optional) PKCS 11 slot that will be used by Parsec If Token serial number is not entered. i.e, serial_number is preferred
 # If the slot number is not entered and there is only one slot available - with a valid token - it will be automatically used

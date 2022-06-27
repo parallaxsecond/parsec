@@ -524,7 +524,7 @@ impl ProviderBuilder {
                             format_error!("Failed parsing token serial number", e);
                             Error::new(ErrorKind::InvalidData, "Failed parsing token serial number")
                         })?;
-                    if sn == serial_number {
+                    if sn.trim() == serial_number.trim() {
                         slot = Some(current_slot);
                         break;
                     }
