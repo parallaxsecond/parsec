@@ -18,6 +18,8 @@ impl Provider {
             op.key_name.clone(),
         );
         let key_id = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
+        op.validate(key_attributes)?;
 
         Ok(psa_sign_hash::Result {
             signature: self
@@ -38,6 +40,8 @@ impl Provider {
             op.key_name.clone(),
         );
         let key_id = self.key_info_store.get_key_id(&key_identity)?;
+        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
+        op.validate(key_attributes)?;
 
         self.context
             .verify_hash(key_id, op.hash.to_vec(), op.signature.to_vec(), op.alg)?;
