@@ -271,6 +271,10 @@ fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
         .unwrap_err();
 }
 
+// Test is disabled for PKCS11 provider since SoftHSMv2 does not
+// properly notify users of invalid padding.
+// See https://github.com/opendnssec/SoftHSMv2/issues/678
+#[cfg(not(feature = "pkcs11-provider"))]
 #[test]
 fn asym_decrypt_wrong_padding() {
     let key_name = auto_test_keyname!();
