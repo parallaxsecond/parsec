@@ -30,7 +30,7 @@ impl Context {
                 }),
             }),
         };
-        let _ = self.send_request(&generate_req)?;
+        self.send_request(&generate_req)?;
 
         Ok(())
     }
@@ -70,7 +70,7 @@ impl Context {
             }),
             data,
         };
-        let _ = self.send_request(&import_req)?;
+        self.send_request(&import_req)?;
 
         Ok(())
     }
