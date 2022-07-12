@@ -271,6 +271,34 @@ fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
         .unwrap_err();
 }
 
+// Test is disabled for PKCS11 provider since SoftHSMv2 does not
+// properly notify users of invalid padding.
+// See https://github.com/opendnssec/SoftHSMv2/issues/678
+#[cfg(not(feature = "pkcs11-provider"))]
+#[test]
+fn asym_decrypt_wrong_padding() {
+    let key_name = auto_test_keyname!();
+    let mut client = TestClient::new();
+
+    if !client.is_operation_supported(Opcode::PsaAsymmetricEncrypt)
+        || !client.is_operation_supported(Opcode::PsaAsymmetricDecrypt)
+    {
+        return;
+    }
+
+    client
+        .generate_rsa_encryption_keys_rsapkcs1v15crypt(key_name.clone())
+        .unwrap();
+    let mut ciphertext = client
+        .asymmetric_encrypt_message_with_rsapkcs1v15(key_name.clone(), PLAINTEXT_MESSAGE.to_vec())
+        .unwrap();
+    ciphertext[20] ^= 0x1;
+    let res = client
+        .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, ciphertext)
+        .unwrap_err();
+    assert_eq!(res, ResponseStatus::PsaErrorInvalidPadding);
+}
+
 #[test]
 fn asym_encrypt_verify_decrypt_with_rsa_crate() {
     let key_name = auto_test_keyname!();
