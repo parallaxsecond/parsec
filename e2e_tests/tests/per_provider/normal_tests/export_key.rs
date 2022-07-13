@@ -244,12 +244,12 @@ fn check_export_rsa_not_possible() {
         },
     };
 
-    let _generated_key = client
+    client
         .generate_key(key_name.clone(), key_attributes)
         .unwrap();
 
-    let _exported_key = client.export_key(key_name).unwrap_err();
-    assert_eq!(_exported_key, ResponseStatus::PsaErrorNotPermitted);
+    let exported_key = client.export_key(key_name).unwrap_err();
+    assert_eq!(exported_key, ResponseStatus::PsaErrorNotPermitted);
 }
 
 #[test]
@@ -277,12 +277,12 @@ fn check_export_ecc_not_possible() {
         },
     };
 
-    let _generated_key = client
+    client
         .generate_key(key_name.clone(), key_attributes)
         .unwrap();
 
-    let _exported_key = client.export_key(key_name).unwrap_err();
-    assert_eq!(_exported_key, ResponseStatus::PsaErrorNotPermitted);
+    let exported_key = client.export_key(key_name).unwrap_err();
+    assert_eq!(exported_key, ResponseStatus::PsaErrorNotPermitted);
 }
 
 #[cfg(not(feature = "cryptoauthlib-provider"))]

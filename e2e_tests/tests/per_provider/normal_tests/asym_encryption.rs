@@ -213,7 +213,7 @@ fn asym_encrypt_wrong_algorithm() {
         return;
     }
 
-    let _key_id = client
+    client
         .generate_rsa_encryption_keys_rsaoaep_sha256(key_name.clone())
         .unwrap();
     let status = client

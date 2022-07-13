@@ -55,7 +55,7 @@ impl Provider {
 
                     // Grab key attributes and replace legacy entry with new one
                     let attributes = self.key_info_store.get_key_attributes(key_identity)?;
-                    let _ = self.key_info_store.replace_key_info(
+                    self.key_info_store.replace_key_info(
                         key_identity.clone(),
                         &password_ctx,
                         attributes,
@@ -195,7 +195,7 @@ impl Provider {
             key_name,
         );
 
-        let _ = self.key_info_store.remove_key_info(&key_identity)?;
+        self.key_info_store.remove_key_info(&key_identity)?;
 
         Ok(psa_destroy_key::Result {})
     }
