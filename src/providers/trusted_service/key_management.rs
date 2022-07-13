@@ -21,7 +21,7 @@ pub fn create_key_id(max_current_id: &AtomicU32) -> Result<u32> {
     if new_key_id > PSA_KEY_ID_USER_MAX {
         // If storing key failed and no other keys were created in the mean time, it is safe to
         // decrement the key counter.
-        let _ = max_current_id.store(PSA_KEY_ID_USER_MAX, Relaxed);
+        max_current_id.store(PSA_KEY_ID_USER_MAX, Relaxed);
         error!("PSA max key ID limit of {} reached", PSA_KEY_ID_USER_MAX);
         return Err(ResponseStatus::PsaErrorInsufficientMemory);
     }
@@ -193,7 +193,7 @@ impl Provider {
             key_name,
         );
         let key_id = self.key_info_store.get_key_id(&key_identity)?;
-        let _ = self.key_info_store.remove_key_info(&key_identity)?;
+        self.key_info_store.remove_key_info(&key_identity)?;
 
         match self.context.destroy_key(key_id) {
             Ok(()) => Ok(psa_destroy_key::Result {}),

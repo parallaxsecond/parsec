@@ -21,7 +21,7 @@ pub fn create_key_id(max_current_id: &AtomicU32) -> Result<key::psa_key_id_t> {
     if new_key_id > key::PSA_KEY_ID_USER_MAX {
         // If storing key failed and no other keys were created in the mean time, it is safe to
         // decrement the key counter.
-        let _ = max_current_id.store(key::PSA_KEY_ID_USER_MAX, Relaxed);
+        max_current_id.store(key::PSA_KEY_ID_USER_MAX, Relaxed);
         error!(
             "PSA max key ID limit of {} reached",
             key::PSA_KEY_ID_USER_MAX
@@ -226,7 +226,7 @@ impl Provider {
         );
 
         let key_id = self.key_info_store.get_key_id(&key_identity)?;
-        let _ = self.key_info_store.remove_key_info(&key_identity)?;
+        self.key_info_store.remove_key_info(&key_identity)?;
 
         let _guard = self
             .key_handle_mutex

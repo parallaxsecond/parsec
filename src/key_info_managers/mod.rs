@@ -352,7 +352,7 @@ impl KeyInfoManagerClient {
         let mut clients = Vec::new();
         for key_identity in key_identities {
             if !clients.contains(&key_identity.application) {
-                let _ = clients.push(key_identity.application.clone());
+                clients.push(key_identity.application.clone());
             }
         }
 

@@ -276,7 +276,7 @@ fn build_providers(
                 return Err(Error::new(ErrorKind::Other, "failed to create provider").into());
             }
         };
-        let _ = providers.push((provider_id, provider));
+        providers.push((provider_id, provider));
     }
 
     Ok(providers)
