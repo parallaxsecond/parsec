@@ -46,7 +46,7 @@ parsec-tool -p 2 create-rsa-key -k rsa
 #parsec-tool -p 2 create-ecc-key -k ecc
 parsec-tool -p 3 create-rsa-key -k rsa
 parsec-tool -p 3 create-ecc-key -k ecc
-#TODO: add keys in the Trusted Service and CryptoAuthLib providers
+#TODO: add keys in the CryptoAuthLib providers
 #TODO: when possible.
 
 pkill parsec
@@ -65,7 +65,17 @@ mv /tmp/create_keys/parsec/NVChip /tmp
 cargo build --features "trusted-service-provider, all-authenticators"
 # Start the service with trusted service provider
 ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
+sleep 2
+# We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
+parsec-tool create-rsa-key -k rsa
+parsec-tool create-ecc-key -k ecc
+
+mkdir /tmp/ts-keys
+cp -r /tmp/create_keys/parsec/mappings /tmp/ts-keys
+# Trusted service creates keys in the current directory.
+cp -r /tmp/create_keys/parsec/0000000000000002.psa_its /tmp/ts-keys
+cp -r /tmp/create_keys/parsec/0000000000000003.psa_its /tmp/ts-keys
 
 # Cleanup to reduce image's size
-rm -rf /tmp/create_keys
 cargo uninstall parsec-tool
+rm -rf /tmp/create_keys
