@@ -90,7 +90,7 @@ RUN git config --global user.email "some@email.com"
 RUN git config --global user.name "Parsec Team"
 RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
 	&& cd trusted-services \
-	&& git reset --hard 389b50624f25dae860bbbf8b16f75b32f1589c8d
+	&& git reset --hard 1b0c520279445fc4d85fc582eda5e5ff5f380c39
 # Install correct python dependencies
 RUN pip3 install -r trusted-services/requirements.txt
 RUN cd trusted-services/deployments/libts/linux-pc/ \
