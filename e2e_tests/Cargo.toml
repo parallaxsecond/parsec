@@ -29,6 +29,7 @@ picky-asn1-der = "0.2.4"
 picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
 serial_test = "0.5.1"
+regex = "1.6.0"
 
 [features]
 mbed-crypto-provider = []
