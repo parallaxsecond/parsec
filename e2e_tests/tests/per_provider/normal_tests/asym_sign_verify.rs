@@ -335,7 +335,6 @@ fn sign_hash_bad_format_rsa_sha256() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider")))]
 #[test]
 fn sign_hash_bad_format_ecdsa_sha256() -> Result<()> {
     let key_name = auto_test_keyname!();
@@ -536,7 +535,6 @@ fn verify_hash_bad_format_rsa() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(feature = "trusted-service-provider", feature = "mbed-crypto-provider")))]
 #[test]
 fn verify_hash_bad_format_ecc() -> Result<()> {
     let key_name = auto_test_keyname!();

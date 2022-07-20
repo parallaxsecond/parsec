@@ -14,8 +14,8 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
-        let key_name = op.key_name;
-        let hash = op.hash;
+        let key_name = op.key_name.clone();
+        let hash = op.hash.clone();
         let alg = op.alg;
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
@@ -33,6 +33,8 @@ impl Provider {
         let key_attributes = key::Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.sign_output_size(alg)?;
         let mut signature = vec![0u8; buffer_size];
+
+        op.validate(key_attributes)?;
 
         match asym_signature::sign_hash(id, alg, &hash, &mut signature) {
             Ok(size) => {
@@ -54,10 +56,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
-        let key_name = op.key_name;
-        let hash = op.hash;
+        let key_name = op.key_name.clone();
+        let hash = op.hash.clone();
         let alg = op.alg;
-        let signature = op.signature;
+        let signature = op.signature.clone();
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
@@ -69,6 +71,10 @@ impl Provider {
             .key_handle_mutex
             .lock()
             .expect("Grabbing key handle mutex failed");
+
+        let id = key::Id::from_persistent_key_id(key_id)?;
+        let key_attributes = key::Attributes::from_key_id(id)?;
+        op.validate(key_attributes)?;
 
         let id = key::Id::from_persistent_key_id(key_id)?;
         match asym_signature::verify_hash(id, alg, &hash, &signature) {
