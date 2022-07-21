@@ -8,6 +8,19 @@
 
 set -xeuf -o pipefail
 
+# Install an old version mock Trusted Services compatible with old parsec 0.7.0
+# used in generate_key.sh script
+git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
+pushd trusted-services && git reset --hard 35c6d643b5f0c0387702e22bf742dd4878ca5ddd && popd
+# Install correct python dependencies
+pip3 install -r trusted-services/requirements.txt
+pushd /tmp/trusted-services/deployments/libts/linux-pc/
+cmake .
+make
+cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
+popd
+rm -rf /tmp/trusted-services
+
 mkdir /tmp/create_keys
 
 # Use an old version of the Parsec service to make sure keys can still be used
