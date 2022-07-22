@@ -10,6 +10,7 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::ResponseStatus;
+use regex::Regex;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -332,6 +333,49 @@ fn slot_number_only() {
 fn serial_number_only() {
     set_config("serial_number_only.toml");
     // The service should still start, using the serial number only.
+    reload_service();
+
+    let mut client = TestClient::new();
+    let _ = client.ping().unwrap();
+}
+
+#[test]
+fn serial_number_padding() {
+    // Extracting the serial number of the first token found in the system
+    let showslots_cmd = Command::new("softhsm2-util")
+        .arg("--show-slots")
+        .output()
+        .expect("Show slots failed");
+    let pattern = Regex::new(r"Serial number:[ ]+([0-9a-zA-Z]+)").unwrap();
+
+    let serials: Vec<_> = String::from_utf8(showslots_cmd.stdout)
+        .unwrap()
+        .lines()
+        .filter_map(|line| pattern.captures(line))
+        .map(|cap| cap[1].to_string())
+        .take(1)
+        .collect();
+
+    // At least 1 token exists in the system
+    assert!(!serials.is_empty());
+
+    // Populating serial_number_padding.toml with serial number found
+    let mut config_file_path = env::current_dir().unwrap();
+    config_file_path.push(CONFIG_TOMLS_FOLDER);
+    config_file_path.push("serial_number_padding.toml");
+    let _sed_cmd = Command::new("sed")
+        .arg("-i")
+        // Put Serial number with extra spaces
+        .arg(format!(
+            "s/^# serial_number.*/serial_number = \"{}{}{}\"/",
+            "   ", serials[0], "   "
+        ))
+        .arg(config_file_path.into_os_string())
+        .output()
+        .expect("Populating Serial Number failed");
+
+    set_config("serial_number_padding.toml");
+    // The service should still start, using the padded serial number.
     reload_service();
 
     let mut client = TestClient::new();
