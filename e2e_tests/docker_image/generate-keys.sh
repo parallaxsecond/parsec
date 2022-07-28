@@ -8,6 +8,24 @@
 
 set -xeuf -o pipefail
 
+wait_for_process() {
+    while [ -z "$(pgrep $1)" ]; do
+        sleep 0.1
+    done
+    pgrep $1 > /dev/null
+}
+wait_for_file() {
+    until [ -e $1 ];
+    do
+        sleep 0.1
+    done
+}
+
+wait_for_killprocess() {
+    while [ -n "$(pgrep $1)" ]; do
+        sleep 0.1
+    done
+}
 # Install an old version mock Trusted Services compatible with old parsec 0.7.0
 # used in generate_key.sh script
 git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
@@ -38,9 +56,8 @@ cargo build --features "all-providers, all-authenticators"
 
 # Start the service with all providers (trusted-service-provider isn't included)
 tpm_server &
-sleep 5
+wait_for_process "tpm_server"
 tpm2_startup -c -T mssim
-sleep 2
 tpm2_changeauth -c owner tpm_pass -T mssim
 tpm2_changeauth -c endorsement endorsement_pass -T mssim
 cd /tmp/create_keys/parsec/e2e_tests
@@ -48,8 +65,8 @@ SLOT_NUMBER=`softhsm2-util --show-slots | head -n2 | tail -n1 | cut -d " " -f 2`
 find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
 cd ../
 ./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
-sleep 2
-
+wait_for_process "parsec"
+wait_for_file "/tmp/parsec.sock"
 # Generate keys for all providers (trusted-service-provider isn't included)
 parsec-tool -p 1 create-rsa-key -k rsa
 parsec-tool -p 1 create-ecc-key -k ecc
@@ -63,9 +80,10 @@ parsec-tool -p 3 create-ecc-key -k ecc
 #TODO: when possible.
 
 pkill parsec
+wait_for_killprocess "parsec"
 tpm2_shutdown -T mssim
-sleep 2
 pkill tpm_server
+wait_for_killprocess "tpm_server"
 
 # Mbed Crypto creates keys in the current directory.
 mv /tmp/create_keys/parsec/mappings /tmp
@@ -78,7 +96,7 @@ mv /tmp/create_keys/parsec/NVChip /tmp
 cargo build --features "trusted-service-provider, all-authenticators"
 # Start the service with trusted service provider
 ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
-sleep 2
+wait_for_process "parsec"
 # We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
 parsec-tool create-rsa-key -k rsa
 parsec-tool create-ecc-key -k ecc

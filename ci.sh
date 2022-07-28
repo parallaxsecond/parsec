@@ -345,7 +345,7 @@ fi
 echo "Unit, doc and integration tests"
 RUST_BACKTRACE=1 cargo test $FEATURES
 
-# Removing any mappings left over from integration tests
+# Removing any mappings or on disk keys left over from integration tests
 rm -rf mappings/
 rm -f *.psa_its
 
