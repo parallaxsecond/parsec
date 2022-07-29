@@ -2,9 +2,18 @@ name: Continuous Integration
 
 on: [push, pull_request, workflow_dispatch]
 
+env:
+  DOCKER_IMAGE: 'parsec-service-test-all'
+  # DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+
 jobs:
-  build-and-export-docker:
+  build-and-export-test-all-docker:
     runs-on: ubuntu-latest
+    # If DOCKER_IMAGE is 'parsec-service-test-all' or any local image,
+    # the following condition must evaluate true to execute this job
+    # Else it must evaluate false to NOT execute this job
+    # Unfortunately, env.DOCKER_IMAGE cannot be used here as the `env` context is not recognize at this level.
+    if: ${{ true }} # env.DOCKER_IMAGE == 'parsec-service-test-all'
     steps:
     - uses: actions/checkout@v3
     - name: Build the docker container
@@ -20,149 +29,154 @@ jobs:
   all-providers:
     name: Various tests targeting a Parsec image with all providers included
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec
-        #   ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh all
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh all
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh all
 
   build-all-providers:
     name: Cargo check all-providers (current Rust stable & old compiler)
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cargo-check
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cargo-check
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh cargo-check
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh mbed-crypto
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # Not running stress tests because they fail, presumably because of the same issue as #264
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh pkcs11 --no-stress-test
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh pkcs11 --no-stress-test
 
   tpm-provider:
     name: Integration tests using TPM provider
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh tpm
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh tpm
 
   trusted-service-provider:
     name: Integration tests using Crypto Trusted Service provider
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
-        # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh trusted-service
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh trusted-service
 
   cryptoauthlib-provider:
     name: Integration tests using CryptoAuthentication Library provider
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
 
   fuzz-test-checker:
     name: Check that the fuzz testing framework is still working
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
-      - name: Run the fuzz test script
+      - name: Run the container to execute the test script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
-        # run: ./fuzz.sh test
-      # When running the container built on the CI
+      - name: Run the fuzz test script From Container
+        # When running the container built on the CI
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         run: CONTAINER_TAG=parsec-service-test-all ./fuzz.sh test
+      - name: Run the fuzz test script
+        if: ${{ env.DOCKER_IMAGE != 'parsec-service-test-all' }}
+        run: ./fuzz.sh test
 
   on-disk-kim:
     name: OnDiskKIM E2E tests on all providers
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
+        if: ${{ env.DOCKER_IMAGE == 'parsec-service-test-all' }}
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
-        # run:
-        #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh on-disk-kim
-      # When running the container built on the CI
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-all /tmp/parsec/ci.sh on-disk-kim
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.DOCKER_IMAGE }} /tmp/parsec/ci.sh on-disk-kim
 
   cross-compilation:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
@@ -173,7 +187,7 @@ jobs:
       - name: Load Docker
         uses: ./.github/actions/load_docker
         with:
-          image-name: "parsec-service-test-all"
+          image-name: "${{ env.DOCKER_IMAGE }}"
           image-path: "/tmp"
       - name: Run the container to execute the test script
         run:
