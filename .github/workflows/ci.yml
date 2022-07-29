@@ -7,7 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      # Use the following step when updating the `parsec-service-test-all` image
     - name: Build the docker container
       run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
     - name: Export the docker container
@@ -23,13 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec
@@ -42,13 +39,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh cargo-check
@@ -60,13 +55,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mbed-crypto
@@ -78,13 +71,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # Not running stress tests because they fail, presumably because of the same issue as #264
         # run:
@@ -97,13 +88,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh tpm
@@ -115,13 +104,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh trusted-service
@@ -133,13 +120,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
         # run:
@@ -152,13 +137,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the fuzz test script
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
         # run: ./fuzz.sh test
@@ -170,13 +153,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         # run:
         #   docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh on-disk-kim
@@ -189,13 +170,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
         with:
-          name: parsec-service-test-all
-          path: /tmp
-      - name: Load docker image
-        run:  docker load --input /tmp/parsec-service-test-all.tar
+          image-name: "parsec-service-test-all"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         run:
           docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
