@@ -16,12 +16,18 @@ use rusqlite::types::Type::{Blob, Integer};
 use rusqlite::{params, Connection, Error as RusqliteError};
 use std::collections::HashMap;
 use std::fs;
+use std::fs::Permissions;
 use std::io::{Error, ErrorKind};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 /// Default path where the database will be stored on disk
 pub const DEFAULT_DB_PATH: &str =
     "/var/lib/parsec/kim-mappings/sqlite/sqlite-key-info-manager.sqlite3";
+
+///File permissions for sqlite database
+///Should only be visible to parsec user
+pub const FILE_PERMISSION: u32 = 0o600;
 
 /// The current serialization version of the Attributes object.
 pub const CURRENT_KEY_ATTRIBUTES_VERSION: u8 = 1;
@@ -268,6 +274,9 @@ impl SQLiteKeyInfoManager {
                 key_store.len()
             );
         }
+
+        let permissions = Permissions::from_mode(FILE_PERMISSION);
+        fs::set_permissions(database_path.clone(), permissions)?;
 
         Ok(SQLiteKeyInfoManager {
             key_store,
