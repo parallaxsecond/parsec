@@ -81,6 +81,7 @@ parsec-tool -p 3 create-ecc-key -k ecc
 
 pkill parsec
 wait_for_killprocess "parsec"
+rm -rf /tmp/parsec.sock
 tpm2_shutdown -T mssim
 pkill tpm_server
 wait_for_killprocess "tpm_server"
@@ -97,6 +98,7 @@ cargo build --features "trusted-service-provider, all-authenticators"
 # Start the service with trusted service provider
 ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
 wait_for_process "parsec"
+wait_for_file "/tmp/parsec.sock"
 # We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
 parsec-tool create-rsa-key -k rsa
 parsec-tool create-ecc-key -k ecc
