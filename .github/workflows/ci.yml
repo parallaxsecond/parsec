@@ -151,8 +151,6 @@ jobs:
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
-      - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
       - name: Run the fuzz test script From Container
         # When running the container built on the CI
