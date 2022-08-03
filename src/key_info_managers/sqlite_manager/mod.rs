@@ -436,6 +436,7 @@ impl SQLiteKeyInfoManagerBuilder {
 mod test {
     use super::super::{KeyIdentity, KeyInfo, ManageKeyInfo};
     use super::SQLiteKeyInfoManager;
+    use crate::key_info_managers::sqlite_manager::FILE_PERMISSION;
     use crate::key_info_managers::{ApplicationIdentity, ProviderIdentity};
     use crate::providers::core::Provider as CoreProvider;
     #[cfg(feature = "mbed-crypto-provider")]
@@ -449,6 +450,8 @@ mod test {
     use parsec_interface::requests::AuthType;
     use rand::Rng;
     use std::fs;
+    use std::fs::Permissions;
+    use std::os::unix::fs::PermissionsExt;
     use std::path::PathBuf;
 
     fn test_key_attributes() -> Attributes {
@@ -970,5 +973,38 @@ mod test {
             ),
             key_name,
         )
+    }
+
+    #[test]
+    fn check_permissions() {
+        let path =
+            PathBuf::from(env!("OUT_DIR").to_owned() + "/kim/sqlite/check_permissions.sqlite3");
+        fs::remove_file(&path).unwrap_or_default();
+
+        let app_name1 = "App1".to_string();
+        let key_name1 = "Key1".to_string();
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new(app_name1, AuthType::NoAuth),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name1,
+        );
+        let key_info1 = test_key_info();
+
+        let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+        let _ = manager.insert(key_identity_1.clone(), key_info1).unwrap();
+
+        let permissions = Permissions::from_mode(FILE_PERMISSION);
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & permissions.mode(),
+            permissions.mode()
+        );
+
+        let _ = manager.remove(&key_identity_1).unwrap().unwrap();
+
+        fs::remove_file(&path).unwrap();
     }
 }

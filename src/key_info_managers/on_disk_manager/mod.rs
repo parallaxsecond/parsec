@@ -904,4 +904,85 @@ mod test {
             key_name,
         )
     }
+
+    #[cfg(feature = "mbed-crypto-provider")]
+    mod permissions_test {
+        use super::*;
+        use crate::key_info_managers::on_disk_manager::DIR_PERMISSION;
+        use crate::key_info_managers::on_disk_manager::FILE_PERMISSION;
+        use std::fs::Permissions;
+        use std::io;
+        use std::os::unix::fs::PermissionsExt;
+        use std::path::Path;
+
+        // loop through every directory and file and check permissions
+        fn check_permissions(dir: &Path) -> io::Result<()> {
+            let file_permissions = Permissions::from_mode(FILE_PERMISSION);
+            let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+            if dir.is_dir() {
+                for entry in fs::read_dir(dir)? {
+                    let path = entry?.path();
+                    if path.is_dir() {
+                        assert_eq!(
+                            fs::metadata(&path)?.permissions().mode() & dir_permissions.mode(),
+                            dir_permissions.mode()
+                        );
+                        check_permissions(&path)?;
+                    } else {
+                        assert_eq!(
+                            fs::metadata(&path)?.permissions().mode() & file_permissions.mode(),
+                            file_permissions.mode()
+                        );
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        #[test]
+        fn check_kim_permissions() {
+            let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+            let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/check_permissions");
+            let app_name1 = "App1".to_string();
+            let key_name1 = "Key1".to_string();
+            let key_identity_1 = KeyIdentity::new(
+                ApplicationIdentity::new(app_name1, AuthType::NoAuth),
+                ProviderIdentity::new(
+                    CoreProvider::PROVIDER_UUID.to_string(),
+                    CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+                ),
+                key_name1,
+            );
+            let key_info1 = test_key_info();
+
+            let app_name2 = "App2".to_string();
+            let key_name2 = "Key2".to_string();
+            let key_identity_2 = KeyIdentity::new(
+                ApplicationIdentity::new(app_name2, AuthType::NoAuth),
+                ProviderIdentity::new(
+                    MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                    MbedCryptoProvider::DEFAULT_PROVIDER_NAME.to_string(),
+                ),
+                key_name2,
+            );
+            let key_info2 = KeyInfo {
+                id: vec![0x12, 0x22, 0x32],
+                attributes: test_key_attributes(),
+            };
+
+            let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
+            assert_eq!(
+                fs::metadata(path.clone()).unwrap().permissions().mode() & dir_permissions.mode(),
+                dir_permissions.mode()
+            );
+            let _ = manager.insert(key_identity_1.clone(), key_info1).unwrap();
+            let _ = manager.insert(key_identity_2.clone(), key_info2).unwrap();
+
+            let _ = check_permissions(&path).is_ok();
+            let _ = manager.remove(&key_identity_1).unwrap().unwrap();
+            let _ = manager.remove(&key_identity_2).unwrap().unwrap();
+
+            fs::remove_dir_all(path).unwrap();
+        }
+    }
 }
