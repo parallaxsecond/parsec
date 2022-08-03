@@ -33,14 +33,24 @@ use parsec_interface::requests::{AuthType, ProviderId};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ffi::OsStr;
+use std::fs::Permissions;
 use std::fs::{DirEntry, File};
 use std::io::{Error, ErrorKind, Read, Write};
 use std::ops::Deref;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::{fmt, fs};
 
 /// Default path where the mapping files will be stored on disk
 pub const DEFAULT_MAPPINGS_PATH: &str = "/var/lib/parsec/mappings";
+
+///Permissions for all directories under database directory
+///Should only be visible to parsec user
+pub const DIR_PERMISSION: u32 = 0o700;
+
+///Permissions for all files under database directory
+///Should only be visible to parsec user
+pub const FILE_PERMISSION: u32 = 0o600;
 
 /// String wrapper for app names
 #[deprecated(since = "0.9.0", note = "ApplicationIdentity should be used instead.")]
@@ -434,6 +444,9 @@ impl OnDiskKeyInfoManager {
             info!("Found {} mapping files", key_store.len());
         }
 
+        let permissions = Permissions::from_mode(DIR_PERMISSION);
+        fs::set_permissions(&mappings_dir_path, permissions)?;
+
         Ok(OnDiskKeyInfoManager {
             key_store,
             mappings_dir_path,
@@ -453,8 +466,10 @@ impl OnDiskKeyInfoManager {
         }
         // Create the directories with base64 names.
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
-        let provider_dir_path = self.mappings_dir_path.join(app_name).join(prov);
+        let app_dir_path = self.mappings_dir_path.join(app_name);
+        let provider_dir_path = app_dir_path.join(prov);
         let key_name_file_path = provider_dir_path.join(key_name);
+
         // Will ignore if they already exist.
         fs::create_dir_all(&provider_dir_path).map_err(|e| {
             format_error!(
@@ -466,7 +481,9 @@ impl OnDiskKeyInfoManager {
             );
             e
         })?;
-
+        let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+        fs::set_permissions(&app_dir_path, dir_permissions.clone())?;
+        fs::set_permissions(&provider_dir_path, dir_permissions)?;
         if key_name_file_path.exists() {
             fs::remove_file(&key_name_file_path)?;
         }
@@ -478,6 +495,9 @@ impl OnDiskKeyInfoManager {
             );
             e
         })?;
+
+        let file_permissions = Permissions::from_mode(FILE_PERMISSION);
+        fs::set_permissions(&key_name_file_path, file_permissions)?;
         mapping_file.write_all(&bincode::serialize(key_info).map_err(|e| {
             format_error!("Error serializing key info", e);
             Error::new(ErrorKind::Other, "error serializing key info")
@@ -883,5 +903,86 @@ mod test {
             ),
             key_name,
         )
+    }
+
+    #[cfg(feature = "mbed-crypto-provider")]
+    mod permissions_test {
+        use super::*;
+        use crate::key_info_managers::on_disk_manager::DIR_PERMISSION;
+        use crate::key_info_managers::on_disk_manager::FILE_PERMISSION;
+        use std::fs::Permissions;
+        use std::io;
+        use std::os::unix::fs::PermissionsExt;
+        use std::path::Path;
+
+        // loop through every directory and file and check permissions
+        fn check_permissions(dir: &Path) -> io::Result<()> {
+            let file_permissions = Permissions::from_mode(FILE_PERMISSION);
+            let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+            if dir.is_dir() {
+                for entry in fs::read_dir(dir)? {
+                    let path = entry?.path();
+                    if path.is_dir() {
+                        assert_eq!(
+                            fs::metadata(&path)?.permissions().mode() & dir_permissions.mode(),
+                            dir_permissions.mode()
+                        );
+                        check_permissions(&path)?;
+                    } else {
+                        assert_eq!(
+                            fs::metadata(&path)?.permissions().mode() & file_permissions.mode(),
+                            file_permissions.mode()
+                        );
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        #[test]
+        fn check_kim_permissions() {
+            let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+            let path = PathBuf::from(env!("OUT_DIR").to_owned() + "/check_permissions");
+            let app_name1 = "App1".to_string();
+            let key_name1 = "Key1".to_string();
+            let key_identity_1 = KeyIdentity::new(
+                ApplicationIdentity::new(app_name1, AuthType::NoAuth),
+                ProviderIdentity::new(
+                    CoreProvider::PROVIDER_UUID.to_string(),
+                    CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+                ),
+                key_name1,
+            );
+            let key_info1 = test_key_info();
+
+            let app_name2 = "App2".to_string();
+            let key_name2 = "Key2".to_string();
+            let key_identity_2 = KeyIdentity::new(
+                ApplicationIdentity::new(app_name2, AuthType::NoAuth),
+                ProviderIdentity::new(
+                    MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                    MbedCryptoProvider::DEFAULT_PROVIDER_NAME.to_string(),
+                ),
+                key_name2,
+            );
+            let key_info2 = KeyInfo {
+                id: vec![0x12, 0x22, 0x32],
+                attributes: test_key_attributes(),
+            };
+
+            let mut manager = OnDiskKeyInfoManager::new(path.clone(), AuthType::NoAuth).unwrap();
+            assert_eq!(
+                fs::metadata(path.clone()).unwrap().permissions().mode() & dir_permissions.mode(),
+                dir_permissions.mode()
+            );
+            let _ = manager.insert(key_identity_1.clone(), key_info1).unwrap();
+            let _ = manager.insert(key_identity_2.clone(), key_info2).unwrap();
+
+            let _ = check_permissions(&path).is_ok();
+            let _ = manager.remove(&key_identity_1).unwrap().unwrap();
+            let _ = manager.remove(&key_identity_2).unwrap().unwrap();
+
+            fs::remove_dir_all(path).unwrap();
+        }
     }
 }
