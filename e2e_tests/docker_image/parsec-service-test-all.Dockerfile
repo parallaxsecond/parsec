@@ -15,6 +15,7 @@ RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake 
 RUN apt install -y --fix-missing wget python3 cmake clang
 RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
 RUN apt install -y python3-distutils libclang-6.0-dev protobuf-compiler python3-pip
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 
 WORKDIR /tmp
 
