@@ -27,6 +27,7 @@ fn use_and_check() -> Result<()> {
     client.set_default_auth(Some(String::from("parsec-tool")));
 
     let keys = client.list_keys()?;
+    assert!(!keys.is_empty());
 
     for key in keys {
         if key.name == "rsa" {

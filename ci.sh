@@ -104,8 +104,12 @@ run_old_e2e_tests() {
 }
 
 run_key_mappings_tests() {
-    echo "Execute key mappings tests"
-    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
+    # There is no keys generated for CryptoAuthLib yet.
+    # This condition should be removed when the keys are generated for the CAL provider
+    if ! [[ "$PROVIDER_NAME" = "cryptoauthlib" ]]; then
+        echo "Execute key mappings tests"
+        RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
+    fi
 }
 
 setup_mappings() {
@@ -113,16 +117,23 @@ setup_mappings() {
     # test.
     # The key mappings test in e2e_tests/tests/per_provider/key_mappings.rs will try
     # to use the key generated via the generate-keys.sh script in the test image.
-    cp -r /tmp/mappings/ .
+    # As mock Trusted Service saves its keys on the current directory we need to move them
+    # as well.
+    if [ "$PROVIDER_NAME" = "trusted-service" ]; then
+        # Copy the generated mappings and keys of the Trusted service
+        cp -r /tmp/ts-keys/* .
+    else
+        cp -r /tmp/mappings/ .
+        # As Mbed Crypto saves its keys on the current directory we need to move them
+        # as well.
+        if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+            cp /tmp/*.psa_its .
+        fi
+    fi
     # Add the fake mappings for the key mappings test as well. The test will check that
     # those keys have successfully been deleted.
-    # TODO: add fake mappings for the Trusted Service and CryptoAuthLib providers.
+    # TODO: add fake mappings for the CryptoAuthLib provider.
     cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-    # As Mbed Crypto saves its keys on the current directory we need to move them
-    # as well.
-    if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-        cp /tmp/*.psa_its .
-    fi
 
     reload_service
 }
@@ -237,13 +248,15 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
-        cp -r /tmp/mappings/ .
-        cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-        if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-            cp /tmp/*.psa_its .
-        elif [ "$PROVIDER_NAME" = "trusted-service" ]; then
-            rm -f ./*.psa_its
+        if [ "$PROVIDER_NAME" = "trusted-service" ]; then
+            cp -r /tmp/ts-keys/* .
+        else
+            cp -r /tmp/mappings/ .
+            if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+                cp /tmp/*.psa_its .
+            fi
         fi
+        cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
 
         # Start service
         RUST_LOG=info cargo +1.57.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
@@ -336,8 +349,9 @@ fi
 echo "Unit, doc and integration tests"
 RUST_BACKTRACE=1 cargo test $FEATURES
 
-# Removing any mappings left over from integration tests
+# Removing any mappings or on disk keys left over from integration tests
 rm -rf mappings/
+rm -f *.psa_its
 
 echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &

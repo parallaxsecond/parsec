@@ -15,6 +15,7 @@ RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake 
 RUN apt install -y --fix-missing wget python3 cmake clang
 RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
 RUN apt install -y python3-distutils libclang-6.0-dev protobuf-compiler python3-pip
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 
 WORKDIR /tmp
 
@@ -84,20 +85,9 @@ RUN cd nanopb-0.4.4-linux-x86 \
 	&& make install
 RUN rm -rf nanopb-0.4.4-linux-x86 nanopb-0.4.4-linux-x86.tar.gz
 
-# Install mock Trusted Services
 # Setup git config for patching dependencies
 RUN git config --global user.email "some@email.com"
 RUN git config --global user.name "Parsec Team"
-RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
-	&& cd trusted-services \
-	&& git reset --hard 389b50624f25dae860bbbf8b16f75b32f1589c8d
-# Install correct python dependencies
-RUN pip3 install -r trusted-services/requirements.txt
-RUN cd trusted-services/deployments/libts/linux-pc/ \
-	&& cmake . \
-	&& make \
-	&& cp libts.so* nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
-RUN rm -rf trusted-services
 
 # Create a new token in a new slot. The slot number assigned will be random
 # and is found with the find_slot_number script.
@@ -131,6 +121,18 @@ ENV PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
 COPY generate-keys.sh /tmp/
 RUN ./generate-keys.sh
 
+# Install mock Trusted Services
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
+	&& cd trusted-services \
+	&& git reset --hard 1b0c520279445fc4d85fc582eda5e5ff5f380c39
+# Install correct python dependencies
+RUN pip3 install -r trusted-services/requirements.txt
+RUN cd trusted-services/deployments/libts/linux-pc/ \
+	&& cmake . \
+	&& make \
+	&& cp libts.so* nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
+RUN rm -rf trusted-services
+
 # Import an old version of the e2e tests
 COPY import-old-e2e-tests.sh /tmp/
 RUN ./import-old-e2e-tests.sh
@@ -138,3 +140,6 @@ RUN ./import-old-e2e-tests.sh
 # Download the SPIRE server and agent
 RUN curl -s -N -L https://github.com/spiffe/spire/releases/download/v0.11.1/spire-0.11.1-linux-x86_64-glibc.tar.gz | tar xz
 ENV SPIFFE_ENDPOINT_SOCKET="unix:///tmp/agent.sock"
+
+# Add safe.directory configuration to access repos freely
+RUN git config --global --add safe.directory '*'
