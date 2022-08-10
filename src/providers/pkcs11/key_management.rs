@@ -7,8 +7,9 @@ use crate::key_info_managers::KeyIdentity;
 use cryptoki::mechanism::{Mechanism, MechanismType};
 use cryptoki::object::{Attribute, AttributeType, KeyType, ObjectClass, ObjectHandle};
 use cryptoki::session::Session;
-use log::{error, info, trace};
+use log::{error, info, trace, warn};
 use parsec_interface::operations::psa_key_attributes::{EccFamily, Id, Lifetime, Type};
+use parsec_interface::operations::utils_deprecated_primitives::CheckDeprecated;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -87,6 +88,13 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        if let Err(ResponseStatus::DeprecatedPrimitive) = op.check_deprecated() {
+            warn!("The key requested to generate is deprecated");
+            if !crate::utils::GlobalConfig::allow_deprecated() {
+                return Err(ResponseStatus::DeprecatedPrimitive);
+            }
+        }
+
         if op.attributes.key_type.is_public_key() {
             error!("A public key type can not be generated.");
             return Err(ResponseStatus::PsaErrorInvalidArgument);
@@ -182,6 +190,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        if let Err(ResponseStatus::DeprecatedPrimitive) = op.check_deprecated() {
+            warn!("The key requested to import is deprecated");
+        }
+
         let key_name = op.key_name;
         let key_attributes = op.attributes;
 

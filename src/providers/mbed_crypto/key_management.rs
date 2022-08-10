@@ -3,8 +3,9 @@
 use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
-use log::error;
+use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, Type};
+use parsec_interface::operations::utils_deprecated_primitives::CheckDeprecated;
 use parsec_interface::operations::{
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_import_key,
 };
@@ -38,6 +39,13 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_generate_key::Operation,
     ) -> Result<psa_generate_key::Result> {
+        if let Err(ResponseStatus::DeprecatedPrimitive) = op.check_deprecated() {
+            warn!("The key requested to generate is deprecated");
+            if !crate::utils::GlobalConfig::allow_deprecated() {
+                return Err(ResponseStatus::DeprecatedPrimitive);
+            }
+        }
+
         let key_name = op.key_name;
         let key_attributes = Provider::check_key_size(op.attributes, false)?;
         let key_identity = KeyIdentity::new(
@@ -83,6 +91,10 @@ impl Provider {
         application_identity: &ApplicationIdentity,
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
+        if let Err(ResponseStatus::DeprecatedPrimitive) = op.check_deprecated() {
+            warn!("The key requested to import is deprecated");
+        }
+
         let key_name = op.key_name;
         let key_attributes = Provider::check_key_size(op.attributes, true)?;
         let key_data = op.data;

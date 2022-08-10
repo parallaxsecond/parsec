@@ -7,7 +7,7 @@ use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
 use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricSignature};
 use parsec_client::core::interface::operations::psa_key_attributes::{
-    Attributes, Lifetime, Policy, Type, UsageFlags,
+    Attributes, EccFamily, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::core::interface::requests::ResponseStatus;
 use regex::Regex;
@@ -528,5 +528,166 @@ fn pkcs11_pin_str_fmt_with_hex_word() {
         "pkcs11_pin_str_fmt_with_hex_word.toml",
         "1234",
         "hex:1100220033",
+    );
+}
+
+#[test]
+fn reject_deprecated() {
+    set_config("reject_deprecated.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_verify_hash()
+        .set_sign_message()
+        .set_verify_message()
+        .set_export();
+    assert_eq!(
+        client.generate_key(
+            "reject_deprecated_key".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Md5.into(),
+                        },
+                    ),
+                },
+            },
+        ),
+        Err(ResponseStatus::DeprecatedPrimitive)
+    );
+    assert_eq!(
+        client.generate_key(
+            "reject_non_deprecated_key".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Sha256.into(),
+                        },
+                    ),
+                },
+            },
+        ),
+        Ok(())
+    );
+
+    // Even the key is deprecated only a warning on the service logs should appear while importing it.
+    assert_eq!(
+        client.import_key(
+            "reject_deprecated_key_import".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Md5.into(),
+                        },
+                    ),
+                },
+            },
+            vec![
+                0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
+                0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF,
+                0xDE, 0xAD, 0xBE, 0xEF
+            ],
+        ),
+        Ok(())
+    );
+}
+
+#[test]
+fn allow_deprecated() {
+    set_config("allow_deprecated.toml");
+    reload_service();
+
+    let mut client = TestClient::new();
+    let mut usage_flags: UsageFlags = Default::default();
+    let _ = usage_flags
+        .set_sign_hash()
+        .set_verify_hash()
+        .set_sign_message()
+        .set_verify_message()
+        .set_export();
+    assert_eq!(
+        client.generate_key(
+            "allow_deprecated_key".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Md5.into(),
+                        },
+                    ),
+                },
+            },
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        client.generate_key(
+            "allow_non_deprecated_key".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::RsaKeyPair,
+                bits: 1024,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Sha256.into(),
+                        },
+                    ),
+                },
+            },
+        ),
+        Ok(())
+    );
+
+    assert_eq!(
+        client.import_key(
+            "allow_deprecated_key_import".to_owned(),
+            Attributes {
+                lifetime: Lifetime::Volatile,
+                key_type: Type::EccKeyPair {
+                    curve_family: EccFamily::SecpR1,
+                },
+                bits: 256,
+                policy: Policy {
+                    usage_flags,
+                    permitted_algorithms: Algorithm::AsymmetricSignature(
+                        AsymmetricSignature::RsaPkcs1v15Sign {
+                            hash_alg: Hash::Md5.into(),
+                        },
+                    ),
+                },
+            },
+            vec![
+                0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD,
+                0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF,
+                0xDE, 0xAD, 0xBE, 0xEF
+            ],
+        ),
+        Ok(())
     );
 }

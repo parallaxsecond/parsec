@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 pub struct GlobalConfig {
     log_error_details: AtomicBool,
     buffer_size_limit: AtomicUsize,
+    allow_deprecated: AtomicBool,
 }
 
 impl GlobalConfig {
@@ -17,6 +18,7 @@ impl GlobalConfig {
         GlobalConfig {
             log_error_details: AtomicBool::new(false),
             buffer_size_limit: AtomicUsize::new(DEFAULT_BUFFER_SIZE_LIMIT), // 1 MB
+            allow_deprecated: AtomicBool::new(true),
         }
     }
 
@@ -31,6 +33,12 @@ impl GlobalConfig {
     pub fn buffer_size_limit() -> usize {
         GLOBAL_CONFIG.buffer_size_limit.load(Ordering::Relaxed)
     }
+
+    /// Determine wethere deprecated algorithms and key types are allowed
+    /// during key generation
+    pub fn allow_deprecated() -> bool {
+        GLOBAL_CONFIG.allow_deprecated.load(Ordering::Relaxed)
+    }
 }
 
 static GLOBAL_CONFIG: GlobalConfig = GlobalConfig::new();
@@ -38,6 +46,7 @@ static GLOBAL_CONFIG: GlobalConfig = GlobalConfig::new();
 pub(super) struct GlobalConfigBuilder {
     log_error_details: bool,
     buffer_size_limit: Option<usize>,
+    allow_deprecated: bool,
 }
 
 impl GlobalConfigBuilder {
@@ -45,6 +54,7 @@ impl GlobalConfigBuilder {
         GlobalConfigBuilder {
             log_error_details: false,
             buffer_size_limit: None,
+            allow_deprecated: true,
         }
     }
 
@@ -60,6 +70,12 @@ impl GlobalConfigBuilder {
         self
     }
 
+    pub fn with_allow_deprecated(mut self, allow_deprecated: bool) -> Self {
+        self.allow_deprecated = allow_deprecated;
+
+        self
+    }
+
     pub fn build(self) {
         GLOBAL_CONFIG
             .log_error_details
@@ -68,5 +84,8 @@ impl GlobalConfigBuilder {
             self.buffer_size_limit.unwrap_or(DEFAULT_BUFFER_SIZE_LIMIT),
             Ordering::Relaxed,
         );
+        GLOBAL_CONFIG
+            .allow_deprecated
+            .store(self.allow_deprecated, Ordering::Relaxed);
     }
 }
