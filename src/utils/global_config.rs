@@ -18,7 +18,7 @@ impl GlobalConfig {
         GlobalConfig {
             log_error_details: AtomicBool::new(false),
             buffer_size_limit: AtomicUsize::new(DEFAULT_BUFFER_SIZE_LIMIT), // 1 MB
-            allow_deprecated: AtomicBool::new(true),
+            allow_deprecated: AtomicBool::new(false),
         }
     }
 
@@ -34,7 +34,7 @@ impl GlobalConfig {
         GLOBAL_CONFIG.buffer_size_limit.load(Ordering::Relaxed)
     }
 
-    /// Determine wethere deprecated algorithms and key types are allowed
+    /// Determine whether deprecated algorithms and key types are allowed
     /// during key generation
     pub fn allow_deprecated() -> bool {
         GLOBAL_CONFIG.allow_deprecated.load(Ordering::Relaxed)
@@ -54,7 +54,7 @@ impl GlobalConfigBuilder {
         GlobalConfigBuilder {
             log_error_details: false,
             buffer_size_limit: None,
-            allow_deprecated: true,
+            allow_deprecated: false,
         }
     }
 
