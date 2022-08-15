@@ -583,7 +583,7 @@ fn reject_deprecated() {
         Ok(())
     );
 
-    // Even the key is deprecated only a warning on the service logs should appear while importing it.
+    // Even if the key is deprecated only a warning on the service logs should appear while importing it.
     assert_eq!(
         client.import_key(
             "reject_deprecated_key_import".to_owned(),

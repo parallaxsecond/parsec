@@ -82,6 +82,7 @@ impl Provider {
         op: psa_import_key::Operation,
     ) -> Result<psa_import_key::Result> {
         if let Err(ResponseStatus::DeprecatedPrimitive) = op.check_deprecated() {
+            // While importing a deprecated key, only a warning is needed.
             warn!("The key requested to import is deprecated");
         }
 
