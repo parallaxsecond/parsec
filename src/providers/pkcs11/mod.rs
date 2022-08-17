@@ -56,6 +56,9 @@ const SUPPORTED_OPCODES: [Opcode; 10] = [
     Opcode::PsaGenerateRandom,
 ];
 
+const PIN_STRING_PREFIX: &str = "str:";
+const PIN_HEX_PREFIX: &str = "hex:";
+
 /// Provider for Public Key Cryptography Standard #11
 ///
 /// Operations for this provider are serviced through a PKCS11 interface,
@@ -217,11 +220,17 @@ impl Provider {
             .map_err(to_response_status)?;
 
         if self.user_pin.is_some() {
+            let mut pin = self.user_pin.as_ref().unwrap().expose_secret().clone();
+            if pin.starts_with(PIN_HEX_PREFIX) {
+                if let Ok(raw_pin) = hex::decode(pin.split_off(PIN_HEX_PREFIX.len())) {
+                    pin = String::from_utf8_lossy(&raw_pin.as_slice()).to_string();
+                }
+            } else if pin.starts_with(PIN_STRING_PREFIX) {
+                pin = pin.split_off(PIN_STRING_PREFIX.len()).into();
+            }
+
             session
-                .login(
-                    UserType::User,
-                    Some(self.user_pin.as_ref().unwrap().expose_secret()),
-                )
+                .login(UserType::User, Some(&pin))
                 .or_else(|e| {
                     if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn) = e {
                         Ok(())
