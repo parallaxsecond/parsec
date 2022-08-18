@@ -1,0 +1,27 @@
+[core_settings]
+# The CI already timestamps the logs
+log_timestamp = false
+log_error_details = true
+
+# The container runs the Parsec service as root, so make sure we disable root
+# checks.
+allow_root = true
+
+[listener]
+listener_type = "DomainSocket"
+# The timeout needs to be smaller than the test client timeout (five seconds) as it is testing
+# that the service does not hang for very big values of body or authentication length.
+timeout = 3000 # in milliseconds
+socket_path = "/tmp/parsec.sock"
+
+[authenticator]
+auth_type = "Direct"
+
+[[key_manager]]
+name = "sqlite-manager"
+manager_type = "SQLite"
+sqlite_db_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
+
+[[provider]]
+provider_type = "MbedCrypto"
+key_info_manager = "sqlite-manager"
