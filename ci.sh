@@ -17,9 +17,10 @@ cleanup () {
     find e2e_tests -name "*toml" -not -name "Cargo.toml" -exec sed -i 's/^slot_number =.*/# slot_number/' {} \;
     find e2e_tests -name "*toml" -not -name "Cargo.toml" -exec sed -i 's/^serial_number =.*/# serial_number/' {} \;
     # Remove fake mapping and temp files
-    rm -rf "mappings"
+    rm -rf "mappings" "kim-mappings"
     rm -f "NVChip"
     rm -f "e2e_tests/provider_cfg/tmp_config.toml"
+    rm -f "parsec.sock"
 
     if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
 }
@@ -78,6 +79,19 @@ stop_service() {
     done
 }
 
+reset_tpm()
+{
+    # In order to reset the TPM, we need to restart the TPM server and send a Startup(CLEAR)
+    pkill tpm_server
+    sleep 1
+
+    tpm_server &
+    TPM_SRV_PID=$!
+    sleep 5
+
+    tpm2_startup -c -T mssim
+}
+
 reload_service() {
     echo "Trigger a configuration reload to load the new mappings or config file"
     pkill -SIGHUP parsec
@@ -119,23 +133,25 @@ setup_mappings() {
     # to use the key generated via the generate-keys.sh script in the test image.
     # As mock Trusted Service saves its keys on the current directory we need to move them
     # as well.
+    KIM_NAME=$1
     if [ "$PROVIDER_NAME" = "trusted-service" ]; then
         # Copy the generated mappings and keys of the Trusted service
-        cp -r /tmp/ts-keys/* .
+        cp -r /tmp/$KIM_NAME/ts-keys/* .
     else
-        cp -r /tmp/mappings/ .
+        if [ "$KIM_NAME" = "ondisk" ]; then
+            cp -r /tmp/$KIM_NAME/mappings/ .
+        else
+            cp -r /tmp/$KIM_NAME/kim-mappings/ .
+        fi
         # As Mbed Crypto saves its keys on the current directory we need to move them
         # as well.
         if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-            cp /tmp/*.psa_its .
+            cp /tmp/$KIM_NAME/*.psa_its .
+        fi
+        if [ "$PROVIDER_NAME" = "tpm" ]; then
+            cp /tmp/$KIM_NAME/NVChip .
         fi
     fi
-    # Add the fake mappings for the key mappings test as well. The test will check that
-    # those keys have successfully been deleted.
-    # TODO: add fake mappings for the CryptoAuthLib provider.
-    cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-
-    reload_service
 }
 
 # Use the newest version of the Rust toolchain
@@ -195,7 +211,7 @@ trap cleanup EXIT
 
 if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
 	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
-    cp /tmp/NVChip .
+    cp /tmp/ondisk/NVChip .
     # Start and configure TPM server
     tpm_server &
     TPM_SRV_PID=$!
@@ -248,14 +264,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
-        if [ "$PROVIDER_NAME" = "trusted-service" ]; then
-            cp -r /tmp/ts-keys/* .
-        else
-            cp -r /tmp/mappings/ .
-            if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-                cp /tmp/*.psa_its .
-            fi
-        fi
+        setup_mappings ondisk
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
 
         # Start service
@@ -268,6 +277,21 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         run_normal_tests
         run_key_mappings_tests
         stop_service
+
+        cp $(pwd)/e2e_tests/provider_cfg/$PROVIDER_NAME/config-sqlite.toml $CONFIG_PATH
+        setup_mappings sqlite
+
+        if [ "$PROVIDER_NAME" = "tpm" ]; then
+            reset_tpm
+        fi
+
+        # Start service
+        RUST_LOG=info cargo +1.57.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+            --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
+            --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
+        wait_for_service
+
+        run_key_mappings_tests
     done
 
     # Run unit tests
@@ -396,7 +420,12 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     echo "Execute all-providers config tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::config -- --test-threads=1
 else
-    setup_mappings
+    setup_mappings ondisk
+    # Add the fake mappings for the key mappings test as well. The test will check that
+    # those keys have successfully been deleted.
+    # TODO: add fake mappings for the CryptoAuthLib provider.
+    cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
+    reload_service
 
     # Per provider tests
     run_normal_tests
@@ -422,16 +451,8 @@ else
         # We first create the keys
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml before_tpm_reset
         stop_service
-
-        # In order to reset the TPM, we need to restart the TPM server and send a Startup(CLEAR)
-        pkill tpm_server
-        sleep 1
-
-        tpm_server &
-        TPM_SRV_PID=$!
-        sleep 5
-
-        tpm2_startup -c -T mssim
+        
+        reset_tpm
 
         # We then spin up the service again and check that the keys can still be used
         RUST_LOG=error RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &
@@ -439,4 +460,14 @@ else
 
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml after_tpm_reset
     fi
+
+    cp $(pwd)/e2e_tests/provider_cfg/$PROVIDER_NAME/config-sqlite.toml $CONFIG_PATH
+    setup_mappings sqlite
+
+    if [ "$PROVIDER_NAME" = "tpm" ]; then
+        reset_tpm
+    fi
+
+    reload_service
+    run_key_mappings_tests
 fi
