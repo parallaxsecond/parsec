@@ -21,7 +21,7 @@ auth_type = "Direct"
 [[key_manager]]
 name = "I-want-to-speak-to-the-manager"
 manager_type = "SQLite"
-database_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
+sqlite_db_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
 
 [[provider]]
 provider_type = "MbedCrypto"
