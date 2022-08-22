@@ -86,7 +86,7 @@ impl ErrorTrait for Error {
 
 /// Native representation of errors returned by the
 /// RPC caller
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RpcCallerError {
     /// endpoint for connecting to Trusted Services does not exist
     EndpointDoesNotExist,
@@ -170,7 +170,7 @@ impl fmt::Display for RpcCallerError {
 impl ErrorTrait for RpcCallerError {}
 
 /// Errors returned by this wrapper layer
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum WrapperError {
     /// call handle returned by RPC layer was null
     CallHandleNull,
