@@ -7,7 +7,7 @@ use parsec_interface::operations::psa_algorithm::{
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
 use parsec_interface::requests::{Opcode, ResponseStatus};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 /// Software status of a ATECC slot
 pub enum KeySlotStatus {
     /// Slot is free
