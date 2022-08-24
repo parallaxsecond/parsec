@@ -465,7 +465,6 @@ fn init_pkcs11_token(lib: &str, so_pin: &str, pin: &str) -> String {
     pkcs11.initialize(CInitializeArgs::OsThreads).unwrap();
     let slot = pkcs11.get_slots_with_token().unwrap().pop().unwrap();
     pkcs11.init_token(slot, so_pin, "Test Token").unwrap();
-    println!("slots {:?}", slot);
     // set flags
     let mut flags = SessionFlags::new();
     let _ = flags.set_rw_session(true).set_serial_session(true);
