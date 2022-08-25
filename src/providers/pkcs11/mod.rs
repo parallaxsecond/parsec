@@ -31,7 +31,7 @@ use std::str::FromStr;
 use std::sync::RwLock;
 use utils::{to_response_status, KeyPairType};
 use uuid::Uuid;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 type LocalIdStore = HashSet<u32>;
 
@@ -55,6 +55,9 @@ const SUPPORTED_OPCODES: [Opcode; 10] = [
     Opcode::CanDoCrypto,
     Opcode::PsaGenerateRandom,
 ];
+
+const PIN_STRING_PREFIX: &str = "str:";
+const PIN_HEX_PREFIX: &str = "hex:";
 
 /// Provider for Public Key Cryptography Standard #11
 ///
@@ -217,11 +220,18 @@ impl Provider {
             .map_err(to_response_status)?;
 
         if self.user_pin.is_some() {
+            let mut pin = Zeroizing::new(self.user_pin.as_ref().unwrap().expose_secret().clone());
+            if pin.starts_with(PIN_HEX_PREFIX) {
+                if let Ok(mut raw_pin) = hex::decode(pin.split_off(PIN_HEX_PREFIX.len())) {
+                    pin = Zeroizing::new(String::from_utf8_lossy(&raw_pin.as_slice()).to_string());
+                    raw_pin.zeroize();
+                }
+            } else if pin.starts_with(PIN_STRING_PREFIX) {
+                pin = pin.split_off(PIN_STRING_PREFIX.len()).into();
+            }
+
             session
-                .login(
-                    UserType::User,
-                    Some(self.user_pin.as_ref().unwrap().expose_secret()),
-                )
+                .login(UserType::User, Some(&pin))
                 .or_else(|e| {
                     if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn) = e {
                         Ok(())

@@ -21,19 +21,44 @@ use std::time::Duration;
 const CONFIG_TOMLS_FOLDER: &str = "tests/all_providers/config/tomls";
 const SERVICE_CONFIG_PATH: &str = "provider_cfg/tmp_config.toml";
 
-fn set_config(filename: &str) {
-    info!("Changing service configuration file to {}", filename);
-    let config_path = PathBuf::from(SERVICE_CONFIG_PATH);
-    let mut new_config = env::current_dir() // this is the root of the crate for tests
-        .unwrap();
-    new_config.push(CONFIG_TOMLS_FOLDER);
-    new_config.push(filename);
-    if !new_config.exists() {
+fn get_test_configfile_path(filename: &str) -> String {
+    let mut config_path = env::current_dir().unwrap();
+    config_path.push(CONFIG_TOMLS_FOLDER);
+    config_path.push(filename);
+    if !config_path.exists() {
         error!("Configuration file {} does not exist", filename);
         panic!();
     }
+    config_path.to_str().unwrap().to_owned()
+}
 
+fn set_config(filename: &str) {
+    info!("Changing service configuration file to {}", filename);
+    let config_path = PathBuf::from(SERVICE_CONFIG_PATH);
+    let new_config = get_test_configfile_path(filename);
     let _ = fs::copy(new_config, config_path).unwrap();
+}
+
+fn extract_from_config(filename: &str, key: &str) -> String {
+    let configfile_path = get_test_configfile_path(filename);
+
+    let grep_cmd = Command::new("grep")
+        .arg(key)
+        .arg(configfile_path)
+        .output()
+        .expect("Couldn't get key from config file");
+
+    let pattern = Regex::new(format!(r"{} = (.*)", key).as_str()).unwrap();
+
+    let values: Vec<_> = String::from_utf8(grep_cmd.stdout)
+        .unwrap()
+        .lines()
+        .filter_map(|line| pattern.captures(line))
+        .map(|cap| cap[1].to_string())
+        .take(1)
+        .collect();
+
+    values[0].to_owned()
 }
 
 fn reload_service() {
@@ -425,5 +450,83 @@ fn activate_cred_no_auth() {
             .activate_credential_with_key(key_name, None, vec![0x33; 16], vec![0x22; 16])
             .unwrap_err(),
         ResponseStatus::PsaErrorGenericError
+    );
+}
+
+#[cfg(feature = "pkcs11-provider")]
+fn init_pkcs11_token(lib: &str, so_pin: &str, pin: &str) -> String {
+    use cryptoki::context::{CInitializeArgs, Pkcs11};
+    use cryptoki::session::SessionFlags;
+    use cryptoki::session::UserType;
+    use std::path::Path;
+
+    let pkcs11 = Pkcs11::new(Path::new(lib)).unwrap();
+    // // initialize the library
+    pkcs11.initialize(CInitializeArgs::OsThreads).unwrap();
+    let slot = pkcs11.get_slots_with_token().unwrap().pop().unwrap();
+    pkcs11.init_token(slot, so_pin, "Test Token").unwrap();
+    // set flags
+    let mut flags = SessionFlags::new();
+    let _ = flags.set_rw_session(true).set_serial_session(true);
+    // open a session
+    let session = pkcs11.open_session_no_callback(slot, flags).unwrap();
+    // log in the session
+    session.login(UserType::So, Some(so_pin)).unwrap();
+    session.init_pin(pin).unwrap();
+    // get the token serial number
+    let token = pkcs11.get_token_info(slot).unwrap();
+    pkcs11.finalize();
+    std::str::from_utf8(&token.serialNumber).unwrap().to_owned()
+}
+
+#[cfg(feature = "pkcs11-provider")]
+fn pkcs11_pin_fmt_test(configfilename: &str, so_pin: &str, pin: &str) {
+    let libpath_str =
+        snailquote::unescape(extract_from_config(configfilename, "library_path").as_str()).unwrap();
+
+    // Initialize token with user pin matches the one in config file
+    let serial_number = init_pkcs11_token(libpath_str.as_str(), so_pin, pin);
+
+    // Append serial number to the config file
+    let configfile_path = get_test_configfile_path(configfilename);
+    let _cmd = Command::new("sh")
+        .args([
+            "-c".to_owned(),
+            format!(
+                "echo \'serial_number = \"{}\"\' >> {}",
+                serial_number, configfile_path
+            ),
+        ])
+        .output();
+
+    set_config(configfilename);
+    reload_service();
+
+    // Revert configuration file to it's original state
+    let _cmd = Command::new("sh")
+        .args([
+            "-c".to_owned(),
+            format!("sed -i \'$d\' {}", configfile_path),
+        ])
+        .output();
+
+    let mut client = TestClient::new();
+    let key_name = auto_test_keyname!();
+    client.generate_rsa_sign_key(key_name).unwrap();
+}
+
+#[cfg(feature = "pkcs11-provider")]
+#[test]
+fn pkcs11_pin_hex_fmt() {
+    pkcs11_pin_fmt_test("pkcs11_pin_hex_fmt.toml", "1234", "\x11\x00\x22\x00\x33");
+}
+
+#[cfg(feature = "pkcs11-provider")]
+#[test]
+fn pkcs11_pin_str_fmt_with_hex_word() {
+    pkcs11_pin_fmt_test(
+        "pkcs11_pin_str_fmt_with_hex_word.toml",
+        "1234",
+        "hex:1100220033",
     );
 }
