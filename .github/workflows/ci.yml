@@ -3,8 +3,8 @@ name: Continuous Integration
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
-  # TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+  # TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
+  TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
 
 jobs:
   build-and-export-test-all-docker:
@@ -13,7 +13,7 @@ jobs:
     # the following condition must evaluate true to execute this job
     # Else it must evaluate false to NOT execute this job
     # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognize at this level.
-    if: ${{ true }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
+    if: ${{ false }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
     steps:
     - uses: actions/checkout@v3
     - name: Build the docker container
