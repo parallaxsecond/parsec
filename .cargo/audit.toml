@@ -1,6 +1,4 @@
 [advisories]
-ignore = ["RUSTSEC-2020-0159", # Issue has been documented here: https://github.com/parallaxsecond/parsec/security/advisories/GHSA-45w3-v3g4-54pm
-          "RUSTSEC-2020-0071"] # Issue has been documented here: https://github.com/parallaxsecond/parsec/security/advisories/GHSA-45w3-v3g4-54pm
 informational_warnings = ["unmaintained"] # warn for categories of informational advisories
 severity_threshold = "low" # CVSS severity ("none", "low", "medium", "high", "critical")
 
