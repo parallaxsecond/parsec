@@ -30,7 +30,7 @@ fn use_and_check() -> Result<()> {
     assert!(!keys.is_empty());
 
     for key in keys {
-        if key.name == "rsa" {
+        if key.name.contains("rsa") {
             let ciphertext = client
                 .asymmetric_encrypt_message_with_rsapkcs1v15(
                     key.name.clone(),
@@ -41,7 +41,7 @@ fn use_and_check() -> Result<()> {
                 .asymmetric_decrypt_message_with_rsapkcs1v15(key.name.clone(), ciphertext)
                 .unwrap();
             assert_eq!(PLAINTEXT_MESSAGE.to_vec(), plaintext);
-        } else if key.name == "ecc" {
+        } else if key.name.contains("ecc") {
             let signature = client.sign_with_ecdsa_sha256(key.name.clone(), HASH.to_vec())?;
             client.verify_with_ecdsa_sha256(key.name.clone(), HASH.to_vec(), signature)?;
         } else {

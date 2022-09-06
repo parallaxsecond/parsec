@@ -117,9 +117,9 @@ ENV LD_LIBRARY_PATH="/usr/local/lib"
 # Individual tests might change that, but set the default after.
 ENV PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
 
-# Generate keys for the key mappings test
+# Generate keys for the key mappings test for ondisk KIM
 COPY generate-keys.sh /tmp/
-RUN ./generate-keys.sh
+RUN ./generate-keys.sh ondisk
 
 # Install mock Trusted Services
 RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
@@ -132,6 +132,9 @@ RUN cd trusted-services/deployments/libts/linux-pc/ \
 	&& make \
 	&& cp libts.so* nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
 RUN rm -rf trusted-services
+
+# Generate keys for the key mappings test for sqlite KIM
+RUN ./generate-keys.sh sqlite
 
 # Import an old version of the e2e tests
 COPY import-old-e2e-tests.sh /tmp/

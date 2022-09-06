@@ -20,7 +20,7 @@ admins = [ { name = "list_clients test" }, { name = "1000" }, { name = "client1"
 [[key_manager]]
 name = "sqlite-manager"
 manager_type = "SQLite"
-database_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
+sqlite_db_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
 
 [[provider]]
 provider_type = "MbedCrypto"

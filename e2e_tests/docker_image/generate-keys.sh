@@ -26,24 +26,166 @@ wait_for_killprocess() {
         sleep 0.1
     done
 }
+
+configure_tpm() 
+{
+    tpm_server &
+    wait_for_process "tpm_server"
+    tpm2_startup -c -T mssim
+    tpm2_changeauth -c owner tpm_pass -T mssim
+    tpm2_changeauth -c endorsement endorsement_pass -T mssim
+}
+
+configure_softhsm()
+{
+    pushd /tmp/create_keys/parsec/e2e_tests
+    SLOT_NUMBER=`softhsm2-util --show-slots | head -n2 | tail -n1 | cut -d " " -f 2`
+    find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
+    popd
+}
+
+kill_parsec_tpm_services()
+{
+    pkill parsec
+    wait_for_killprocess "parsec"
+    rm -rf /tmp/parsec.sock
+    tpm2_shutdown -T mssim
+    pkill tpm_server
+    wait_for_killprocess "tpm_server"
+}
+
+save_generated_mappings_keys()
+{
+    DESTINATION_PATH=$1
+    mkdir -p $DESTINATION_PATH
+    if [[ "$DESTINATION_PATH" == *"ondisk"* ]]; then
+        mv /tmp/create_keys/parsec/mappings $DESTINATION_PATH
+    else
+        mv /var/lib/parsec/kim-mappings $DESTINATION_PATH
+    fi
+    
+    mv /tmp/create_keys/parsec/0000000000000002.psa_its $DESTINATION_PATH
+    mv /tmp/create_keys/parsec/0000000000000003.psa_its $DESTINATION_PATH
+}
+
+generate_and_store_keys_for_ondisk_KIM()
+{
+    # This config.toml of parsec version 0.7.0 uses on disk manager. The latest 
+    # one is updated to use SQLite manager.
+    ./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
+    wait_for_process "parsec"
+    wait_for_file "/tmp/parsec.sock"
+
+    # Generate keys for all providers (trusted-service-provider isn't included)
+    parsec-tool -p 1 create-rsa-key -k rsa
+    parsec-tool -p 1 create-ecc-key -k ecc
+    parsec-tool -p 2 create-rsa-key -k rsa
+    # PKCS11 provider does not support creating ECC keys
+    # See https://github.com/parallaxsecond/parsec/issues/421
+    #parsec-tool -p 2 create-ecc-key -k ecc
+    parsec-tool -p 3 create-rsa-key -k rsa
+    parsec-tool -p 3 create-ecc-key -k ecc
+    #TODO: add keys in the CryptoAuthLib providers
+    #TODO: when possible.
+
+    kill_parsec_tpm_services
+
+    save_generated_mappings_keys /tmp/ondisk
+    mv /tmp/create_keys/parsec/NVChip /tmp/ondisk
+
+    # Build the service with trusted service provider
+    cargo build --features "trusted-service-provider, all-authenticators"
+    # Start the service with trusted service provider
+    ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
+    wait_for_process "parsec"
+    wait_for_file "/tmp/parsec.sock"
+    # We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
+    parsec-tool create-rsa-key -k rsa
+    parsec-tool create-ecc-key -k ecc
+
+    save_generated_mappings_keys /tmp/ondisk/ts-keys
+}
+
+generate_and_store_keys_for_sqlite_KIM()
+{
+    ./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
+    wait_for_process "parsec"
+    wait_for_file "/tmp/parsec.sock"
+    
+    # Generate keys for all providers (trusted-service-provider isn't included)
+    parsec-tool -p 1 create-rsa-key -k rsa-mbed
+    parsec-tool -p 1 create-ecc-key -k ecc-mbed
+    parsec-tool -p 2 create-rsa-key -k rsa-pkcs11
+    # PKCS11 provider does not support creating ECC keys
+    # See https://github.com/parallaxsecond/parsec/issues/421
+    #parsec-tool -p 2 create-ecc-key -k ecc
+    parsec-tool -p 3 create-rsa-key -k rsa-tpm
+    parsec-tool -p 3 create-ecc-key -k ecc-tpm
+    #TODO: add keys in the CryptoAuthLib providers
+    #TODO: when possible.
+
+    kill_parsec_tpm_services
+
+    save_generated_mappings_keys /tmp/sqlite/
+    mv /tmp/create_keys/parsec/NVChip /tmp/sqlite
+
+    # Create config file for trusted services with sqlite KIM
+    pushd e2e_tests/provider_cfg/trusted-service/
+    export LINE_NO=21
+    head -n "$(( LINE_NO - 1 ))" config.toml >> config-sqlite.toml
+    cat <<EOF >> config-sqlite.toml
+name = "sqlite-manager"
+manager_type = "SQLite"
+sqlite_db_path = "/var/lib/parsec/kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
+
+[[provider]]
+provider_type = "TrustedService"
+key_info_manager = "sqlite-manager"
+EOF
+    popd
+    # Build the service with trusted service provider
+    cargo build --features "trusted-service-provider, all-authenticators"
+    # Start the service with trusted service provider
+    ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config-sqlite.toml &
+    wait_for_process "parsec"
+    wait_for_file "/tmp/parsec.sock"
+    # We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
+    parsec-tool create-rsa-key -k rsa-ts
+    parsec-tool create-ecc-key -k ecc-ts
+
+    save_generated_mappings_keys /tmp/sqlite/ts-keys/
+}
+
 # Install an old version mock Trusted Services compatible with old parsec 0.7.0
 # used in generate_key.sh script
-git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
-pushd trusted-services && git reset --hard 35c6d643b5f0c0387702e22bf742dd4878ca5ddd && popd
-# Install correct python dependencies
-pip3 install -r trusted-services/requirements.txt
-pushd /tmp/trusted-services/deployments/libts/linux-pc/
-cmake .
-make
-cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
-popd
-rm -rf /tmp/trusted-services
+install_trusted_services_lib_old()
+{
+    git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
+    pushd trusted-services && git reset --hard 35c6d643b5f0c0387702e22bf742dd4878ca5ddd && popd
+    # Install correct python dependencies
+    pip3 install -r trusted-services/requirements.txt
+    pushd /tmp/trusted-services/deployments/libts/linux-pc/
+    cmake .
+    make
+    cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
+    popd
+    rm -rf /tmp/trusted-services
+}
 
-mkdir /tmp/create_keys
+if [ "$1" == "ondisk" ]; then
+    install_trusted_services_lib_old
+    # Use an old version of the Parsec service to make sure keys can still be used
+    # with today's version.
+    git clone https://github.com/parallaxsecond/parsec.git --branch 0.7.0 /tmp/create_keys/parsec
+elif [ "$1" == "sqlite" ]; then
+    # Use an old version of the Parsec service to make sure keys can still be used
+    # with today's version.
+    git clone https://github.com/parallaxsecond/parsec.git --branch 1.0.0 /tmp/create_keys/parsec
+else
+    echo "Incorrect usage of script"
+    exit 1
+fi
 
-# Use an old version of the Parsec service to make sure keys can still be used
-# with today's version.
-git clone https://github.com/parallaxsecond/parsec.git --branch 0.7.0 /tmp/create_keys/parsec
 cd /tmp/create_keys/parsec
 git submodule update --init --recursive
 
@@ -55,59 +197,18 @@ cargo install parsec-tool
 cargo build --features "all-providers, all-authenticators"
 
 # Start the service with all providers (trusted-service-provider isn't included)
-tpm_server &
-wait_for_process "tpm_server"
-tpm2_startup -c -T mssim
-tpm2_changeauth -c owner tpm_pass -T mssim
-tpm2_changeauth -c endorsement endorsement_pass -T mssim
-cd /tmp/create_keys/parsec/e2e_tests
-SLOT_NUMBER=`softhsm2-util --show-slots | head -n2 | tail -n1 | cut -d " " -f 2`
-find . -name "*toml" -not -name "Cargo.toml" -exec sed -i "s/^# slot_number.*$/slot_number = $SLOT_NUMBER/" {} \;
-cd ../
-./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
-wait_for_process "parsec"
-wait_for_file "/tmp/parsec.sock"
-# Generate keys for all providers (trusted-service-provider isn't included)
-parsec-tool -p 1 create-rsa-key -k rsa
-parsec-tool -p 1 create-ecc-key -k ecc
-parsec-tool -p 2 create-rsa-key -k rsa
-# PKCS11 provider does not support creating ECC keys
-# See https://github.com/parallaxsecond/parsec/issues/421
-#parsec-tool -p 2 create-ecc-key -k ecc
-parsec-tool -p 3 create-rsa-key -k rsa
-parsec-tool -p 3 create-ecc-key -k ecc
-#TODO: add keys in the CryptoAuthLib providers
-#TODO: when possible.
+configure_tpm
+configure_softhsm
+
+if [ "$1" == "ondisk" ]; then
+    generate_and_store_keys_for_ondisk_KIM
+else
+    generate_and_store_keys_for_sqlite_KIM
+fi
 
 pkill parsec
 wait_for_killprocess "parsec"
 rm -rf /tmp/parsec.sock
-tpm2_shutdown -T mssim
-pkill tpm_server
-wait_for_killprocess "tpm_server"
-
-# Mbed Crypto creates keys in the current directory.
-mv /tmp/create_keys/parsec/mappings /tmp
-mv /tmp/create_keys/parsec/0000000000000002.psa_its /tmp
-mv /tmp/create_keys/parsec/0000000000000003.psa_its /tmp
-# The TPM server state needs to be passed to the tested service
-mv /tmp/create_keys/parsec/NVChip /tmp
-
-# Build the service with trusted service provider
-cargo build --features "trusted-service-provider, all-authenticators"
-# Start the service with trusted service provider
-./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
-wait_for_process "parsec"
-wait_for_file "/tmp/parsec.sock"
-# We use the Parsec Tool to create one RSA and one ECC key using trusted service provider.
-parsec-tool create-rsa-key -k rsa
-parsec-tool create-ecc-key -k ecc
-
-mkdir /tmp/ts-keys
-cp -r /tmp/create_keys/parsec/mappings /tmp/ts-keys
-# Trusted service creates keys in the current directory.
-cp -r /tmp/create_keys/parsec/0000000000000002.psa_its /tmp/ts-keys
-cp -r /tmp/create_keys/parsec/0000000000000003.psa_its /tmp/ts-keys
 
 # Cleanup to reduce image's size
 cargo uninstall parsec-tool
