@@ -117,6 +117,7 @@ impl ServiceBuilder {
                     .buffer_size_limit
                     .unwrap_or(DEFAULT_BUFFER_SIZE_LIMIT),
             )
+            .with_allow_deprecated(config.core_settings.allow_deprecated.unwrap_or(false))
             .build();
 
         let authenticators = build_authenticators(&config.authenticator)?;

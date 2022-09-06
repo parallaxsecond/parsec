@@ -47,6 +47,32 @@ macro_rules! format_error {
     };
 }
 
+#[allow(unused)]
+macro_rules! deprecation_check {
+    ($operation:ident, $warning:expr, $return_flag:expr) => {
+        if let Err(ResponseStatus::DeprecatedPrimitive) = $operation.check_deprecated() {
+            log::warn!("{}", $warning);
+            if $return_flag && !crate::utils::GlobalConfig::allow_deprecated() {
+                return Err(ResponseStatus::DeprecatedPrimitive);
+            }
+        }
+    };
+}
+
+#[allow(unused)]
+macro_rules! warn_on_deprecated {
+    ($operation:ident, $warning:expr) => {
+        deprecation_check!($operation, $warning, false);
+    };
+}
+
+#[allow(unused)]
+macro_rules! return_on_deprecated {
+    ($operation:ident, $warning:expr) => {
+        deprecation_check!($operation, $warning, true);
+    };
+}
+
 pub mod authenticators;
 pub mod back;
 pub mod front;

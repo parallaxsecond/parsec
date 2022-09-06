@@ -36,6 +36,11 @@
 # for buffers larger than this threshold will be rejected. Defaults to 1MB.
 #buffer_size_limit = 1048576
 
+# Decide whether deprecated algorithms and key types are allowed when generating keys or not.
+# Note: While importing a deprecated key, only a warning log is generated.
+# The default behaviour is to reject the deprecated primitives. Hence, the default value is false.
+#allow_deprecated = false
+
 # (Required) Configuration for the service IPC listener component.
 [listener]
 # (Required) Type of IPC that the service will support.

@@ -19,6 +19,8 @@
       "justincormack",
       "paulhowardarm",
       "anta5010",
+      "gowthamsk-arm",
+      "mohamedasaker-arm",
     ]
 
 [people]
@@ -59,3 +61,13 @@
     Name = "Anton Antonov"
     Email = "anton.antonov@arm.com"
     GitHub = "anta5010"
+
+    [people.gowthamsk-arm]
+    Name = "Gowtham Suresh Kumar"
+    Email = "gowtham.sureshkumar@arm.com"
+    GitHub = "gowthamsk-arm"
+
+    [people.mohamedasaker-arm]
+    Name = "Mohamed Omar Asaker"
+    Email = "mohamed.omarasaker@arm.com"
+    GitHub = "mohamedasaker-arm"

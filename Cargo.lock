@@ -997,8 +997,7 @@ dependencies = [
 [[package]]
 name = "parsec-interface"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9ad975a39f98e38b5897402887862df08b083fcfc7bdc209145b2f9851b165a"
+source = "git+https://github.com/parallaxsecond/parsec-interface-rs.git?rev=b2a4b6656f693b61f7fdac593de5fbbb1853d58e#b2a4b6656f693b61f7fdac593de5fbbb1853d58e"
 dependencies = [
  "bincode",
  "derivative",
