@@ -6,6 +6,8 @@ log_error_details = true
 # The container runs the Parsec service as root, so make sure we disable root
 # checks.
 allow_root = true
+# Allow deprecated for testing
+allow_deprecated = true
 
 [listener]
 listener_type = "DomainSocket"

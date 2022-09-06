@@ -48,6 +48,7 @@ pub struct CoreSettings {
     pub log_error_details: Option<bool>,
     pub allow_root: Option<bool>,
     pub buffer_size_limit: Option<usize>,
+    pub allow_deprecated: Option<bool>,
 }
 
 /// Type of the Listener used
