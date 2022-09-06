@@ -126,7 +126,7 @@ impl ServiceBuilder {
             warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
         }
 
-        let key_info_manager_builders = gey_key_info_manager_builders(
+        let key_info_manager_builders = get_key_info_manager_builders(
             config.key_manager.as_ref().unwrap_or(&Vec::new()),
             authenticators[0].0,
         )?;
@@ -454,7 +454,7 @@ unsafe fn get_provider(
     }
 }
 
-fn gey_key_info_manager_builders(
+fn get_key_info_manager_builders(
     configs: &[KeyInfoManagerConfig],
     default_auth_type: AuthType,
 ) -> Result<HashMap<String, KeyInfoManagerFactory>> {

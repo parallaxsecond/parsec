@@ -105,7 +105,7 @@ impl KeyIdentity {
         &self.application
     }
 
-    /// Get the application identity of the key
+    /// Get the provider identity of the key
     pub fn provider(&self) -> &ProviderIdentity {
         &self.provider
     }

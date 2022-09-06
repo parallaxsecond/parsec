@@ -23,14 +23,8 @@ manager_type = "SQLite"
 sqlite_db_path = "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3"
 
 [[provider]]
-provider_type = "TrustedService"
+provider_type = "Tpm"
 key_info_manager = "sqlite-manager"
-
-[[provider]]
-provider_type = "Pkcs11"
-key_info_manager = "sqlite-manager"
-library_path = "/usr/local/lib/softhsm/libsofthsm2.so"
-user_pin = "123456"
-software_public_operations = true
-# The slot_number mandatory field is going to replace the following line with a valid number
-# slot_number
+tcti = "mssim:host=127.0.0.1,port=2321"
+owner_hierarchy_auth = "hex:74706d5f70617373" # "tpm_pass" in hex
+endorsement_hierarchy_auth = "str:endorsement_pass"
