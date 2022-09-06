@@ -12,7 +12,7 @@ jobs:
     # If TEST_ALL_DOCKER_IMAGE is 'parsec-service-test-all' or any local image,
     # the following condition must evaluate true to execute this job
     # Else it must evaluate false to NOT execute this job
-    # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognize at this level.
+    # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognized at this level.
     if: ${{ false }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
     steps:
     - uses: actions/checkout@v3
