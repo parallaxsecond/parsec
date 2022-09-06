@@ -6,7 +6,7 @@ use std::error::Error as ErrorTrait;
 use std::fmt;
 
 /// Wrapper over types of error that the TS Context might return
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Error {
     /// errors coming from the Crypto TS service, associated with performed operations.
     PsaCrypto(PsaError),
