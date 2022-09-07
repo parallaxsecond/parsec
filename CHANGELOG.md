@@ -1,10 +1,77 @@
 # Changelog
 
-## [1.0.0](https://github.com/parallaxsecond/parsec/tree/1.0.0) (2022-03-21)
+## [1.1.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc1) (2022-09-06)
 
-### [1.0.0-rc3](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc3) (2022-03-21)
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0...1.1.0-rc1)
 
-[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0...1.0.0-rc3)
+**Implemented enhancements:**
+
+- Update PKCS11 dependency [\#604](https://github.com/parallaxsecond/parsec/issues/604)
+- Allow binary PIN values for PKCS11 providers [\#603](https://github.com/parallaxsecond/parsec/issues/603)
+- Implement get\_random in the PKCS11 provider [\#594](https://github.com/parallaxsecond/parsec/issues/594)
+- Implement get\_random in TPM provider [\#593](https://github.com/parallaxsecond/parsec/issues/593)
+- Create script for Quickstart package [\#534](https://github.com/parallaxsecond/parsec/issues/534)
+- Recognise a PKCS11 hardware token with its serial number instead of slot number [\#481](https://github.com/parallaxsecond/parsec/issues/481)
+- Implement configurable exclusion of deprecated primitives [\#119](https://github.com/parallaxsecond/parsec/issues/119)
+
+**Fixed bugs:**
+
+- RSA padding oracle issue [\#619](https://github.com/parallaxsecond/parsec/issues/619)
+- PKCS11 provider serial\_number configuration [\#615](https://github.com/parallaxsecond/parsec/issues/615)
+- Export of public EC key fails with PKCS\#11 back-end on NXP Layerscape [\#599](https://github.com/parallaxsecond/parsec/issues/599)
+- Wrong permissions on KIM files [\#598](https://github.com/parallaxsecond/parsec/issues/598)
+- Send back PsaErrorInvalidPadding when needed [\#620](https://github.com/parallaxsecond/parsec/pull/620) ([ionut-arm](https://github.com/ionut-arm))
+
+**Security fixes:**
+
+- Update Spiffe dependency [\#602](https://github.com/parallaxsecond/parsec/issues/602)
+
+**Closed issues:**
+
+- Add key persistence tests for TS provider [\#568](https://github.com/parallaxsecond/parsec/issues/568)
+- Create stability tests for SQLite KIM [\#519](https://github.com/parallaxsecond/parsec/issues/519)
+- Change default socket path for E2E tests [\#463](https://github.com/parallaxsecond/parsec/issues/463)
+
+**Merged pull requests:**
+
+- Update maintainers list [\#636](https://github.com/parallaxsecond/parsec/pull/636) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Fix spiffy issue [\#635](https://github.com/parallaxsecond/parsec/pull/635) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Add sqlite stability tests [\#634](https://github.com/parallaxsecond/parsec/pull/634) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Feature/119 implement configurable exclusion of deprecated primitives [\#633](https://github.com/parallaxsecond/parsec/pull/633) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Feature/603 allow binary pin values for pkcs11 [\#631](https://github.com/parallaxsecond/parsec/pull/631) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Add `Eq` to the types with `PartialEq` [\#630](https://github.com/parallaxsecond/parsec/pull/630) ([ionut-arm](https://github.com/ionut-arm))
+- build and share docker image across jobs [\#628](https://github.com/parallaxsecond/parsec/pull/628) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Kim file permissions [\#627](https://github.com/parallaxsecond/parsec/pull/627) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Testing/568 add key persistence tests for ts provider [\#625](https://github.com/parallaxsecond/parsec/pull/625) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Fix problem reported by Clippy \(rust 1.62\) [\#624](https://github.com/parallaxsecond/parsec/pull/624) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Validate hash sign operation before execution. [\#623](https://github.com/parallaxsecond/parsec/pull/623) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Fix Hugues' email address [\#622](https://github.com/parallaxsecond/parsec/pull/622) ([hug-dev](https://github.com/hug-dev))
+- Compare trimmed token serial numbers \(PKCS11 provider\) [\#621](https://github.com/parallaxsecond/parsec/pull/621) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Added some context to error messages. [\#618](https://github.com/parallaxsecond/parsec/pull/618) ([fredrik-jansson-se](https://github.com/fredrik-jansson-se))
+- Implement get\_random in the PKCS11 provider [\#613](https://github.com/parallaxsecond/parsec/pull/613) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Add a script to create the Quickstart package [\#612](https://github.com/parallaxsecond/parsec/pull/612) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Change default socket path for E2E tests [\#610](https://github.com/parallaxsecond/parsec/pull/610) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Fix `cargo-audit` TOML config [\#609](https://github.com/parallaxsecond/parsec/pull/609) ([ionut-arm](https://github.com/ionut-arm))
+- Recognise a PKCS11 hardware token with its serial number instead of slot number [\#608](https://github.com/parallaxsecond/parsec/pull/608) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Bump version of cryptoki [\#605](https://github.com/parallaxsecond/parsec/pull/605) ([ionut-arm](https://github.com/ionut-arm))
+- Fix issue \#599 - allow EC\_POINT public key data to omit ASN.1 structure wrapping [\#600](https://github.com/parallaxsecond/parsec/pull/600) ([paulhowardarm](https://github.com/paulhowardarm))
+- Add generate random support into TPM provider [\#595](https://github.com/parallaxsecond/parsec/pull/595) ([anta5010](https://github.com/anta5010))
+
+## [1.0.0](https://github.com/parallaxsecond/parsec/tree/1.0.0) (2022-03-30)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0-rc3...1.0.0)
+
+**Security fixes:**
+
+- RUSTSEC-2022-0013 [\#587](https://github.com/parallaxsecond/parsec/issues/587)
+
+**Merged pull requests:**
+
+- Update Changelog file to include 1.0.0 [\#596](https://github.com/parallaxsecond/parsec/pull/596) ([ionut-arm](https://github.com/ionut-arm))
+
+## [1.0.0-rc3](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc3) (2022-03-21)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0-rc2...1.0.0-rc3)
 
 **Fixed bugs:**
 
@@ -14,7 +81,7 @@
 
 - Prepare for Release Candidate 3 [\#592](https://github.com/parallaxsecond/parsec/pull/592) ([ionut-arm](https://github.com/ionut-arm))
 
-### [1.0.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc2) (2022-03-02)
+## [1.0.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc2) (2022-03-02)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0-rc1...1.0.0-rc2)
 
@@ -26,7 +93,7 @@
 
 - Update the Parsec Book to include SQLiteKeyInfoManager [\#532](https://github.com/parallaxsecond/parsec/issues/532)
 
-### [1.0.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc1) (2022-02-16)
+## [1.0.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.0.0-rc1) (2022-02-16)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/0.8.1...1.0.0-rc1)
 
