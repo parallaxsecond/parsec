@@ -20,7 +20,7 @@ lazy_static = "1.4.0"
 arbitrary = { version = "0.4.0", features = ["derive"] }
 
 [build-dependencies]
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust", rev = "9e7dd111e77afa9168c1bff84963125057568b6f", features = ["testing", "spiffe-auth"] }
+parsec-client = { version = "0.14.1", features = ["testing", "spiffe-auth"] }
 
 # Prevent this from interfering with workspaces
 [workspace]

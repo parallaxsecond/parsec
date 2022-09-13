@@ -64,7 +64,7 @@ mod activate_credential {
             panic!("Wrong Public type");
         };
         let pub_handle = basic_ctx
-            .load_external_public(&key_pub, Hierarchy::Owner)
+            .load_external_public(key_pub, Hierarchy::Owner)
             .unwrap();
 
         let (cred, secret) = basic_ctx

@@ -11,13 +11,13 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.123", features = ["derive"] }
-parsec-client = { git = "https://github.com/parallaxsecond/parsec-client-rust", rev = "fd083591923c4aeab2bb3eb9c5d0be3c3b48bd37", features = ["testing", "spiffe-auth"] }
+parsec-client = { version = "0.14.1", features = ["testing", "spiffe-auth"] }
 log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
 env_logger = "0.8.3"
 stdext = "0.3.1"
-tss-esapi = { git = "https://github.com/parallaxsecond/rust-tss-esapi.git", rev = "62fb9b7b05b1e607518ae127406f3b85991205b9", optional = true }
+tss-esapi = { version = "7.1.0", optional = true }
 
 [dev-dependencies]
 ring = "0.16.20"
