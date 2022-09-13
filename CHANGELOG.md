@@ -1,6 +1,14 @@
 # Changelog
 
-## [1.1.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc1) (2022-09-06)
+## [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0-rc1...1.1.0-rc2)
+
+**Merged pull requests:**
+
+- Release candidate prep 1.1.0 rc2 [\#638](https://github.com/parallaxsecond/parsec/pull/638) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+
+## [1.1.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc1) (2022-09-07)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.0.0...1.1.0-rc1)
 
@@ -34,6 +42,7 @@
 
 **Merged pull requests:**
 
+- Update Change log and service version no. [\#637](https://github.com/parallaxsecond/parsec/pull/637) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
 - Update maintainers list [\#636](https://github.com/parallaxsecond/parsec/pull/636) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
 - Fix spiffy issue [\#635](https://github.com/parallaxsecond/parsec/pull/635) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
 - Add sqlite stability tests [\#634](https://github.com/parallaxsecond/parsec/pull/634) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
