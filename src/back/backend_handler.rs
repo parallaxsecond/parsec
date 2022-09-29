@@ -97,8 +97,7 @@ impl BackEndHandler {
         }
 
         if opcode.is_admin() {
-            let app =
-                unwrap_or_else_return!((&app).as_ref().ok_or(ResponseStatus::NotAuthenticated));
+            let app = unwrap_or_else_return!(app.as_ref().ok_or(ResponseStatus::NotAuthenticated));
 
             if !app.is_admin() {
                 warn!(
