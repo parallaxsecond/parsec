@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Docker Image Publish
 
 env:
   REGISTRY: ghcr.io
@@ -7,6 +7,7 @@ env:
 on:
   push:
     branches: [ "*" ]
+  workflow_dispatch:
 
 jobs:
 
