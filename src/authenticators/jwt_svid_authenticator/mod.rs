@@ -75,7 +75,7 @@ impl Authenticate for JwtSvidAuthenticator {
         Ok(Application {
             identity: ApplicationIdentity {
                 name: app_name,
-                authenticator_id: AuthType::JwtSvid,
+                auth: AuthType::JwtSvid.into(),
             },
             is_admin,
         })

@@ -153,9 +153,9 @@ impl Provide for Provider {
             // Currently Parsec only stores keys, we delete all of them.
             let keys = provider
                 .list_keys(
-                    &ApplicationIdentity::new(
+                    &ApplicationIdentity::new_with_auth(
                         client.clone(),
-                        *application_identity.authenticator_id(),
+                        *application_identity.auth(),
                     ),
                     list_keys::Operation {},
                 )
@@ -168,9 +168,9 @@ impl Provide for Provider {
                 let key_name = key.name;
                 let _ = provider
                     .psa_destroy_key(
-                        &ApplicationIdentity::new(
+                        &ApplicationIdentity::new_with_auth(
                             client.clone(),
-                            *application_identity.authenticator_id(),
+                            *application_identity.auth(),
                         ),
                         psa_destroy_key::Operation { key_name },
                     )

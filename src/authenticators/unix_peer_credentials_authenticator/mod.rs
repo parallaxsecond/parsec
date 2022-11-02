@@ -92,7 +92,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
             Ok(Application {
                 identity: ApplicationIdentity {
                     name: app_name,
-                    authenticator_id: AuthType::UnixPeerCredentials,
+                    auth: AuthType::UnixPeerCredentials.into(),
                 },
                 is_admin,
             })

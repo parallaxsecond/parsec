@@ -53,7 +53,7 @@ impl Provider {
                 password_context.key_material().clone(),
                 utils::parsec_to_tpm_params(key_attributes)?,
                 Some(
-                    Auth::try_from(password_context.auth_value())
+                    Auth::try_from(password_context.auth_value().to_vec())
                         .map_err(utils::to_response_status)?,
                 ),
                 Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
