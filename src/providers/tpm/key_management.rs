@@ -106,7 +106,7 @@ impl Provider {
 
         self.key_info_store.insert_key_info(
             key_identity,
-            &PasswordContext::new(key_material, auth_value.value().to_vec()),
+            &PasswordContext::new(key_material, auth_value.to_vec()),
             attributes,
         )?;
 

@@ -64,7 +64,7 @@ impl Authenticate for DirectAuthenticator {
                     Ok(Application {
                         identity: ApplicationIdentity {
                             name: app_name,
-                            authenticator_id: AuthType::Direct,
+                            auth: AuthType::Direct.into(),
                         },
                         is_admin,
                     })

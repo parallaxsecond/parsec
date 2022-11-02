@@ -6,8 +6,9 @@ use crate::key_info_managers::KeyIdentity;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
 use parsec_interface::requests::{ResponseStatus, Result};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
+use tss_esapi::structures::Auth;
 use tss_esapi::{constants::Tss2ResponseCodeKind, Error};
 
 impl Provider {
@@ -36,9 +37,7 @@ impl Provider {
             password_context.key_material().clone(),
             utils::parsec_to_tpm_params(key_attributes)?,
             Some(
-                password_context
-                    .auth_value()
-                    .try_into()
+                Auth::try_from(password_context.auth_value().to_vec())
                     .map_err(utils::to_response_status)?,
             ),
             op.plaintext
@@ -57,7 +56,7 @@ impl Provider {
             },
         ) {
             Ok(ciphertext) => Ok(psa_asymmetric_encrypt::Result {
-                ciphertext: ciphertext.value().to_vec().into(),
+                ciphertext: ciphertext.to_vec().into(),
             }),
             Err(tss_error) => {
                 let error = utils::to_response_status(tss_error);
@@ -92,9 +91,7 @@ impl Provider {
             password_context.key_material().clone(),
             utils::parsec_to_tpm_params(key_attributes)?,
             Some(
-                password_context
-                    .auth_value()
-                    .try_into()
+                Auth::try_from(password_context.auth_value().to_vec())
                     .map_err(utils::to_response_status)?,
             ),
             op.ciphertext
@@ -113,7 +110,7 @@ impl Provider {
             },
         ) {
             Ok(plaintext) => Ok(psa_asymmetric_decrypt::Result {
-                plaintext: plaintext.value().to_vec().into(),
+                plaintext: plaintext.to_vec().into(),
             }),
             Err(tss_error) => {
                 // If the algorithm is RSA with PKCS#1 v1.5 padding and we get TPM_RC_VALUE back,

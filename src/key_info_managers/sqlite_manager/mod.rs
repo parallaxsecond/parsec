@@ -4,7 +4,7 @@
 //!
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
-use crate::authenticators::ApplicationIdentity;
+use crate::authenticators::{ApplicationIdentity, Auth, INTERNAL_AUTH_ID};
 use crate::providers::ProviderIdentity;
 use crate::utils::config::KeyInfoManagerType;
 use anyhow::{Context, Result};
@@ -239,15 +239,16 @@ impl SQLiteKeyInfoManager {
         // Deserialize key mappings and store within local key_store HashMap.
         let mut rows = key_mapping_stmt.query(params![])?;
         while let Some(row) = rows.next()? {
+            let auth = match row.get("authenticator_id")? {
+                INTERNAL_AUTH_ID => Auth::Internal,
+                auth_type => Auth::Client(i64_to_auth_type(auth_type).map_err(|e| {
+                    format_error!("Failed to get AuthType from authenticator_id.", e);
+                    let error = Box::new(Error::new(ErrorKind::InvalidData, e));
+                    RusqliteError::FromSqlConversionFailure(64, Integer, error)
+                })?),
+            };
             let key_identity = KeyIdentity::new(
-                ApplicationIdentity::new(
-                    row.get("application_name")?,
-                    i64_to_auth_type(row.get("authenticator_id")?).map_err(|e| {
-                        format_error!("Failed to get AuthType from authenticator_id.", e);
-                        let error = Box::new(Error::new(ErrorKind::InvalidData, e));
-                        RusqliteError::FromSqlConversionFailure(64, Integer, error)
-                    })?,
-                ),
+                ApplicationIdentity::new_with_auth(row.get("application_name")?, auth),
                 ProviderIdentity::new(row.get("provider_uuid")?, row.get("provider_name")?),
                 row.get("key_name")?,
             );
@@ -314,7 +315,7 @@ impl SQLiteKeyInfoManager {
                 (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9);
             ",
             params![
-                *key_identity.application().authenticator_id() as u8,
+                key_identity.application().authenticator_id(),
                 key_identity.application().name(),
                 key_identity.provider().uuid(),
                 key_identity.provider().name(),
@@ -345,7 +346,7 @@ impl SQLiteKeyInfoManager {
                 AND `key_name` = ?3
             ",
             params![
-                *key_identity.application().authenticator_id() as u8,
+                key_identity.application().authenticator_id(),
                 key_identity.application().name(),
                 key_identity.key_name(),
             ],
