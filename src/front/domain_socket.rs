@@ -9,13 +9,13 @@ use anyhow::{Context, Result};
 use listener::Listen;
 use listener::{Connection, ConnectionMetadata};
 use log::{error, warn};
-use std::convert::TryInto;
 use std::fs;
 use std::fs::Permissions;
 use std::io::{Error, ErrorKind};
 use std::os::unix::fs::FileTypeExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::io::FromRawFd;
+use std::os::unix::io::RawFd;
 use std::os::unix::net::UnixListener;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -38,7 +38,8 @@ impl DomainSocketListener {
     pub fn new(timeout: Duration, socket_path: PathBuf) -> Result<Self> {
         // If Parsec was service activated or not started under systemd, this
         // will return `0`. `1` will be returned in case Parsec is socket activated.
-        let listener = match sd_notify::listen_fds()? {
+        let listeners: Vec<RawFd> = sd_notify::listen_fds()?.collect();
+        let listener = match listeners.len() {
             0 => {
                 if socket_path.exists() {
                     let meta = fs::metadata(&socket_path)?;
@@ -72,10 +73,10 @@ impl DomainSocketListener {
             1 => {
                 // No need to set the socket as non-blocking, parsec.service
                 // already requests that.
-                let nfd = sd_notify::SD_LISTEN_FDS_START;
+                let nfd = listeners[0];
                 // Safe as listen_fds gives us the information that one file descriptor was
                 // received and its value starts from SD_LISTEN_FDS_START.
-                unsafe { UnixListener::from_raw_fd(nfd.try_into()?) }
+                unsafe { UnixListener::from_raw_fd(nfd) }
                 // Expect the socket created by systemd to be 666 on permissions.
             }
             n => {
