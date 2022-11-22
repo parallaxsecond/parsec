@@ -191,7 +191,7 @@ impl Provider {
             }
         }
 
-        if None == cryptoauthlib_provider.set_opcodes() {
+        if cryptoauthlib_provider.set_opcodes().is_none() {
             warn!("Failed to setup opcodes for cryptoauthlib_provider");
         }
 
