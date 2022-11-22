@@ -1,11 +1,13 @@
 # Changelog
 
-## [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
+## [1.1.0](https://github.com/parallaxsecond/parsec/tree/1.1.0) (2022-09-13)
+### [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0-rc1...1.1.0-rc2)
 
 **Merged pull requests:**
 
+- Update change log for release candidate 1.1.0-rc2 [\#639](https://github.com/parallaxsecond/parsec/pull/639) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
 - Release candidate prep 1.1.0 rc2 [\#638](https://github.com/parallaxsecond/parsec/pull/638) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
 
 ## [1.1.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc1) (2022-09-07)
