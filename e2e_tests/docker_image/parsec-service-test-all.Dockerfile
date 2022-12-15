@@ -16,7 +16,6 @@ RUN apt install -y --fix-missing wget python3 cmake clang
 RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
 RUN apt install -y python3-distutils libclang-6.0-dev protobuf-compiler python3-pip
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
-
 WORKDIR /tmp
 
 # Download and install TSS 2.0
@@ -107,8 +106,13 @@ COPY _exec_wrapper /usr/local/bin/
 RUN ls /opt/rust/bin | xargs -n1 -I% ln -s /usr/local/bin/_exec_wrapper /usr/local/bin/$(basename %)
 
 # Add users for multitenancy tests
-RUN useradd -m parsec-client-1
-RUN useradd -m parsec-client-2
+RUN useradd -m parsec-client-1 \
+ && useradd -m parsec-client-2 \
+ && groupadd parsec-clients \
+ && usermod -g parsec-clients parsec-client-1 \
+ && usermod -g parsec-clients parsec-client-2 \
+ && sed -i '/^UMASK/s/022/002/' /etc/login.defs
+
 
 # Add `/usr/local/lib` to library path for Trusted service provider
 ENV LD_LIBRARY_PATH="/usr/local/lib"
