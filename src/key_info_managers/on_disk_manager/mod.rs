@@ -395,7 +395,7 @@ impl OnDiskKeyInfoManager {
             for provider_dir_path in list_dirs(app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(provider_dir_path)?.iter() {
                     let mut key_info = Vec::new();
-                    let mut key_info_file = File::open(&key_name_file_path).with_context(|| {
+                    let mut key_info_file = File::open(key_name_file_path).with_context(|| {
                         format!(
                             "Failed to open Key Info Mappings file at {:?}",
                             key_name_file_path

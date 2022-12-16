@@ -393,7 +393,8 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     # Needed because parsec-client-1 and 2 write to those locations owned by root
     chmod 777 /tmp/parsec/e2e_tests
     chmod 777 /tmp/
-    chmod -R 777 /opt/rust/registry
+    chmod -R 775 /opt/rust/registry
+    chgrp -R parsec-clients /opt/rust/registry
 
     # PATH is defined before each command for user to use their own version of the Rust toolchain
     su -c "PATH=\"/home/parsec-client-1/.cargo/bin:${PATH}\";RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml --target-dir /home/parsec-client-1 all_providers::multitenancy::client1_before" parsec-client-1
