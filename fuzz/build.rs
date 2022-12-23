@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #![deny(
     nonstandard_style,
-    const_err,
     dead_code,
     improper_ctypes,
     non_shorthand_field_patterns,
