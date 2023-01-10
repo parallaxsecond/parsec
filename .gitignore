@@ -26,3 +26,9 @@ kim-mappings/
 # TPM simulator state file
 NVChip
 .devcontainer
+
+# Quickstart tarball
+quickstart/*.tar.gz
+
+# IDE settings files
+.idea
