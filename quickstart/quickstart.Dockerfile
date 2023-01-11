@@ -48,7 +48,6 @@ FROM base_builder AS layout
 ## Add the built binaries into the image and make available on PATH
 COPY --from=parsec_service_builder /parsec-service/target/release/parsec /parsec/bin/parsec
 COPY --from=parsec_tool_builder /parsec-tool/target/release/parsec-tool /parsec/bin/parsec-tool
-COPY --from=parsec_tool_builder /parsec-tool/target/release/parsec-tool /parsec/bin/parsec-tool
 
 ## Create and configure a starting directory for quickstart operations
 WORKDIR /parsec/quickstart
