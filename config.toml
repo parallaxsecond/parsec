@@ -189,7 +189,16 @@ key_info_manager = "sqlite-manager"
 # (Required) TPM TCTI device to use with this provider. The string can include configuration values - if no
 # configuration value is given, the defaults are used. Options are:
 # - "device": uses a TPM device available as a file node; path can be given as a configuration string,
-# e.g "device:/path/to/tpm"; the default path is /dev/tpm0
+# e.g "device:/path/to/tpm". The default path is /dev/tpm0, but this default is only suitable in deployments
+# where Parsec would have exclusive usage of the device, and where Parsec is executing at a sufficiently high
+# privilege for such access. It is more common for the TPM device to be managed by an Access Broker / Resource
+# Manager (ABRM) component, either within the kernel or via a userspace daemon (the TABRMD). Trying to
+# use /dev/tpm0 directly in such cases will lead to "device busy" errors on service start-up. Instead, Parsec should
+# normally be configured to access the TPM via the suitable ABRM. To use the in-kernel ABRM, the "device"
+# setting should be configured to use the managed TPM device path, typically /dev/tpmrm0. Permissions on this
+# device are normally less restrictive. In most Linux distributions, this device can be accessed by any user
+# within the "tss" group, so whatever user the Parsec service is running as should be made a member of this group.
+# To use the userspace ABRMD, adopt the "tabrmd" setting below, instead of "device".
 # - "mssim": uses the TPM simulator server with the socket; server path and/or port can be given as configuration values,
 # e.g. "mssim:host=168.0.1.1,port=1234"; "host" can be set to IPv4, IPv6 or a hostname; default values are
 # "localhost" for "host" and 2321 for "port"
