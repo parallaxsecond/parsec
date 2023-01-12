@@ -18,6 +18,7 @@ parsec
 │   └── parsec-tool            # The parsec client tool
 └── quickstart
     ├── README.md              # This README
+    ├── build.txt              # Information about the Parsec build environment
     ├── config.toml            # The config file used by parsec
     └── parsec-cli-tests.sh    # Standard parsec-tool tests
 ```
