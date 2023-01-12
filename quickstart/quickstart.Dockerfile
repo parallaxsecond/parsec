@@ -9,6 +9,8 @@ RUN apt update -y && \
 WORKDIR /build-env
 RUN echo "$(uname | awk '{print tolower($0)}')" > /build-env/os
 RUN echo "$(arch)" > /build-env/arch
+RUN echo "$(rustc --version)" > /build-env/rustc-version
+RUN echo "$(cargo --version)" > /build-env/cargo-version
 
 # ---------------------------------------------
 # Docker Stage: Temporary stage to help dependency caching
@@ -22,15 +24,17 @@ WORKDIR /parsec-service
 # download them each time the builder runs.
 RUN cargo fetch
 
-# Save the current parsec version as defined by cargo
-RUN echo "$(cargo metadata --format-version=1 --no-deps --offline | jq -r '.packages[0].version')" > /build-env/parsec-version
-
 # ---------------------------------------------
 # Docker Stage: Executes the build of the Parsec Service
 FROM parsec_service_scratch AS parsec_service_builder
 
 ## Run the actual build
 RUN cargo build --release --features mbed-crypto-provider
+
+# Save the current parsec version and dependencies as defined by cargo and the current git commit hash
+RUN echo "$(cargo metadata --format-version=1 --no-deps --offline | jq -r '.packages[0].version')" > /build-env/parsec-version
+RUN echo "$(cargo tree)" > /build-env/parsec-dependencies
+RUN echo "$(git rev-parse HEAD)" > /build-env/parsec-commit
 
 # ---------------------------------------------
 # Docker Stage: Executes the build of the Parsec Tool
@@ -58,6 +62,14 @@ COPY --from=parsec_tool_builder /parsec-tool/target/release/parsec-tool /parsec/
 WORKDIR /parsec/quickstart
 COPY quickstart/config.toml /parsec/quickstart/config.toml
 COPY --from=parsec_tool_builder /parsec-tool/tests/parsec-cli-tests.sh /parsec/quickstart/parsec-cli-tests.sh
+
+## Grab all the build-env values
+COPY --from=parsec_service_builder /build-env/* /build-env/
+COPY --from=parsec_tool_builder /build-env/* /build-env/
+
+## Generate the build details file
+COPY quickstart/construct-build-details.sh /build-env/
+RUN chmod +x /build-env/construct-build-details.sh && /build-env/construct-build-details.sh > /parsec/quickstart/build.txt
 
 # ---------------------------------------------
 # Docker Stage: Constructs an appropriate tarball containing all binaries and files
