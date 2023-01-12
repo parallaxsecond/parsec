@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 Contributors to the Parsec project.
+# Copyright 2023 Contributors to the Parsec project.
 # SPDX-License-Identifier: Apache-2.0
 
 cat << EOF
