@@ -1,3 +1,6 @@
+# Copyright 2019 Contributors to the Parsec project.
+# SPDX-License-Identifier: Apache-2.0
+
 # ---------------------------------------------
 # Docker Stage: Base builder used for both parsec service and tools
 FROM rust:latest AS base_builder
