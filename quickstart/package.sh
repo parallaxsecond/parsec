@@ -38,7 +38,7 @@ check_release_tag() {
     if [ "$LATTEST_TAG" == "$CURRENT_TAG" ]; then
         echo "Packaging release tag: $LATTEST_TAG"
     else
-        echo "Warning: The current HEAD does't match the latest tagged"
+        echo "Warning: The current HEAD doesn't match the latest tagged"
         echo "Warning: Please checkout the latest tag : $LATTEST_TAG"
         read  -n 1 -p "Do you want to continue anyway [y/n]?" choice
         if [ "$choice" != "y" ]; then

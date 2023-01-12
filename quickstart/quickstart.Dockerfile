@@ -41,11 +41,16 @@ WORKDIR /parsec-tool
 RUN git checkout $(git tag --sort=committerdate | tail -1)
 RUN cargo build --release
 
+# Save the current parsec-tool version and dependencies as defined by cargo and the current git commit hash
+RUN echo "$(cargo metadata --format-version=1 --no-deps --offline | jq -r '.packages[0].version')" > /build-env/parsec-tool-version
+RUN echo "$(cargo tree)" > /build-env/parsec-tool-dependencies
+RUN echo "$(git rev-parse HEAD)" > /build-env/parsec-tool-commit
+
 # ---------------------------------------------
 # Docker Stage: Extracts build results from previous stages and adds in quickstart configs
 FROM base_builder AS layout
 
-## Add the built binaries into the image and make available on PATH
+## Add the built binaries into the image
 COPY --from=parsec_service_builder /parsec-service/target/release/parsec /parsec/bin/parsec
 COPY --from=parsec_tool_builder /parsec-tool/target/release/parsec-tool /parsec/bin/parsec-tool
 
