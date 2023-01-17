@@ -2,10 +2,10 @@
 
 This Docker container is constructed specifically as an introductory quickstart for the Parsec service and client tool. It is not intended for use in any production system.
 
-The container is started with the following command
+The container is started with the following command. This assumes that your Docker system is configured to pull images from ghcr.io. If that's not the case, or if you'd like to build a local image, see section [Building Quickstart Image](#building-quickstart-image).
 
 ```bash
-$> docker run --rm --name parsec -it parsec-quickstart bash
+$> docker run --rm --name parsec -it parallaxsecond/parsec-quickstart bash
 qs@319b139eb85e:/parsec/quickstart$ 
 ```
 
@@ -111,3 +111,23 @@ Testing Mbed Crypto provider
 24 A1 19 DB 3F 3C A0 82 FE 63
 ....
 ```
+
+## Building Quickstart Image
+
+Building the Quickstart image locally can be accomplished by executing the `package.sh` script located in the `quickstart` directory. Running `package.sh` will also generate the Quickstart tarball and place it in the current directory.
+
+```bash
+$ quickstart > ./package.sh
+Packaging started...
+...
+Finalizing packages
+```
+
+Alternatively, you can execute the Docker build command directly
+
+```bash
+# We use .. at the end so the entire parsec directory is available in the docker build context
+$ quickstart > docker build --target runnable_image --tag parallaxsecond/parsec-quickstart -f quickstart.Dockerfile ..
+```
+
+Image construction requires cloning of https://github.com/parallaxsecond/parsec-tool in order to include the `parsec-tool` binary in the built image. This will be done automatically as part of the image construction process, but it does necessitate your system having access to Github.

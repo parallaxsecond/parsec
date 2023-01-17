@@ -4,6 +4,8 @@ This tarball and content is constructed specifically as an introductory quicksta
 
 These tools were built for a Linux-based `x86_64` system.
 
+Please see section [Building Quickstart Tarball](#building-quickstart-tarball) if you'd like to generate the Quickstart tarball locally.
+
 ## Directory Layout
 
 ```
@@ -104,3 +106,27 @@ Testing Mbed Crypto provider
 24 A1 19 DB 3F 3C A0 82 FE 63
 ....
 ```
+
+## Building Quickstart Tarball
+
+Building the Quickstart tarball locally can be accomplished by executing the `package.sh` script located in the `quickstart` directory. Default execution will place the generated tarball in the current directory. If you'd like it placed in a specific directory then use the `-o <path>` option. Running `package.sh` will also generate the Quickstart Docker image.
+
+```bash
+$ quickstart > ./package.sh
+Packaging started...
+...
+Finalizing packages
+```
+
+Alternatively, you can execute the commands directly
+
+```bash
+# Use Docker to generate the tarball
+# We use .. at the end so the entire parsec directory is available in the docker build context
+$ quickstart > docker build --target tarball_builder --tag parallaxsecond/parsec-quickstart-tarball -f quickstart.Dockerfile ..
+
+# Extract the tarball from the Docker image and place it in the currently directory
+$ quickstart > docker run -v `pwd`:/opt/mount --rm parallaxsecond/parsec-quickstart-tarball bash -c 'cp /parsec-tar/*.tar.gz /opt/mount/'
+```
+
+Tarball generation requires cloning of https://github.com/parallaxsecond/parsec-tool in order to include the `parsec-tool` binary in the built image. This will be done automatically as part of the tarball construction process, but it does necessitate your system having access to Github.

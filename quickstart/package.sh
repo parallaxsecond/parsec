@@ -48,14 +48,14 @@ check_release_tag() {
 }
 
 build_runnable_image() {
-  docker build --target runnable_image --tag parsec-quickstart -f quickstart.Dockerfile ${PARSEC_DIR}
+  docker build --target runnable_image --tag parallaxsecond/parsec-quickstart -f quickstart.Dockerfile ${PARSEC_DIR}
 }
 
 build_extract_tarball() {
-  docker build --target tarball_builder --tag parsec-quickstart-tarball -f quickstart.Dockerfile ${PARSEC_DIR}
+  docker build --target tarball_builder --tag parallaxsecond/parsec-quickstart-tarball -f quickstart.Dockerfile ${PARSEC_DIR}
 
   # Extract the tarball out of the image used to construct it and place it in ${PACKAGE_PATH}
-  docker run -v ${PACKAGE_PATH}:/opt/mount --rm parsec-quickstart-tarball bash -c 'cp /parsec-tar/*.tar.gz /opt/mount/'
+  docker run -v ${PACKAGE_PATH}:/opt/mount --rm parallaxsecond/parsec-quickstart-tarball bash -c 'cp /parsec-tar/*.tar.gz /opt/mount/'
 }
 
 echo "Packaging started..."
