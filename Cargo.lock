@@ -1430,9 +1430,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sd-notify"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9348c5ddb670ff69d94c7f9f3560fc95cb54377956f6960c9a4fd5bfebbfadc"
+checksum = "0cd08a21f852bd2fe42e3b2a6c76a0db6a95a5b5bd29c0521dd0b30fa1712ec8"
 
 [[package]]
 name = "secrecy"
