@@ -1,0 +1,17 @@
+quickstart/quickstart.Dockerfile
+quickstart/package.sh
+quickstart/*.tar.gz
+.idea/
+
+# Copied from .gitignore
+/target
+*.psa_its
+*.swp
+tags
+*DS_Store
+*vscode
+*.patch
+mappings/
+kim-mappings/
+NVChip
+.devcontainer
