@@ -37,6 +37,7 @@
 )]
 // This one is hard to avoid.
 #![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::uninlined_format_args)]
 
 use anyhow::Result;
 use log::{info, trace};

@@ -3,6 +3,8 @@
 //! A key info manager storing key identity to key info mappings using a SQLite database.
 //!
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
+#![allow(clippy::uninlined_format_args)]
+
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::ProviderIdentity;

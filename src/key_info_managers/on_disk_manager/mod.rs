@@ -12,6 +12,9 @@
 //! example, for operating systems having a limit of 255 characters for filenames (Unix systems),
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
+
+#![allow(clippy::uninlined_format_args)]
+
 use crate::authenticators::{Application, ApplicationIdentity};
 use crate::utils::config::KeyInfoManagerType;
 

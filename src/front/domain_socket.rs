@@ -4,6 +4,8 @@
 //!
 //! Expose Parsec functionality using Unix domain sockets as an IPC layer.
 //! The local socket is created at a predefined location.
+#![allow(clippy::uninlined_format_args)]
+
 use super::listener;
 use anyhow::{Context, Result};
 use listener::Listen;

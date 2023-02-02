@@ -6,6 +6,8 @@
 //! are the real implementors of the operations that Parsec claims to support. They map to
 //! functionality in the underlying hardware which allows the PSA Crypto operations to be
 //! backed by a hardware root of trust.
+#![allow(clippy::uninlined_format_args)]
+
 use log::trace;
 use parsec_interface::requests::Opcode;
 use std::collections::HashSet;

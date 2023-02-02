@@ -1,4 +1,5 @@
 #![allow(clippy::multiple_crate_versions, unused)]
+#![allow(clippy::uninlined_format_args)]
 use std::env;
 use std::fs::read_dir;
 use std::io::{Error, ErrorKind, Result};

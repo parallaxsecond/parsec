@@ -9,6 +9,8 @@
 //! is the `RequestAuth` field of a request, which is parsed by the authenticator specified in the header.
 //! The authentication functionality is abstracted through an `Authenticate` trait.
 
+#![allow(clippy::uninlined_format_args)]
+
 #[cfg(not(any(
     feature = "direct-authenticator",
     feature = "unix-peer-credentials-authenticator",
