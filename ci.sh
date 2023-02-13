@@ -326,15 +326,15 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # and an old Rust compiler.
     # The old Rust compiler version is found by manually checking the oldest Rust version of all
     # Linux distributions that we support:
-    # - Fedora 33 and more recent releases
-    # - RHEL-8
+    # - Fedora 36 and more recent releases
+    # - RHEL-9 (intend to support in the future)
     # - openSUSE Tumbleweed
-    # - openSUSE Leap 15.3
-    # The oldest is currently in openSUSE Leap 15.3 and is 1.53.0.
+    # - openSUSE Leap 15.4
+    # The oldest is currently in RHEL9, is 1.58.1.
 
-    rustup toolchain install 1.53.0
-    # The "jwt-svid-authenticator" can not be compiled on 1.53.0
-    RUST_BACKTRACE=1 cargo +1.53.0 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
+    rustup toolchain install 1.58.1
+    # The "jwt-svid-authenticator" can not be compiled on 1.58.1
+    RUST_BACKTRACE=1 cargo +1.58.1 check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
 
     # Latest stable
     rustup toolchain install stable
@@ -452,7 +452,7 @@ else
         # We first create the keys
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml before_tpm_reset
         stop_service
-        
+
         reset_tpm
 
         # We then spin up the service again and check that the keys can still be used
