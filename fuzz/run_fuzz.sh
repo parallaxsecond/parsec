@@ -5,6 +5,9 @@
 
 set -ex
 
+# Use the newest version of the Rust toolchain
+rustup update
+
 # The clean up procedure is called when the script finished or is interrupted
 cleanup () {
     # Stop tpm_server if running
