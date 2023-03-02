@@ -19,10 +19,9 @@ use parsec_interface::operations::{
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
-use std::str::FromStr;
+use std::num::ParseIntError;
 use std::sync::Arc;
 use uuid::Uuid;
-use version::{version, Version};
 
 const SUPPORTED_OPCODES: [Opcode; 5] = [
     Opcode::ListProviders,
@@ -263,13 +262,29 @@ impl ProviderBuilder {
             provider_info_vec.push(provider_info);
         }
 
-        let crate_version: Version = Version::from_str(version!()).map_err(|e| {
-            format_error!("Error parsing the crate version", e);
+        let crate_version: std::result::Result<Vec<u32>, ParseIntError> = env!("CARGO_PKG_VERSION")
+            .split('.')
+            .map(|v| v.parse())
+            .collect();
+
+        let crate_version = crate_version.map_err(|e| {
+            format_error!("Invalid CARGO_PKG_VERSION format", e);
             Error::new(
                 ErrorKind::InvalidData,
                 "crate version number has invalid format",
             )
         })?;
+
+        if crate_version.len() != 3 {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                format!(
+                    "Invalid CARGO_PKG_VERSION format: expected 3 components, got {}.",
+                    crate_version.len()
+                ),
+            ));
+        }
+
         provider_info_vec.push(ProviderInfo {
             // Assigned UUID for this provider: 47049873-2a43-4845-9d72-831eab668784
             uuid: Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").map_err(|_| Error::new(
@@ -278,9 +293,9 @@ impl ProviderBuilder {
             ))?,
             description: String::from("Software provider that implements only administrative (i.e. no cryptographic) operations"),
             vendor: String::new(),
-            version_maj: crate_version.major,
-            version_min: crate_version.minor,
-            version_rev: crate_version.patch,
+            version_maj: crate_version[0],
+            version_min: crate_version[1],
+            version_rev: crate_version[2],
             id: ProviderId::Core,
         });
 
@@ -325,5 +340,14 @@ mod tests {
             result.wire_protocol_version_min,
             provider.wire_protocol_version_min
         );
+    }
+
+    #[test]
+    fn test_build() {
+        let provider_builder = ProviderBuilder::new().with_wire_protocol_version(42, 12);
+        assert!(
+            provider_builder.build().is_ok(),
+            "error building a CoreProvider"
+        )
     }
 }
