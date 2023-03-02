@@ -1779,9 +1779,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "7.1.0"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2cca751996d707a593074a115d40a285179f7929f912a4e81d2a8c2404c7e7c"
+checksum = "891582e26e83f2cbd608b18cbd7ffb921482740524187a2bca20cf44a286547b"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1801,9 +1801,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi-sys"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e2f37914ec4d494d145cfa18bb8429498b238d63c47a08b89d09c1ec2545ff0"
+checksum = "e7b8be553262e0924410fe96404830252477f175f228081f21cb0bd87f2ccebe"
 dependencies = [
  "pkg-config",
  "target-lexicon",
