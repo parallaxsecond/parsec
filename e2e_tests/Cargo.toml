@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0.123", features = ["derive"] }
-parsec-client = { version = "0.14.1", features = ["testing", "spiffe-auth"] }
+parsec-client = { version = "0.15.0", features = ["testing", "spiffe-auth"] }
 log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
@@ -30,7 +30,7 @@ picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
 serial_test = "0.5.1"
 regex = "1.6.0"
-cryptoki = "0.3.0"
+cryptoki = "0.3.1"
 snailquote = "0.3.1"
 
 [features]
