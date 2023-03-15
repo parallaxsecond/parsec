@@ -129,15 +129,13 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.59.2"
+version = "0.63.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bd2a9a458e8f4304c52c43ebb0cfbd520289f8379a52e329a38afda99bf8eb8"
+checksum = "36d860121800b2a9a94f9b5604b332d5cffb234ce17609ea479d723dbc9d3885"
 dependencies = [
  "bitflags",
  "cexpr 0.6.0",
  "clang-sys",
- "clap",
- "env_logger 0.9.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -147,6 +145,7 @@ dependencies = [
  "regex",
  "rustc-hash",
  "shlex 1.1.0",
+ "syn",
  "which",
 ]
 
@@ -256,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "cryptoki"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "503aa2bd88796da9bc6baf2c47696da40f135721b3d6680c7c6cee0b7d1f7a59"
+checksum = "570006e51d08ec89ce5bbfdcf428ad96111636d524bf2447bee6377fd0e1d889"
 dependencies = [
  "cryptoki-sys",
  "derivative",
@@ -269,9 +268,9 @@ dependencies = [
 
 [[package]]
 name = "cryptoki-sys"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e4895bb04269df9a14f2692c6499dc2769e9a93caa33ef37c4df134f76956d2"
+checksum = "1d12231889cbf7e11d2965a063d9518bc7aac60c5b125dc61c8ff2111a160eae"
 dependencies = [
  "libloading",
  "target-lexicon",
@@ -359,19 +358,6 @@ name = "env_logger"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
 dependencies = [
  "atty",
  "humantime",
@@ -991,9 +977,9 @@ dependencies = [
 
 [[package]]
 name = "parsec-interface"
-version = "0.27.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aed88aac3338f48063f504539fc0f19f2c1ff32ed8c6ed37ac5451b4169c7cc"
+checksum = "f6f1b90789d4cabb8d7100a2ce632baad9683c2598f302d2387d9a45f967de56"
 dependencies = [
  "bincode",
  "derivative",
@@ -1016,10 +1002,10 @@ dependencies = [
  "anyhow",
  "base64",
  "bincode",
- "bindgen 0.59.2",
+ "bindgen 0.63.0",
  "cryptoki",
  "derivative",
- "env_logger 0.8.4",
+ "env_logger",
  "hex",
  "libc",
  "log",
@@ -1249,9 +1235,9 @@ checksum = "cf7e6d18738ecd0902d30d1ad232c9125985a3422929b16c65517b38adc14f96"
 
 [[package]]
 name = "psa-crypto"
-version = "0.9.2"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f96fc66af3a6d2cb810d08cd631d559130102657d8fc2890a4f202afebcf0cae"
+checksum = "31a7f20ebf21c7a53dd8aa24a11bd4cc9f3f838f0de1b32e17cb6cd4f88fdf7f"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -1261,11 +1247,11 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.9.3"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bbad66b89eacc985cab3aed5c898e4b39e3d13424b0f8852a30b210f60f92fa"
+checksum = "0d3f19716e0584f8d5627712617b1cc5b9b642943fd9a61b883b8d533f5d400c"
 dependencies = [
- "bindgen 0.59.2",
+ "bindgen 0.63.0",
  "cc",
  "cmake",
  "walkdir",
@@ -1783,9 +1769,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "7.1.0"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2cca751996d707a593074a115d40a285179f7929f912a4e81d2a8c2404c7e7c"
+checksum = "891582e26e83f2cbd608b18cbd7ffb921482740524187a2bca20cf44a286547b"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1805,9 +1791,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi-sys"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e2f37914ec4d494d145cfa18bb8429498b238d63c47a08b89d09c1ec2545ff0"
+checksum = "e7b8be553262e0924410fe96404830252477f175f228081f21cb0bd87f2ccebe"
 dependencies = [
  "pkg-config",
  "target-lexicon",
