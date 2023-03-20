@@ -3,8 +3,8 @@ name: Continuous Integration
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  # TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
-  TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+  TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
+  #TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
 
 jobs:
   build-and-export-test-all-docker:
@@ -13,7 +13,7 @@ jobs:
     # the following condition must evaluate true to execute this job
     # Else it must evaluate false to NOT execute this job
     # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognized at this level.
-    if: ${{ false }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
+    if: ${{ true }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
     steps:
     - uses: actions/checkout@v3
     - name: Build the docker container
@@ -180,13 +180,21 @@ jobs:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets
     runs-on: ubuntu-latest
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        with:
+          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
-        run:
-          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        #run:
+          #docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
         # When running the container built on the CI
-        # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links

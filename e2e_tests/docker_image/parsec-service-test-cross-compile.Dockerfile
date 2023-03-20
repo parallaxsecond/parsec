@@ -1,6 +1,6 @@
 # Copyright 2021 Contributors to the Parsec project.
 # SPDX-License-Identifier: Apache-2.0
-FROM ghcr.io/parallaxsecond/parsec-service-test-all
+FROM parsec-service-test-all
 
 # Install aarch64-none-linux-gnu cross compilation toolchain
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz?revision=61c3be5d-5175-4db6-9030-b565aae9f766 -O aarch64-gcc.tar.xz
