@@ -27,7 +27,7 @@ wait_for_killprocess() {
     done
 }
 
-configure_tpm() 
+configure_tpm()
 {
     tpm_server &
     wait_for_process "tpm_server"
@@ -63,16 +63,16 @@ save_generated_mappings_keys()
     else
         mv /var/lib/parsec/kim-mappings $DESTINATION_PATH
     fi
-    
+
     mv /tmp/create_keys/parsec/0000000000000002.psa_its $DESTINATION_PATH
     mv /tmp/create_keys/parsec/0000000000000003.psa_its $DESTINATION_PATH
 }
 
 generate_and_store_keys_for_ondisk_KIM()
 {
-    # This config.toml of parsec version 0.7.0 uses on disk manager. The latest 
+    # This config.toml of parsec version 0.7.0 uses on disk manager. The latest
     # one is updated to use SQLite manager.
-    ./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
+    ./target/debug/parsec -c e2e_tests/provider_cfg/all/on-disk-kim-all-providers.toml &
     wait_for_process "parsec"
     wait_for_file "/tmp/parsec.sock"
 
@@ -111,7 +111,7 @@ generate_and_store_keys_for_sqlite_KIM()
     ./target/debug/parsec -c e2e_tests/provider_cfg/all/config.toml &
     wait_for_process "parsec"
     wait_for_file "/tmp/parsec.sock"
-    
+
     # Generate keys for all providers (trusted-service-provider isn't included)
     parsec-tool -p 1 create-rsa-key -k rsa-mbed
     parsec-tool -p 1 create-ecc-key -k ecc-mbed
@@ -156,35 +156,8 @@ EOF
     save_generated_mappings_keys /tmp/sqlite/ts-keys/
 }
 
-# Install an old version mock Trusted Services compatible with old parsec 0.7.0
-# used in generate_key.sh script
-install_trusted_services_lib_old()
-{
-    git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration
-    pushd trusted-services && git reset --hard 35c6d643b5f0c0387702e22bf742dd4878ca5ddd && popd
-    # Install correct python dependencies
-    pip3 install -r trusted-services/requirements.txt
-    pushd /tmp/trusted-services/deployments/libts/linux-pc/
-    cmake .
-    make
-    cp libts.so nanopb_install/lib/libprotobuf-nanopb.a mbedcrypto_install/lib/libmbedcrypto.a /usr/local/lib/
-    popd
-    rm -rf /tmp/trusted-services
-}
 
-if [ "$1" == "ondisk" ]; then
-    install_trusted_services_lib_old
-    # Use an old version of the Parsec service to make sure keys can still be used
-    # with today's version.
-    git clone https://github.com/parallaxsecond/parsec.git --branch 0.7.0 /tmp/create_keys/parsec
-elif [ "$1" == "sqlite" ]; then
-    # Use an old version of the Parsec service to make sure keys can still be used
-    # with today's version.
-    git clone https://github.com/parallaxsecond/parsec.git --branch 1.0.0 /tmp/create_keys/parsec
-else
-    echo "Incorrect usage of script"
-    exit 1
-fi
+git clone https://github.com/parallaxsecond/parsec.git --branch 1.0.0 /tmp/create_keys/parsec
 
 cd /tmp/create_keys/parsec
 git submodule update --init --recursive

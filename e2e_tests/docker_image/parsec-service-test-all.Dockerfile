@@ -1,6 +1,6 @@
 # Copyright 2021 Contributors to the Parsec project.
 # SPDX-License-Identifier: Apache-2.0
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 # The specific version of libraries used in this Dockerfile should not change without having
 # carefully checked that this is not breaking stability.
@@ -9,27 +9,27 @@ FROM ubuntu:18.04
 
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
-RUN apt update
+RUN apt-get update && apt-get -y upgrade
 RUN apt install -y autoconf-archive libcmocka0 libcmocka-dev procps
 RUN apt install -y iproute2 build-essential git pkg-config gcc libtool automake libssl-dev uthash-dev doxygen libjson-c-dev
 RUN apt install -y --fix-missing wget python3 cmake clang
 RUN apt install -y libini-config-dev libcurl4-openssl-dev curl libgcc1
-RUN apt install -y python3-distutils libclang-6.0-dev protobuf-compiler python3-pip
+RUN apt install -y python3-distutils libclang-11-dev protobuf-compiler python3-pip
+RUN apt install -y libgcrypt20-dev uuid-dev
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
 WORKDIR /tmp
 
-# Download and install TSS 2.0
-RUN git clone https://github.com/tpm2-software/tpm2-tss.git --branch 2.3.3
+# Download and install TSS 3.2.0
+RUN git clone https://github.com/tpm2-software/tpm2-tss.git --branch 3.2.0
 RUN cd tpm2-tss \
 	&& ./bootstrap \
 	&& ./configure \
 	&& make -j$(nproc) \
 	&& make install \
 	&& ldconfig
-RUN rm -rf tpm2-tss
 
-# Download and install TPM 2.0 Tools verison 4.1.1
-RUN git clone https://github.com/tpm2-software/tpm2-tools.git --branch 4.1.1
+# Download and install TPM 2.0 Tools verison 5.5
+RUN git clone https://github.com/tpm2-software/tpm2-tools.git --branch 5.5
 RUN cd tpm2-tools \
 	&& ./bootstrap \
 	&& ./configure --prefix=/usr \
@@ -38,9 +38,9 @@ RUN cd tpm2-tools \
 RUN rm -rf tpm2-tools
 
 # Download and install software TPM
-ARG ibmtpm_name=ibmtpm1637
+ARG ibmtpm_name=ibmtpm1682
 RUN wget -L "https://downloads.sourceforge.net/project/ibmswtpm2/$ibmtpm_name.tar.gz"
-RUN sha256sum $ibmtpm_name.tar.gz | grep ^dd3a4c3f7724243bc9ebcd5c39bbf87b82c696d1c1241cb8e5883534f6e2e327
+RUN sha256sum $ibmtpm_name.tar.gz | grep ^3cb642f871a17b23d50b046e5f95f449c2287415fc1e7aeb4bdbb8920dbcb38f
 RUN mkdir -p $ibmtpm_name \
 	&& tar -xvf $ibmtpm_name.tar.gz -C $ibmtpm_name \
 	&& chown -R root:root $ibmtpm_name \
@@ -123,7 +123,6 @@ ENV PARSEC_SERVICE_ENDPOINT="unix:/tmp/parsec.sock"
 
 # Generate keys for the key mappings test for ondisk KIM
 COPY generate-keys.sh /tmp/
-RUN ./generate-keys.sh ondisk
 
 # Install mock Trusted Services
 RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
@@ -138,7 +137,19 @@ RUN cd trusted-services/deployments/libts/linux-pc/ \
 RUN rm -rf trusted-services
 
 # Generate keys for the key mappings test for sqlite KIM
+RUN ./generate-keys.sh ondisk
 RUN ./generate-keys.sh sqlite
+
+# Compile latest version of tpm2-tss
+RUN cd tpm2-tss \
+	&& make uninstall \
+	&& git checkout 4.0.1 \
+	&& ./bootstrap \
+	&& ./configure \
+	&& make -j$(nproc) \
+	&& make install \
+	&& ldconfig
+RUN rm -rf tpm2-tss
 
 # Import an old version of the e2e tests
 COPY import-old-e2e-tests.sh /tmp/
