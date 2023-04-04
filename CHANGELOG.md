@@ -1,7 +1,42 @@
 # Changelog
 
-## [1.1.0](https://github.com/parallaxsecond/parsec/tree/1.1.0) (2022-09-13)
-### [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
+## [1.2.0](https://github.com/parallaxsecond/parsec/tree/HEAD)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.2.0...HEAD)
+
+**Closed issues:**
+
+- Parsec 1.1 fails to build with meta-security master branch [\#663](https://github.com/parallaxsecond/parsec/issues/663)
+
+## [1.2.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.2.0-rc1) (2023-03-21)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0...1.2.0-rc1)
+
+**Closed issues:**
+
+- Parsec fails to compile for arm32  [\#647](https://github.com/parallaxsecond/parsec/issues/647)
+
+**Merged pull requests:**
+
+- Update crates [\#671](https://github.com/parallaxsecond/parsec/pull/671) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Update rusqlite to fix security issue [\#662](https://github.com/parallaxsecond/parsec/pull/662) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Update MSRV to 1.58 [\#661](https://github.com/parallaxsecond/parsec/pull/661) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Remove dependency on crate "version" [\#657](https://github.com/parallaxsecond/parsec/pull/657) ([ema](https://github.com/ema))
+- Update TPM TCTI configuration docs [\#656](https://github.com/parallaxsecond/parsec/pull/656) ([paulhowardarm](https://github.com/paulhowardarm))
+- Add support for a Quickstart Docker image [\#654](https://github.com/parallaxsecond/parsec/pull/654) ([dennisgove](https://github.com/dennisgove))
+- Update to remove const\_err [\#653](https://github.com/parallaxsecond/parsec/pull/653) ([marcsvll](https://github.com/marcsvll))
+- Fix Clippy warnings for rustc version 1.65 [\#652](https://github.com/parallaxsecond/parsec/pull/652) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+- Bump sd-notify to 0.3.0 [\#651](https://github.com/parallaxsecond/parsec/pull/651) ([stevecapperarm](https://github.com/stevecapperarm))
+
+## [1.1.0](https://github.com/parallaxsecond/parsec/tree/1.1.0) (2022-09-29)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0-rc2...1.1.0)
+
+**Merged pull requests:**
+
+- Release v1.1.0 Changelog [\#641](https://github.com/parallaxsecond/parsec/pull/641) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
+
+## [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0-rc1...1.1.0-rc2)
 
