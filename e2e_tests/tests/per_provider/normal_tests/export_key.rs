@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused_imports, unused)]
 use crate::per_provider::normal_tests::import_key::ECC_PUBLIC_KEY;
+use base64::Engine;
 use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::*;
@@ -365,7 +366,9 @@ fn export_rsa_private_key_matches_import() {
     let _ = usage_flags.set_encrypt().set_decrypt().set_export();
     let key_name = auto_test_keyname!();
 
-    let decoded_key = base64::decode(PRIVATE_KEY).unwrap();
+    let decoded_key = base64::engine::general_purpose::STANDARD
+        .decode(PRIVATE_KEY)
+        .unwrap();
     client
         .import_key(
             key_name.clone(),
