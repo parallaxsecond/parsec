@@ -109,11 +109,11 @@ mod test {
     use super::UnixPeerCredentialsAuthenticator;
     use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
+    use nix::unistd::getuid;
     use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
     use rand::Rng;
     use std::os::unix::net::UnixStream;
-    use users::get_current_uid;
 
     #[test]
     fn successful_authentication() {
@@ -143,7 +143,7 @@ mod test {
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(application.identity.name, get_current_uid().to_string());
+        assert_eq!(application.identity.name, getuid().as_raw().to_string());
         assert!(!application.is_admin);
     }
 
@@ -230,7 +230,7 @@ mod test {
             peer_credentials::peer_cred(&_sock_b).unwrap(),
         );
 
-        let admin = toml::from_str(&format!("name = '{}'", get_current_uid())).unwrap();
+        let admin = toml::from_str(&format!("name = '{}'", getuid().as_raw())).unwrap();
         let authenticator = UnixPeerCredentialsAuthenticator {
             admins: vec![admin].into(),
         };
@@ -247,7 +247,7 @@ mod test {
             .authenticate(&req_auth, conn_metadata)
             .expect("Failed to authenticate");
 
-        assert_eq!(application.identity.name, get_current_uid().to_string());
+        assert_eq!(application.identity.name, getuid().as_raw().to_string());
         assert!(application.is_admin);
     }
 

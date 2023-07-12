@@ -40,6 +40,7 @@
 
 use anyhow::Result;
 use log::{info, trace};
+use nix::unistd::getuid;
 use parsec_service::utils::cli::Opts;
 use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
 use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
@@ -50,7 +51,6 @@ use std::sync::{
 };
 use std::time::Duration;
 use structopt::StructOpt;
-use users::get_current_uid;
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
@@ -82,7 +82,7 @@ fn main() -> Result<()> {
     // Guard against running as root. This check can be overridden by changing `allow_root` inside
     // the config file.
     let allow_root = config.core_settings.allow_root.unwrap_or(false);
-    if !allow_root && get_current_uid() == 0 {
+    if !allow_root && getuid().as_raw() == 0 {
         return Err(Error::new(
             ErrorKind::Other,
             "Insecure configuration; the Parsec service should not be running as root! You can \
