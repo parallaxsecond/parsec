@@ -15,7 +15,6 @@ impl Provider {
         op: psa_sign_hash::Operation,
     ) -> Result<psa_sign_hash::Result> {
         let key_name = op.key_name.clone();
-        let hash = op.hash.clone();
         let alg = op.alg;
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
@@ -36,7 +35,7 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        match asym_signature::sign_hash(id, alg, &hash, &mut signature) {
+        match asym_signature::sign_hash(id, alg, &(op.hash), &mut signature) {
             Ok(size) => {
                 signature.resize(size, 0);
                 Ok(psa_sign_hash::Result {
@@ -57,9 +56,7 @@ impl Provider {
         op: psa_verify_hash::Operation,
     ) -> Result<psa_verify_hash::Result> {
         let key_name = op.key_name.clone();
-        let hash = op.hash.clone();
         let alg = op.alg;
-        let signature = op.signature.clone();
         let key_identity = KeyIdentity::new(
             application_identity.clone(),
             self.provider_identity.clone(),
@@ -77,7 +74,7 @@ impl Provider {
         op.validate(key_attributes)?;
 
         let id = key::Id::from_persistent_key_id(key_id)?;
-        match asym_signature::verify_hash(id, alg, &hash, &signature) {
+        match asym_signature::verify_hash(id, alg, &(op.hash), &(op.signature)) {
             Ok(()) => Ok(psa_verify_hash::Result {}),
             Err(error) => {
                 let error = ResponseStatus::from(error);

@@ -63,7 +63,12 @@ fn rsa_encrypt_use_check() {
         feature = "mbed-crypto-provider",
         feature = "trusted-service-provider",
     ))]
-    let supported_algs = all_algs.clone();
+    let supported_algs = vec![
+        AsymmetricEncryption::RsaPkcs1v15Crypt {},
+        AsymmetricEncryption::RsaOaep {
+            hash_alg: Hash::Sha256,
+        },
+    ];
 
     #[cfg(feature = "cryptoauthlib-provider")]
     let supported_algs = vec![];
@@ -178,7 +183,19 @@ fn hash_use_check() {
     ];
 
     #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
-    let supported_hashes = all_hashes.clone();
+    let supported_hashes = vec![
+        Hash::Ripemd160,
+        Hash::Sha224,
+        Hash::Sha256,
+        Hash::Sha384,
+        Hash::Sha512,
+        Hash::Sha512_224,
+        Hash::Sha512_256,
+        Hash::Sha3_224,
+        Hash::Sha3_256,
+        Hash::Sha3_384,
+        Hash::Sha3_512,
+    ];
 
     #[cfg(feature = "tpm-provider")]
     let supported_hashes = vec![
