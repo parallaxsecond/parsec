@@ -19,3 +19,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Matt Davis (@MattDavis00)
 * Mohamed Omar Asaker (@mohamedasaker-arm)
 * Gowtham Suresh Kumar (@gowthamsk-arm)
+* William Brown (@firstyear)
