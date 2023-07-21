@@ -20,3 +20,4 @@ This file aims to acknowledge the specific contributors referred to in the "Cont
 * Mohamed Omar Asaker (@mohamedasaker-arm)
 * Gowtham Suresh Kumar (@gowthamsk-arm)
 * William Brown (@firstyear)
+* Tomas Agustin Gonzalez Orlando (@tgonzalezorlandoarm)
