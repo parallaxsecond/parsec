@@ -39,6 +39,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 use anyhow::Result;
+use libc::{getuid, uid_t};
 use log::{info, trace};
 use parsec_service::utils::cli::Opts;
 use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
@@ -50,7 +51,6 @@ use std::sync::{
 };
 use std::time::Duration;
 use structopt::StructOpt;
-use users::get_current_uid;
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
@@ -82,7 +82,8 @@ fn main() -> Result<()> {
     // Guard against running as root. This check can be overridden by changing `allow_root` inside
     // the config file.
     let allow_root = config.core_settings.allow_root.unwrap_or(false);
-    if !allow_root && get_current_uid() == 0 {
+    let current_id: uid_t = unsafe { getuid() };
+    if !allow_root && current_id == 0 {
         return Err(Error::new(
             ErrorKind::Other,
             "Insecure configuration; the Parsec service should not be running as root! You can \
