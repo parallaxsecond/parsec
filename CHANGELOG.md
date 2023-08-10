@@ -2,7 +2,7 @@
 
 ## [1.2.0](https://github.com/parallaxsecond/parsec/tree/HEAD)
 
-[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.2.0...HEAD)
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.2.0-rc1...1.2.0)
 
 **Closed issues:**
 
@@ -31,10 +31,6 @@
 ## [1.1.0](https://github.com/parallaxsecond/parsec/tree/1.1.0) (2022-09-29)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.1.0-rc2...1.1.0)
-
-**Merged pull requests:**
-
-- Release v1.1.0 Changelog [\#641](https://github.com/parallaxsecond/parsec/pull/641) ([mohamedasaker-arm](https://github.com/mohamedasaker-arm))
 
 ## [1.1.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.1.0-rc2) (2022-09-13)
 
