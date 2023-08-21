@@ -254,7 +254,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     # Install tarpaulin
     #TODO: Remove the fixed version of cargo-tarpaulin when a new rust version
     # is used (and the MSRV gets upgraded).
-    cargo +1.60.0 install cargo-tarpaulin --version 0.24.0
+    cargo +1.60.0 install cargo-tarpaulin --version 0.26.1
 
     mkdir -p reports
 
