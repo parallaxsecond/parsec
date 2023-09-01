@@ -132,10 +132,9 @@ fn wrong_permitted_algorithm() {
     }
     let key_type = Type::RsaKeyPair;
     // Do not permit RSA PKCS 1v15 signing algorithm with SHA-256.
-    #[allow(deprecated)]
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha1.into(),
+            hash_alg: Hash::Sha512.into(),
         });
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_sign_hash();
