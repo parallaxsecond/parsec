@@ -307,7 +307,7 @@ fn cipher_encrypt_ecb_invalid_data_size() {
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::EcbNoPadding)
         .unwrap();
 
-    let invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
+    let invalid_plaintext = [0u8; INVALID_DATA_SIZE];
 
     assert_eq!(
         client
@@ -411,7 +411,7 @@ fn cipher_encrypt_cbc_invalid_data_size() {
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::CbcNoPadding)
         .unwrap();
 
-    let invalid_plaintext = vec![0u8; INVALID_DATA_SIZE];
+    let invalid_plaintext = [0u8; INVALID_DATA_SIZE];
 
     assert_eq!(
         client
@@ -543,7 +543,7 @@ fn cipher_encrypt_empty_data() {
         return;
     }
 
-    let empty_plaintext = vec![];
+    let empty_plaintext = [];
 
     client
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::Cfb)
@@ -568,7 +568,7 @@ fn cipher_decrypt_empty_data() {
         return;
     }
 
-    let empty_ciphertext = vec![];
+    let empty_ciphertext = [];
 
     client
         .import_aes_key_cipher(key_name.clone(), KEY_DATA.to_vec(), Cipher::Cfb)

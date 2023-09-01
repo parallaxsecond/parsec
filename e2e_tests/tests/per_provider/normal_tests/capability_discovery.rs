@@ -50,7 +50,7 @@ fn rsa_encrypt_use_check() {
         return;
     }
 
-    let all_algs = vec![
+    let all_algs = [
         AsymmetricEncryption::RsaPkcs1v15Crypt {},
         AsymmetricEncryption::RsaOaep {
             hash_alg: Hash::Sha256,
@@ -63,7 +63,7 @@ fn rsa_encrypt_use_check() {
         feature = "mbed-crypto-provider",
         feature = "trusted-service-provider",
     ))]
-    let supported_algs = vec![
+    let supported_algs = [
         AsymmetricEncryption::RsaPkcs1v15Crypt {},
         AsymmetricEncryption::RsaOaep {
             hash_alg: Hash::Sha256,
@@ -71,7 +71,7 @@ fn rsa_encrypt_use_check() {
     ];
 
     #[cfg(feature = "cryptoauthlib-provider")]
-    let supported_algs = vec![];
+    let supported_algs = [];
 
     let mut attributes = get_default_rsa_attrs();
     let _ = attributes.policy.usage_flags.set_encrypt();
@@ -118,7 +118,7 @@ fn ecc_curve_use_check() {
     ];
 
     #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
-    let supported_curves = vec![
+    let supported_curves = [
         (EccFamily::SecpR1, 256),
         (EccFamily::SecpK1, 256),
         (EccFamily::SectK1, 409),
@@ -135,7 +135,7 @@ fn ecc_curve_use_check() {
         feature = "pkcs11-provider",
         feature = "cryptoauthlib-provider"
     ))]
-    let supported_curves = vec![(EccFamily::SecpR1, 256)];
+    let supported_curves = [(EccFamily::SecpR1, 256)];
 
     let mut attributes = get_default_ecc_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
@@ -168,7 +168,7 @@ fn hash_use_check() {
         return;
     }
 
-    let all_hashes = vec![
+    let all_hashes = [
         Hash::Ripemd160,
         Hash::Sha224,
         Hash::Sha256,
@@ -183,7 +183,7 @@ fn hash_use_check() {
     ];
 
     #[cfg(any(feature = "mbed-crypto-provider", feature = "trusted-service-provider",))]
-    let supported_hashes = vec![
+    let supported_hashes = [
         Hash::Ripemd160,
         Hash::Sha224,
         Hash::Sha256,
@@ -198,7 +198,7 @@ fn hash_use_check() {
     ];
 
     #[cfg(feature = "tpm-provider")]
-    let supported_hashes = vec![
+    let supported_hashes = [
         Hash::Sha256,
         Hash::Sha384,
         Hash::Sha512,
@@ -207,10 +207,10 @@ fn hash_use_check() {
         Hash::Sha3_512,
     ];
     #[cfg(feature = "pkcs11-provider")]
-    let supported_hashes = vec![Hash::Sha224, Hash::Sha256, Hash::Sha384, Hash::Sha512];
+    let supported_hashes = [Hash::Sha224, Hash::Sha256, Hash::Sha384, Hash::Sha512];
 
     #[cfg(feature = "cryptoauthlib-provider")]
-    let supported_hashes = vec![Hash::Sha256];
+    let supported_hashes = [Hash::Sha256];
 
     let mut attributes = get_default_rsa_attrs();
     let _ = attributes.policy.usage_flags.set_sign_hash();
