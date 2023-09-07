@@ -250,7 +250,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     rustup toolchain install 1.66.0
     PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
-    UNIT_TEST_COMMON_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
+    UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
     cargo +1.66.0 install cargo-tarpaulin
 
@@ -260,7 +260,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         # Set up run
         PROVIDER_NAME=$provider
         TEST_FEATURES="--features=$provider-provider"
-        UNIT_TEST_FEATURES="$UNIT_TEST_COMMON_FEATURES,$provider-provider"
+        UNIT_TEST_FEATURES="$UNIT_TEST_FEATURES,$provider-provider"
         cp $(pwd)/e2e_tests/provider_cfg/$provider/config.toml $CONFIG_PATH
         mkdir -p reports/$provider
 
