@@ -292,6 +292,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         wait_for_service
 
         run_key_mappings_tests
+        stop_service
     done
 
     # Run unit tests
