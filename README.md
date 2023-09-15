@@ -71,6 +71,10 @@ to know more about the contribution process.
 Check the [**open issues**](https://github.com/orgs/parallaxsecond/projects/1) on the board if you
 need any ideas 🙂!
 
+# Security Vulnerability Reporting
+
+Check [**PARSEC's security policy**](./SECURITY.md).
+
 # License
 
 The software is provided under Apache-2.0. Contributions to this project are accepted under the same license.
