@@ -21,6 +21,7 @@
       "anta5010",
       "gowthamsk-arm",
       "mohamedasaker-arm",
+      "tgonzalezorlandoarm",
     ]
 
 [people]
@@ -71,3 +72,8 @@
     Name = "Mohamed Omar Asaker"
     Email = "mohamed.omarasaker@arm.com"
     GitHub = "mohamedasaker-arm"
+
+    [people.tgonzalezorlandoarm]
+    Name = "Tomás Agustín González Orlando"
+    Email = "tomasagustin.gonzalezorlando@arm.com"
+    GitHub = "tgonzalezorlandoarm"
