@@ -253,7 +253,8 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
-    cargo +${MSRV} install cargo-tarpaulin
+    # TODO: Stop using the --version parameter when MSRV is upgraded.
+    cargo +${MSRV} install cargo-tarpaulin --version 0.26.1
 
     mkdir -p reports
 
