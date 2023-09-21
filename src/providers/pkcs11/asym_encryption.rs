@@ -1,18 +1,16 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::to_response_status;
+use super::utils::{algorithm_to_mechanism, to_response_status};
 use super::KeyPairType;
 use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use cryptoki::error::Error;
 use cryptoki::error::RvError;
-use cryptoki::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_interface::operations::{psa_asymmetric_decrypt, psa_asymmetric_encrypt};
 use parsec_interface::requests::{ResponseStatus, Result};
-use std::convert::TryFrom;
 
 impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(
@@ -30,7 +28,7 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
+        let mech = algorithm_to_mechanism(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
         let session = self.new_session()?;
 
@@ -61,7 +59,7 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
+        let mech = algorithm_to_mechanism(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
         let session = self.new_session()?;
 

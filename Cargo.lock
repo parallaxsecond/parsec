@@ -256,7 +256,6 @@ dependencies = [
  "derivative",
  "libloading",
  "log",
- "psa-crypto",
 ]
 
 [[package]]
