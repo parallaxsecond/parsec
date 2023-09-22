@@ -11,8 +11,9 @@ use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
 use cryptoki::context::{CInitializeArgs, Pkcs11};
 use cryptoki::error::{Error as Pkcs11Error, RvError};
-use cryptoki::session::{Session, SessionFlags, UserType};
+use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
+use cryptoki::types::AuthPin;
 use derivative::Derivative;
 use log::{error, info, trace, warn};
 use parsec_interface::operations::list_providers::Uuid;
@@ -211,12 +212,9 @@ impl Provider {
     // * logged in if the pin is set
     // * set on the slot in the provider
     fn new_session(&self) -> Result<Session> {
-        let mut flags = SessionFlags::new();
-        let _ = flags.set_rw_session(true).set_serial_session(true);
-
         let session = self
             .backend
-            .open_session_no_callback(self.slot_number, flags)
+            .open_rw_session(self.slot_number)
             .map_err(to_response_status)?;
 
         if self.user_pin.is_some() {
@@ -231,7 +229,7 @@ impl Provider {
             }
 
             session
-                .login(UserType::User, Some(&pin))
+                .login(UserType::User, Some(&AuthPin::new(pin.to_string())))
                 .or_else(|e| {
                     if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn) = e {
                         Ok(())
@@ -529,11 +527,11 @@ impl ProviderBuilder {
                         format_error!("Failed parsing token info", e);
                         Error::new(ErrorKind::InvalidData, "Failed parsing token info")
                     })?;
-                    let sn =
-                        String::from_utf8(current_token.serialNumber.to_vec()).map_err(|e| {
-                            format_error!("Failed parsing token serial number", e);
-                            Error::new(ErrorKind::InvalidData, "Failed parsing token serial number")
-                        })?;
+                    let sn = String::from_utf8(current_token.serial_number().as_bytes().to_vec())
+                        .map_err(|e| {
+                        format_error!("Failed parsing token serial number", e);
+                        Error::new(ErrorKind::InvalidData, "Failed parsing token serial number")
+                    })?;
                     if sn.trim() == serial_number.trim() {
                         slot = Some(current_slot);
                         break;

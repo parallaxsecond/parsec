@@ -77,8 +77,8 @@ impl CanDoCrypto for Provider {
             .get_mechanism_info(self.slot_number, mechanism.mechanism_type())
             .map_err(to_response_status)?;
         if std::any::type_name::<Ulong>() == std::any::type_name::<u64>() {
-            if !((attributes.bits as u64) >= (*mechanism_info.min_key_size()).into()
-                && (attributes.bits as u64) <= (*mechanism_info.max_key_size()).into())
+            if !(attributes.bits >= mechanism_info.min_key_size()
+                && attributes.bits <= mechanism_info.max_key_size())
             {
                 info!(
                     "Incorrect key size {} for mechanism {:?}",
@@ -87,8 +87,8 @@ impl CanDoCrypto for Provider {
                 return Err(PsaErrorNotSupported);
             }
         } else {
-            if !((attributes.bits as u64) >= (*mechanism_info.min_key_size() as u64)
-                && (attributes.bits as u64) <= (*mechanism_info.max_key_size() as u64))
+            if !(attributes.bits >= mechanism_info.min_key_size()
+                && attributes.bits <= mechanism_info.max_key_size())
             {
                 info!(
                     "Incorrect key size {} for mechanism {:?}",

@@ -1,5 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use cryptoki::types::AuthPin;
 use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
 use log::{error, info};
@@ -456,7 +457,6 @@ fn activate_cred_no_auth() {
 #[cfg(feature = "pkcs11-provider")]
 fn init_pkcs11_token(lib: &str, so_pin: &str, pin: &str) -> String {
     use cryptoki::context::{CInitializeArgs, Pkcs11};
-    use cryptoki::session::SessionFlags;
     use cryptoki::session::UserType;
     use std::path::Path;
 
@@ -464,19 +464,22 @@ fn init_pkcs11_token(lib: &str, so_pin: &str, pin: &str) -> String {
     // // initialize the library
     pkcs11.initialize(CInitializeArgs::OsThreads).unwrap();
     let slot = pkcs11.get_slots_with_token().unwrap().pop().unwrap();
-    pkcs11.init_token(slot, so_pin, "Test Token").unwrap();
-    // set flags
-    let mut flags = SessionFlags::new();
-    let _ = flags.set_rw_session(true).set_serial_session(true);
+    pkcs11
+        .init_token(slot, &AuthPin::new(so_pin.to_string()), "Test Token")
+        .unwrap();
     // open a session
-    let session = pkcs11.open_session_no_callback(slot, flags).unwrap();
+    let session = pkcs11.open_rw_session(slot).unwrap();
     // log in the session
-    session.login(UserType::So, Some(so_pin)).unwrap();
-    session.init_pin(pin).unwrap();
+    session
+        .login(UserType::So, Some(&AuthPin::new(so_pin.to_string())))
+        .unwrap();
+    session.init_pin(&AuthPin::new(pin.to_string())).unwrap();
     // get the token serial number
     let token = pkcs11.get_token_info(slot).unwrap();
     pkcs11.finalize();
-    std::str::from_utf8(&token.serialNumber).unwrap().to_owned()
+    std::str::from_utf8(token.serial_number().as_bytes())
+        .unwrap()
+        .to_owned()
 }
 
 #[cfg(feature = "pkcs11-provider")]

@@ -164,9 +164,9 @@ pub fn pkcsmgftype_from_psa_crypto_hash(alg: Hash) -> Result<rsa::PkcsMgfType, E
 }
 
 #[allow(deprecated)]
-pub fn algorithm_to_mechanism(
+pub fn algorithm_to_mechanism<'a>(
     alg: psa_crypto::types::algorithm::Algorithm,
-) -> Result<Mechanism, Error> {
+) -> Result<Mechanism<'a>, Error> {
     use psa_crypto::types::algorithm::{Algorithm, AsymmetricEncryption};
 
     match alg {
@@ -187,13 +187,11 @@ pub fn algorithm_to_mechanism(
         })),
         Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa { .. }) => Ok(Mechanism::Ecdsa),
         Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaOaep { hash_alg }) => {
-            Ok(Mechanism::RsaPkcsOaep(rsa::PkcsOaepParams {
-                hash_alg: algorithm_to_mechanism(Algorithm::from(hash_alg))?.mechanism_type(),
-                mgf: pkcsmgftype_from_psa_crypto_hash(hash_alg)?,
-                source: rsa::PkcsOaepSourceType::DATA_SPECIFIED,
-                source_data: std::ptr::null(),
-                source_data_len: 0.into(),
-            }))
+            Ok(Mechanism::from(rsa::PkcsOaepParams::new(
+                algorithm_to_mechanism(Algorithm::from(hash_alg))?.mechanism_type(),
+                pkcsmgftype_from_psa_crypto_hash(hash_alg)?,
+                rsa::PkcsOaepSource::empty(),
+            )))
         }
         alg => {
             error!("{:?} is not a supported algorithm", alg);
