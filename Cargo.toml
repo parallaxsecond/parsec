@@ -21,7 +21,7 @@ base64 = "0.21.0"
 uuid = "0.8.2"
 threadpool = "1.8.1"
 signal-hook = "0.3.4"
-sd-notify = "0.3.0"
+sd-notify = "0.4.1"
 toml = "0.5.8"
 serde = { version = "1.0.123", features = ["derive"] }
 env_logger = "0.8.3"
