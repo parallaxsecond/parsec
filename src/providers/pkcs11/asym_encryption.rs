@@ -58,7 +58,6 @@ impl Provider {
         let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
 
         op.validate(key_attributes)?;
-
         let mech = algorithm_to_mechanism(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
         let session = self.new_session()?;

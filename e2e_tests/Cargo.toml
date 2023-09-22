@@ -30,7 +30,7 @@ picky-asn1 = "0.3.1"
 sha2 = "0.9.3"
 serial_test = "0.5.1"
 regex = "1.6.0"
-cryptoki = { version = "0.3.1", default-features = false }
+cryptoki = { version = "0.5.0", default-features = false }
 snailquote = "0.3.1"
 
 [features]
