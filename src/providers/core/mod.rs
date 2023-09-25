@@ -9,6 +9,7 @@ use super::Provide;
 use crate::authenticators::ApplicationIdentity;
 use derivative::Derivative;
 use log::{error, trace};
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{
     delete_client, list_authenticators, list_clients, list_keys, list_opcodes, list_providers,
     ping, psa_destroy_key,
@@ -21,7 +22,6 @@ use std::collections::{HashMap, HashSet};
 use std::io::{Error, ErrorKind};
 use std::num::ParseIntError;
 use std::sync::Arc;
-use uuid::Uuid;
 
 const SUPPORTED_OPCODES: [Opcode; 5] = [
     Opcode::ListProviders,

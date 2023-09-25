@@ -12,11 +12,11 @@ use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{error, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{list_clients, list_keys};
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
-use uuid::Uuid;
 
 use parsec_interface::operations::{
     psa_aead_decrypt, psa_aead_encrypt, psa_cipher_decrypt, psa_cipher_encrypt, psa_destroy_key,

@@ -11,6 +11,7 @@ use context::Context;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::ProviderInfo;
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{
     can_do_crypto, list_clients, list_keys, psa_asymmetric_decrypt, psa_asymmetric_encrypt,
     psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key, psa_generate_random,
@@ -20,7 +21,6 @@ use parsec_interface::requests::{Opcode, ProviderId, Result};
 use psa_crypto::types::key;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU32, Ordering};
-use uuid::Uuid;
 
 mod asym_encryption;
 mod asym_sign;
