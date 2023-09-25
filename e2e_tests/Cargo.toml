@@ -15,7 +15,7 @@ parsec-client = { version = "0.15.0", features = ["testing", "spiffe-auth"] }
 log = "0.4.14"
 # Compatible version with crate rsa
 rand = "0.7.3"
-env_logger = "0.8.3"
+env_logger = "0.10.0"
 stdext = "0.3.1"
 tss-esapi = { version = "7.3.0", optional = true }
 
