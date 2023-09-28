@@ -178,9 +178,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bumpalo"
-version = "3.11.0"
+version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1ad822118d20d2c234f427000d5acc36eabe1e29a348c89b63dd60b13f28e5d"
+checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "bytes"
@@ -1124,9 +1124,9 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1"
-version = "0.3.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "889bbb26c80acf919e89980dfc8e04eb19df272d8a9893ec9b748d3a1675abde"
+checksum = "1088a7f82ee21e534da0f62b074b559d2a0717b0d5104ba7a47c1f5bc6c83f69"
 dependencies = [
  "oid",
  "serde",
@@ -1146,11 +1146,11 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-der"
-version = "0.2.5"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbbd5390ab967396cc7473e6e0848684aec7166e657c6088604e07b54a73dbe"
+checksum = "de76bf631e2f2064f78d7f1ea8a57cb0445d83138cd5fac67274d50b0f6053c2"
 dependencies = [
- "picky-asn1 0.3.3",
+ "picky-asn1 0.5.0",
  "serde",
  "serde_bytes",
 ]
@@ -1168,14 +1168,14 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-x509"
-version = "0.6.1"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3033675030de806aba1d5470949701b7c9f1dbf77e3bb17bd12e5f945e560ba"
+checksum = "43aa17ded8046e4809d21f0a007439ebcd1aa23e88003a6d68ba9992b26c96f7"
 dependencies = [
  "base64 0.13.1",
  "oid",
- "picky-asn1 0.3.3",
- "picky-asn1-der 0.2.5",
+ "picky-asn1 0.5.0",
+ "picky-asn1-der 0.3.1",
  "serde",
 ]
 
@@ -1801,9 +1801,9 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "7.2.0"
+version = "7.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "891582e26e83f2cbd608b18cbd7ffb921482740524187a2bca20cf44a286547b"
+checksum = "40d158588eb8f815ca311b56a0bce5d775b0cb1a54640339ea2820bf636cdea5"
 dependencies = [
  "bitfield",
  "enumflags2",
@@ -1813,8 +1813,8 @@ dependencies = [
  "num-derive",
  "num-traits",
  "oid",
- "picky-asn1 0.3.3",
- "picky-asn1-x509 0.6.1",
+ "picky-asn1 0.5.0",
+ "picky-asn1-x509 0.7.1",
  "regex",
  "serde",
  "tss-esapi-sys",
