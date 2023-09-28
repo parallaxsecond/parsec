@@ -28,6 +28,7 @@ use crate::providers::tpm::Provider as TpmProvider;
 #[cfg(feature = "trusted-service-provider")]
 use crate::providers::trusted_service::Provider as TrustedServiceProvider;
 use anyhow::{Context, Result};
+use base64::Engine;
 use log::{error, info, warn};
 use parsec_interface::requests::{AuthType, ProviderId};
 use std::collections::HashMap;
@@ -240,9 +241,9 @@ pub struct OnDiskKeyInfoManager {
 #[allow(deprecated)]
 fn key_triple_to_base64_filenames(key_triple: &KeyTriple) -> (String, String, String) {
     (
-        base64::encode_config(key_triple.app_name.as_bytes(), base64::URL_SAFE),
+        base64::engine::general_purpose::URL_SAFE.encode(key_triple.app_name.as_bytes()),
         (key_triple.provider_id as u8).to_string(),
-        base64::encode_config(key_triple.key_name.as_bytes(), base64::URL_SAFE),
+        base64::engine::general_purpose::URL_SAFE.encode(key_triple.key_name.as_bytes()),
     )
 }
 
@@ -252,7 +253,7 @@ fn key_triple_to_base64_filenames(key_triple: &KeyTriple) -> (String, String, St
 ///
 /// Returns an error as a string if either the decoding or the bytes conversion to UTF-8 failed.
 fn base64_data_to_string(base64_bytes: &[u8]) -> Result<String, String> {
-    match base64::decode_config(base64_bytes, base64::URL_SAFE) {
+    match base64::engine::general_purpose::URL_SAFE.decode(base64_bytes) {
         Ok(decode_bytes) => match String::from_utf8(decode_bytes) {
             Ok(string) => Ok(string),
             Err(error) => Err(error.to_string()),

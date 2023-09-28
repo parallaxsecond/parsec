@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(unused, dead_code)]
 
+use base64::Engine;
 use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::can_do_crypto::CheckType;
@@ -388,9 +389,16 @@ fn asym_verify_decrypt_with_internet() {
     }
 
     client
-        .import_rsa_key_pair_for_encryption(key_name.clone(), base64::decode(PRIVATE_KEY).unwrap())
+        .import_rsa_key_pair_for_encryption(
+            key_name.clone(),
+            base64::engine::general_purpose::STANDARD
+                .decode(PRIVATE_KEY)
+                .unwrap(),
+        )
         .unwrap();
-    let encrypt_bytes = base64::decode(ENCRYPTED_MESSAGE).unwrap();
+    let encrypt_bytes = base64::engine::general_purpose::STANDARD
+        .decode(ENCRYPTED_MESSAGE)
+        .unwrap();
     let plaintext_bytes = client
         .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, encrypt_bytes)
         .unwrap();
@@ -449,7 +457,9 @@ fn asym_decrypt_not_permitted() {
 
     client.generate_key(key_name.clone(), attributes).unwrap();
 
-    let encrypt_bytes = base64::decode(ENCRYPTED_MESSAGE).unwrap();
+    let encrypt_bytes = base64::engine::general_purpose::STANDARD
+        .decode(ENCRYPTED_MESSAGE)
+        .unwrap();
     let error = client
         .asymmetric_decrypt_message_with_rsapkcs1v15(key_name, encrypt_bytes)
         .unwrap_err();
