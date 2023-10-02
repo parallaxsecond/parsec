@@ -3,7 +3,7 @@ use std::env;
 use std::fs::read_dir;
 use std::io::{Error, ErrorKind, Result};
 use std::path::{Path, PathBuf};
-
+jffjfj
 #[cfg(feature = "trusted-service-provider")]
 fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     let header = ts_include_dir.clone() + "/components/service/locator/interface/service_locator.h";
