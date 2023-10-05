@@ -11,6 +11,7 @@ use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{info, trace};
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{
     attest_key, can_do_crypto, prepare_key_attestation, psa_asymmetric_decrypt,
     psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key, psa_generate_key,
@@ -26,7 +27,6 @@ use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
 use tss_esapi::structures::{SymmetricCipherParameters, SymmetricDefinitionObject};
 use tss_esapi::Tcti;
-use uuid::Uuid;
 use zeroize::Zeroize;
 
 mod asym_encryption;

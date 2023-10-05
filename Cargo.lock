@@ -1071,7 +1071,6 @@ dependencies = [
  "threadpool",
  "toml",
  "tss-esapi",
- "uuid",
  "zeroize",
 ]
 

@@ -18,7 +18,6 @@ path = "src/bin/main.rs"
 parsec-interface = "0.28.0"
 rand = { version = "0.8.3", features = ["small_rng"], optional = true }
 base64 = "0.21.0"
-uuid = "0.8.2"
 threadpool = "1.8.1"
 signal-hook = "0.3.4"
 sd-notify = "0.3.0"

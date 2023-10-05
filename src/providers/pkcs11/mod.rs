@@ -15,6 +15,7 @@ use cryptoki::session::{Session, SessionFlags, UserType};
 use cryptoki::slot::Slot;
 use derivative::Derivative;
 use log::{error, info, trace, warn};
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{
     can_do_crypto, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_destroy_key,
     psa_export_public_key, psa_generate_key, psa_generate_random, psa_import_key, psa_sign_hash,
@@ -30,7 +31,6 @@ use std::io::{Error, ErrorKind};
 use std::str::FromStr;
 use std::sync::RwLock;
 use utils::{to_response_status, KeyPairType};
-use uuid::Uuid;
 use zeroize::{Zeroize, Zeroizing};
 
 type LocalIdStore = HashSet<u32>;

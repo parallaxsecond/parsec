@@ -10,6 +10,7 @@ use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{error, trace};
+use parsec_interface::operations::list_providers::Uuid;
 use parsec_interface::operations::{
     can_do_crypto, psa_aead_decrypt, psa_aead_encrypt, psa_asymmetric_decrypt,
     psa_asymmetric_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key,
@@ -25,7 +26,6 @@ use std::sync::{
     atomic::{AtomicU32, Ordering::Relaxed},
     Mutex,
 };
-use uuid::Uuid;
 
 mod aead;
 mod asym_encryption;
