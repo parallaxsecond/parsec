@@ -1,18 +1,20 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use cryptoki::error::{Error, RvError};
+use cryptoki::mechanism::rsa;
+use cryptoki::mechanism::Mechanism;
 use cryptoki::object::Attribute;
 use log::error;
-use parsec_interface::operations::psa_algorithm::*;
+use parsec_interface::operations::psa_algorithm::{AsymmetricSignature, Hash, SignHash};
+
 use parsec_interface::operations::psa_key_attributes::*;
 use parsec_interface::requests::ResponseStatus;
-use parsec_interface::requests::Result;
+use parsec_interface::requests::Result as ResponseResult;
 use picky_asn1::wrapper::ObjectIdentifierAsn1;
 use picky_asn1_x509::{
     algorithm_identifier::EcParameters, AlgorithmIdentifier, DigestInfo, ShaVariant,
 };
 use std::convert::TryInto;
-
 // Public exponent value for all RSA keys.
 pub const PUBLIC_EXPONENT: [u8; 3] = [0x01, 0x00, 0x01];
 
@@ -99,7 +101,7 @@ pub fn key_pair_usage_flags_to_pkcs11_attributes(
 }
 
 /// Format the input data into ASN1 DigestInfo bytes
-pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
+pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> ResponseResult<Vec<u8>> {
     let oid = match alg {
         AsymmetricSignature::RsaPkcs1v15Sign {
             hash_alg: SignHash::Specific(Hash::Sha224),
@@ -123,7 +125,7 @@ pub fn digest_info(alg: AsymmetricSignature, hash: Vec<u8>) -> Result<Vec<u8>> {
     .map_err(|_| ResponseStatus::PsaErrorGenericError)
 }
 
-pub fn ec_params(ecc_family: EccFamily, bits: usize) -> Result<EcParameters> {
+pub fn ec_params(ecc_family: EccFamily, bits: usize) -> ResponseResult<EcParameters> {
     Ok(EcParameters::NamedCurve(match (ecc_family, bits) {
         // The following "unwrap()" should be ok, as they cover constant conversions
         (EccFamily::SecpR1, 192) => {
@@ -143,4 +145,57 @@ pub fn ec_params(ecc_family: EccFamily, bits: usize) -> Result<EcParameters> {
         }
         _ => return Err(ResponseStatus::PsaErrorNotSupported),
     }))
+}
+
+#[allow(deprecated)]
+/// Convert a PSA Crypto Hash algorithm to a MGF type
+pub fn pkcsmgftype_from_psa_crypto_hash(alg: Hash) -> Result<rsa::PkcsMgfType, Error> {
+    match alg {
+        Hash::Sha1 => Ok(rsa::PkcsMgfType::MGF1_SHA1),
+        Hash::Sha224 => Ok(rsa::PkcsMgfType::MGF1_SHA224),
+        Hash::Sha256 => Ok(rsa::PkcsMgfType::MGF1_SHA256),
+        Hash::Sha384 => Ok(rsa::PkcsMgfType::MGF1_SHA384),
+        Hash::Sha512 => Ok(rsa::PkcsMgfType::MGF1_SHA512),
+        alg => {
+            error!("{:?} is not a supported MGF1 algorithm", alg);
+            Err(Error::NotSupported)
+        }
+    }
+}
+
+#[allow(deprecated)]
+pub fn algorithm_to_mechanism<'a>(
+    alg: psa_crypto::types::algorithm::Algorithm,
+) -> Result<Mechanism<'a>, Error> {
+    use psa_crypto::types::algorithm::{Algorithm, AsymmetricEncryption};
+
+    match alg {
+        Algorithm::Hash(Hash::Sha1) => Ok(Mechanism::Sha1),
+        Algorithm::Hash(Hash::Sha256) => Ok(Mechanism::Sha256),
+        Algorithm::Hash(Hash::Sha384) => Ok(Mechanism::Sha384),
+        Algorithm::Hash(Hash::Sha512) => Ok(Mechanism::Sha512),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign { .. })
+        | Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaPkcs1v15Crypt { .. }) => {
+            Ok(Mechanism::RsaPkcs)
+        }
+        Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPss {
+            hash_alg: SignHash::Specific(hash_alg),
+        }) => Ok(Mechanism::RsaPkcsPss(rsa::PkcsPssParams {
+            hash_alg: algorithm_to_mechanism(Algorithm::from(hash_alg))?.mechanism_type(),
+            mgf: pkcsmgftype_from_psa_crypto_hash(hash_alg)?,
+            s_len: hash_alg.hash_length().try_into()?,
+        })),
+        Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa { .. }) => Ok(Mechanism::Ecdsa),
+        Algorithm::AsymmetricEncryption(AsymmetricEncryption::RsaOaep { hash_alg }) => {
+            Ok(Mechanism::from(rsa::PkcsOaepParams::new(
+                algorithm_to_mechanism(Algorithm::from(hash_alg))?.mechanism_type(),
+                pkcsmgftype_from_psa_crypto_hash(hash_alg)?,
+                rsa::PkcsOaepSource::empty(),
+            )))
+        }
+        alg => {
+            error!("{:?} is not a supported algorithm", alg);
+            Err(Error::NotSupported)
+        }
+    }
 }

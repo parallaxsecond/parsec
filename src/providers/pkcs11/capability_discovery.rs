@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(trivial_numeric_casts)]
+use super::utils::algorithm_to_mechanism;
 use super::{utils, Provider};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::pkcs11::to_response_status;
-use cryptoki::mechanism::{Mechanism, MechanismInfo, MechanismType};
+use cryptoki::mechanism::{MechanismInfo, MechanismType};
 use cryptoki::types::Ulong;
 use log::{info, trace};
 use parsec_interface::operations::can_do_crypto;
@@ -14,7 +15,6 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::psa_key_attributes::{Attributes, Type};
 use parsec_interface::requests::ResponseStatus::PsaErrorNotSupported;
 use parsec_interface::requests::Result;
-use std::convert::TryFrom;
 
 impl CanDoCrypto for Provider {
     fn can_do_crypto_internal(
@@ -65,7 +65,7 @@ impl CanDoCrypto for Provider {
             .backend
             .get_mechanism_list(self.slot_number)
             .map_err(to_response_status)?;
-        let mechanism = Mechanism::try_from(attributes.policy.permitted_algorithms)
+        let mechanism = algorithm_to_mechanism(attributes.policy.permitted_algorithms)
             .map_err(to_response_status)?;
         if !(supported_mechanisms.contains(&mechanism.mechanism_type())) {
             info!("Mechanism {:?} is not supported", mechanism);
@@ -77,8 +77,8 @@ impl CanDoCrypto for Provider {
             .get_mechanism_info(self.slot_number, mechanism.mechanism_type())
             .map_err(to_response_status)?;
         if std::any::type_name::<Ulong>() == std::any::type_name::<u64>() {
-            if !((attributes.bits as u64) >= (*mechanism_info.min_key_size()).into()
-                && (attributes.bits as u64) <= (*mechanism_info.max_key_size()).into())
+            if !(attributes.bits >= mechanism_info.min_key_size()
+                && attributes.bits <= mechanism_info.max_key_size())
             {
                 info!(
                     "Incorrect key size {} for mechanism {:?}",
@@ -87,8 +87,8 @@ impl CanDoCrypto for Provider {
                 return Err(PsaErrorNotSupported);
             }
         } else {
-            if !((attributes.bits as u64) >= (*mechanism_info.min_key_size() as u64)
-                && (attributes.bits as u64) <= (*mechanism_info.max_key_size() as u64))
+            if !(attributes.bits >= mechanism_info.min_key_size()
+                && attributes.bits <= mechanism_info.max_key_size())
             {
                 info!(
                     "Incorrect key size {} for mechanism {:?}",

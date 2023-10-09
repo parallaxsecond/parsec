@@ -1,17 +1,15 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::to_response_status;
+use super::utils::{algorithm_to_mechanism, to_response_status};
 use super::Provider;
 use super::{utils, KeyPairType};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
-use cryptoki::mechanism::Mechanism;
 use log::{info, trace};
 use parsec_interface::operations::psa_algorithm::Algorithm;
 use parsec_interface::operations::psa_key_attributes::Type;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ResponseStatus, Result};
-use std::convert::TryFrom;
 
 impl Provider {
     pub(super) fn psa_sign_hash_internal(
@@ -30,7 +28,7 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
+        let mech = algorithm_to_mechanism(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
         let session = self.new_session()?;
 
@@ -69,7 +67,7 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
-        let mech = Mechanism::try_from(Algorithm::from(op.alg)).map_err(to_response_status)?;
+        let mech = algorithm_to_mechanism(Algorithm::from(op.alg)).map_err(to_response_status)?;
 
         let session = self.new_session()?;
 

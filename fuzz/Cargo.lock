@@ -278,22 +278,23 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "cryptoki"
-version = "0.3.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "570006e51d08ec89ce5bbfdcf428ad96111636d524bf2447bee6377fd0e1d889"
+checksum = "95d9fb68c88020896fa3741a10e41f206b2ace927724170a753a3f2ba5f77c2b"
 dependencies = [
+ "bitflags",
  "cryptoki-sys",
- "derivative",
  "libloading",
  "log",
- "psa-crypto",
+ "paste",
+ "secrecy 0.8.0",
 ]
 
 [[package]]
 name = "cryptoki-sys"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d12231889cbf7e11d2965a063d9518bc7aac60c5b125dc61c8ff2111a160eae"
+checksum = "4bc9943e09928a84ed6e76dbaea1699b7678e95b2487b0de31075af300221095"
 dependencies = [
  "libloading",
  "target-lexicon",
@@ -1053,7 +1054,7 @@ dependencies = [
  "num-traits",
  "prost",
  "psa-crypto",
- "secrecy",
+ "secrecy 0.7.0",
  "serde",
  "uuid",
  "zeroize",
@@ -1089,6 +1090,12 @@ dependencies = [
  "tss-esapi",
  "zeroize",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
 
 [[package]]
 name = "peeking_take_while"
@@ -1474,6 +1481,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0673d6a6449f5e7d12a1caf424fd9363e2af3a4953023ed455e3c4beef4597c0"
 dependencies = [
  "serde",
+ "zeroize",
+]
+
+[[package]]
+name = "secrecy"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
+dependencies = [
  "zeroize",
 ]
 

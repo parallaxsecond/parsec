@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::to_response_status;
+use super::utils::{algorithm_to_mechanism, to_response_status};
 use super::{utils, KeyPairType, Provider};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
@@ -17,7 +17,7 @@ use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use picky_asn1::wrapper::{IntegerAsn1, OctetStringAsn1};
 use picky_asn1_x509::RsaPublicKey;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 
 impl Provider {
     /// Find the PKCS 11 object handle corresponding to the key ID and the key type (public,
@@ -117,7 +117,7 @@ impl Provider {
         let mut pub_template = vec![
             Attribute::Id(key_id.to_be_bytes().to_vec()),
             Attribute::Token(true.into()),
-            Attribute::AllowedMechanisms(vec![Mechanism::try_from(
+            Attribute::AllowedMechanisms(vec![algorithm_to_mechanism(
                 key_attributes.policy.permitted_algorithms,
             )
             .map_err(to_response_status)?
