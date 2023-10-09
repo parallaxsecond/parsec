@@ -1064,7 +1064,7 @@ name = "parsec-service"
 version = "1.2.0"
 dependencies = [
  "anyhow",
- "base64 0.13.1",
+ "base64 0.21.2",
  "bincode",
  "cryptoki",
  "derivative",
@@ -1075,7 +1075,7 @@ dependencies = [
  "num-traits",
  "parsec-interface",
  "picky-asn1 0.7.2",
- "picky-asn1-der 0.4.0",
+ "picky-asn1-der 0.4.1",
  "picky-asn1-x509 0.11.0",
  "psa-crypto",
  "rand",
@@ -1144,6 +1144,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "picky-asn1"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "295eea0f33c16be21e2a98b908fdd4d73c04dd48c8480991b76dbcf0cb58b212"
+dependencies = [
+ "oid",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "picky-asn1-der"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1156,11 +1167,11 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1-der"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e47267a46f4ea246b772381970b8ed3f15963dd3e15ffc2c3f4ac3bc2d77384b"
+checksum = "5df7873a9e36d42dadb393bea5e211fe83d793c172afad5fb4ec846ec582793f"
 dependencies = [
- "picky-asn1 0.7.2",
+ "picky-asn1 0.8.0",
  "serde",
  "serde_bytes",
 ]
@@ -1187,7 +1198,7 @@ dependencies = [
  "base64 0.21.2",
  "oid",
  "picky-asn1 0.7.2",
- "picky-asn1-der 0.4.0",
+ "picky-asn1-der 0.4.1",
  "serde",
 ]
 
@@ -1486,9 +1497,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.185"
+version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be9b6f69f1dfd54c3b568ffa45c310d6973a5e5148fd40cf515acaf38cf5bc31"
+checksum = "cf9e0fcba69a370eed61bcf2b728575f726b50b55cba78064753d708ddc7549e"
 dependencies = [
  "serde_derive",
 ]
@@ -1504,9 +1515,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.185"
+version = "1.0.188"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc59dfdcbad1437773485e0367fea4b090a2e0a16d9ffc46af47764536a298ec"
+checksum = "4eca7ac642d82aa35b60049a6eccb4be6be75e599bd2e9adb5f875a737654af2"
 dependencies = [
  "proc-macro2",
  "quote",
