@@ -590,9 +590,9 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "grpcio"
-version = "0.12.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "609832ca501baeb662dc81932fda9ed83f5d058f4b899a807ba222ce696f430a"
+checksum = "55edb2eaa4b13b9a8a07f1a1bbaadc8a5bf4132c2b1fa6358d2be14afd18a2c3"
 dependencies = [
  "futures-executor",
  "futures-util",
