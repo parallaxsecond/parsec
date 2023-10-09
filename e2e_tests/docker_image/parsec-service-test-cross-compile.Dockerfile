@@ -35,7 +35,7 @@ ENV OPENSSL_VERSION="OpenSSL_1_1_1j"
 RUN git clone https://github.com/openssl/openssl.git --branch $OPENSSL_VERSION
 
 # Get TPM2 TSS source code
-ENV TPM2_TSS_VERSION="2.3.3"
+ENV TPM2_TSS_VERSION="2.4.6"
 RUN git clone https://github.com/tpm2-software/tpm2-tss --branch $TPM2_TSS_VERSION
 
 # Copy TSS cross-compilation script

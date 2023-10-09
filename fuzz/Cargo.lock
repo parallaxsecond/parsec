@@ -145,23 +145,24 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.63.0"
+version = "0.66.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36d860121800b2a9a94f9b5604b332d5cffb234ce17609ea479d723dbc9d3885"
+checksum = "f2b84e06fc203107bfbad243f4aba2af864eb7db3b1cf46ea0a023b0b433d2a7"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.0",
  "cexpr 0.6.0",
  "clang-sys",
  "lazy_static",
  "lazycell",
  "log",
  "peeking_take_while",
+ "prettyplease",
  "proc-macro2",
  "quote",
  "regex",
  "rustc-hash",
  "shlex 1.2.0",
- "syn 1.0.109",
+ "syn 2.0.38",
  "which",
 ]
 
@@ -296,7 +297,7 @@ dependencies = [
  "libloading",
  "log",
  "paste",
- "secrecy 0.8.0",
+ "secrecy",
 ]
 
 [[package]]
@@ -955,17 +956,6 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "num-derive"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
@@ -1078,17 +1068,17 @@ dependencies = [
 
 [[package]]
 name = "parsec-client"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5798ac04b102b074ad2a26976e53e4c918d2342ccb8ce6f31c2e71ab338b1156"
+checksum = "a36f9d8e27166cf0586913812454174286e094d594cc8b28d8a8d02d64406bbc"
 dependencies = [
  "derivative",
+ "libc",
  "log",
  "num",
  "parsec-interface",
  "spiffe",
  "url",
- "users",
  "zeroize",
 ]
 
@@ -1108,19 +1098,19 @@ dependencies = [
 
 [[package]]
 name = "parsec-interface"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6f1b90789d4cabb8d7100a2ce632baad9683c2598f302d2387d9a45f967de56"
+checksum = "0cdfb8fbec0cc9a03ec4a9a15ac7728c6502daf7fcccae96990bd8240809c78a"
 dependencies = [
  "bincode",
  "derivative",
  "log",
  "num",
- "num-derive 0.3.3",
+ "num-derive",
  "num-traits",
  "prost",
  "psa-crypto",
- "secrecy 0.7.0",
+ "secrecy",
  "serde",
  "uuid",
  "zeroize",
@@ -1265,6 +1255,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
+name = "prettyplease"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae005bd773ab59b4725093fd7df83fd7892f7d8eafb48dbd7de6e024e4215f9d"
+dependencies = [
+ "proc-macro2",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1299,9 +1299,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de5e2533f59d08fcf364fd374ebda0692a70bd6d7e66ef97f306f45c6c5d8020"
+checksum = "444879275cb4fd84958b1a1d5420d15e6fcf7c235fe47f053c9c2a80aceb6001"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -1309,9 +1309,9 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "600d2f334aa05acb02a755e217ef1ab6dea4d51b58b7846588b747edec04efba"
+checksum = "f9cc1a3263e07e0bf68e96268f37665207b49560d98739662cdfaae215c720fe"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1328,9 +1328,9 @@ checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "psa-crypto"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31a7f20ebf21c7a53dd8aa24a11bd4cc9f3f838f0de1b32e17cb6cd4f88fdf7f"
+checksum = "7bc6d5483e7d002ed1cc1e326ede9762cf2e9adcde0dbc36a926e8087694735a"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -1340,13 +1340,14 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d3f19716e0584f8d5627712617b1cc5b9b642943fd9a61b883b8d533f5d400c"
+checksum = "2d2be6a4212e526dda25f29cbe2b0d6879709ca62c826a0c569e77841f5f023e"
 dependencies = [
- "bindgen 0.63.0",
+ "bindgen 0.66.1",
  "cc",
  "cmake",
+ "regex",
  "walkdir",
 ]
 
@@ -1522,20 +1523,11 @@ checksum = "621e3680f3e07db4c9c2c3fb07c6223ab2fab2e54bd3c04c3ae037990f428c32"
 
 [[package]]
 name = "secrecy"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0673d6a6449f5e7d12a1caf424fd9363e2af3a4953023ed455e3c4beef4597c0"
-dependencies = [
- "serde",
- "zeroize",
-]
-
-[[package]]
-name = "secrecy"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
 dependencies = [
+ "serde",
  "zeroize",
 ]
 
@@ -1906,7 +1898,7 @@ dependencies = [
  "hostname-validator",
  "log",
  "mbox",
- "num-derive 0.4.1",
+ "num-derive",
  "num-traits",
  "oid",
  "picky-asn1",
@@ -1993,16 +1985,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
-]
-
-[[package]]
-name = "users"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24cc0f6d6f267b73e5a2cadf007ba8f9bc39c6a6f9666f8cf25ea809a153b032"
-dependencies = [
- "libc",
- "log",
 ]
 
 [[package]]
