@@ -180,8 +180,16 @@ jobs:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
     name: Cross-compile Parsec to various targets
     runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
     steps:
       - uses: actions/checkout@v2
+      - name: Load Docker
+        uses: ./.github/actions/load_docker
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
+        with:
+          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
+          image-path: "/tmp"
       - name: Run the container to execute the test script
         #run:
         #  docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
