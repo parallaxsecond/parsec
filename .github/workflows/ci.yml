@@ -3,8 +3,8 @@ name: Continuous Integration
 on: [push, pull_request, workflow_dispatch]
 
 env:
-  # TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
-  TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+  TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-cross-compile'
+  #TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
 
 jobs:
   build-and-export-test-all-docker:
@@ -13,18 +13,18 @@ jobs:
     # the following condition must evaluate true to execute this job
     # Else it must evaluate false to NOT execute this job
     # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognized at this level.
-    if: ${{ false }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
+    if: ${{ true }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
     steps:
     - uses: actions/checkout@v3
     - name: Build the docker container
-      run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && popd
+      run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-all -f parsec-service-test-all.Dockerfile . && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
     - name: Export the docker container
-      run: docker save parsec-service-test-all > /tmp/parsec-service-test-all.tar
+      run: docker save parsec-service-test-cross-compile > /tmp/parsec-service-test-cross-compile.tar
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: parsec-service-test-all
-        path: /tmp/parsec-service-test-all.tar
+        name: parsec-service-test-cross-compile
+        path: /tmp/parsec-service-test-cross-compile.tar
 
   all-providers:
     name: Various tests targeting a Parsec image with all providers included
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -99,7 +99,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -115,7 +115,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -147,17 +147,17 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
         # Not running stress tests because rust-cryptoauthlib test-interface does not support required calls
       - name: Run the fuzz test script From Container
         # When running the container built on the CI
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        run: CONTAINER_TAG=parsec-service-test-all ./fuzz.sh test
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
+        run: CONTAINER_TAG=parsec-service-test-cross-compile ./fuzz.sh test
       - name: Run the fuzz test script
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE != 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE != 'parsec-service-test-cross-compile' }}
         run: ./fuzz.sh test
 
   on-disk-kim:
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Load Docker
         uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
         with:
           image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
           image-path: "/tmp"
@@ -183,10 +183,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run the container to execute the test script
-        run:
-          docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        #run:
+        #  docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
         # When running the container built on the CI
-        # run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links
