@@ -15,7 +15,7 @@ name = "parsec"
 path = "src/bin/main.rs"
 
 [dependencies]
-parsec-interface = "0.28.0"
+parsec-interface = "0.29.0"
 rand = { version = "0.8.3", features = ["small_rng"], optional = true }
 base64 = "0.21.0"
 threadpool = "1.8.1"
