@@ -261,7 +261,7 @@ dependencies = [
  "libloading",
  "log",
  "paste",
- "secrecy 0.8.0",
+ "secrecy",
 ]
 
 [[package]]
@@ -349,9 +349,9 @@ dependencies = [
  "log",
  "num_cpus",
  "parsec-client",
- "picky-asn1 0.7.2",
+ "picky-asn1",
  "picky-asn1-der",
- "picky-asn1-x509 0.11.0",
+ "picky-asn1-x509",
  "rand",
  "regex",
  "ring",
@@ -874,17 +874,6 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "num-derive"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfb77679af88f8b125209d354a202862602672222e7f2313fdd6dc349bad4712"
@@ -1003,35 +992,35 @@ dependencies = [
 
 [[package]]
 name = "parsec-client"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5798ac04b102b074ad2a26976e53e4c918d2342ccb8ce6f31c2e71ab338b1156"
+checksum = "a36f9d8e27166cf0586913812454174286e094d594cc8b28d8a8d02d64406bbc"
 dependencies = [
  "derivative",
+ "libc",
  "log",
  "num",
  "parsec-interface",
  "spiffe",
  "url",
- "users",
  "zeroize",
 ]
 
 [[package]]
 name = "parsec-interface"
-version = "0.28.0"
+version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6f1b90789d4cabb8d7100a2ce632baad9683c2598f302d2387d9a45f967de56"
+checksum = "cc706e09209b30f10baa35709d41b9cc01d4931b21c00679f59db96cd1650add"
 dependencies = [
  "bincode",
  "derivative",
  "log",
  "num",
- "num-derive 0.3.3",
+ "num-derive",
  "num-traits",
  "prost",
  "psa-crypto",
- "secrecy 0.7.0",
+ "secrecy",
  "serde",
  "uuid",
  "zeroize",
@@ -1088,17 +1077,6 @@ dependencies = [
 
 [[package]]
 name = "picky-asn1"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f338f1fd4f3e13e75e986ca29f2a3c62528d88d3cbadf4afdcefb6b087f2d32"
-dependencies = [
- "oid",
- "serde",
- "serde_bytes",
-]
-
-[[package]]
-name = "picky-asn1"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "295eea0f33c16be21e2a98b908fdd4d73c04dd48c8480991b76dbcf0cb58b212"
@@ -1114,22 +1092,9 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5df7873a9e36d42dadb393bea5e211fe83d793c172afad5fb4ec846ec582793f"
 dependencies = [
- "picky-asn1 0.8.0",
+ "picky-asn1",
  "serde",
  "serde_bytes",
-]
-
-[[package]]
-name = "picky-asn1-x509"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25c2718a5fe2b6c4b651bad5514699182f01db1b2f256fd6ab237f5879a01a4a"
-dependencies = [
- "base64 0.21.4",
- "oid",
- "picky-asn1 0.7.2",
- "picky-asn1-der",
- "serde",
 ]
 
 [[package]]
@@ -1140,7 +1105,7 @@ checksum = "2c5f20f71a68499ff32310f418a6fad8816eac1a2859ed3f0c5c741389dd6208"
 dependencies = [
  "base64 0.21.4",
  "oid",
- "picky-asn1 0.8.0",
+ "picky-asn1",
  "picky-asn1-der",
  "serde",
 ]
@@ -1190,9 +1155,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de5e2533f59d08fcf364fd374ebda0692a70bd6d7e66ef97f306f45c6c5d8020"
+checksum = "444879275cb4fd84958b1a1d5420d15e6fcf7c235fe47f053c9c2a80aceb6001"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -1200,9 +1165,9 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "600d2f334aa05acb02a755e217ef1ab6dea4d51b58b7846588b747edec04efba"
+checksum = "f9cc1a3263e07e0bf68e96268f37665207b49560d98739662cdfaae215c720fe"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1219,9 +1184,9 @@ checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "psa-crypto"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31a7f20ebf21c7a53dd8aa24a11bd4cc9f3f838f0de1b32e17cb6cd4f88fdf7f"
+checksum = "89c2256e525b9a45ec3bbb3382a43dd8809240279e0aab8ea7ee220e9295445b"
 dependencies = [
  "log",
  "psa-crypto-sys",
@@ -1231,12 +1196,13 @@ dependencies = [
 
 [[package]]
 name = "psa-crypto-sys"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d3f19716e0584f8d5627712617b1cc5b9b642943fd9a61b883b8d533f5d400c"
+checksum = "f170cac3a328e1678916b276067ec170a5a51db1b9b8b4c00b44c2839819a963"
 dependencies = [
  "cc",
  "cmake",
+ "regex",
  "walkdir",
 ]
 
@@ -1425,20 +1391,11 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "secrecy"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0673d6a6449f5e7d12a1caf424fd9363e2af3a4953023ed455e3c4beef4597c0"
-dependencies = [
- "serde",
- "zeroize",
-]
-
-[[package]]
-name = "secrecy"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
 dependencies = [
+ "serde",
  "zeroize",
 ]
 
@@ -1767,11 +1724,11 @@ dependencies = [
  "hostname-validator",
  "log",
  "mbox",
- "num-derive 0.4.1",
+ "num-derive",
  "num-traits",
  "oid",
- "picky-asn1 0.8.0",
- "picky-asn1-x509 0.12.0",
+ "picky-asn1",
+ "picky-asn1-x509",
  "regex",
  "serde",
  "tss-esapi-sys",
@@ -1848,16 +1805,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
-]
-
-[[package]]
-name = "users"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24cc0f6d6f267b73e5a2cadf007ba8f9bc39c6a6f9666f8cf25ea809a153b032"
-dependencies = [
- "libc",
- "log",
 ]
 
 [[package]]
