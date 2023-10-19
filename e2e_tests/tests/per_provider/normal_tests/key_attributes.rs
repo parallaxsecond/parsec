@@ -134,7 +134,7 @@ fn wrong_permitted_algorithm() {
     // Do not permit RSA PKCS 1v15 signing algorithm with SHA-256.
     let permitted_algorithm =
         Algorithm::AsymmetricSignature(AsymmetricSignature::RsaPkcs1v15Sign {
-            hash_alg: Hash::Sha512.into(),
+            hash_alg: Hash::Sha256.into(),
         });
     let mut usage_flags: UsageFlags = Default::default();
     let _ = usage_flags.set_sign_hash();
@@ -159,7 +159,7 @@ fn wrong_permitted_algorithm() {
         .unwrap();
 
     let status = client
-        .sign_with_rsa_sha256(key_name, vec![0xDE; 32])
+        .sign_with_rsa_sha384(key_name, vec![0xDE; 32])
         .unwrap_err();
 
     assert_eq!(status, ResponseStatus::PsaErrorNotPermitted);
