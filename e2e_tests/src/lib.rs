@@ -522,6 +522,17 @@ impl TestClient {
         )
     }
 
+    /// Signs a short digest with an RSA key.
+    pub fn sign_with_rsa_sha384(&mut self, key_name: String, hash: Vec<u8>) -> Result<Vec<u8>> {
+        self.sign(
+            key_name,
+            AsymmetricSignature::RsaPkcs1v15Sign {
+                hash_alg: Hash::Sha384.into(),
+            },
+            hash,
+        )
+    }
+
     /// Signs a short digest with an ECDSA key.
     pub fn sign_with_ecdsa_sha256(&mut self, key_name: String, hash: Vec<u8>) -> Result<Vec<u8>> {
         self.sign(
