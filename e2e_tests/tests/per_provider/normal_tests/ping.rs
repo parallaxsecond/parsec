@@ -8,6 +8,7 @@ use parsec_client::core::interface::requests::ProviderId;
 use parsec_client::core::interface::requests::ResponseStatus;
 use parsec_client::core::interface::requests::Result;
 use parsec_client::core::ipc_handler::unix_socket;
+use std::env;
 use std::time::Duration;
 
 #[test]
@@ -22,10 +23,12 @@ fn test_ping() -> Result<()> {
 
 #[test]
 fn mangled_ping() {
+    let socket_path = env::var("PARSEC_SERVICE_ENDPOINT")
+        .unwrap_or_else(|_| "/tmp/parsec.sock".into())
+        .replace("unix:", "");
     let client = RequestClient {
         ipc_handler: Box::from(
-            unix_socket::Handler::new("/tmp/parsec.sock".into(), Some(Duration::from_secs(1)))
-                .unwrap(),
+            unix_socket::Handler::new(socket_path.into(), Some(Duration::from_secs(1))).unwrap(),
         ),
         ..Default::default()
     };
