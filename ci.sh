@@ -254,7 +254,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
     # TODO: Stop using the --version parameter when MSRV is upgraded.
-    cargo +${MSRV} install cargo-tarpaulin --version 0.26.1
+    cargo +${MSRV} install cargo-tarpaulin --version 0.26.1 --locked
 
     mkdir -p reports
 
