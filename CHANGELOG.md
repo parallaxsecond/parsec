@@ -1,6 +1,56 @@
 # Changelog
 
-## [1.2.0](https://github.com/parallaxsecond/parsec/tree/HEAD)
+## [1.3.0](https://github.com/parallaxsecond/parsec/tree/1.3.0) (2023-10-25)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.3.0-rc2...1.3.0)
+
+## [1.3.0-rc2](https://github.com/parallaxsecond/parsec/tree/1.3.0-rc2) (2023-10-19)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.3.0-rc1...1.3.0-rc2)
+
+**Merged pull requests:**
+
+- e2e\_tests/wrong\_permitted\_algorithm: Change used sha for hw compatibi… [\#723](https://github.com/parallaxsecond/parsec/pull/723) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+
+## [1.3.0-rc1](https://github.com/parallaxsecond/parsec/tree/1.3.0-rc1) (2023-10-17)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.2.0...1.3.0-rc1)
+
+**Closed issues:**
+
+- Update cryptoki version to `0.4.1`  [\#668](https://github.com/parallaxsecond/parsec/issues/668)
+- `ansi_term` is unmaintained [\#629](https://github.com/parallaxsecond/parsec/issues/629)
+
+**Merged pull requests:**
+
+- Bump psa-crypto and interface crates [\#718](https://github.com/parallaxsecond/parsec/pull/718) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Update toml, env\_logger and bindgen crates [\#716](https://github.com/parallaxsecond/parsec/pull/716) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Bump various crates [\#714](https://github.com/parallaxsecond/parsec/pull/714) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update picky crates [\#711](https://github.com/parallaxsecond/parsec/pull/711) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Cargo.toml: Remove uuid crate [\#710](https://github.com/parallaxsecond/parsec/pull/710) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Bump sd-notify to 0.4.1 [\#708](https://github.com/parallaxsecond/parsec/pull/708) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- fuzz: Bump bumpalo to 3.14.0 [\#706](https://github.com/parallaxsecond/parsec/pull/706) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update the tss-esapi crate to version 7.3.0 [\#702](https://github.com/parallaxsecond/parsec/pull/702) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Fix cargo-tarpaulin version to 0.26.1 [\#701](https://github.com/parallaxsecond/parsec/pull/701) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Add a Security Vulnerability Reporting section in the README [\#700](https://github.com/parallaxsecond/parsec/pull/700) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update maintainers list [\#699](https://github.com/parallaxsecond/parsec/pull/699) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- ci: Fix coverage builds, nightly issues [\#698](https://github.com/parallaxsecond/parsec/pull/698) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update cryptoki and cryptoki-sys crates [\#697](https://github.com/parallaxsecond/parsec/pull/697) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Use arrays instead of vec! when possible [\#696](https://github.com/parallaxsecond/parsec/pull/696) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Make wrong\_permitted\_algorithm test use a non-deprecated Hash [\#695](https://github.com/parallaxsecond/parsec/pull/695) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Fix coverage builds for different providers [\#694](https://github.com/parallaxsecond/parsec/pull/694) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update MSRV to Rust 1.66.0 [\#692](https://github.com/parallaxsecond/parsec/pull/692) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Bump ASN1 crates dependencies [\#691](https://github.com/parallaxsecond/parsec/pull/691) ([anta5010](https://github.com/anta5010))
+- Minor fixes to changelog [\#690](https://github.com/parallaxsecond/parsec/pull/690) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Upgrade proc-macro2 package [\#688](https://github.com/parallaxsecond/parsec/pull/688) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Update CONTRIBUTORS.md [\#687](https://github.com/parallaxsecond/parsec/pull/687) ([Firstyear](https://github.com/Firstyear))
+- Disable the optional features for the 'structopt' crate [\#686](https://github.com/parallaxsecond/parsec/pull/686) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Upgrade enumflags2 crate [\#685](https://github.com/parallaxsecond/parsec/pull/685) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Remove unmaintained 'users' crate [\#684](https://github.com/parallaxsecond/parsec/pull/684) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Fix compilation issues [\#682](https://github.com/parallaxsecond/parsec/pull/682) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+- Bump base64 dependency to 0.21.0 [\#679](https://github.com/parallaxsecond/parsec/pull/679) ([ema](https://github.com/ema))
+
+## [1.2.0](https://github.com/parallaxsecond/parsec/tree/1.2.0) (2023-04-05)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.2.0-rc1...1.2.0)
 
