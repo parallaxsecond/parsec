@@ -55,3 +55,13 @@ jobs:
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh coverage
       - name: Collect coverage results
         run: bash <(curl -s https://codecov.io/bash)
+
+  mismatcher:
+    name: Check for mismatched dependencies (those that have more than one version)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the dependency mismatcher script
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh mismatcher

@@ -196,6 +196,9 @@ while [ "$#" -gt 0 ]; do
         coverage )
             PROVIDER_NAME=$1
         ;;
+        mismatcher )
+            PROVIDER_NAME=$1
+        ;;
         *)
             error_msg "Unknown argument: $1"
         ;;
@@ -209,6 +212,16 @@ if [ -z "$PROVIDER_NAME" ]; then
 fi
 
 trap cleanup EXIT
+
+if [ "$PROVIDER_NAME" = "mismatcher" ]; then
+    python3 $(pwd)/utils/dependency_cross_matcher.py --deps_dir $(pwd)
+    mismatcher_result=$?
+    if [ "$mismatcher_result" -ne 0 ]; then
+        error_msg "Found dependencies version mismatches"
+    fi
+
+    exit 0
+fi
 
 if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
 	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
