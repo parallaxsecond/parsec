@@ -36,15 +36,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh all
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "all"
 
   build-all-providers:
     name: Cargo check all-providers (current Rust stable & old compiler)
@@ -52,15 +48,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh cargo-check
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "cargo-check"
 
   mbed-crypto-provider:
     name: Integration tests using Mbed Crypto provider
@@ -68,15 +60,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh mbed-crypto
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "mbed-crypto"
 
   pkcs11-provider:
     name: Integration tests using PKCS 11 provider
@@ -84,15 +72,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh pkcs11 --no-stress-test
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "pkcs11 --no-stress-test"
 
   tpm-provider:
     name: Integration tests using TPM provider
@@ -100,15 +84,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh tpm
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "tpm"
 
   trusted-service-provider:
     name: Integration tests using Crypto Trusted Service provider
@@ -116,15 +96,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh trusted-service
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "trusted-service"
 
   cryptoauthlib-provider:
     name: Integration tests using CryptoAuthentication Library provider
@@ -132,15 +108,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh cryptoauthlib --no-stress-test
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "cryptoauthlib --no-stress-test"
 
   fuzz-test-checker:
     name: Check that the fuzz testing framework is still working
@@ -170,15 +142,11 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
-        with:
-          image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      - uses: actions/checkout@v3
       - name: Run the container to execute the test script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh on-disk-kim
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "on-disk-kim"
 
   cross-compilation:
     # Currently only the Mbed Crypto, PKCS 11, and TPM providers are tested as the other ones need to cross-compile other libraries.
