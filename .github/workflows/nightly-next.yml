@@ -1,0 +1,89 @@
+name: Nightly Next Branch Checks
+
+on:
+  schedule:
+    # Every night at midnight
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      rev:
+        description: "Revision hash to run against"
+        required: false
+        default: ""
+
+
+env:
+  TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+
+jobs:
+  all-providers:
+    name: Various tests targeting a Parsec image with all providers included
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "all --test-next-branch-tracking"
+
+  build-all-providers:
+    name: Cargo check all-providers (current Rust stable & old compiler)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "cargo-check --test-next-branch-tracking"
+
+  mbed-crypto-provider:
+    name: Integration tests using Mbed Crypto provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "mbed-crypto --test-next-branch-tracking"
+
+  pkcs11-provider:
+    name: Integration tests using PKCS 11 provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "pkcs11 --no-stress-test --test-next-branch-tracking"
+
+  tpm-provider:
+    name: Integration tests using TPM provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "tpm --test-next-branch-tracking"
+
+  trusted-service-provider:
+    name: Integration tests using Crypto Trusted Service provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "trusted-service --test-next-branch-tracking"
