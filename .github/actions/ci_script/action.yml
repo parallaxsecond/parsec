@@ -1,0 +1,19 @@
+name: "Run CI Tests"
+description: "Run the ci.sh script with the specified flags"
+inputs:
+    ci-flags:
+      required: true
+      description: "Flags with which to run the ci.sh tests"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Load Docker
+      uses: ./.github/actions/load_docker
+      if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
+      with:
+        image-name: "${{ env.TEST_ALL_DOCKER_IMAGE }}"
+        image-path: "/tmp"
+    - name: Run the container to execute the test script
+      run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t ${{ env.TEST_ALL_DOCKER_IMAGE }} /tmp/parsec/ci.sh ${{ inputs.ci-flags }}
+      shell: bash
