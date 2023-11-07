@@ -212,8 +212,7 @@ done
 
 if [ "$TEST_NEXT_BRANCH_TRACKING" ]; then
     echo "Track next branches for parallaxsecond repositories"
-    mkdir -p /tmp/clonings
-    python3 $(pwd)/utils/release_tracking.py --clone_dir /tmp/clonings $(pwd)/Cargo.toml $(pwd)/e2e_tests/Cargo.toml
+    python3 $(pwd)/utils/release_tracking.py $(pwd)/Cargo.toml $(pwd)/e2e_tests/Cargo.toml
     next_branch_result=$?
     if [ "$next_branch_result" -ne 0 ]; then
         error_msg "Failed to track next branches of parallaxsecond repositories."

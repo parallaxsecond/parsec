@@ -10,7 +10,7 @@ def run_cargo_tree(path):
     cmd += '--features tss-esapi/generate-bindings,cryptoki/generate-bindings -d'
     prev_dir = os.getcwd()
     os.chdir(os.path.join(path))
-    return subprocess.check_output(cmd.split(' ')).decode()
+    return subprocess.check_output(cmd, shell=True).decode()
 
 
 def run_deps_mismatcher(lines):
