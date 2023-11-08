@@ -9,6 +9,7 @@ readme = "README.md"
 keywords = ["security", "service"]
 categories = ["cryptography", "hardware-support"]
 edition = "2018"
+rust-version = "1.66.0"
 
 [[bin]]
 name = "parsec"
