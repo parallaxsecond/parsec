@@ -274,7 +274,7 @@ fi
 git submodule update --init
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    rustup toolchain install ${MSRV}
+    rustup default ${MSRV}
     PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
@@ -360,12 +360,12 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # - openSUSE Tumbleweed
     # - openSUSE Leap 15.4
 
-    rustup toolchain install ${MSRV}
+    rustup default ${MSRV}
     # TODO: The "jwt-svid-authenticator" is currently not being used.
     RUST_BACKTRACE=1 cargo +${MSRV} check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
 
     # Latest stable
-    rustup toolchain install stable
+    rustup default stable
     RUST_BACKTRACE=1 cargo +stable check --release $FEATURES
 
     # We test that each feature still exist.
