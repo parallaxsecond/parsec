@@ -1,19 +1,23 @@
 name: Continuous Integration
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      trigger_docker:
+        description: "'parsec-service-test-all' if docker build should be triggered"
+        required: false
+        default: ""
 
 env:
-  # TEST_ALL_DOCKER_IMAGE: 'parsec-service-test-all'
-  TEST_ALL_DOCKER_IMAGE: 'ghcr.io/parallaxsecond/parsec-service-test-all'
+  TEST_ALL_DOCKER_IMAGE: ${{ github.event.inputs.trigger_docker || 'ghcr.io/parallaxsecond/parsec-service-test-all' }}
 
 jobs:
   build-and-export-test-all-docker:
     runs-on: ubuntu-latest
-    # If TEST_ALL_DOCKER_IMAGE is 'parsec-service-test-all' or any local image,
-    # the following condition must evaluate true to execute this job
-    # Else it must evaluate false to NOT execute this job
-    # Unfortunately, env.TEST_ALL_DOCKER_IMAGE cannot be used here as the `env` context is not recognized at this level.
-    if: ${{ false }} # env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all'
+    # For running this job  we need to manually trigger the CI and set the variable
+    if: ${{ github.event.inputs.trigger_docker == 'parsec-service-test-all' }}
     steps:
     - uses: actions/checkout@v3
     - name: Build the docker container
