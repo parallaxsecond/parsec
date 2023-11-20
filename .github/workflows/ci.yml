@@ -171,3 +171,10 @@ jobs:
           args: -v -r *.md
       - name: Fail if there were link errors
         run: exit ${{ steps.lc.outputs.exit_code }}
+
+  cargo-deny:
+    name: "Run cargo deny"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: EmbarkStudios/cargo-deny-action@v1
