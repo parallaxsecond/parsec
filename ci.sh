@@ -154,7 +154,11 @@ setup_mappings() {
     fi
 }
 
-# Use the newest version of the Rust toolchain
+# Change rust toolchain version
+if [[ ! -z ${RUST_TOOLCHAIN_VERSION:+x} ]]; then
+	rustup override set ${RUST_TOOLCHAIN_VERSION}
+fi
+
 rustup update
 MSRV=1.66.0
 
