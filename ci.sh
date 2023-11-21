@@ -360,13 +360,10 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     # - openSUSE Tumbleweed
     # - openSUSE Leap 15.4
 
-    rustup default ${MSRV}
     # TODO: The "jwt-svid-authenticator" is currently not being used.
-    RUST_BACKTRACE=1 cargo +${MSRV} check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
+    RUST_BACKTRACE=1 cargo check --release --features=all-providers,direct-authenticator,unix-peer-credentials-authenticator
 
-    # Latest stable
-    rustup default stable
-    RUST_BACKTRACE=1 cargo +stable check --release $FEATURES
+    RUST_BACKTRACE=1 cargo check --release $FEATURES
 
     # We test that each feature still exist.
     RUST_BACKTRACE=1 cargo check
