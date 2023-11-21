@@ -42,8 +42,21 @@ jobs:
         with:
           ci-flags: "all"
 
-  build-all-providers:
-    name: Cargo check all-providers (current Rust stable & old compiler)
+  build-all-providers-msrv:
+    name: MSRV - Cargo check all-providers
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [build-and-export-test-all-docker]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run the container to execute the test script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "cargo-check"
+          rs-version: "1.66.0"
+
+  build-all-providers-stable:
+    name: Cargo check all-providers (current Rust stable)
     runs-on: ubuntu-latest
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
