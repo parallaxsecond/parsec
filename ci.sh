@@ -160,7 +160,6 @@ if [[ ! -z ${RUST_TOOLCHAIN_VERSION:+x} ]]; then
 fi
 
 rustup update
-MSRV=1.66.0
 
 # Parse arguments
 NO_CARGO_CLEAN=
@@ -278,13 +277,12 @@ fi
 git submodule update --init
 
 if [ "$PROVIDER_NAME" = "coverage" ]; then
-    rustup default ${MSRV}
     PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
     # Install tarpaulin
-    # TODO: Stop using the --version parameter when MSRV is upgraded.
-    cargo +${MSRV} install cargo-tarpaulin --version 0.26.1 --locked
+    # TODO: Stop using the --version parameter when MSRV is upgraded (>1.66.0)
+    cargo install cargo-tarpaulin --version 0.26.1 --locked
 
     mkdir -p reports
 
@@ -300,7 +298,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
 
         # Start service
-        RUST_LOG=info cargo +${MSRV} tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
             --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
             --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
@@ -318,7 +316,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         fi
 
         # Start service
-        RUST_LOG=info cargo +${MSRV} tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
+        RUST_LOG=info cargo tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
             --output-dir $(pwd)/reports/$provider --features="$provider-provider,direct-authenticator" \
             --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
@@ -329,7 +327,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
     # Run unit tests
     mkdir -p reports/unit
-    cargo +${MSRV} tarpaulin --tests --out Xml --features=$UNIT_TEST_FEATURES --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
+    cargo tarpaulin --tests --out Xml --features=$UNIT_TEST_FEATURES --exclude-files="$EXCLUDES" --output-dir $(pwd)/reports/unit
 
     exit 0
 fi
