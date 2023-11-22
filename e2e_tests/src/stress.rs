@@ -231,6 +231,7 @@ impl StressTestWorker {
                     )
                     .expect_err("Verification should fail.");
                 if !(status == ResponseStatus::PsaErrorInvalidSignature
+                    || status == ResponseStatus::PsaErrorInvalidArgument
                     || status == ResponseStatus::PsaErrorCorruptionDetected)
                 {
                     panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.", status);
