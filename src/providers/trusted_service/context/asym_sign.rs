@@ -1,11 +1,11 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::error::Error;
-use super::ts_protobuf::{SignHashIn, SignHashOut, VerifyHashIn};
+use super::ts_protobuf::{SignHashIn, SignHashOut, VerifyHashIn, VerifyHashOut};
 use super::Context;
 use log::info;
 use psa_crypto::types::algorithm::AsymmetricSignature;
-use std::convert::TryInto;
+use std::{convert::TryInto, mem};
 
 impl Context {
     /// Sign a hash with an asymmetric key given its ID and the signing algorithm.
@@ -21,7 +21,8 @@ impl Context {
             hash,
             alg: algorithm.try_into()?,
         };
-        let SignHashOut { signature } = self.send_request(&proto_req)?;
+        let SignHashOut { signature } =
+            self.send_request(&proto_req, mem::size_of::<SignHashOut>())?;
 
         Ok(signature)
     }
@@ -41,7 +42,7 @@ impl Context {
             signature,
             alg: algorithm.try_into()?,
         };
-        self.send_request(&proto_req)?;
+        self.send_request(&proto_req, mem::size_of::<VerifyHashOut>())?;
 
         Ok(())
     }

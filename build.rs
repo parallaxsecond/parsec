@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 #[cfg(feature = "trusted-service-provider")]
 fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     let header = ts_include_dir.clone() + "/components/service/locator/interface/service_locator.h";
+
     let encoding_header = ts_include_dir.clone() + "/protocols/rpc/common/packed-c/encoding.h";
 
     if !Path::new(&header).exists() {
@@ -19,6 +20,7 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     println!("cargo:rerun-if-changed={}", header);
 
     let bindings = bindgen::Builder::default()
+        .clang_arg(format!("-I{}", ts_include_dir))
         .clang_arg(format!(
             "-I{}",
             ts_include_dir + "/components/rpc/common/interface"

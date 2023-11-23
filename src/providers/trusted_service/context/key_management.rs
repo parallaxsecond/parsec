@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 use super::error::Error;
 use super::ts_protobuf::{
-    DestroyKeyIn, DestroyKeyOut, ExportKeyIn, ExportPublicKeyIn, GenerateKeyIn, ImportKeyIn,
-    KeyAttributes, KeyLifetime, KeyPolicy,
+    DestroyKeyIn, DestroyKeyOut, ExportKeyIn, ExportKeyOut, ExportPublicKeyIn, ExportPublicKeyOut,
+    GenerateKeyIn, GenerateKeyOut, ImportKeyIn, ImportKeyOut, KeyAttributes, KeyLifetime,
+    KeyPolicy,
 };
 use super::Context;
 use log::info;
 use psa_crypto::types::key::Attributes;
-use std::convert::{TryFrom, TryInto};
+use std::{
+    convert::{TryFrom, TryInto},
+    mem,
+};
 use zeroize::Zeroize;
 
 impl Context {
@@ -30,7 +34,7 @@ impl Context {
                 }),
             }),
         };
-        self.send_request(&generate_req)?;
+        self.send_request(&generate_req, mem::size_of::<GenerateKeyOut>())?;
 
         Ok(())
     }
@@ -70,7 +74,7 @@ impl Context {
             }),
             data,
         };
-        self.send_request(&import_req)?;
+        self.send_request(&import_req, mem::size_of::<ImportKeyOut>())?;
 
         Ok(())
     }
@@ -82,14 +86,14 @@ impl Context {
     pub fn export_public_key(&self, id: u32) -> Result<Vec<u8>, Error> {
         info!("Handling ExportPublicKey request");
         let req = ExportPublicKeyIn { id };
-        self.send_request(&req)
+        self.send_request(&req, mem::size_of::<ExportPublicKeyOut>())
     }
 
     /// Export the key given its ID.
     pub fn export_key(&self, id: u32) -> Result<Vec<u8>, Error> {
         info!("Handling ExportKey request");
         let req = ExportKeyIn { id };
-        self.send_request(&req)
+        self.send_request(&req, mem::size_of::<ExportKeyOut>())
     }
 
     /// Destroy a key given its ID.
@@ -97,7 +101,8 @@ impl Context {
         info!("Handling DestroyKey request");
 
         let destroy_req = DestroyKeyIn { id: key_id };
-        let _proto_resp: DestroyKeyOut = self.send_request(&destroy_req)?;
+        let _proto_resp: DestroyKeyOut =
+            self.send_request(&destroy_req, mem::size_of::<DestroyKeyOut>())?;
         Ok(())
     }
 }
