@@ -61,7 +61,7 @@ def main(argv=[], prog_name=''):
     exceptions = {
         'base64': ['v0.13.1', 'v0.21.4'],
         'bindgen': ['v0.57.0', 'v0.66.1'],
-        'bitflags': ['v1.3.2', 'v2.4.0'],
+        'bitflags': ['v1.3.2', 'v2.4.1'],
         'cexpr': ['v0.4.0', 'v0.6.0'],
         'nom': ['v5.1.3', 'v7.1.3'],
         'shlex': ['v0.1.1', 'v1.2.0'],
