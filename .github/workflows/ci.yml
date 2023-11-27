@@ -191,3 +191,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: EmbarkStudios/cargo-deny-action@v1
+
+  mismatcher:
+    name: Check for mismatched dependencies (those that have more than one version)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: "${{ github.event.inputs.rev }}"
+      - name: Run the container to execute the dependency mismatcher script
+        uses: ./.github/actions/ci_script
+        with:
+          ci-flags: "mismatcher"
