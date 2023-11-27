@@ -55,9 +55,7 @@ def main(argv=[], prog_name=''):
 
     mismatches = get_deps_with_more_than_1v(mismatches)
 
-    print('---------------------mistmatches----------------------\n\n')
-    print_deps(mismatches)
-
+    print('---------------------exceptions-----------------------\n\n')
     exceptions = {
         'base64': ['v0.13.1', 'v0.21.4'],
         'bindgen': ['v0.57.0', 'v0.66.1'],
@@ -67,6 +65,10 @@ def main(argv=[], prog_name=''):
         'shlex': ['v0.1.1', 'v1.2.0'],
         'syn': ['v1.0.109', 'v2.0.38'],
     }
+    print_deps(exceptions)
+
+    print('---------------------mistmatches----------------------\n\n')
+    print_deps(mismatches)
 
     if exceptions != mismatches:
         return 1
