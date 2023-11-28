@@ -1,3 +1,9 @@
+# Copyright 2023 Contributors to the Parsec project.
+# SPDX-License-Identifier: Apache-2.0
+
+# Checks the version mismatches for dependencies in Cargo based repositories:
+# * In parsec itself
+# * Between parsec and parsec-tool
 import argparse
 import re
 import os
