@@ -11,9 +11,10 @@ import subprocess
 import sys
 
 
-def run_cargo_tree(path):
-    cmd = 'cargo tree --all-features '
-    cmd += '--features tss-esapi/generate-bindings,cryptoki/generate-bindings -d'
+def run_cargo_tree(path, flags=None):
+    cmd = 'cargo tree'
+    if flags is not None:
+        cmd += ' ' + flags
     prev_dir = os.getcwd()
     os.chdir(os.path.join(path))
     return subprocess.check_output(cmd, shell=True).decode()
@@ -56,7 +57,9 @@ def main(argv=[], prog_name=''):
                              'dependencies')
     args = parser.parse_args()
 
-    mismatches = run_deps_mismatcher(run_cargo_tree(args.deps_dir))
+    parsec_flags = '--all-features' + ' '
+    parsec_flags += '--features tss-esapi/generate-bindings,cryptoki/generate-bindings -d'
+    mismatches = run_deps_mismatcher(run_cargo_tree(args.deps_dir, parsec_flags))
     print_deps(mismatches)
 
     mismatches = get_deps_with_more_than_1v(mismatches)
