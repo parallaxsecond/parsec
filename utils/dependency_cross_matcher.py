@@ -51,36 +51,65 @@ def main(argv=[], prog_name=''):
     parser = argparse.ArgumentParser(prog='DependencyCrossmatcher',
                                      description='Checks the version mismatches for dependencies '
                                                  'in Cargo based repositories')
+    parser.add_argument("-c", "--compare", action='store_true',
+                        help='Check for mismatches between 2 repositories')
     parser.add_argument('--deps_dir',
                         required=True,
-                        help='Existing directory that contains the Cargo.toml for analyzing'
+                        nargs='+',
+                        help='Existing directories that contain Cargo.toml for analyzing '
                              'dependencies')
     args = parser.parse_args()
 
+    mismatches = dict()
     parsec_flags = '--all-features' + ' '
     parsec_flags += '--features tss-esapi/generate-bindings,cryptoki/generate-bindings -d'
-    mismatches = run_deps_mismatcher(run_cargo_tree(args.deps_dir, parsec_flags))
-    print_deps(mismatches)
 
-    mismatches = get_deps_with_more_than_1v(mismatches)
+    if args.compare:
+        # Versions should be sorted!
+        exceptions = {
+            'bindgen': ['v0.66.1'],
+            'cexpr': ['v0.6.0'],
+        }
+        parsec_repo, parsec_tool_repo = args.deps_dir
+        parsec_tool_flags = '--all-features -d'
+        mismatches_parsec = run_deps_mismatcher(run_cargo_tree(parsec_repo, parsec_flags))
+        mismatches_parsec_tool = run_deps_mismatcher(run_cargo_tree(parsec_tool_repo,
+                                                                    parsec_tool_flags)
+                                                    )
+
+        # Dependencies that are common to both parsec_repo and parsec_tool_repo repos
+        common_deps = list(set(mismatches_parsec.keys()) & set(mismatches_parsec_tool.keys()))
+        for dep in common_deps:
+            # Symmetric difference of repos parsec_repo and parsec_tool_repo
+            mistmatch = sorted(set(mismatches_parsec[dep]) ^ set(mismatches_parsec_tool[dep]))
+            if len(mistmatch) > 0:
+                mismatches[dep] = mistmatch
+    else:
+        # Versions should be sorted!
+        exceptions = {
+            'base64': ['v0.13.1', 'v0.21.4'],
+            'bindgen': ['v0.57.0', 'v0.66.1'],
+            'bitflags': ['v1.3.2', 'v2.4.1'],
+            'cexpr': ['v0.4.0', 'v0.6.0'],
+            'nom': ['v5.1.3', 'v7.1.3'],
+            'shlex': ['v0.1.1', 'v1.2.0'],
+            'syn': ['v1.0.109', 'v2.0.38'],
+        }
+        mismatches = run_deps_mismatcher(run_cargo_tree(args.deps_dir[0], parsec_flags))
+        mismatches = get_deps_with_more_than_1v(mismatches)
 
     print('---------------------exceptions-----------------------\n\n')
-    exceptions = {
-        'base64': ['v0.13.1', 'v0.21.4'],
-        'bindgen': ['v0.57.0', 'v0.66.1'],
-        'bitflags': ['v1.3.2', 'v2.4.1'],
-        'cexpr': ['v0.4.0', 'v0.6.0'],
-        'nom': ['v5.1.3', 'v7.1.3'],
-        'shlex': ['v0.1.1', 'v1.2.0'],
-        'syn': ['v1.0.109', 'v2.0.38'],
-    }
     print_deps(exceptions)
 
     print('---------------------mistmatches----------------------\n\n')
     print_deps(mismatches)
 
-    if exceptions != mismatches:
-        return 1
+    if not args.compare:
+        errormsg = "Found dependencies version mismatches in parsec"
+    else:
+        errormsg = "Found dependencies version mismatches between parsec and parsec-tool"
+
+    assert exceptions == mismatches, errormsg
 
     return 0
 
