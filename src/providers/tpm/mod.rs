@@ -6,7 +6,7 @@
 //! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
-use crate::key_info_managers::KeyInfoManagerClient;
+use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
 use derivative::Derivative;
@@ -416,7 +416,8 @@ impl ProviderBuilder {
             builder = builder.with_hierarchy_auth(Hierarchy::Endorsement, endorsement_auth);
             self.endorsement_hierarchy_auth.zeroize();
         }
-        Ok(Provider::new(
+
+        let built_provider = Provider::new(
             self.provider_name.ok_or_else(|| {
                 std::io::Error::new(ErrorKind::InvalidData, "missing provider name")
             })?,
@@ -427,6 +428,58 @@ impl ProviderBuilder {
                 format_error!("Error creating TSS Transient Object Context", e);
                 std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
             })?,
-        ))
+        );
+
+        // Get the root key from the key store
+        let root_key_identity = KeyIdentity::new(
+            ApplicationIdentity::new_internal(),
+            built_provider.provider_identity.clone(),
+            String::from("RootKeyTPM"),
+        );
+        let key_is_stored = match built_provider
+            .key_info_store
+            .does_not_exist(&root_key_identity)
+        {
+            Ok(()) => false,
+            Err(ResponseStatus::PsaErrorAlreadyExists) => true,
+            Err(e) => Err(e).map_err(|e| {
+                format_error!("Failure accessing Key Info Manager", e);
+                std::io::Error::new(ErrorKind::InvalidData, "Key existence check failed")
+            })?,
+        };
+
+        if key_is_stored {
+            let stored_root_key_name: Vec<u8> = built_provider
+                .key_info_store
+                .get_key_id(&root_key_identity)
+                .map_err(|e| {
+                    format_error!("Error getting Key Identities from the Key Info Store", e);
+                    std::io::Error::new(ErrorKind::InvalidData, "failed getting Key Identities")
+                })?;
+            // Check if the stored public part coincides with the one in the context
+            let mut esapi_context = built_provider
+                .esapi_context
+                .lock()
+                .expect("ESAPI Context lock poisoned");
+
+            let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
+                format_error!("Error getting the Root Key's name", e);
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "failed getting Root Key's Name",
+                )
+            })?;
+
+            if root_key_name.value().to_vec() != stored_root_key_name {
+                let e = std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "Obtained Root Key name does not coincide with the stored one",
+                );
+                format_error!("Error when verifying the Root Key's Name", e);
+                return Err(e);
+            }
+        }
+
+        Ok(built_provider)
     }
 }
