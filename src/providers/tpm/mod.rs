@@ -12,6 +12,10 @@ use crate::providers::ProviderIdentity;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::list_providers::Uuid;
+use parsec_interface::operations::psa_algorithm::Algorithm;
+use parsec_interface::operations::psa_key_attributes::{
+    Attributes, Lifetime, Policy, Type, UsageFlags,
+};
 use parsec_interface::operations::{
     attest_key, can_do_crypto, prepare_key_attestation, psa_asymmetric_decrypt,
     psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key, psa_generate_key,
@@ -478,6 +482,45 @@ impl ProviderBuilder {
                 format_error!("Error when verifying the Root Key's Name", e);
                 return Err(e);
             }
+        } else {
+            let mut esapi_context = built_provider
+                .esapi_context
+                .lock()
+                .expect("ESAPI Context lock poisoned");
+
+            let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
+                format_error!("Error getting the the Root Key's Name", e);
+                std::io::Error::new(
+                    ErrorKind::InvalidData,
+                    "failed getting Root Key's Name",
+                )
+            })?;
+
+            let attributes = Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaPublicKey,
+                bits: ROOT_KEY_SIZE as usize,
+                policy: Policy {
+                    // Internal key, usage_flags information is not relevant
+                    usage_flags: UsageFlags::default(),
+                    // Internal key, permitted_algorithms information is not relevant
+                    permitted_algorithms: Algorithm::None,
+                },
+            };
+
+            built_provider
+                .key_info_store
+                .insert_key_info(
+                    root_key_identity,
+                    &(root_key_name.value().to_vec()),
+                    attributes,
+                )
+                .map_err(|_| {
+                    std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "Failed to insert Key Info in the Key Store",
+                    )
+                })?;
         }
 
         Ok(built_provider)
