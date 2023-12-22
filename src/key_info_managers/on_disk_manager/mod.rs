@@ -12,7 +12,7 @@
 //! example, for operating systems having a limit of 255 characters for filenames (Unix systems),
 //! names will be limited to 188 bytes of UTF-8 characters.
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
-use crate::authenticators::{Application, ApplicationIdentity};
+use crate::authenticators::{Application, ApplicationIdentity, Auth, INTERNAL_APP_NAME};
 use crate::utils::config::KeyInfoManagerType;
 
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo, ProviderIdentity};
@@ -44,6 +44,9 @@ use std::{fmt, fs};
 
 /// Default path where the mapping files will be stored on disk
 pub const DEFAULT_MAPPINGS_PATH: &str = "/var/lib/parsec/mappings";
+
+/// Directory in which the internal keys file will be held
+const INTERNAL_KEYS_PARSEC_DIR: &str = INTERNAL_APP_NAME;
 
 ///Permissions for all directories under database directory
 ///Should only be visible to parsec user
@@ -228,6 +231,9 @@ pub struct OnDiskKeyInfoManager {
     /// Internal mapping, used for non-modifying operations.
     #[allow(deprecated)]
     key_store: HashMap<KeyTriple, KeyInfo>,
+    /// Internal mapping with Internal Keys, used for non-modifying operations.
+    #[allow(deprecated)]
+    key_store_internal: HashMap<KeyTriple, bool>,
     /// Folder where all the key triple to key info mappings are saved. This folder will be created
     /// if it does already exist.
     mappings_dir_path: PathBuf,
@@ -371,10 +377,16 @@ impl OnDiskKeyInfoManager {
     /// |---app2/
     /// |   ...
     /// |---appN/
+    /// |---parsec/
+    /// |   |---provider1-INTERNAL1
+    /// |   |---provider2-INTERNAL2
     ///
     /// where the path of a key name from the mappings directory is the key triple (application,
     /// provider, key) and the data inside the key name file is the key info serialised in binary
     /// format.
+    /// The INTERNAL files under the parsec directory stores the information of those keys that are
+    /// internally generated. The file name of the INTERNAL files has as its first component the
+    /// provider name of the provider that generated the internal key.
     /// Each mapping is contained in its own file to prevent the modification of one mapping
     /// impacting the other ones.
     ///
@@ -383,6 +395,7 @@ impl OnDiskKeyInfoManager {
     /// Returns an std::io error if the function failed reading the mapping files.
     fn new(mappings_dir_path: PathBuf, auth_type: AuthType) -> Result<OnDiskKeyInfoManager> {
         let mut key_store = HashMap::new();
+        let mut key_store_internal = HashMap::new();
 
         // Will ignore if the mappings directory already exists.
         fs::create_dir_all(&mappings_dir_path).with_context(|| {
@@ -392,6 +405,21 @@ impl OnDiskKeyInfoManager {
             )
         })?;
 
+        // The INTERNAL files are the only files that on the second level in the directory structure
+        // and store the information of internal keys
+        let parsec_dir = mappings_dir_path.join(INTERNAL_KEYS_PARSEC_DIR);
+        fs::create_dir_all(&parsec_dir)
+            .with_context(|| format!("Failed to create Parsec directory at {:?}", parsec_dir))?;
+        fs::set_permissions(&parsec_dir, Permissions::from_mode(DIR_PERMISSION))?;
+
+        for internal_key_path in list_files(&parsec_dir)?.iter() {
+            let keytriple = KeyTriple::new(
+                ApplicationName::from_name(INTERNAL_KEYS_PARSEC_DIR.to_string()),
+                ProviderId::Tpm,
+                internal_key_path.to_string_lossy().to_string(),
+            );
+            let _ = key_store_internal.insert(keytriple, true);
+        }
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(provider_dir_path)?.iter() {
@@ -450,6 +478,7 @@ impl OnDiskKeyInfoManager {
 
         Ok(OnDiskKeyInfoManager {
             key_store,
+            key_store_internal,
             mappings_dir_path,
             auth_type,
         })
