@@ -654,7 +654,10 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
 
     fn exists(&self, key_identity: &KeyIdentity) -> Result<bool, String> {
         let key_triple = KeyTriple::try_from(key_identity.clone())?;
-        Ok(self.key_store.contains_key(&key_triple))
+        match key_identity.application().auth() {
+            &Auth::Internal => Ok(self.key_store_internal.contains_key(&key_triple)),
+            &Auth::Client(_) => Ok(self.key_store.contains_key(&key_triple)),
+        }
     }
 }
 
