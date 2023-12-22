@@ -487,37 +487,57 @@ impl OnDiskKeyInfoManager {
     /// Saves the key triple to key info mapping in its own file.
     /// The filename will be `mappings/[APP_NAME]/[PROVIDER_NAME]/[KEY_NAME]` under the same path as the
     /// on-disk manager. It will contain the Key info data.
-    fn save_mapping(&self, key_triple: &KeyTriple, key_info: &KeyInfo) -> std::io::Result<()> {
+    fn save_mapping(
+        &self,
+        key_triple: &KeyTriple,
+        key_info: &KeyInfo,
+        auth: &Auth,
+    ) -> std::io::Result<()> {
         if crate::utils::GlobalConfig::log_error_details() {
             warn!(
                 "Saving Key Triple ({}) mapping to disk.",
                 key_triple.clone()
             );
         }
-        // Create the directories with base64 names.
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
-        let app_dir_path = self.mappings_dir_path.join(app_name);
-        let provider_dir_path = app_dir_path.join(prov);
-        let key_name_file_path = provider_dir_path.join(key_name);
+        let key_name_file_path = match auth {
+            Auth::Internal => {
+                // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
+                let key_name_file_path = self
+                    .mappings_dir_path
+                    .join(INTERNAL_KEYS_PARSEC_DIR)
+                    .join(key_name);
 
-        // Will ignore if they already exist.
-        fs::create_dir_all(&provider_dir_path).map_err(|e| {
-            format_error!(
-                format!(
-                    "Failed to create provider directory as {:?}",
-                    &provider_dir_path
-                ),
-                e
-            );
-            e
-        })?;
-        let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
-        fs::set_permissions(&app_dir_path, dir_permissions.clone())?;
-        fs::set_permissions(&provider_dir_path, dir_permissions)?;
-        if key_name_file_path.exists() {
-            fs::remove_file(&key_name_file_path)?;
-        }
+                key_name_file_path
+            }
+            Auth::Client(_) => {
+                // Create the directories with base64 names.
+                let app_dir_path = self.mappings_dir_path.join(app_name);
+                let provider_dir_path = app_dir_path.join(prov);
+                let key_name_file_path = provider_dir_path.join(key_name);
+                // Will ignore if they already exist.
+                fs::create_dir_all(&provider_dir_path).map_err(|e| {
+                    format_error!(
+                        format!(
+                            "Failed to create provider directory as {:?}",
+                            &provider_dir_path
+                        ),
+                        e
+                    );
+                    e
+                })?;
+                let dir_permissions = Permissions::from_mode(DIR_PERMISSION);
+                fs::set_permissions(&app_dir_path, dir_permissions.clone())?;
+                fs::set_permissions(&provider_dir_path, dir_permissions)?;
 
+                if key_name_file_path.exists() {
+                    fs::remove_file(&key_name_file_path)?;
+                }
+                key_name_file_path
+            }
+        };
+
+        // Create the mapping file with the corresponding permissions and write the key information
         let mut mapping_file = File::create(&key_name_file_path).map_err(|e| {
             error!(
                 "Failed to create Key Info Mapping file at {:?}",
@@ -592,10 +612,15 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         key_identity: KeyIdentity,
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String> {
-        let key_triple = KeyTriple::try_from(key_identity)?;
-        if let Err(err) = self.save_mapping(&key_triple, &key_info) {
+        let key_triple = KeyTriple::try_from(key_identity.clone())?;
+        if let Err(err) =
+            self.save_mapping(&key_triple, &key_info, key_identity.application().auth())
+        {
             Err(err.to_string())
         } else {
+            if key_identity.application().auth() == &Auth::Internal {
+                let _ = self.key_store_internal.insert(key_triple.clone(), true);
+            }
             Ok(self.key_store.insert(key_triple, key_info))
         }
     }
