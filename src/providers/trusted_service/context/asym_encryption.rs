@@ -6,22 +6,16 @@ use super::ts_protobuf::{
 use super::Context;
 use parsec_interface::operations::psa_algorithm::AsymmetricEncryption;
 use parsec_interface::requests::ResponseStatus;
-use std::convert::TryInto;
-use zeroize::Zeroize;
 
 impl Context {
     pub fn asym_encrypt(
         &self,
         key_id: u32,
         alg: AsymmetricEncryption,
-        mut plaintext: Vec<u8>,
-        mut salt: Vec<u8>,
+        plaintext: Vec<u8>,
+        salt: Vec<u8>,
     ) -> Result<Vec<u8>, ResponseStatus> {
-        let alg = alg.try_into().map_err(|e| {
-            plaintext.zeroize();
-            salt.zeroize();
-            e
-        })?;
+        let alg = alg.into();
         let req = AsymmetricEncryptIn {
             id: key_id,
             alg,
@@ -37,14 +31,10 @@ impl Context {
         &self,
         key_id: u32,
         alg: AsymmetricEncryption,
-        mut ciphertext: Vec<u8>,
-        mut salt: Vec<u8>,
+        ciphertext: Vec<u8>,
+        salt: Vec<u8>,
     ) -> Result<Vec<u8>, ResponseStatus> {
-        let alg = alg.try_into().map_err(|e| {
-            ciphertext.zeroize();
-            salt.zeroize();
-            e
-        })?;
+        let alg = alg.into();
         let req = AsymmetricDecryptIn {
             id: key_id,
             alg,
