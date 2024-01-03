@@ -5,7 +5,6 @@ use super::ts_protobuf::{SignHashIn, SignHashOut, VerifyHashIn};
 use super::Context;
 use log::info;
 use psa_crypto::types::algorithm::AsymmetricSignature;
-use std::convert::TryInto;
 
 impl Context {
     /// Sign a hash with an asymmetric key given its ID and the signing algorithm.
@@ -19,7 +18,7 @@ impl Context {
         let proto_req = SignHashIn {
             id: key_id,
             hash,
-            alg: algorithm.try_into()?,
+            alg: algorithm.into(),
         };
         let SignHashOut { signature } = self.send_request(&proto_req)?;
 
@@ -39,7 +38,7 @@ impl Context {
             id: key_id,
             hash,
             signature,
-            alg: algorithm.try_into()?,
+            alg: algorithm.into(),
         };
         self.send_request(&proto_req)?;
 

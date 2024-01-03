@@ -25,7 +25,7 @@ impl Context {
                 lifetime: KeyLifetime::Persistent as u32,
                 id,
                 policy: Some(KeyPolicy {
-                    usage: key_attrs.policy.usage_flags.try_into()?,
+                    usage: key_attrs.policy.usage_flags.into(),
                     alg: key_attrs.policy.permitted_algorithms.try_into()?,
                 }),
             }),
