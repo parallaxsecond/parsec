@@ -176,10 +176,9 @@ impl TryFrom<KeyIdentity> for KeyTriple {
             )),
         }?;
 
-        let app_name = ApplicationName::from_name(key_identity.application().name().clone());
         Ok(KeyTriple {
             provider_id,
-            app_name,
+            app_name: ApplicationName::from_name(key_identity.application().name().to_string()),
             key_name: key_identity.key_name,
         })
     }
@@ -233,7 +232,7 @@ pub struct OnDiskKeyInfoManager {
     key_store: HashMap<KeyTriple, KeyInfo>,
     /// Internal mapping with Internal Keys, used for non-modifying operations.
     #[allow(deprecated)]
-    key_store_internal: HashMap<KeyTriple, bool>,
+    key_store_internal: HashMap<KeyTriple, KeyInfo>,
     /// Folder where all the key triple to key info mappings are saved. This folder will be created
     /// if it does already exist.
     mappings_dir_path: PathBuf,
@@ -413,13 +412,31 @@ impl OnDiskKeyInfoManager {
         fs::set_permissions(&parsec_dir, Permissions::from_mode(DIR_PERMISSION))?;
 
         for internal_key_path in list_files(&parsec_dir)?.iter() {
+            let key_name_internal = base64_data_to_string(os_str_to_u8_ref(
+                internal_key_path
+                    .file_name()
+                    .expect("The key name directory path should contain a final component."),
+            )?);
             let keytriple = KeyTriple::new(
                 ApplicationName::from_name(INTERNAL_KEYS_PARSEC_DIR.to_string()),
                 ProviderId::Tpm,
-                internal_key_path.to_string_lossy().to_string(),
+                key_name_internal.unwrap(),
             );
-            let _ = key_store_internal.insert(keytriple, true);
+
+            let mut key_info = Vec::new();
+            let mut key_info_file = File::open(internal_key_path).with_context(|| {
+                format!(
+                    "Failed to open Key Info Mappings file at {:?}",
+                    internal_key_path
+                )
+            })?;
+            let _ = key_info_file.read_to_end(&mut key_info)?;
+            let key_info = bincode::deserialize(&key_info[..]).map_err(|e| {
+                format_error!("Error deserializing key info", e);
+                Error::new(ErrorKind::Other, "error deserializing key info")
+            })?;
         }
+
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
             for provider_dir_path in list_dirs(app_name_dir_path)?.iter() {
                 for key_name_file_path in list_files(provider_dir_path)?.iter() {
@@ -594,7 +611,12 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         let key_triple = KeyTriple::try_from(key_identity.clone())?;
         // An Option<&Vec<u8>> can not automatically coerce to an Option<&[u8]>, it needs to be
         // done by hand.
-        if let Some(key_info) = self.key_store.get(&key_triple) {
+        let curr_key_store = match key_identity.application().auth() {
+            &Auth::Internal => &self.key_store_internal,
+            _ => &self.key_store,
+        };
+
+        if let Some(key_info) = curr_key_store.get(&key_triple) {
             Ok(Some(key_info))
         } else {
             Ok(None)
@@ -632,9 +654,10 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
             Err(err.to_string())
         } else {
             if key_identity.application().auth() == &Auth::Internal {
-                let _ = self.key_store_internal.insert(key_triple.clone(), true);
+                Ok(self.key_store_internal.insert(key_triple, key_info))
+            } else {
+                Ok(self.key_store.insert(key_triple, key_info))
             }
-            Ok(self.key_store.insert(key_triple, key_info))
         }
     }
 
