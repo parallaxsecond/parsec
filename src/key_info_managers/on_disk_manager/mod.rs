@@ -56,6 +56,23 @@ pub const DIR_PERMISSION: u32 = 0o700;
 ///Should only be visible to parsec user
 pub const FILE_PERMISSION: u32 = 0o600;
 
+const CORE_PROVIDER: &str = "core";
+const PKCS11_PROVIDER: &str = "pkcs11";
+const MBEDCRYPTO_PROVIDER: &str = "mbedcrypto";
+const TPM_PROVIDER: &str = "tpm";
+const TRUSTEDS_PROVIDER: &str = "trusted-service";
+const CRYPTOAUTH_PROVIDER: &str = "cryptoauthlib";
+
+/// Provider names for internal storage.
+const PROVIDER_NAMES: [&str; 6] = [
+    CORE_PROVIDER,
+    PKCS11_PROVIDER,
+    MBEDCRYPTO_PROVIDER,
+    TPM_PROVIDER,
+    TRUSTEDS_PROVIDER,
+    CRYPTOAUTH_PROVIDER,
+];
+
 /// String wrapper for app names
 #[deprecated(since = "0.9.0", note = "ApplicationIdentity should be used instead.")]
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -330,6 +347,49 @@ fn os_str_to_provider_id(os_str: &OsStr) -> std::io::Result<ProviderId> {
     }
 }
 
+/// Splits a filename into provider_name + key name (for internal keys only)
+///
+/// # Errors
+///
+/// Returns None if no provider_name was detected
+fn split_provider_key_filename(filename: &str) -> Option<(String, String)> {
+    for name in PROVIDER_NAMES {
+        if filename.starts_with(name) {
+            return Some((name.to_string(), filename.replacen(name, "", 1)));
+        }
+    }
+    None
+}
+
+fn provider_id_to_str(provid: ProviderId) -> &'static str {
+    match provid {
+        ProviderId::Core => CORE_PROVIDER,
+        ProviderId::Pkcs11 => PKCS11_PROVIDER,
+        ProviderId::MbedCrypto => MBEDCRYPTO_PROVIDER,
+        ProviderId::Tpm => TPM_PROVIDER,
+        ProviderId::TrustedService => TRUSTEDS_PROVIDER,
+        ProviderId::CryptoAuthLib => CRYPTOAUTH_PROVIDER,
+    }
+}
+
+fn str_to_provider_id(provid: &str) -> Option<ProviderId> {
+    match provid {
+        CORE_PROVIDER => Some(ProviderId::Core),
+        PKCS11_PROVIDER => Some(ProviderId::Pkcs11),
+        MBEDCRYPTO_PROVIDER => Some(ProviderId::MbedCrypto),
+        TPM_PROVIDER => Some(ProviderId::Tpm),
+        TRUSTEDS_PROVIDER => Some(ProviderId::TrustedService),
+        CRYPTOAUTH_PROVIDER => Some(ProviderId::CryptoAuthLib),
+        _ => None,
+    }
+}
+
+fn prov_and_key_to_str(provider_id: ProviderId, key_name: &str) -> String {
+    let mut p_name = provider_id_to_str(provider_id).to_string();
+    p_name.push_str(key_name);
+    p_name
+}
+
 /// Lists all the directory paths in the given directory path.
 fn list_dirs(path: &Path) -> std::io::Result<Vec<PathBuf>> {
     // read_dir returning an iterator over Result<DirEntry>, there is first a conversion to a path
@@ -416,12 +476,20 @@ impl OnDiskKeyInfoManager {
                 internal_key_path
                     .file_name()
                     .expect("The key name directory path should contain a final component."),
-            )?);
-            let keytriple = KeyTriple::new(
-                ApplicationName::from_name(INTERNAL_KEYS_PARSEC_DIR.to_string()),
-                ProviderId::Tpm,
-                key_name_internal.unwrap(),
-            );
+            )?)
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+
+            // If provider name is not recognized, ignore the key.
+            let keytriple = match split_provider_key_filename(&key_name_internal) {
+                None => continue,
+                Some((prov, key_name)) => KeyTriple::new(
+                    ApplicationName::from_name(INTERNAL_KEYS_PARSEC_DIR.to_string()),
+                    // Provider name has been recognized, so if None is returned here something has
+                    // gone terribly wrong.
+                    str_to_provider_id(&prov).unwrap(),
+                    key_name,
+                ),
+            };
 
             let mut key_info = Vec::new();
             let mut key_info_file = File::open(internal_key_path).with_context(|| {
@@ -435,6 +503,7 @@ impl OnDiskKeyInfoManager {
                 format_error!("Error deserializing key info", e);
                 Error::new(ErrorKind::Other, "error deserializing key info")
             })?;
+            let _ = key_store_internal.insert(keytriple, key_info);
         }
 
         for app_name_dir_path in list_dirs(&mappings_dir_path)?.iter() {
@@ -519,11 +588,15 @@ impl OnDiskKeyInfoManager {
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
         let key_name_file_path = match auth {
             Auth::Internal => {
+                let prov_key_name =
+                    prov_and_key_to_str(key_triple.provider_id, &key_triple.key_name);
+                let prov_key_name =
+                    base64::engine::general_purpose::URL_SAFE.encode(prov_key_name.as_bytes());
                 // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
                 let key_name_file_path = self
                     .mappings_dir_path
                     .join(INTERNAL_KEYS_PARSEC_DIR)
-                    .join(key_name);
+                    .join(prov_key_name);
 
                 key_name_file_path
             }
@@ -577,11 +650,13 @@ impl OnDiskKeyInfoManager {
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
         let key_name_file_path = match auth {
             Auth::Internal => {
+                let prov_key_name = prov_and_key_to_str(key_triple.provider_id, &key_name);
+
                 // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
                 let key_name_file_path = self
                     .mappings_dir_path
                     .join(INTERNAL_KEYS_PARSEC_DIR)
-                    .join(key_name);
+                    .join(prov_key_name);
                 key_name_file_path
             }
             Auth::Client(_) => {
