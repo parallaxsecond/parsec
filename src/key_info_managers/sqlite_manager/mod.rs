@@ -965,6 +965,94 @@ mod test {
         fs::remove_file(&path).unwrap();
     }
 
+    #[cfg(feature = "mbed-crypto-provider")]
+    #[test]
+    fn create_and_load_internal_keys() {
+        let path = PathBuf::from(
+            env!("OUT_DIR").to_owned()
+                + "/kim/sqlite/create_and_load_mappings_internal_keys.sqlite3",
+        );
+        fs::remove_file(&path).unwrap_or_default();
+
+        let key_name1 = "😀 Key One 😀".to_string();
+        let key_identity_1 = KeyIdentity::new(
+            ApplicationIdentity::new_internal(),
+            ProviderIdentity::new(
+                CoreProvider::PROVIDER_UUID.to_string(),
+                CoreProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name1,
+        );
+        let key_info1 = test_key_info();
+
+        let key_name2 = "😇 Key Two 😇".to_string();
+        let key_identity_2 = KeyIdentity::new(
+            ApplicationIdentity::new_internal(),
+            ProviderIdentity::new(
+                MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                MbedCryptoProvider::DEFAULT_PROVIDER_NAME.to_string(),
+            ),
+            key_name2,
+        );
+        let key_info2 = KeyInfo {
+            id: vec![0x12, 0x22, 0x32],
+            attributes: test_key_attributes(),
+        };
+
+        {
+            let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+            let _ = manager
+                .insert(key_identity_1.clone(), key_info1.clone())
+                .unwrap();
+            let _ = manager
+                .insert(key_identity_2.clone(), key_info2.clone())
+                .unwrap();
+        }
+        // The local hashmap is dropped when leaving the inner scope.
+        {
+            let mut manager = SQLiteKeyInfoManager::new(path.clone()).unwrap();
+
+            assert_eq!(
+                manager
+                    .get_all(key_identity_1.provider.clone())
+                    .unwrap()
+                    .len(),
+                1
+            );
+            assert_eq!(
+                manager
+                    .get_all(key_identity_2.provider.clone())
+                    .unwrap()
+                    .len(),
+                1
+            );
+
+            // get() should return the key info of the internal key!
+            assert_eq!(&key_info1, manager.get(&key_identity_1).unwrap().unwrap());
+
+            // get() should not work for the same key if it is marked as External!
+            let mut key_identity3 = key_identity_2.clone();
+            key_identity3.application = ApplicationIdentity::new(
+                key_identity_2.application().name().to_string(),
+                AuthType::UnixPeerCredentials,
+            );
+            assert_eq!(None, manager.get(&key_identity3).unwrap());
+
+            assert_eq!(manager.remove(&key_identity_1).unwrap().unwrap(), key_info1);
+            assert_eq!(manager.remove(&key_identity_2).unwrap().unwrap(), key_info2);
+            assert_eq!(
+                manager
+                    .get_all(key_identity_1.provider.clone())
+                    .unwrap()
+                    .len(),
+                0
+            );
+        }
+
+        fs::remove_file(&path).unwrap();
+    }
+
     fn new_key_identity(key_name: String) -> KeyIdentity {
         KeyIdentity::new(
             ApplicationIdentity::new("Testing Application 😎".to_string(), AuthType::NoAuth),
