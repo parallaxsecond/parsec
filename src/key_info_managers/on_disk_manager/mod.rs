@@ -556,13 +556,26 @@ impl OnDiskKeyInfoManager {
 
     /// Removes the mapping file.
     /// Will do nothing if the mapping file does not exist.
-    fn delete_mapping(&self, key_triple: &KeyTriple) -> std::io::Result<()> {
+    fn delete_mapping(&self, key_triple: &KeyTriple, auth: &Auth) -> std::io::Result<()> {
         let (app_name, prov, key_name) = key_triple_to_base64_filenames(key_triple);
-        let key_name_file_path = self
-            .mappings_dir_path
-            .join(app_name)
-            .join(prov)
-            .join(key_name);
+        let key_name_file_path = match auth {
+            Auth::Internal => {
+                // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
+                let key_name_file_path = self
+                    .mappings_dir_path
+                    .join(INTERNAL_KEYS_PARSEC_DIR)
+                    .join(key_name);
+                key_name_file_path
+            }
+            Auth::Client(_) => {
+                let key_name_file_path = self
+                    .mappings_dir_path
+                    .join(app_name)
+                    .join(prov)
+                    .join(key_name);
+                key_name_file_path
+            }
+        };
         if key_name_file_path.exists() {
             fs::remove_file(key_name_file_path)
         } else {
@@ -627,10 +640,13 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
 
     fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String> {
         let key_triple = KeyTriple::try_from(key_identity.clone())?;
-        if let Err(err) = self.delete_mapping(&key_triple) {
-            Err(err.to_string())
-        } else if let Some(key_info) = self.key_store.remove(&key_triple) {
-            Ok(Some(key_info))
+        if let Err(err) = self.delete_mapping(&key_triple, key_identity.application().auth()) {
+            return Err(err.to_string());
+        }
+        if key_identity.application().is_internal() {
+            Ok(self.key_store_internal.remove(&key_triple))
+        } else if !key_identity.application().is_internal() {
+            Ok(self.key_store.remove(&key_triple))
         } else {
             Ok(None)
         }
