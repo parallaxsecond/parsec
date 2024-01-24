@@ -88,6 +88,7 @@ impl TryFrom<ProviderIdentity> for ProviderId {
 
     fn try_from(provider_identity: ProviderIdentity) -> std::result::Result<Self, Self::Error> {
         let provider_id = match provider_identity.uuid.as_str() {
+            crate::providers::core::Provider::PROVIDER_UUID => Ok(ProviderId::Core),
             #[cfg(feature = "cryptoauthlib-provider")]
             crate::providers::cryptoauthlib::Provider::PROVIDER_UUID => Ok(ProviderId::CryptoAuthLib),
             #[cfg(feature = "mbed-crypto-provider")]
