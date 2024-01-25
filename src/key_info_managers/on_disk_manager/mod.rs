@@ -202,11 +202,11 @@ impl TryFrom<KeyIdentity> for KeyTriple {
 }
 
 #[allow(deprecated)]
-impl TryFrom<(KeyTriple, ProviderIdentity, AuthType)> for KeyIdentity {
+impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
     type Error = String;
 
     fn try_from(
-        (key_triple, provider_identity, auth_type): (KeyTriple, ProviderIdentity, AuthType),
+        (key_triple, provider_identity, auth): (KeyTriple, ProviderIdentity, Auth),
     ) -> std::result::Result<Self, Self::Error> {
         // Result types required by clippy as Err result has the possibility of not being compiled.
         let provider_uuid = match key_triple.provider_id {
@@ -233,9 +233,15 @@ impl TryFrom<(KeyTriple, ProviderIdentity, AuthType)> for KeyIdentity {
             _ => Err(format!("Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", key_triple.provider_id)),
         }?;
 
+        let app_identity = match auth {
+            Auth::Internal => ApplicationIdentity::new_internal(),
+            Auth::Client(auth_type) => {
+                ApplicationIdentity::new(key_triple.app_name().to_string(), auth_type)
+            }
+        };
         Ok(KeyIdentity {
             provider: ProviderIdentity::new(provider_uuid, provider_identity.name().clone()),
-            application: ApplicationIdentity::new(key_triple.app_name().to_string(), auth_type),
+            application: app_identity.clone(),
             key_name: key_triple.key_name.to_string(),
         })
     }
@@ -700,17 +706,31 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
 
     fn get_all(&self, provider_identity: ProviderIdentity) -> Result<Vec<KeyIdentity>, String> {
         let provider_id = ProviderId::try_from(provider_identity.clone())?;
-        let key_triples = self
+        let mut key_identites = Vec::new();
+
+        let key_triples_internal = self
+            .key_store_internal
+            .keys()
+            .filter(|key_triple| key_triple.belongs_to_provider(provider_id));
+
+        for key_triple_internal in key_triples_internal {
+            let key_identity = KeyIdentity::try_from((
+                key_triple_internal.clone(),
+                provider_identity.clone(),
+                Auth::Internal,
+            ))?;
+            key_identites.push(key_identity)
+        }
+        let key_triples_external = self
             .key_store
             .keys()
             .filter(|key_triple| key_triple.belongs_to_provider(provider_id));
 
-        let mut key_identites = Vec::new();
-        for key_triple in key_triples {
+        for key_triple_external in key_triples_external {
             let key_identity = KeyIdentity::try_from((
-                key_triple.clone(),
+                key_triple_external.clone(),
                 provider_identity.clone(),
-                self.auth_type,
+                Auth::Client(self.auth_type),
             ))?;
             key_identites.push(key_identity)
         }
@@ -728,7 +748,7 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
         {
             Err(err.to_string())
         } else {
-            if key_identity.application().auth() == &Auth::Internal {
+            if key_identity.application().is_internal() {
                 Ok(self.key_store_internal.insert(key_triple, key_info))
             } else {
                 Ok(self.key_store.insert(key_triple, key_info))
