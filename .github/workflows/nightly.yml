@@ -42,7 +42,10 @@ jobs:
       - name: Install cargo audit
         run: cargo install cargo-audit
       - name: Execute cargo audit
-        run: cargo audit
+        # shlex is currently only being brought by bindgen, which does not use the concerning APIs
+        # except for testing.
+        # TODO: remove when shlex gets updated to >=1.3.0 (here and in deny.toml)
+        run: cargo audit --ignore RUSTSEC-2024-0006
 
   coverage:
     name: Gather coverage data and upload to Codecov
