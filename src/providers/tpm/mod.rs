@@ -526,3 +526,103 @@ impl ProviderBuilder {
         Ok(built_provider)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::key_info_managers::{KeyIdentity, KeyInfoManagerFactory};
+    use crate::providers::tpm::ROOT_KEY_SIZE;
+    use crate::providers::tpm::{Provider, ProviderBuilder};
+    use crate::providers::ApplicationIdentity;
+    use crate::providers::ProviderIdentity;
+    use crate::utils::config::{KeyInfoManagerConfig, KeyInfoManagerType};
+    use parsec_interface::operations::psa_algorithm::Algorithm;
+    use parsec_interface::operations::psa_key_attributes::{
+        Attributes, Lifetime, Policy, Type, UsageFlags,
+    };
+    use parsec_interface::requests::AuthType;
+
+    #[test]
+    fn test_root_key_check() {
+        let tcti = "mssim:host=127.0.0.1,port=2321";
+        let owner_hierarchy_auth = "hex:74706d5f70617373";
+        let endorsement_hierarchy_auth = "str:endorsement_pass".to_string();
+
+        let provider_identity =
+            ProviderIdentity::new(Provider::PROVIDER_UUID.to_string(), "Tpm".to_string());
+        let kim_config = KeyInfoManagerConfig {
+            name: "sqlite-manager".to_string(),
+            manager_type: KeyInfoManagerType::SQLite,
+            store_path: None,
+            sqlite_db_path: Some(
+                "./kim-mappings/sqlite/sqlite-key-info-manager.sqlite3".to_string(),
+            ),
+        };
+
+        let kim_factory = KeyInfoManagerFactory::new(&kim_config, AuthType::NoAuth).unwrap();
+        // Builds the tpm provider and inserts an internal key
+        {
+            let builder = ProviderBuilder::new()
+                .with_key_info_store(kim_factory.build_client(provider_identity.clone()))
+                .with_tcti(tcti)
+                .with_provider_name("Tpm".to_string())
+                .with_owner_hierarchy_auth(owner_hierarchy_auth.to_string())
+                .with_endorsement_hierarchy_auth(endorsement_hierarchy_auth.clone());
+
+            unsafe {
+                let _ = builder.build().unwrap();
+            }
+        }
+
+        // Builds the tpm provider, checking that the internally stored key matches
+        // the newly generated one.
+        // Then, it modifies the key information inside so that the next check fails.
+        {
+            let builder = ProviderBuilder::new()
+                .with_key_info_store(kim_factory.build_client(provider_identity.clone()))
+                .with_tcti(tcti)
+                .with_provider_name("Tpm".to_string())
+                .with_owner_hierarchy_auth(owner_hierarchy_auth.to_string())
+                .with_endorsement_hierarchy_auth(endorsement_hierarchy_auth.clone());
+            // Reads the key and verifies the created one vs the stored one
+
+            let built_provider = unsafe { builder.build().unwrap() };
+
+            // replace the key info from the internal key with some incorrect information
+            let root_key_identity = KeyIdentity::new(
+                ApplicationIdentity::new_internal(),
+                built_provider.provider_identity.clone(),
+                String::from("RootKeyTPM"),
+            );
+            let attributes = Attributes {
+                lifetime: Lifetime::Persistent,
+                key_type: Type::RsaPublicKey,
+                bits: ROOT_KEY_SIZE as usize,
+                policy: Policy {
+                    // Internal key, usage_flags information is not relevant
+                    usage_flags: UsageFlags::default(),
+                    // Internal key, permitted_algorithms information is not relevant
+                    permitted_algorithms: Algorithm::None,
+                },
+            };
+
+            let test_material: Vec<u8> = vec![1, 2];
+
+            built_provider
+                .key_info_store
+                .replace_key_info(root_key_identity, &test_material, attributes)
+                .unwrap();
+        }
+
+        // Should fail as the newly replaced key information does not match
+        // the previously created one.
+        {
+            let builder = ProviderBuilder::new()
+                .with_key_info_store(kim_factory.build_client(provider_identity.clone()))
+                .with_tcti(tcti)
+                .with_provider_name("Tpm".to_string())
+                .with_owner_hierarchy_auth(owner_hierarchy_auth.to_string())
+                .with_endorsement_hierarchy_auth(endorsement_hierarchy_auth);
+            assert!(unsafe { builder.build().is_err() });
+        }
+    }
+}
