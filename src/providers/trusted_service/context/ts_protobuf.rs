@@ -83,3 +83,17 @@ impl Drop for VerifyHashIn {
         self.signature.zeroize();
     }
 }
+
+impl Drop for AsymmetricEncryptIn {
+    fn drop(&mut self) {
+        self.plaintext.zeroize();
+        self.salt.zeroize();
+    }
+}
+
+impl Drop for AsymmetricDecryptIn {
+    fn drop(&mut self) {
+        self.ciphertext.zeroize();
+        self.salt.zeroize();
+    }
+}
