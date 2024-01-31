@@ -351,7 +351,9 @@ impl KeyInfoManagerClient {
 
         let mut clients = Vec::new();
         for key_identity in key_identities {
-            if !clients.contains(&key_identity.application) {
+            if !clients.contains(&key_identity.application)
+                && !key_identity.application.is_internal()
+            {
                 clients.push(key_identity.application.clone());
             }
         }
@@ -377,10 +379,11 @@ impl KeyInfoManagerClient {
             .expect("Key Info Manager lock poisoned");
 
         let mut keys: Vec<KeyInfo> = Vec::new();
-        let key_identities = key_info_manager_impl
+        let mut key_identities = key_info_manager_impl
             .get_all(self.provider_identity.clone())
             .map_err(to_response_status)?;
 
+        key_identities.retain(|key_identity| !key_identity.application().is_internal());
         for key_identity in key_identities {
             // If the OnDisk KIM is being used, only check if the app name is the same.
             // Otherwise, check if the entire ApplicationIdentity matches.
