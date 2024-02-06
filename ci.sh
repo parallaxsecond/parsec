@@ -398,6 +398,7 @@ RUST_BACKTRACE=1 cargo test $FEATURES
 
 # Removing any mappings or on disk keys left over from integration tests
 rm -rf mappings/
+rm -rf kim-mappings/
 rm -f *.psa_its
 
 echo "Start Parsec for end-to-end tests"
