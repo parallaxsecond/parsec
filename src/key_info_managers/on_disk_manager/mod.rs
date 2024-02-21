@@ -241,8 +241,8 @@ impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
         };
         Ok(KeyIdentity {
             provider: ProviderIdentity::new(provider_uuid, provider_identity.name().clone()),
-            application: app_identity.clone(),
-            key_name: key_triple.key_name.to_string(),
+            application: app_identity,
+            key_name: key_triple.key_name,
         })
     }
 }
@@ -599,12 +599,9 @@ impl OnDiskKeyInfoManager {
                 let prov_key_name =
                     base64::engine::general_purpose::URL_SAFE.encode(prov_key_name.as_bytes());
                 // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
-                let key_name_file_path = self
-                    .mappings_dir_path
+                self.mappings_dir_path
                     .join(INTERNAL_KEYS_PARSEC_DIR)
-                    .join(prov_key_name);
-
-                key_name_file_path
+                    .join(prov_key_name)
             }
             Auth::Client(_) => {
                 // Create the directories with base64 names.
@@ -659,20 +656,15 @@ impl OnDiskKeyInfoManager {
                 let prov_key_name = prov_and_key_to_str(key_triple.provider_id, &key_name);
 
                 // INTERNAL_KEYS_PARSEC_DIR has already been created with the necessary permissions
-                let key_name_file_path = self
-                    .mappings_dir_path
+                self.mappings_dir_path
                     .join(INTERNAL_KEYS_PARSEC_DIR)
-                    .join(prov_key_name);
-                key_name_file_path
+                    .join(prov_key_name)
             }
-            Auth::Client(_) => {
-                let key_name_file_path = self
-                    .mappings_dir_path
-                    .join(app_name)
-                    .join(prov)
-                    .join(key_name);
-                key_name_file_path
-            }
+            Auth::Client(_) => self
+                .mappings_dir_path
+                .join(app_name)
+                .join(prov)
+                .join(key_name),
         };
         if key_name_file_path.exists() {
             fs::remove_file(key_name_file_path)
@@ -747,12 +739,10 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
             self.save_mapping(&key_triple, &key_info, key_identity.application().auth())
         {
             Err(err.to_string())
+        } else if key_identity.application().is_internal() {
+            Ok(self.key_store_internal.insert(key_triple, key_info))
         } else {
-            if key_identity.application().is_internal() {
-                Ok(self.key_store_internal.insert(key_triple, key_info))
-            } else {
-                Ok(self.key_store.insert(key_triple, key_info))
-            }
+            Ok(self.key_store.insert(key_triple, key_info))
         }
     }
 
@@ -772,9 +762,9 @@ impl ManageKeyInfo for OnDiskKeyInfoManager {
 
     fn exists(&self, key_identity: &KeyIdentity) -> Result<bool, String> {
         let key_triple = KeyTriple::try_from(key_identity.clone())?;
-        match key_identity.application().auth() {
-            &Auth::Internal => Ok(self.key_store_internal.contains_key(&key_triple)),
-            &Auth::Client(_) => Ok(self.key_store.contains_key(&key_triple)),
+        match *key_identity.application().auth() {
+            Auth::Internal => Ok(self.key_store_internal.contains_key(&key_triple)),
+            Auth::Client(_) => Ok(self.key_store.contains_key(&key_triple)),
         }
     }
 }
