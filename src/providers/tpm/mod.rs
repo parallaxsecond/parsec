@@ -468,10 +468,7 @@ impl ProviderBuilder {
 
             let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
                 format_error!("Error getting the Root Key's name", e);
-                std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "failed getting Root Key's Name",
-                )
+                std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
             })?;
 
             if root_key_name.value().to_vec() != stored_root_key_name {
@@ -490,10 +487,7 @@ impl ProviderBuilder {
 
             let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
                 format_error!("Error getting the the Root Key's Name", e);
-                std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "failed getting Root Key's Name",
-                )
+                std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
             })?;
 
             let attributes = Attributes {
@@ -617,7 +611,7 @@ mod test {
         // the previously created one.
         {
             let builder = ProviderBuilder::new()
-                .with_key_info_store(kim_factory.build_client(provider_identity.clone()))
+                .with_key_info_store(kim_factory.build_client(provider_identity))
                 .with_tcti(tcti)
                 .with_provider_name("Tpm".to_string())
                 .with_owner_hierarchy_auth(owner_hierarchy_auth.to_string())
