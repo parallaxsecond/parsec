@@ -26,7 +26,6 @@ use parsec_interface::operations::{list_clients, list_keys, list_providers::Prov
 use parsec_interface::requests::{Opcode, ProviderId, ResponseStatus, Result};
 use parsec_interface::secrecy::{ExposeSecret, SecretString};
 use std::collections::HashSet;
-use std::convert::From;
 use std::convert::TryFrom;
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
