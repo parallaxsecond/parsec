@@ -86,16 +86,16 @@ impl ProviderIdentity {
 impl TryFrom<ProviderIdentity> for ProviderId {
     type Error = String;
 
-    fn try_from(provider_identity: ProviderIdentity) -> ::std::result::Result<Self, Self::Error> {
+    fn try_from(provider_identity: ProviderIdentity) -> std::result::Result<Self, Self::Error> {
         let provider_id = match provider_identity.uuid.as_str() {
             #[cfg(feature = "cryptoauthlib-provider")]
             crate::providers::cryptoauthlib::Provider::PROVIDER_UUID => Ok(ProviderId::CryptoAuthLib),
             #[cfg(feature = "mbed-crypto-provider")]
-            crate::providers::mbed_crypto::Provider::PROVIDER_UUID => Ok(ProviderId::MbedCrypto),
+            mbed_crypto::Provider::PROVIDER_UUID => Ok(ProviderId::MbedCrypto),
             #[cfg(feature = "pkcs11-provider")]
-            crate::providers::pkcs11::Provider::PROVIDER_UUID => Ok(ProviderId::Pkcs11),
+            pkcs11::Provider::PROVIDER_UUID => Ok(ProviderId::Pkcs11),
             #[cfg(feature = "tpm-provider")]
-            crate::providers::tpm::Provider::PROVIDER_UUID => Ok(ProviderId::Tpm),
+            tpm::Provider::PROVIDER_UUID => Ok(ProviderId::Tpm),
             #[cfg(feature = "trusted-service-provider")]
             crate::providers::trusted_service::Provider::PROVIDER_UUID => Ok(ProviderId::TrustedService),
             _ => Err(format!("Cannot convert from ProviderIdentity to ProviderId.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", provider_identity.uuid)),

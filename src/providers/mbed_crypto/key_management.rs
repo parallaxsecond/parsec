@@ -175,7 +175,7 @@ impl Provider {
             .expect("Grabbing key handle mutex failed");
 
         let id = key::Id::from_persistent_key_id(key_id)?;
-        let key_attributes = key::Attributes::from_key_id(id)?;
+        let key_attributes = Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.export_public_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
 
@@ -206,7 +206,7 @@ impl Provider {
             .expect("Grabbing key handle mutex failed");
 
         let id = key::Id::from_persistent_key_id(key_id)?;
-        let key_attributes = key::Attributes::from_key_id(id)?;
+        let key_attributes = Attributes::from_key_id(id)?;
         let buffer_size = key_attributes.export_key_output_size()?;
         let mut buffer = vec![0u8; buffer_size];
 

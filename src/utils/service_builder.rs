@@ -362,7 +362,7 @@ unsafe fn get_provider(
             );
 
             let tcti_name_conf = TctiNameConf::from_str(tcti).map_err(|_| {
-                std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+                Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
             })?;
             if *skip_if_no_tpm == Some(true) {
                 // TODO: When the TPM Provider uses the new TctiContext, pass it directly to the

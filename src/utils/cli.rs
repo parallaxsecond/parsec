@@ -5,6 +5,7 @@
 // WARNING: This file should be only updated in a non-breaking way. CLI flags should not be
 // removed, new flags should be tested.
 // See https://github.com/parallaxsecond/parsec/issues/392 for details.
+#![allow(unused_qualifications)]
 
 use structopt::StructOpt;
 

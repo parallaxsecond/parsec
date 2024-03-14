@@ -79,8 +79,8 @@ impl ApplicationName {
 }
 
 #[allow(deprecated)]
-impl std::fmt::Display for ApplicationName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ApplicationName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
 }
@@ -152,7 +152,7 @@ impl fmt::Display for KeyTriple {
 impl TryFrom<KeyIdentity> for KeyTriple {
     type Error = String;
 
-    fn try_from(key_identity: KeyIdentity) -> ::std::result::Result<Self, Self::Error> {
+    fn try_from(key_identity: KeyIdentity) -> std::result::Result<Self, Self::Error> {
         let provider_id = match key_identity.provider.uuid().as_str() {
             CoreProvider::PROVIDER_UUID => Ok(ProviderId::Core),
             #[cfg(feature = "cryptoauthlib-provider")]
@@ -188,7 +188,7 @@ impl TryFrom<(KeyTriple, ProviderIdentity, AuthType)> for KeyIdentity {
 
     fn try_from(
         (key_triple, provider_identity, auth_type): (KeyTriple, ProviderIdentity, AuthType),
-    ) -> ::std::result::Result<Self, Self::Error> {
+    ) -> std::result::Result<Self, Self::Error> {
         // Result types required by clippy as Err result has the possibility of not being compiled.
         let provider_uuid = match key_triple.provider_id {
             ProviderId::Core => Ok::<String, Self::Error>(
@@ -489,7 +489,7 @@ impl OnDiskKeyInfoManager {
             fs::remove_file(&key_name_file_path)?;
         }
 
-        let mut mapping_file = fs::File::create(&key_name_file_path).map_err(|e| {
+        let mut mapping_file = File::create(&key_name_file_path).map_err(|e| {
             error!(
                 "Failed to create Key Info Mapping file at {:?}",
                 key_name_file_path
