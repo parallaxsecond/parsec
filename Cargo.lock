@@ -515,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.10"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
+checksum = "190092ea657667030ac6a35e305e62fc4dd69fd98ac98631e5d3a2b1575a12b5"
 dependencies = [
  "cfg-if",
  "libc",
@@ -1871,12 +1871,13 @@ dependencies = [
 
 [[package]]
 name = "tss-esapi"
-version = "7.4.0"
+version = "7.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de234df360c349f78ecd33f0816ab3842db635732212b5cfad67f2638336864e"
+checksum = "d36722a0888ff29225d11ea205f10319d6cb4d072ef3c91bf3509f7f476d89e3"
 dependencies = [
  "bitfield",
  "enumflags2",
+ "getrandom",
  "hostname-validator",
  "log",
  "mbox",
