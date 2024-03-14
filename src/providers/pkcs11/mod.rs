@@ -586,9 +586,8 @@ impl ProviderBuilder {
         };
 
         Ok(Provider::new(
-            self.provider_name.ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, "missing provider name")
-            })?,
+            self.provider_name
+                .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing provider name"))?,
             self.key_info_store
                 .ok_or_else(|| Error::new(ErrorKind::InvalidData, "missing key info store"))?,
             backend,
