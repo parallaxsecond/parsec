@@ -38,6 +38,7 @@
 #![allow(clippy::multiple_crate_versions)]
 
 use anyhow::Result;
+use clap::Parser;
 use libc::{getuid, uid_t};
 use log::{info, trace};
 use parsec_service::utils::cli::Opts;
@@ -49,13 +50,12 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
-use clap::StructOpt;
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
 fn main() -> Result<()> {
     // Parsing the command line arguments.
-    let opts: Opts = Opts::from_args();
+    let opts: Opts = Opts::parse();
 
     // Register a boolean set to true when the SIGTERM signal is received.
     let kill_signal = Arc::new(AtomicBool::new(false));
