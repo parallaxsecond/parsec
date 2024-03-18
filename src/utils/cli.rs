@@ -7,7 +7,7 @@
 // See https://github.com/parallaxsecond/parsec/issues/392 for details.
 #![allow(unused_qualifications)]
 
-use clap::StructOpt;
+use clap::Parser;
 
 /// Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
 /// common API to secure services in a platform-agnostic way.
@@ -18,7 +18,7 @@ use clap::StructOpt;
 /// Most of Parsec configuration comes from its configuration file.
 /// Please check the documentation to find more about configuration:
 /// https://parallaxsecond.github.io/parsec-book/user_guides/configuration.html
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub struct Opts {
     /// Sets the configuration file path
     #[structopt(short, long, default_value = "config.toml")]
