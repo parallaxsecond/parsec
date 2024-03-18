@@ -7,7 +7,7 @@
 // See https://github.com/parallaxsecond/parsec/issues/392 for details.
 #![allow(unused_qualifications)]
 
-use structopt::StructOpt;
+use clap::StructOpt;
 
 /// Parsec is the Platform AbstRaction for SECurity, a new open-source initiative to provide a
 /// common API to secure services in a platform-agnostic way.
