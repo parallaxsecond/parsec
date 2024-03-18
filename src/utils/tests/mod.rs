@@ -22,7 +22,7 @@ fn config_to_toml(file_name: String) -> ServiceConfig {
         panic!();
     }
 
-    let config_file = ::std::fs::read_to_string(new_config_path.clone())
+    let config_file = std::fs::read_to_string(new_config_path.clone())
         .map_err(|e| {
             error!(
                 "Failed to read config file from path: {:#?}\nError: {:#?}",

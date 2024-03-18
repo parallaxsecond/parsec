@@ -15,7 +15,7 @@ lazy_static! {
         log_setup();
         let config_file = String::from("./run_config.toml");
         let config_file =
-            ::std::fs::read_to_string(config_file).expect("Failed to read configuration file");
+            std::fs::read_to_string(config_file).expect("Failed to read configuration file");
         let config: ServiceConfig =
             toml::from_str(&config_file).expect("Failed to parse service configuration");
         ServiceBuilder::build_service(&config).expect("Failed to initialize service")
