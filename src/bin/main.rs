@@ -49,7 +49,7 @@ use std::sync::{
     Arc,
 };
 use std::time::Duration;
-use structopt::StructOpt;
+use clap::StructOpt;
 
 const MAIN_LOOP_DEFAULT_SLEEP: u64 = 10;
 
