@@ -65,7 +65,7 @@ fn main() -> Result<()> {
     let _ = flag::register(SIGINT, kill_signal.clone())?;
     let _ = flag::register(SIGHUP, reload_signal.clone())?;
 
-    let mut config_file = ::std::fs::read_to_string(opts.config.clone()).map_err(|e| {
+    let mut config_file = std::fs::read_to_string(opts.config.clone()).map_err(|e| {
         Error::new(
             e.kind(),
             format!("Failed to read config file from path: {}", opts.config),
@@ -122,7 +122,7 @@ fn main() -> Result<()> {
             drop(listener);
             drop(threadpool);
 
-            config_file = ::std::fs::read_to_string(opts.config.clone()).map_err(|e| {
+            config_file = std::fs::read_to_string(opts.config.clone()).map_err(|e| {
                 Error::new(
                     e.kind(),
                     format!("Failed to read config file from path: {}", opts.config),
@@ -149,7 +149,7 @@ fn main() -> Result<()> {
                 trace!("handle_request egress");
             });
         } else {
-            ::std::thread::sleep(Duration::from_millis(
+            std::thread::sleep(Duration::from_millis(
                 config
                     .core_settings
                     .idle_listener_sleep_duration
