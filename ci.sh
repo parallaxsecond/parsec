@@ -396,6 +396,11 @@ fi
 echo "Unit, doc and integration tests"
 RUST_BACKTRACE=1 cargo test $FEATURES
 
+# Ignored unit tests that we want to manually run should be run here!
+if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
+    RUST_BACKTRACE=1 cargo test $FEATURES -- --ignored test_root_key_check
+fi
+
 # Removing any mappings or on disk keys left over from integration tests
 rm -rf mappings/
 rm -rf kim-mappings/

@@ -535,8 +535,12 @@ mod test {
     };
     use parsec_interface::requests::AuthType;
 
+    // This test can only be run with a TPM already available in your system.
+    // Ignored unless specified
+    #[ignore]
     #[test]
     fn test_root_key_check() {
+        // Test configuration should be changed to adapt to your system's TPM
         let tcti = "mssim:host=127.0.0.1,port=2321";
         let owner_hierarchy_auth = "hex:74706d5f70617373";
         let endorsement_hierarchy_auth = "str:endorsement_pass".to_string();
