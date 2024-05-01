@@ -1,0 +1,21 @@
+name: "Build and export docker image"
+description: "Builds and exports the docker images required by Parsec CI"
+inputs:
+   image-name:
+      required: true
+      description: "Docker image name"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build the docker container
+      run: pushd e2e_tests/docker_image && docker build -t ${{ inputs.image-name }} -f ${{ inputs.image-name }}.Dockerfile . && popd
+      shell: bash
+    - name: Export the docker container
+      run: docker save ${{ inputs.image-name }} > /tmp/${{ inputs.image-name }}.tar
+      shell: bash
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.image-name }}
+        path: /tmp/${{ inputs.image-name }}.tar

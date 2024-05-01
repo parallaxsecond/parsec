@@ -19,11 +19,12 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     println!("cargo:rerun-if-changed={}", header);
 
     let bindings = bindgen::Builder::default()
+        .clang_arg(format!("-I{}", ts_include_dir))
         .clang_arg(format!(
             "-I{}",
             ts_include_dir + "/components/rpc/common/interface"
         ))
-        .rustfmt_bindings(true)
+        //.rustfmt_bindings(true)
         .header(header)
         .header(encoding_header)
         .generate_comments(false)

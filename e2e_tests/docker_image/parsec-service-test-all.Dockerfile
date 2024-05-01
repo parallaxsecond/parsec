@@ -161,3 +161,18 @@ ENV SPIFFE_ENDPOINT_SOCKET="unix:///tmp/agent.sock"
 
 # Add safe.directory configuration to access repos freely
 RUN git config --global --add safe.directory '*'
+
+# Install latest Trusted Services libraries. The previously installed
+# libraries are old and necessary for ./generate-keys.sh which uses 
+# Parsec 1.0.0 version that is incompatible with newer libts APIs. 
+RUN rm /usr/local/lib/libts.so* /usr/local/lib/libprotobuf-nanopb.a /usr/local/lib/libmbedcrypto.a 
+RUN git clone https://git.trustedfirmware.org/TS/trusted-services.git --branch integration \
+	&& cd trusted-services \
+	&& git reset --hard b27d4163e01065d1203bd71ffa6562a651f77a13
+# Install correct python dependencies
+RUN pip3 install -r trusted-services/requirements.txt
+RUN cd trusted-services/deployments/libts/linux-pc/ \
+	&& cmake . \
+	&& make \
+	&& cp libts.so* nanopb_install/lib/libprotobuf-nanopb.a mbedtls_install/lib/libmbedcrypto.a /usr/local/lib/
+RUN rm -rf trusted-services
