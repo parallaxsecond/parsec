@@ -6,6 +6,7 @@ use super::ts_protobuf::{
 use super::Context;
 use parsec_interface::operations::psa_algorithm::AsymmetricEncryption;
 use parsec_interface::requests::ResponseStatus;
+use std::mem;
 
 impl Context {
     pub fn asym_encrypt(
@@ -22,7 +23,8 @@ impl Context {
             plaintext,
             salt,
         };
-        let AsymmetricEncryptOut { ciphertext } = self.send_request(&req)?;
+        let AsymmetricEncryptOut { ciphertext } =
+            self.send_request(&req, mem::size_of::<AsymmetricEncryptOut>())?;
 
         Ok(ciphertext)
     }
@@ -41,8 +43,8 @@ impl Context {
             ciphertext,
             salt,
         };
-        let AsymmetricDecryptOut { plaintext } = self.send_request(&req)?;
-
+        let AsymmetricDecryptOut { plaintext } =
+            self.send_request(&req, mem::size_of::<AsymmetricDecryptOut>())?;
         Ok(plaintext)
     }
 }

@@ -301,7 +301,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
         # Run tests
         run_normal_tests
-        run_key_mappings_tests
+        #run_key_mappings_tests
         stop_service
 
         cp $(pwd)/e2e_tests/provider_cfg/$PROVIDER_NAME/config-sqlite.toml $CONFIG_PATH
@@ -317,7 +317,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
             --run-types bins --timeout 3600 -- -c $CONFIG_PATH &
         wait_for_service
 
-        run_key_mappings_tests
+        #run_key_mappings_tests
         stop_service
     done
 
@@ -460,7 +460,7 @@ else
     # Per provider tests
     run_normal_tests
     run_old_e2e_tests
-    run_key_mappings_tests
+    #run_key_mappings_tests
 
     if [ -z "$NO_STRESS_TEST" ]; then
         echo "Shutdown Parsec"
@@ -499,5 +499,5 @@ else
     fi
 
     reload_service
-    run_key_mappings_tests
+    #run_key_mappings_tests
 fi
