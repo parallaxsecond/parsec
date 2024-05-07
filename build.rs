@@ -23,7 +23,6 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
             "-I{}",
             ts_include_dir + "/components/rpc/common/interface"
         ))
-        .rustfmt_bindings(true)
         .header(header)
         .header(encoding_header)
         .generate_comments(false)
