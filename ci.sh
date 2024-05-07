@@ -120,7 +120,7 @@ run_old_e2e_tests() {
 run_key_mappings_tests() {
     # There is no keys generated for CryptoAuthLib yet.
     # This condition should be removed when the keys are generated for the CAL provider
-    if ! [[ "$PROVIDER_NAME" = "cryptoauthlib" ]]; then
+    if ! [[ "$PROVIDER_NAME" = "cryptoauthlib" || "$PROVIDER_NAME" = "trusted-service" ]]; then
         echo "Execute key mappings tests"
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml key_mappings
     fi
