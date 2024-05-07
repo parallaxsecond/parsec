@@ -90,7 +90,7 @@ impl TryFrom<ProviderIdentity> for ProviderId {
         let provider_id = match provider_identity.uuid.as_str() {
             core::Provider::PROVIDER_UUID => Ok(ProviderId::Core),
             #[cfg(feature = "cryptoauthlib-provider")]
-            crate::providers::cryptoauthlib::Provider::PROVIDER_UUID => Ok(ProviderId::CryptoAuthLib),
+            cryptoauthlib::Provider::PROVIDER_UUID => Ok(ProviderId::CryptoAuthLib),
             #[cfg(feature = "mbed-crypto-provider")]
             mbed_crypto::Provider::PROVIDER_UUID => Ok(ProviderId::MbedCrypto),
             #[cfg(feature = "pkcs11-provider")]
@@ -98,7 +98,7 @@ impl TryFrom<ProviderIdentity> for ProviderId {
             #[cfg(feature = "tpm-provider")]
             tpm::Provider::PROVIDER_UUID => Ok(ProviderId::Tpm),
             #[cfg(feature = "trusted-service-provider")]
-            crate::providers::trusted_service::Provider::PROVIDER_UUID => Ok(ProviderId::TrustedService),
+            trusted_service::Provider::PROVIDER_UUID => Ok(ProviderId::TrustedService),
             _ => Err(format!("Cannot convert from ProviderIdentity to ProviderId.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", provider_identity.uuid)),
         }?;
 
