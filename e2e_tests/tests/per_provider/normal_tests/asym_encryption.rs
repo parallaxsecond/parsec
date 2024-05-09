@@ -246,7 +246,12 @@ fn asym_encrypt_and_decrypt_rsa_pkcs() {
     assert_eq!(PLAINTEXT_MESSAGE.to_vec(), plaintext);
 }
 
+// TODO: Remove ignore if issue gets resolved upstream
+// Test is ignored for PKCS11 because the library we use for testing currently breaks for new
+// Docker builds
+// See: https://github.com/parallaxsecond/parsec/issues/761
 #[test]
+#[cfg(not(any(feature = "pkcs11-provider")))]
 fn asym_encrypt_decrypt_rsa_pkcs_different_keys() {
     let key_name_1 = auto_test_keyname!("1");
     let key_name_2 = auto_test_keyname!("2");
