@@ -180,18 +180,21 @@ jobs:
     needs: [build-and-export-cross-compile-docker]
     steps:
       - uses: actions/checkout@v3
-      - name: Load Docker
-        uses: ./.github/actions/load_docker
-        if: ${{ env.TEST_CROSS_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
-        with:
-          image-name: "${{ env.TEST_CROSS_DOCKER_IMAGE }}"
-          image-path: "/tmp"
+      # - name: Load Docker
+      #   uses: ./.github/actions/load_docker
+      #   if: ${{ env.TEST_CROSS_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
+      #   with:
+      #     image-name: "${{ env.TEST_CROSS_DOCKER_IMAGE }}"
+      #     image-path: "/tmp"
+      # Use the following step when updating the `parsec-service-test-all` image
+      - name: Build the container
+        run: pushd e2e_tests/docker_image && docker build -t parsec-service-test-cross-compile -f parsec-service-test-cross-compile.Dockerfile . && popd
       - name: Run the cross compiler tests using pre-built docker image
-        if: ${{ env.TEST_CROSS_DOCKER_IMAGE != 'parsec-service-test-cross-compile' }}
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
-      - name: Run the cross compiler tests using image built on the CI
         if: ${{ env.TEST_CROSS_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
-        run: docker run -v $(pwd):/tmp/parsec -w "${{ env.TEST_CROSS_DOCKER_IMAGE }}" /tmp/parsec/test/cross-compile.sh
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
+      - name: Run the cross compiler tests using image built on the CI
+        if: ${{ env.TEST_CROSS_DOCKER_IMAGE != 'parsec-service-test-cross-compile' }}
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec -t parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links
