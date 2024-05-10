@@ -191,7 +191,7 @@ jobs:
         run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec ghcr.io/parallaxsecond/parsec-service-test-cross-compile /tmp/parsec/test/cross-compile.sh
       - name: Run the cross compiler tests using image built on the CI
         if: ${{ env.TEST_CROSS_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
-        run: docker run -v $(pwd):/tmp/parsec -w "${{ env.TEST_CROSS_DOCKER_IMAGE }}" /tmp/parsec/test/cross-compile.sh
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec "${{ env.TEST_CROSS_DOCKER_IMAGE }}" /tmp/parsec/test/cross-compile.sh
 
   links:
     name: Check links
