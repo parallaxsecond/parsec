@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.4.1](https://github.com/parallaxsecond/parsec/tree/1.4.1) (2024-05-14)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.4.1-rc1...1.4.1)
+
+**Fixed bugs:**
+
+- e2e\_tests: Ignore different key test for RSA in pkcs11 [\#764](https://github.com/parallaxsecond/parsec/pull/764) ([tgonzalezorlandoarm](https://github.com/tgonzalezorlandoarm))
+
+**Merged pull requests:**
+
+- Minor CI pipeline fixes [\#766](https://github.com/parallaxsecond/parsec/pull/766) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+
+## [1.4.1-rc1](https://github.com/parallaxsecond/parsec/tree/1.4.1-rc1) (2024-05-10)
+
+[Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.4.0...1.4.1-rc1)
+
+**Merged pull requests:**
+
+- Revert "Test patch for cross-compiler docker image" [\#767](https://github.com/parallaxsecond/parsec/pull/767) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Use v1.0.0 release of trusted services  [\#765](https://github.com/parallaxsecond/parsec/pull/765) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Adds support to build and test the cross-compiler docker images. [\#762](https://github.com/parallaxsecond/parsec/pull/762) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+- Minor fixes [\#760](https://github.com/parallaxsecond/parsec/pull/760) ([gowthamsk-arm](https://github.com/gowthamsk-arm))
+
 ## [1.4.0](https://github.com/parallaxsecond/parsec/tree/1.4.0) (2024-03-28)
 
 [Full Changelog](https://github.com/parallaxsecond/parsec/compare/1.4.0-rc2...1.4.0)
