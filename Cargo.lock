@@ -1100,7 +1100,7 @@ dependencies = [
 
 [[package]]
 name = "parsec-service"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "anyhow",
  "base64 0.21.4",
