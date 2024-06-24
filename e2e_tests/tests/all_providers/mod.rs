@@ -3,5 +3,6 @@
 
 mod config;
 mod cross;
+mod logging;
 mod multitenancy;
 mod normal;
