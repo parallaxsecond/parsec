@@ -21,6 +21,7 @@ cleanup () {
     rm -f "NVChip"
     rm -f "e2e_tests/provider_cfg/tmp_config.toml"
     rm -f "parsec.sock"
+    rm -f parsec_logging.txt
 
     if [ -z "$NO_CARGO_CLEAN" ]; then cargo clean; fi
 }
@@ -451,6 +452,17 @@ if [ "$PROVIDER_NAME" = "all" ]; then
     # Last test as it changes the service configuration
     echo "Execute all-providers config tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::config -- --test-threads=1
+
+    stop_service
+    rm -rf mappings/
+    rm -rf kim-mappings/
+    rm -f *.psa_its
+    
+    # Redirect the parsec service logs to parsec_logging.txt and run "check_log_source" test to ensure that the
+    # logs contain the source module path.
+    RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config ./e2e_tests/provider_cfg/mbed-crypto/config.toml > parsec_logging.txt 2>&1 &
+    wait_for_service
+    RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::logging -- --ignored check_log_source
 else
     setup_mappings ondisk
     # Add the fake mappings for the key mappings test as well. The test will check that
