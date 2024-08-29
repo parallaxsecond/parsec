@@ -239,15 +239,16 @@ pub mod peer_credentials {
     pub mod impl_linux {
         use super::UCred;
         use libc::{c_void, getsockopt, socklen_t, ucred, SOL_SOCKET, SO_PEERCRED};
+        use std::io;
+        use std::mem::size_of;
         use std::os::unix::io::AsRawFd;
         use std::os::unix::net::UnixStream;
-        use std::{io, mem};
 
         pub fn peer_cred(socket: &UnixStream) -> io::Result<UCred> {
-            let ucred_size = mem::size_of::<ucred>();
+            let ucred_size = size_of::<ucred>();
 
             // Trivial sanity checks.
-            assert!(mem::size_of::<u32>() <= mem::size_of::<usize>());
+            assert!(size_of::<u32>() <= size_of::<usize>());
             assert!(ucred_size <= u32::MAX as usize);
 
             let mut ucred_size = ucred_size as socklen_t;
@@ -266,7 +267,7 @@ pub mod peer_credentials {
                     &mut ucred_size,
                 );
 
-                if ret == 0 && ucred_size as usize == mem::size_of::<ucred>() {
+                if ret == 0 && ucred_size as usize == size_of::<ucred>() {
                     Ok(UCred {
                         uid: ucred.uid,
                         gid: ucred.gid,
