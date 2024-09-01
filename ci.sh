@@ -279,9 +279,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
-    # Install tarpaulin
-    # TODO: Stop using the --version parameter when MSRV is upgraded (>1.66.0)
-    cargo install cargo-tarpaulin --version 0.26.1 --locked
+    cargo install cargo-tarpaulin
 
     mkdir -p reports
 

@@ -64,7 +64,7 @@ jobs:
         uses: ./.github/actions/ci_script
         with:
           ci-flags: "cargo-check"
-          rs-version: "1.66.0"
+          rs-version: "1.67.0"
 
   build-all-providers-stable:
     name: Cargo check all-providers (current Rust stable)
