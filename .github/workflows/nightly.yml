@@ -55,6 +55,6 @@ jobs:
         with:
           ref: "${{ github.event.inputs.rev }}"
       - name: Run the container to execute the coverage script
-        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined --env RUST_TOOLCHAIN_VERSION=1.66.0 ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh coverage
+        run: docker run -v $(pwd):/tmp/parsec -w /tmp/parsec --security-opt seccomp=unconfined --env RUST_TOOLCHAIN_VERSION=1.67.0 ghcr.io/parallaxsecond/parsec-service-test-all /tmp/parsec/ci.sh coverage
       - name: Collect coverage results
         run: bash <(curl -s https://codecov.io/bash)

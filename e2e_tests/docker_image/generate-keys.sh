@@ -9,7 +9,7 @@
 set -xeuf -o pipefail
 
 
-rustup install 1.66.0
+rustup install 1.67.0
 
 wait_for_process() {
     while [ -z "$(pgrep $1)" ]; do
@@ -97,7 +97,7 @@ generate_and_store_keys_for_ondisk_KIM()
     mv /tmp/create_keys/parsec/NVChip /tmp/ondisk
 
     # Build the service with trusted service provider
-    cargo +1.66.0 build --features "trusted-service-provider, all-authenticators"
+    cargo +1.67.0 build --features "trusted-service-provider, all-authenticators"
     # Start the service with trusted service provider
     ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config.toml &
     wait_for_process "parsec"
@@ -147,7 +147,7 @@ key_info_manager = "sqlite-manager"
 EOF
     popd
     # Build the service with trusted service provider
-    cargo +1.66.0 build --features "trusted-service-provider, all-authenticators"
+    cargo +1.67.0 build --features "trusted-service-provider, all-authenticators"
     # Start the service with trusted service provider
     ./target/debug/parsec -c e2e_tests/provider_cfg/trusted-service/config-sqlite.toml &
     wait_for_process "parsec"
@@ -170,7 +170,7 @@ git submodule update --init --recursive
 cargo install parsec-tool
 
 # Build service with all providers (trusted-service-provider isn't included)
-cargo +1.66.0 build --features "all-providers, all-authenticators"
+cargo +1.67.0 build --features "all-providers, all-authenticators"
 
 # Start the service with all providers (trusted-service-provider isn't included)
 configure_tpm
