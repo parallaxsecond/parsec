@@ -54,7 +54,7 @@ impl BackEndHandler {
     ///
     /// # Errors
     /// - if the provider ID can not perform the type of operation, returns
-    /// `ResponseStatus::PsaErrorNotSupported`
+    ///   `ResponseStatus::PsaErrorNotSupported`
     /// - if the provider ID does not match, returns `ResponseStatus::WrongProviderId`
     /// - if the content type does not match, returns `ResponseStatus::ContentTypeNotSupported`
     /// - if the accept type does not match, returns `ResponseStatus::AcceptTypeNotSupported`

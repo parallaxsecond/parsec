@@ -106,8 +106,8 @@ impl ServiceBuilder {
     ///
     /// # Errors
     /// * if any of the fields specified in the configuration are inconsistent (e.g. key info manager with name 'X'
-    /// requested for a certain provider does not exist) or if required fields are missing, an error of kind
-    /// `InvalidData` is returned with a string describing the cause more accurately.
+    ///   requested for a certain provider does not exist) or if required fields are missing, an error of kind
+    ///   `InvalidData` is returned with a string describing the cause more accurately.
     pub fn build_service(config: &ServiceConfig) -> Result<FrontEndHandler> {
         GlobalConfigBuilder::new()
             .with_log_error_details(config.core_settings.log_error_details.unwrap_or(false))
