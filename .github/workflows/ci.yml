@@ -24,7 +24,7 @@ jobs:
     # For running this job  we need to manually trigger the CI and set the variable
     if: ${{ github.event.inputs.trigger_test_all_docker == 'parsec-service-test-all' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build and Export Docker Image
       uses: ./.github/actions/build_export_docker
       with:
@@ -35,7 +35,7 @@ jobs:
     # For running this job  we need to manually trigger the CI and set the variable
     if: ${{ github.event.inputs.trigger_test_cross_docker == 'parsec-service-test-cross-compile' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build and Export Docker Image
       uses: ./.github/actions/build_export_docker
       with:
@@ -47,7 +47,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -59,7 +59,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -72,7 +72,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -84,7 +84,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -96,7 +96,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -108,7 +108,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -120,7 +120,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -132,7 +132,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -144,7 +144,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Load Docker
         uses: ./.github/actions/load_docker
         if: ${{ env.TEST_ALL_DOCKER_IMAGE == 'parsec-service-test-all' }}
@@ -166,7 +166,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-test-all-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run the container to execute the test script
         uses: ./.github/actions/ci_script
         with:
@@ -179,7 +179,7 @@ jobs:
     if: ${{ always() }}
     needs: [build-and-export-cross-compile-docker]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Load Docker
         uses: ./.github/actions/load_docker
         if: ${{ env.TEST_CROSS_DOCKER_IMAGE == 'parsec-service-test-cross-compile' }}
@@ -197,7 +197,7 @@ jobs:
     name: Check links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Link Checker
         uses: peter-evans/link-checker@v1
         with:
@@ -209,14 +209,14 @@ jobs:
     name: "Run cargo deny"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: EmbarkStudios/cargo-deny-action@v1
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v2
 
   mismatcher:
     name: Check for mismatched dependencies (those that have more than one version)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: "${{ github.event.inputs.rev }}"
       - name: Run the container to execute the dependency mismatcher script
