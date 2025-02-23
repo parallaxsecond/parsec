@@ -20,9 +20,10 @@ jobs:
         with:
           ref: "${{ github.event.inputs.rev }}"
       - name: Install latest Rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+          rustflags: ""
       - name: Install cargo udeps
         run: cargo install cargo-udeps --locked
       - name: Execute cargo udeps
@@ -36,9 +37,10 @@ jobs:
         with:
           ref: "${{ github.event.inputs.rev }}"
       - name: Install latest Rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
+          rustflags: ""
       - name: Install cargo audit
         run: cargo install cargo-audit
       - name: Execute cargo audit
