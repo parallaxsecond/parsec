@@ -23,6 +23,7 @@ RUN cd trusted-services/deployments/libts/arm-linux/ \
 RUN rm -rf trusted-services
 
 # Install cross-compilers
+RUN apt update
 RUN apt install -y gcc-multilib
 RUN apt install -y gcc-arm-linux-gnueabihf
 RUN apt install -y gcc-aarch64-linux-gnu
