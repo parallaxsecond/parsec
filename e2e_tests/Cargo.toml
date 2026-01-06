@@ -21,7 +21,7 @@ tss-esapi = { version = "7.5.0", optional = true }
 
 [dev-dependencies]
 ring = "0.16.20"
-rsa = "0.3.0"
+rsa = "0.9.10"
 picky-asn1-x509 = "0.12.0"
 base64 = "0.21.0"
 num_cpus = "1.13.0"
