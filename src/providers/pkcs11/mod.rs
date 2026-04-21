@@ -9,7 +9,7 @@ use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
-use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error as Pkcs11Error, RvError};
 use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
@@ -228,9 +228,9 @@ impl Provider {
             }
 
             session
-                .login(UserType::User, Some(&AuthPin::new(pin.to_string())))
+                .login(UserType::User, Some(&AuthPin::new(pin.to_string().into())))
                 .or_else(|e| {
-                    if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn) = e {
+                    if let Pkcs11Error::Pkcs11(RvError::UserAlreadyLoggedIn, _) = e {
                         Ok(())
                     } else {
                         Err(e)
@@ -502,7 +502,7 @@ impl ProviderBuilder {
         })?;
         trace!("Initialize command");
         backend
-            .initialize(CInitializeArgs::OsThreads)
+            .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
             .map_err(|e| {
                 format_error!("Error initializing PKCS 11 context", e);
                 Error::new(ErrorKind::InvalidData, "error initializing PKCS 11 context")

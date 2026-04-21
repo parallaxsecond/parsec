@@ -81,7 +81,7 @@ impl Provider {
                         key_attributes.policy.permitted_algorithms
                     {
                         match e {
-                            Error::Pkcs11(RvError::EncryptedDataInvalid) => {
+                            Error::Pkcs11(RvError::EncryptedDataInvalid, _) => {
                                 return ResponseStatus::PsaErrorInvalidPadding
                             }
                             _ => (),

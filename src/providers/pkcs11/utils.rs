@@ -33,7 +33,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
             format_error!("Conversion of error to PsaErrorCommunicationFailure", e);
             ResponseStatus::PsaErrorCommunicationFailure
         }
-        Error::Pkcs11(ck_rv) => rv_to_response_status(ck_rv),
+        Error::Pkcs11(ck_rv, _) => rv_to_response_status(ck_rv),
         Error::NotSupported => ResponseStatus::PsaErrorNotSupported,
         Error::TryFromInt(e) => ResponseStatus::from(e),
         Error::TryFromSlice(e) => ResponseStatus::from(e),
