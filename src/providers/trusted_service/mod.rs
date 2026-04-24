@@ -112,12 +112,12 @@ impl Provider {
                 }
                 Err(string) => {
                     error!("Key Info Manager error when obtaining handles: {}", string);
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
+                    return Err(std::io::Error::other(string).into());
                 }
             };
             for key_identity in to_remove.iter() {
                 if let Err(string) = ts_provider.key_info_store.remove_key_info(key_identity) {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
+                    return Err(std::io::Error::other(string).into());
                 }
             }
         }

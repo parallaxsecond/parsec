@@ -15,8 +15,9 @@ impl Provider {
         // external loop to retry generation if vector is not secure
         loop {
             // calculate internal loop count
-            let call_count = (op.size + rust_cryptoauthlib::ATCA_RANDOM_BUFFER_SIZE - 1)
-                / rust_cryptoauthlib::ATCA_RANDOM_BUFFER_SIZE;
+            let call_count = op
+                .size
+                .div_ceil(rust_cryptoauthlib::ATCA_RANDOM_BUFFER_SIZE);
             // internal loop for vector size greater than buffer size
             for _i in 0..call_count {
                 let mut buffer = Vec::with_capacity(rust_cryptoauthlib::ATCA_RANDOM_BUFFER_SIZE);

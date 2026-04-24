@@ -382,10 +382,7 @@ impl ProviderBuilder {
                 return Ok(*cipher);
             }
         }
-        Err(std::io::Error::new(
-            ErrorKind::Other,
-            "desired ciphers not supported",
-        ))
+        Err(std::io::Error::other("desired ciphers not supported"))
     }
 
     /// Create an instance of TpmProvider

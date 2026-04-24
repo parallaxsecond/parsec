@@ -194,7 +194,7 @@ mod test {
             admins: Default::default(),
         };
 
-        let garbage_data = rand::thread_rng().gen::<[u8; 32]>().to_vec();
+        let garbage_data = rand::thread_rng().r#gen::<[u8; 32]>().to_vec();
         let req_auth = RequestAuth::new(garbage_data);
         let conn_metadata = Some(ConnectionMetadata::UnixPeerCredentials {
             uid: cred_a.uid,

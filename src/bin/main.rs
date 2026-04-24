@@ -83,8 +83,7 @@ fn main() -> Result<()> {
     let allow_root = config.core_settings.allow_root.unwrap_or(false);
     let current_id: uid_t = unsafe { getuid() };
     if !allow_root && current_id == 0 {
-        return Err(Error::new(
-            ErrorKind::Other,
+        return Err(Error::other(
             "Insecure configuration; the Parsec service should not be running as root! You can \
              modify `allow_root` in the config file to bypass this check (not recommended).",
         )
@@ -104,13 +103,13 @@ fn main() -> Result<()> {
     let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
     // Notify systemd that the daemon is ready, the start command will block until this point.
-    let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+    let _ = sd_notify::notify(&[sd_notify::NotifyState::Ready]);
 
     info!("Parsec is ready.");
 
     while !kill_signal.load(Ordering::Relaxed) {
         if reload_signal.swap(false, Ordering::Relaxed) {
-            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Reloading]);
+            let _ = sd_notify::notify(&[sd_notify::NotifyState::Reloading]);
             info!("SIGHUP signal received. Reloading the configuration...");
 
             threadpool.join();
@@ -138,7 +137,7 @@ fn main() -> Result<()> {
             listener = ServiceBuilder::start_listener(config.listener)?;
             threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
-            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+            let _ = sd_notify::notify(&[sd_notify::NotifyState::Ready]);
             info!("Parsec configuration reloaded.");
         }
 
@@ -158,7 +157,7 @@ fn main() -> Result<()> {
         }
     }
 
-    let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Stopping]);
+    let _ = sd_notify::notify(&[sd_notify::NotifyState::Stopping]);
     info!("SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish...");
     threadpool.join();
     info!("Parsec is now terminated.");

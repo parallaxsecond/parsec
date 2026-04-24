@@ -30,7 +30,7 @@ impl Context {
                 }),
             }),
         };
-        self.send_request(&generate_req)?;
+        self.send_request::<()>(&generate_req)?;
 
         Ok(())
     }
@@ -46,13 +46,11 @@ impl Context {
         let mut data = key_data.to_vec();
         let import_req = ImportKeyIn {
             attributes: Some(KeyAttributes {
-                r#type: u16::try_from(key_attrs.key_type).map_err(|e| {
+                r#type: u16::try_from(key_attrs.key_type).inspect_err(|_| {
                     data.zeroize();
-                    e
                 })? as u32,
-                key_bits: key_attrs.bits.try_into().map_err(|e| {
+                key_bits: key_attrs.bits.try_into().inspect_err(|_| {
                     data.zeroize();
-                    e
                 })?,
                 lifetime: KeyLifetime::Persistent as u32,
                 id,
@@ -62,15 +60,14 @@ impl Context {
                         .policy
                         .permitted_algorithms
                         .try_into()
-                        .map_err(|e| {
+                        .inspect_err(|_| {
                             data.zeroize();
-                            e
                         })?,
                 }),
             }),
             data,
         };
-        self.send_request(&import_req)?;
+        self.send_request::<()>(&import_req)?;
 
         Ok(())
     }

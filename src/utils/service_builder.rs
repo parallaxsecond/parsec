@@ -198,7 +198,7 @@ fn build_backend_handlers(
     for (_auth_type, authenticator) in authenticators {
         let authenticator_info = authenticator
             .describe()
-            .map_err(|_| Error::new(ErrorKind::Other, "Failed to describe authenticator"))?;
+            .map_err(|_| Error::other("Failed to describe authenticator"))?;
         core_provider_builder = core_provider_builder.with_authenticator_info(authenticator_info);
     }
 
@@ -274,7 +274,7 @@ fn build_providers(
                     &format!("Provider with ID {} cannot be created", provider_id),
                     e
                 );
-                return Err(Error::new(ErrorKind::Other, "failed to create provider").into());
+                return Err(Error::other("failed to create provider").into());
             }
         };
         providers.push((provider_id, provider));
@@ -505,11 +505,7 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Result<Vec<(AuthType, A
             ) {
                 Some(authenticator) => authenticator,
                 None => {
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "can not create a SPIFFE Workload API client",
-                    )
-                    .into())
+                    return Err(Error::other("can not create a SPIFFE Workload API client").into())
                 }
             };
             authenticators.push((AuthType::JwtSvid, Box::from(jwt_svid_authenticator)))

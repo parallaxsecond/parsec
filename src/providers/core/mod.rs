@@ -257,7 +257,7 @@ impl ProviderBuilder {
         for provider in &self.prov_list {
             let (provider_info, opcodes) = provider
                 .describe()
-                .map_err(|_| Error::new(ErrorKind::Other, "Failed to describe provider"))?;
+                .map_err(|_| Error::other("Failed to describe provider"))?;
             let _ = provider_opcodes.insert(provider_info.id, opcodes);
             provider_info_vec.push(provider_info);
         }

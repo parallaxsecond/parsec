@@ -40,7 +40,7 @@ impl Context {
             signature,
             alg: algorithm.into(),
         };
-        self.send_request(&proto_req)?;
+        self.send_request::<()>(&proto_req)?;
 
         Ok(())
     }

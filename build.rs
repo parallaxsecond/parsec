@@ -10,8 +10,7 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
     let encoding_header = ts_include_dir.clone() + "/protocols/rpc/common/packed-c/encoding.h";
 
     if !Path::new(&header).exists() {
-        return Err(Error::new(
-            ErrorKind::Other,
+        return Err(Error::other(
             "Trusted Services Locator header is missing. Have you run 'git submodule update --init'?",
         ));
     }
@@ -29,13 +28,9 @@ fn generate_ts_bindings(ts_include_dir: String) -> Result<()> {
         .generate_comments(false)
         .size_t_is_usize(true)
         .derive_default(true)
+        .layout_tests(false)
         .generate()
-        .map_err(|_| {
-            Error::new(
-                ErrorKind::Other,
-                "Unable to generate bindings to trusted services locator",
-            )
-        })?;
+        .map_err(|_| Error::other("Unable to generate bindings to trusted services locator"))?;
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings.write_to_file(out_path.join("ts_bindings.rs"))?;
 

@@ -151,6 +151,7 @@ fn list_opcodes() {
     // );
 }
 
+#[allow(unexpected_cfgs)]
 #[cfg(feature = "testing")]
 #[test]
 fn mangled_list_providers() {

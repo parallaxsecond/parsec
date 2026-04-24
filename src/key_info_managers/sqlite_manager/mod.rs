@@ -150,7 +150,7 @@ impl SQLiteKeyInfoManager {
                         .unwrap_or_else(|_| "DB_FILE_PATH_UNKNOWN".to_string()),
                 );
                 error!("{}", error_message);
-                return Err(Error::new(ErrorKind::Other, error_message).into());
+                return Err(Error::other(error_message).into());
             }
         }
 
@@ -183,7 +183,7 @@ impl SQLiteKeyInfoManager {
                     version_number
                 );
                 error!("{}", error_message);
-                return Err(Error::new(ErrorKind::Other, error_message).into());
+                return Err(Error::other(error_message).into());
             }
         }
 
@@ -224,7 +224,7 @@ impl SQLiteKeyInfoManager {
                 key_attributes_version,
             );
             error!("{}", error_message);
-            return Err(Error::new(ErrorKind::Other, error_message).into());
+            return Err(Error::other(error_message).into());
         }
 
         // All checks have passed, load key mappings
@@ -485,7 +485,7 @@ mod test {
     fn test_key_info_with_random_id() -> KeyInfo {
         let mut rng = rand::thread_rng();
         KeyInfo {
-            id: vec![rng.gen(), rng.gen(), rng.gen()],
+            id: vec![rng.r#gen(), rng.r#gen(), rng.r#gen()],
             attributes: test_key_attributes(),
         }
     }
