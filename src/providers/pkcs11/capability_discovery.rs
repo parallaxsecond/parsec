@@ -3,7 +3,7 @@
 
 #![allow(trivial_numeric_casts)]
 use super::utils::algorithm_to_mechanism;
-use super::{utils, Provider};
+use super::{Provider, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::pkcs11::to_response_status;

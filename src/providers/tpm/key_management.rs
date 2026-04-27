@@ -1,10 +1,10 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::Provider;
 use super::utils;
 #[allow(deprecated)]
 use super::utils::LegacyPasswordContext;
 use super::utils::PasswordContext;
-use super::Provider;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use log::error;

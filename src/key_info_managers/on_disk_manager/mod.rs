@@ -210,19 +210,25 @@ impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
     ) -> std::result::Result<Self, Self::Error> {
         // Result types required by clippy as Err result has the possibility of not being compiled.
         let provider_uuid = match key_triple.provider_id {
-            ProviderId::Core => Ok::<String, Self::Error>(
-                CoreProvider::PROVIDER_UUID.to_string(),
-            ),
+            ProviderId::Core => Ok::<String, Self::Error>(CoreProvider::PROVIDER_UUID.to_string()),
             #[cfg(feature = "cryptoauthlib-provider")]
-            ProviderId::CryptoAuthLib => Ok::<String, Self::Error>(CryptoAuthLibProvider::PROVIDER_UUID.to_string()),
+            ProviderId::CryptoAuthLib => {
+                Ok::<String, Self::Error>(CryptoAuthLibProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "mbed-crypto-provider")]
-            ProviderId::MbedCrypto => Ok::<String, Self::Error>(MbedCryptoProvider::PROVIDER_UUID.to_string()),
+            ProviderId::MbedCrypto => {
+                Ok::<String, Self::Error>(MbedCryptoProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "pkcs11-provider")]
-            ProviderId::Pkcs11 => Ok::<String, Self::Error>(Pkcs11Provider::PROVIDER_UUID.to_string()),
+            ProviderId::Pkcs11 => {
+                Ok::<String, Self::Error>(Pkcs11Provider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "tpm-provider")]
             ProviderId::Tpm => Ok::<String, Self::Error>(TpmProvider::PROVIDER_UUID.to_string()),
             #[cfg(feature = "trusted-service-provider")]
-            ProviderId::TrustedService => Ok::<String, Self::Error>(TrustedServiceProvider::PROVIDER_UUID.to_string()),
+            ProviderId::TrustedService => {
+                Ok::<String, Self::Error>(TrustedServiceProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(not(all(
                 feature = "cryptoauthlib-provider",
                 feature = "mbed-crypto-provider",
@@ -230,7 +236,10 @@ impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
                 feature = "tpm-provider",
                 feature = "trusted-service-provider",
             )))]
-            _ => Err(format!("Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", key_triple.provider_id)),
+            _ => Err(format!(
+                "Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.",
+                key_triple.provider_id
+            )),
         }?;
 
         let app_identity = match auth {
@@ -853,10 +862,12 @@ mod test {
 
         assert!(manager.get(&key_identity).unwrap().is_none());
 
-        assert!(manager
-            .insert(key_identity.clone(), key_info.clone())
-            .unwrap()
-            .is_none());
+        assert!(
+            manager
+                .insert(key_identity.clone(), key_info.clone())
+                .unwrap()
+                .is_none()
+        );
 
         let stored_key_info = manager
             .get(&key_identity)

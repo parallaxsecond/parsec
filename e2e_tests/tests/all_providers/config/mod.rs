@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use cryptoki::types::AuthPin;
-use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;

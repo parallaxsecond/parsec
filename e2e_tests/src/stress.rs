@@ -9,7 +9,7 @@ use rand::{
     thread_rng,
 };
 use std::convert::TryInto;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::Duration;
 
@@ -236,7 +236,10 @@ impl StressTestWorker {
                     || status == ResponseStatus::PsaErrorInvalidArgument
                     || status == ResponseStatus::PsaErrorCorruptionDetected)
                 {
-                    panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.", status);
+                    panic!(
+                        "An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.",
+                        status
+                    );
                 }
             }
             Operation::SignEcc => {
@@ -276,7 +279,10 @@ impl StressTestWorker {
                     || status == ResponseStatus::PsaErrorCorruptionDetected
                     || status == ResponseStatus::PsaErrorNotSupported)
                 {
-                    panic!("An invalid signature, a tampering detection or no support should be the only reasons of the ECC verification failing. Status returned: {:?}.", status);
+                    panic!(
+                        "An invalid signature, a tampering detection or no support should be the only reasons of the ECC verification failing. Status returned: {:?}.",
+                        status
+                    );
                 }
             }
             Operation::DestroyKey => {

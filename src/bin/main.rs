@@ -42,12 +42,12 @@ use clap::Parser;
 use libc::{getuid, uid_t};
 use log::{info, trace};
 use parsec_service::utils::cli::Opts;
-use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
+use parsec_service::utils::{ServiceBuilder, config::ServiceConfig};
 use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
 
@@ -141,24 +141,29 @@ fn main() -> Result<()> {
             info!("Parsec configuration reloaded.");
         }
 
-        match listener.accept() { Some(connection) => {
-            let front_end_handler = front_end_handler.clone();
-            threadpool.execute(move || {
-                front_end_handler.handle_request(connection);
-                trace!("handle_request egress");
-            });
-        } _ => {
-            std::thread::sleep(Duration::from_millis(
-                config
-                    .core_settings
-                    .idle_listener_sleep_duration
-                    .unwrap_or(MAIN_LOOP_DEFAULT_SLEEP),
-            ));
-        }}
+        match listener.accept() {
+            Some(connection) => {
+                let front_end_handler = front_end_handler.clone();
+                threadpool.execute(move || {
+                    front_end_handler.handle_request(connection);
+                    trace!("handle_request egress");
+                });
+            }
+            _ => {
+                std::thread::sleep(Duration::from_millis(
+                    config
+                        .core_settings
+                        .idle_listener_sleep_duration
+                        .unwrap_or(MAIN_LOOP_DEFAULT_SLEEP),
+                ));
+            }
+        }
     }
 
     let _ = sd_notify::notify(&[sd_notify::NotifyState::Stopping]);
-    info!("SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish...");
+    info!(
+        "SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish..."
+    );
     threadpool.join();
     info!("Parsec is now terminated.");
 

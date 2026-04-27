@@ -1,6 +1,6 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{utils, Provider};
+use super::{Provider, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use log::error;
@@ -8,8 +8,8 @@ use parsec_interface::operations::{attest_key, prepare_key_attestation};
 use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::zeroize::Zeroizing;
 use std::convert::TryFrom;
-use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
 use tss_esapi::Error;
+use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
 use tss_esapi::{abstraction::transient::ObjectWrapper, structures::Auth};
 
 impl Provider {

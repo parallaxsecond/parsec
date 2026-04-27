@@ -238,7 +238,7 @@ pub mod peer_credentials {
     #[allow(missing_docs, trivial_casts)] // docs not required; only used for selective compilation.
     pub mod impl_linux {
         use super::UCred;
-        use libc::{c_void, getsockopt, socklen_t, ucred, SOL_SOCKET, SO_PEERCRED};
+        use libc::{SO_PEERCRED, SOL_SOCKET, c_void, getsockopt, socklen_t, ucred};
         use std::io;
         use std::mem::size_of;
         use std::os::unix::io::AsRawFd;

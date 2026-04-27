@@ -99,7 +99,10 @@ impl TryFrom<ProviderIdentity> for ProviderId {
             tpm::Provider::PROVIDER_UUID => Ok(ProviderId::Tpm),
             #[cfg(feature = "trusted-service-provider")]
             trusted_service::Provider::PROVIDER_UUID => Ok(ProviderId::TrustedService),
-            _ => Err(format!("Cannot convert from ProviderIdentity to ProviderId.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", provider_identity.uuid)),
+            _ => Err(format!(
+                "Cannot convert from ProviderIdentity to ProviderId.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.",
+                provider_identity.uuid
+            )),
         }?;
 
         Ok(provider_id)

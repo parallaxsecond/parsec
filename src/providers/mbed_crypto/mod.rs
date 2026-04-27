@@ -6,8 +6,8 @@
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
-use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
+use crate::providers::crypto_capability::CanDoCrypto;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::list_providers::Uuid;
@@ -23,8 +23,8 @@ use psa_crypto::types::{key, status};
 use std::collections::HashSet;
 use std::io::{Error, ErrorKind};
 use std::sync::{
-    atomic::{AtomicU32, Ordering::Relaxed},
     Mutex,
+    atomic::{AtomicU32, Ordering::Relaxed},
 };
 
 mod aead;
@@ -122,7 +122,10 @@ impl Provider {
                         {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                error!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...", key_identity, response_status);
+                                error!(
+                                    "Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
+                                    key_identity, response_status
+                                );
                                 to_remove.push(key_identity.clone());
                                 continue;
                             }
@@ -163,16 +166,22 @@ impl Provider {
 impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
-        Ok((ProviderInfo {
-            // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
-            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
-            description: String::from("User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API"),
-            vendor: String::from("Arm"),
-            version_maj: 0,
-            version_min: 1,
-            version_rev: 0,
-            id: ProviderId::MbedCrypto,
-        }, SUPPORTED_OPCODES.iter().copied().collect()))
+        Ok((
+            ProviderInfo {
+                // Assigned UUID for this provider: 1c1139dc-ad7c-47dc-ad6b-db6fdb466552
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)
+                    .or(Err(ResponseStatus::InvalidEncoding))?,
+                description: String::from(
+                    "User space software provider, based on Mbed Crypto - the reference implementation of the PSA crypto API",
+                ),
+                vendor: String::from("Arm"),
+                version_maj: 0,
+                version_min: 1,
+                version_rev: 0,
+                id: ProviderId::MbedCrypto,
+            },
+            SUPPORTED_OPCODES.iter().copied().collect(),
+        ))
     }
 
     fn list_keys(

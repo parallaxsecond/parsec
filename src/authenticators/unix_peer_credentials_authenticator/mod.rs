@@ -14,8 +14,8 @@ use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
 use log::error;
 use parsec_interface::operations::list_authenticators;
-use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::AuthType;
+use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use std::convert::TryInto;
@@ -41,7 +41,7 @@ impl Authenticate for UnixPeerCredentialsAuthenticator {
             description: String::from(
                 "Uses Unix peer credentials to authenticate the client. Verifies that the self-declared \
                 Unix user identifier (UID) in the request's authentication header matches that which is \
-                found from the peer credentials."
+                found from the peer credentials.",
             ),
             version_maj: 0,
             version_min: 1,
@@ -110,8 +110,8 @@ mod test {
     use crate::front::domain_socket::peer_credentials;
     use crate::front::listener::ConnectionMetadata;
     use libc::{getuid, uid_t};
-    use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
+    use parsec_interface::requests::request::RequestAuth;
     use rand::Rng;
     use std::os::unix::net::UnixStream;
 

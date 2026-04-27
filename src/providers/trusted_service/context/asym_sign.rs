@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::Context;
 use super::error::Error;
 use super::ts_protobuf::{SignHashIn, SignHashOut, VerifyHashIn};
-use super::Context;
 use log::info;
 use psa_crypto::types::algorithm::AsymmetricSignature;
 

@@ -1,7 +1,7 @@
 // Copyright 2022 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::to_response_status;
 use super::Provider;
+use super::utils::to_response_status;
 use log::error;
 use parsec_interface::operations::psa_generate_random;
 use parsec_interface::requests::{ResponseStatus, Result};

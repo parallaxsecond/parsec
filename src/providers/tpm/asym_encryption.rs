@@ -1,6 +1,6 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::{utils, Provider};
+use super::{Provider, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use parsec_interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
@@ -9,7 +9,7 @@ use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 use tss_esapi::structures::Auth;
-use tss_esapi::{constants::Tss2ResponseCodeKind, Error};
+use tss_esapi::{Error, constants::Tss2ResponseCodeKind};
 
 impl Provider {
     pub(super) fn psa_asymmetric_encrypt_internal(

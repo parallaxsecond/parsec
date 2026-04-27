@@ -13,7 +13,7 @@ use num_traits::FromPrimitive;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::AuthType;
 use rusqlite::types::Type::{Blob, Integer};
-use rusqlite::{params, Connection, Error as RusqliteError};
+use rusqlite::{Connection, Error as RusqliteError, params};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::Permissions;
@@ -382,21 +382,20 @@ impl ManageKeyInfo for SQLiteKeyInfoManager {
         key_identity: KeyIdentity,
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String> {
-        match self.save_mapping(&key_identity, &key_info) { Err(err) => {
-            Err(err.to_string())
-        } _ => {
-            Ok(self.key_store.insert(key_identity, key_info))
-        }}
+        match self.save_mapping(&key_identity, &key_info) {
+            Err(err) => Err(err.to_string()),
+            _ => Ok(self.key_store.insert(key_identity, key_info)),
+        }
     }
 
     fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String> {
-        match self.delete_mapping(key_identity) { Err(err) => {
-            Err(err.to_string())
-        } _ => { match self.key_store.remove(key_identity) { Some(key_info) => {
-            Ok(Some(key_info))
-        } _ => {
-            Ok(None)
-        }}}}
+        match self.delete_mapping(key_identity) {
+            Err(err) => Err(err.to_string()),
+            _ => match self.key_store.remove(key_identity) {
+                Some(key_info) => Ok(Some(key_info)),
+                _ => Ok(None),
+            },
+        }
     }
 
     fn exists(&self, key_identity: &KeyIdentity) -> Result<bool, String> {
@@ -503,10 +502,12 @@ mod test {
 
         assert!(manager.get(&key_identity).unwrap().is_none());
 
-        assert!(manager
-            .insert(key_identity.clone(), key_info.clone())
-            .unwrap()
-            .is_none());
+        assert!(
+            manager
+                .insert(key_identity.clone(), key_info.clone())
+                .unwrap()
+                .is_none()
+        );
 
         let stored_key_info = manager
             .get(&key_identity)

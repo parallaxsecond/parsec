@@ -1,11 +1,11 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use super::Context;
 use super::error::Error;
 use super::ts_protobuf::{
     DestroyKeyIn, DestroyKeyOut, ExportKeyIn, ExportPublicKeyIn, GenerateKeyIn, ImportKeyIn,
     KeyAttributes, KeyLifetime, KeyPolicy,
 };
-use super::Context;
 use log::info;
 use psa_crypto::types::key::Attributes;
 use std::convert::{TryFrom, TryInto};

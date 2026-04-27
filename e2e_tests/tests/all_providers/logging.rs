@@ -30,8 +30,11 @@ fn check_log_source() {
     assert!(logs.contains(
         "[INFO  parsec_service::front::front_end] New request received without authentication"
     ));
-    assert!(logs
-        .contains("[WARN  parsec_service::key_info_managers::on_disk_manager] Saving Key Triple"));
+    assert!(
+        logs.contains(
+            "[WARN  parsec_service::key_info_managers::on_disk_manager] Saving Key Triple"
+        )
+    );
     assert!(logs.contains(
         "[ERROR psa_crypto::types::key] Key attributes do not permit encrypting messages."
     ));

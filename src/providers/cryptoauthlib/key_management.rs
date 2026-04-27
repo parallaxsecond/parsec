@@ -1,7 +1,7 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::key_slot::KeySlotStatus;
 use super::Provider;
+use super::key_slot::KeySlotStatus;
 use crate::authenticators::ApplicationIdentity;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};

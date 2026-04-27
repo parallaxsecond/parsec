@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Static config tests to see if the service starts with different configurations.
 
-use crate::utils::config::ServiceConfig;
 use crate::utils::ServiceBuilder;
+use crate::utils::config::ServiceConfig;
 use anyhow::anyhow;
 use log::error;
 use std::env;

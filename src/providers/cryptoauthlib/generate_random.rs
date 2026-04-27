@@ -39,7 +39,7 @@ impl Provider {
                 true => {
                     break Ok(psa_generate_random::Result {
                         random_bytes: random_bytes.into(),
-                    })
+                    });
                 }
                 false => {
                     loop_count += 1;

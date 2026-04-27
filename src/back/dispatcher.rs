@@ -7,8 +7,8 @@
 use super::backend_handler::BackEndHandler;
 use crate::authenticators::Application;
 use log::trace;
-use parsec_interface::requests::request::Request;
 use parsec_interface::requests::ProviderId;
+use parsec_interface::requests::request::Request;
 use parsec_interface::requests::{Response, ResponseStatus};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Result};

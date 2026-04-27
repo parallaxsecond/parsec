@@ -7,8 +7,8 @@
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
-use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
+use crate::providers::crypto_capability::CanDoCrypto;
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error as Pkcs11Error, RvError};
 use cryptoki::session::{Session, UserType};
@@ -30,7 +30,7 @@ use std::convert::TryFrom;
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
 use std::sync::RwLock;
-use utils::{to_response_status, KeyPairType};
+use utils::{KeyPairType, to_response_status};
 use zeroize::{Zeroize, Zeroizing};
 
 type LocalIdStore = HashSet<u32>;
@@ -550,7 +550,7 @@ impl ProviderBuilder {
                         return Err(Error::new(
                             ErrorKind::InvalidData,
                             "No token with the provided serial number",
-                        ))
+                        ));
                     }
                 }
             }

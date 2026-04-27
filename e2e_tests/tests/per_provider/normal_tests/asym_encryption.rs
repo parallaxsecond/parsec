@@ -3,8 +3,8 @@
 #![allow(unused, dead_code)]
 
 use base64::Engine;
-use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::psa_algorithm::{Algorithm, AsymmetricEncryption};
 use parsec_client::core::interface::operations::psa_key_attributes::{
@@ -39,8 +39,7 @@ const PUBLIC_KEY: &str = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCd+EKeRmZCKLmg7L
 N9Unf2s2KbKrKXupaQTXcrGGSB/BmHeWeiqidEMw7i9ysjHK4KEuacmYmZpvKAnN\
 WMyvQgjGgGNpsNzqawIDAQAB";
 
-const ENCRYPTED_MESSAGE: &str =
-"ebr0Q/lPf+905a66RjABlZJ8Xl9ZpTHrwVAHd1+sKOT0G4uCUd+q2mpKGljODiMn5gvMj8aMjTOZUROBmrZQpCnB8GCqpGtEOjJtpJy5AdfMTK+QZVvTnvEia1NTjYIoRNCSfFXTQP/ZsAfq2ViiymqwYXM270pHxS3TvBdQH9A=";
+const ENCRYPTED_MESSAGE: &str = "ebr0Q/lPf+905a66RjABlZJ8Xl9ZpTHrwVAHd1+sKOT0G4uCUd+q2mpKGljODiMn5gvMj8aMjTOZUROBmrZQpCnB8GCqpGtEOjJtpJy5AdfMTK+QZVvTnvEia1NTjYIoRNCSfFXTQP/ZsAfq2ViiymqwYXM270pHxS3TvBdQH9A=";
 
 const ORIGINAL_MESSAGE: &str = "This is a test!";
 

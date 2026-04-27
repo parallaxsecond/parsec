@@ -13,8 +13,8 @@ use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
 use log::error;
 use parsec_interface::operations::list_authenticators;
-use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::AuthType;
+use parsec_interface::requests::request::RequestAuth;
 use parsec_interface::requests::{ResponseStatus, Result};
 use parsec_interface::secrecy::ExposeSecret;
 use std::str;
@@ -82,8 +82,8 @@ impl Authenticate for DirectAuthenticator {
 mod test {
     use super::super::Authenticate;
     use super::DirectAuthenticator;
-    use parsec_interface::requests::request::RequestAuth;
     use parsec_interface::requests::ResponseStatus;
+    use parsec_interface::requests::request::RequestAuth;
 
     #[test]
     fn successful_authentication() {
