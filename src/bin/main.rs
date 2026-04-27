@@ -141,20 +141,20 @@ fn main() -> Result<()> {
             info!("Parsec configuration reloaded.");
         }
 
-        if let Some(connection) = listener.accept() {
+        match listener.accept() { Some(connection) => {
             let front_end_handler = front_end_handler.clone();
             threadpool.execute(move || {
                 front_end_handler.handle_request(connection);
                 trace!("handle_request egress");
             });
-        } else {
+        } _ => {
             std::thread::sleep(Duration::from_millis(
                 config
                     .core_settings
                     .idle_listener_sleep_duration
                     .unwrap_or(MAIN_LOOP_DEFAULT_SLEEP),
             ));
-        }
+        }}
     }
 
     let _ = sd_notify::notify(&[sd_notify::NotifyState::Stopping]);

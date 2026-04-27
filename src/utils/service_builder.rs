@@ -300,7 +300,7 @@ fn build_providers(
 unsafe fn get_provider(
     config: &ProviderConfig,
     kim_factory: &KeyInfoManagerFactory,
-) -> Result<Option<Provider>> {
+) -> Result<Option<Provider>> { unsafe {
     match config {
         #[cfg(feature = "mbed-crypto-provider")]
         ProviderConfig::MbedCrypto { .. } => {
@@ -452,7 +452,7 @@ unsafe fn get_provider(
             Err(Error::new(ErrorKind::InvalidData, "provider not compiled").into())
         }
     }
-}
+}}
 
 fn get_key_info_manager_builders(
     configs: &[KeyInfoManagerConfig],

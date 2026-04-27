@@ -391,7 +391,7 @@ impl ProviderBuilder {
     ///
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
-    pub unsafe fn build(mut self) -> std::io::Result<Provider> {
+    pub unsafe fn build(mut self) -> std::io::Result<Provider> { unsafe {
         let owner_auth_unparsed = self.owner_hierarchy_auth.take();
         let owner_auth = self.get_hierarchy_auth(owner_auth_unparsed)?;
         let default_cipher = self.find_default_context_cipher()?;
@@ -515,7 +515,7 @@ impl ProviderBuilder {
         }
 
         Ok(built_provider)
-    }
+    }}
 }
 
 #[cfg(test)]

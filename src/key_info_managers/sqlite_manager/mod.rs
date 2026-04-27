@@ -382,21 +382,21 @@ impl ManageKeyInfo for SQLiteKeyInfoManager {
         key_identity: KeyIdentity,
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String> {
-        if let Err(err) = self.save_mapping(&key_identity, &key_info) {
+        match self.save_mapping(&key_identity, &key_info) { Err(err) => {
             Err(err.to_string())
-        } else {
+        } _ => {
             Ok(self.key_store.insert(key_identity, key_info))
-        }
+        }}
     }
 
     fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String> {
-        if let Err(err) = self.delete_mapping(key_identity) {
+        match self.delete_mapping(key_identity) { Err(err) => {
             Err(err.to_string())
-        } else if let Some(key_info) = self.key_store.remove(key_identity) {
+        } _ => { match self.key_store.remove(key_identity) { Some(key_info) => {
             Ok(Some(key_info))
-        } else {
+        } _ => {
             Ok(None)
-        }
+        }}}}
     }
 
     fn exists(&self, key_identity: &KeyIdentity) -> Result<bool, String> {
