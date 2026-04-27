@@ -308,157 +308,155 @@ unsafe fn get_provider(
     config: &ProviderConfig,
     kim_factory: &KeyInfoManagerFactory,
 ) -> Result<Option<Provider>> {
-    unsafe {
-        match config {
-            #[cfg(feature = "mbed-crypto-provider")]
-            ProviderConfig::MbedCrypto { .. } => {
-                info!("Creating a Mbed Crypto Provider.");
-                let provider_identity = ProviderIdentity::new(
-                    MbedCryptoProvider::PROVIDER_UUID.to_string(),
-                    config.provider_name()?,
-                );
-                Ok(Some(Arc::new(
-                    MbedCryptoProviderBuilder::new()
-                        .with_key_info_store(kim_factory.build_client(provider_identity))
-                        .with_provider_name(config.provider_name()?)
-                        .build()?,
-                )))
-            }
-            #[cfg(feature = "pkcs11-provider")]
-            ProviderConfig::Pkcs11 {
-                library_path,
-                slot_number,
-                serial_number,
-                user_pin,
-                software_public_operations,
-                allow_export,
-                ..
-            } => {
-                info!("Creating a PKCS 11 Provider.");
-                let provider_identity = ProviderIdentity::new(
-                    Pkcs11Provider::PROVIDER_UUID.to_string(),
-                    config.provider_name()?,
-                );
-                Ok(Some(Arc::new(
-                    Pkcs11ProviderBuilder::new()
-                        .with_key_info_store(kim_factory.build_client(provider_identity))
-                        .with_provider_name(config.provider_name()?)
-                        .with_pkcs11_library_path(library_path.clone())
-                        .with_slot_number(*slot_number)
-                        .with_serial_number(serial_number.clone())
-                        .with_user_pin(user_pin.clone())
-                        .with_software_public_operations(*software_public_operations)
-                        .with_allow_export(*allow_export)
-                        .build()?,
-                )))
-            }
-            #[cfg(feature = "tpm-provider")]
-            ProviderConfig::Tpm {
-                tcti,
-                owner_hierarchy_auth,
-                endorsement_hierarchy_auth,
-                skip_if_no_tpm,
-                ..
-            } => {
-                use std::str::FromStr;
-                use tss_esapi::tcti_ldr::{TctiContext, TctiNameConf};
-                info!("Creating a TPM Provider.");
-
-                let provider_identity = ProviderIdentity::new(
-                    TpmProvider::PROVIDER_UUID.to_string(),
-                    config.provider_name()?,
-                );
-
-                let tcti_name_conf = TctiNameConf::from_str(tcti).map_err(|_| {
-                    Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
-                })?;
-                if *skip_if_no_tpm == Some(true) {
-                    // TODO: When the TPM Provider uses the new TctiContext, pass it directly to the
-                    // builder.
-                    let _tcti_context = match TctiContext::initialize(tcti_name_conf) {
-                        Ok(tcti_context) => tcti_context,
-                        Err(e) => {
-                            format_error!("Error creating a TCTI context", e);
-                            // We make the assumption that the TCTI Name Configuration is correct
-                            // and that if we failed creating a TCTI Contecxt it means that there
-                            // is no TPM support on the platform.
-                            return Ok(None);
-                        }
-                    };
-                }
-
-                let mut builder = TpmProviderBuilder::new()
+    match config {
+        #[cfg(feature = "mbed-crypto-provider")]
+        ProviderConfig::MbedCrypto { .. } => {
+            info!("Creating a Mbed Crypto Provider.");
+            let provider_identity = ProviderIdentity::new(
+                MbedCryptoProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+            Ok(Some(Arc::new(
+                MbedCryptoProviderBuilder::new()
                     .with_key_info_store(kim_factory.build_client(provider_identity))
-                    .with_tcti(tcti)
                     .with_provider_name(config.provider_name()?)
-                    .with_owner_hierarchy_auth(owner_hierarchy_auth.clone());
-                if endorsement_hierarchy_auth.is_some() {
-                    builder = builder.with_endorsement_hierarchy_auth(
-                        endorsement_hierarchy_auth.as_ref().unwrap().clone(),
-                    );
-                }
-                Ok(Some(Arc::new(builder.build()?)))
+                    .build()?,
+            )))
+        }
+        #[cfg(feature = "pkcs11-provider")]
+        ProviderConfig::Pkcs11 {
+            library_path,
+            slot_number,
+            serial_number,
+            user_pin,
+            software_public_operations,
+            allow_export,
+            ..
+        } => {
+            info!("Creating a PKCS 11 Provider.");
+            let provider_identity = ProviderIdentity::new(
+                Pkcs11Provider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+            Ok(Some(Arc::new(
+                Pkcs11ProviderBuilder::new()
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
+                    .with_provider_name(config.provider_name()?)
+                    .with_pkcs11_library_path(library_path.clone())
+                    .with_slot_number(*slot_number)
+                    .with_serial_number(serial_number.clone())
+                    .with_user_pin(user_pin.clone())
+                    .with_software_public_operations(*software_public_operations)
+                    .with_allow_export(*allow_export)
+                    .build()?,
+            )))
+        }
+        #[cfg(feature = "tpm-provider")]
+        ProviderConfig::Tpm {
+            tcti,
+            owner_hierarchy_auth,
+            endorsement_hierarchy_auth,
+            skip_if_no_tpm,
+            ..
+        } => {
+            use std::str::FromStr;
+            use tss_esapi::tcti_ldr::{TctiContext, TctiNameConf};
+            info!("Creating a TPM Provider.");
+
+            let provider_identity = ProviderIdentity::new(
+                TpmProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+
+            let tcti_name_conf = TctiNameConf::from_str(tcti).map_err(|_| {
+                Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
+            })?;
+            if *skip_if_no_tpm == Some(true) {
+                // TODO: When the TPM Provider uses the new TctiContext, pass it directly to the
+                // builder.
+                let _tcti_context = match TctiContext::initialize(tcti_name_conf) {
+                    Ok(tcti_context) => tcti_context,
+                    Err(e) => {
+                        format_error!("Error creating a TCTI context", e);
+                        // We make the assumption that the TCTI Name Configuration is correct
+                        // and that if we failed creating a TCTI Contecxt it means that there
+                        // is no TPM support on the platform.
+                        return Ok(None);
+                    }
+                };
             }
-            #[cfg(feature = "cryptoauthlib-provider")]
-            ProviderConfig::CryptoAuthLib {
-                device_type,
-                iface_type,
-                wake_delay,
-                rx_retries,
-                slave_address,
-                bus,
-                baud,
-                access_key_file_name,
-                ..
-            } => {
-                info!("Creating a CryptoAuthentication Library Provider.");
-                let provider_identity = ProviderIdentity::new(
-                    CryptoAuthLibProvider::PROVIDER_UUID.to_string(),
-                    config.provider_name()?,
+
+            let mut builder = TpmProviderBuilder::new()
+                .with_key_info_store(kim_factory.build_client(provider_identity))
+                .with_tcti(tcti)
+                .with_provider_name(config.provider_name()?)
+                .with_owner_hierarchy_auth(owner_hierarchy_auth.clone());
+            if endorsement_hierarchy_auth.is_some() {
+                builder = builder.with_endorsement_hierarchy_auth(
+                    endorsement_hierarchy_auth.as_ref().unwrap().clone(),
                 );
-                Ok(Some(Arc::new(
-                    CryptoAuthLibProviderBuilder::new()
-                        .with_key_info_store(kim_factory.build_client(provider_identity))
-                        .with_provider_name(config.provider_name()?)
-                        .with_device_type(device_type.to_string())
-                        .with_iface_type(iface_type.to_string())
-                        .with_wake_delay(*wake_delay)
-                        .with_rx_retries(*rx_retries)
-                        .with_slave_address(*slave_address)
-                        .with_bus(*bus)
-                        .with_baud(*baud)
-                        .with_access_key_file(access_key_file_name.clone())
-                        .build()?,
-                )))
             }
-            #[cfg(feature = "trusted-service-provider")]
-            ProviderConfig::TrustedService { .. } => {
-                info!("Creating a Trusted Service Provider.");
-                let provider_identity = ProviderIdentity::new(
-                    TrustedServiceProvider::PROVIDER_UUID.to_string(),
-                    config.provider_name()?,
-                );
-                Ok(Some(Arc::new(
-                    TrustedServiceProviderBuilder::new()
-                        .with_key_info_store(kim_factory.build_client(provider_identity))
-                        .with_provider_name(config.provider_name()?)
-                        .build()?,
-                )))
-            }
-            #[cfg(not(all(
-                feature = "mbed-crypto-provider",
-                feature = "pkcs11-provider",
-                feature = "tpm-provider",
-                feature = "cryptoauthlib-provider",
-                feature = "trusted-service-provider"
-            )))]
-            _ => {
-                error!(
-                    "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
-                    config
-                );
-                Err(Error::new(ErrorKind::InvalidData, "provider not compiled").into())
-            }
+            Ok(Some(Arc::new(unsafe { builder.build()? })))
+        }
+        #[cfg(feature = "cryptoauthlib-provider")]
+        ProviderConfig::CryptoAuthLib {
+            device_type,
+            iface_type,
+            wake_delay,
+            rx_retries,
+            slave_address,
+            bus,
+            baud,
+            access_key_file_name,
+            ..
+        } => {
+            info!("Creating a CryptoAuthentication Library Provider.");
+            let provider_identity = ProviderIdentity::new(
+                CryptoAuthLibProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+            Ok(Some(Arc::new(
+                CryptoAuthLibProviderBuilder::new()
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
+                    .with_provider_name(config.provider_name()?)
+                    .with_device_type(device_type.to_string())
+                    .with_iface_type(iface_type.to_string())
+                    .with_wake_delay(*wake_delay)
+                    .with_rx_retries(*rx_retries)
+                    .with_slave_address(*slave_address)
+                    .with_bus(*bus)
+                    .with_baud(*baud)
+                    .with_access_key_file(access_key_file_name.clone())
+                    .build()?,
+            )))
+        }
+        #[cfg(feature = "trusted-service-provider")]
+        ProviderConfig::TrustedService { .. } => {
+            info!("Creating a Trusted Service Provider.");
+            let provider_identity = ProviderIdentity::new(
+                TrustedServiceProvider::PROVIDER_UUID.to_string(),
+                config.provider_name()?,
+            );
+            Ok(Some(Arc::new(
+                TrustedServiceProviderBuilder::new()
+                    .with_key_info_store(kim_factory.build_client(provider_identity))
+                    .with_provider_name(config.provider_name()?)
+                    .build()?,
+            )))
+        }
+        #[cfg(not(all(
+            feature = "mbed-crypto-provider",
+            feature = "pkcs11-provider",
+            feature = "tpm-provider",
+            feature = "cryptoauthlib-provider",
+            feature = "trusted-service-provider"
+        )))]
+        _ => {
+            error!(
+                "Provider \"{:?}\" chosen in the configuration was not compiled in Parsec binary.",
+                config
+            );
+            Err(Error::new(ErrorKind::InvalidData, "provider not compiled").into())
         }
     }
 }

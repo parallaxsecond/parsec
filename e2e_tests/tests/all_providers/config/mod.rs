@@ -216,7 +216,9 @@ fn various_fields() {
     set_config("various_field_check.toml");
     reload_service();
 
-    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/toto.sock");
+    unsafe {
+        env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/toto.sock");
+    }
 
     let mut client = TestClient::new();
     // Try to send a bit less than 1KiB, should work
@@ -237,7 +239,9 @@ fn various_fields() {
         ResponseStatus::ResponseTooLarge
     );
 
-    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+    unsafe {
+        env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+    }
 }
 
 #[test]
