@@ -1,7 +1,7 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{utils, Provider};
+use super::{Provider, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::providers::crypto_capability::CanDoCrypto;
 use log::{info, trace};

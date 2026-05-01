@@ -1,7 +1,7 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use super::utils::{algorithm_to_mechanism, to_response_status};
-use super::{utils, KeyPairType, Provider};
+use super::{KeyPairType, Provider, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use cryptoki::mechanism::{Mechanism, MechanismType};
@@ -99,7 +99,9 @@ impl Provider {
         let key_attributes = op.attributes;
 
         if key_attributes.policy.usage_flags.export() && !self.allow_export {
-            error!("The configuration of this provider does not allow it to generate keys that can be exported.");
+            error!(
+                "The configuration of this provider does not allow it to generate keys that can be exported."
+            );
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
 
@@ -117,11 +119,11 @@ impl Provider {
         let mut pub_template = vec![
             Attribute::Id(key_id.to_be_bytes().to_vec()),
             Attribute::Token(true.into()),
-            Attribute::AllowedMechanisms(vec![algorithm_to_mechanism(
-                key_attributes.policy.permitted_algorithms,
-            )
-            .map_err(to_response_status)?
-            .mechanism_type()]),
+            Attribute::AllowedMechanisms(vec![
+                algorithm_to_mechanism(key_attributes.policy.permitted_algorithms)
+                    .map_err(to_response_status)?
+                    .mechanism_type(),
+            ]),
         ];
         let mut priv_template = pub_template.clone();
         priv_template.push(Attribute::Class(ObjectClass::PRIVATE_KEY));
@@ -191,7 +193,9 @@ impl Provider {
         let key_attributes = op.attributes;
 
         if key_attributes.policy.usage_flags.export() && !self.allow_export {
-            error!("The configuration of this provider does not allow it to generate keys that can be exported.");
+            error!(
+                "The configuration of this provider does not allow it to generate keys that can be exported."
+            );
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
         if op.data.expose_secret().is_empty() {
@@ -289,7 +293,9 @@ impl Provider {
                     modulus_object.len() * 8
                 );
             } else {
-                error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data`.");
+                error!(
+                    "`bits` field of key attributes must be either 0 or equal to the size of the key in `data`."
+                );
             }
 
             return Err(ResponseStatus::PsaErrorInvalidArgument);
@@ -331,12 +337,13 @@ impl Provider {
         if bits != key_len {
             if crate::utils::GlobalConfig::log_error_details() {
                 error!(
-                        "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
-                        bits,
-                        key_len
-                    );
+                    "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
+                    bits, key_len
+                );
             } else {
-                error!("`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves.");
+                error!(
+                    "`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves."
+                );
             }
             return Err(ResponseStatus::PsaErrorInvalidArgument);
         }

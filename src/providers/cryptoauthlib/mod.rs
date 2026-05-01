@@ -7,8 +7,8 @@
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
-use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
 use crate::providers::ProviderIdentity;
+use crate::providers::cryptoauthlib::key_slot_storage::KeySlotStorage;
 use derivative::Derivative;
 use log::{error, trace, warn};
 use parsec_interface::operations::list_providers::ProviderInfo;
@@ -124,9 +124,9 @@ impl Provider {
                     {
                         Ok(x) => x,
                         Err(err) => {
-                            warn!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
-                                key_identity,
-                                err
+                            warn!(
+                                "Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
+                                key_identity, err
                             );
                             to_remove.push(key_identity.clone());
                             continue;
@@ -248,16 +248,22 @@ impl Provider {
 impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
-        Ok((ProviderInfo {
-            // Assigned UUID for this provider: b8ba81e2-e9f7-4bdd-b096-a29d0019960c
-            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
-            description: String::from("User space hardware provider, utilizing MicrochipTech CryptoAuthentication Library for ATECCx08 chips"),
-            vendor: String::from("Arm"),
-            version_maj: 0,
-            version_min: 1,
-            version_rev: 0,
-            id: ProviderId::CryptoAuthLib,
-        }, self.supported_opcodes.iter().copied().collect()))
+        Ok((
+            ProviderInfo {
+                // Assigned UUID for this provider: b8ba81e2-e9f7-4bdd-b096-a29d0019960c
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)
+                    .or(Err(ResponseStatus::InvalidEncoding))?,
+                description: String::from(
+                    "User space hardware provider, utilizing MicrochipTech CryptoAuthentication Library for ATECCx08 chips",
+                ),
+                vendor: String::from("Arm"),
+                version_maj: 0,
+                version_min: 1,
+                version_rev: 0,
+                id: ProviderId::CryptoAuthLib,
+            },
+            self.supported_opcodes.iter().copied().collect(),
+        ))
     }
 
     fn list_keys(
@@ -646,7 +652,7 @@ impl ProviderBuilder {
                     return Err(Error::new(
                         ErrorKind::InvalidData,
                         "Unsupported inteface type",
-                    ))
+                    ));
                 }
             },
             None => return Err(Error::new(ErrorKind::InvalidData, "Missing inteface type")),

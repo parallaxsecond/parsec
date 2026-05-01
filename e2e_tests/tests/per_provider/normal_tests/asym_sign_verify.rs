@@ -1,7 +1,7 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::can_do_crypto::CheckType;
 use parsec_client::core::interface::operations::psa_algorithm::*;
 use parsec_client::core::interface::operations::psa_key_attributes::*;
@@ -80,7 +80,9 @@ fn asym_verify_fail_ecc_sha256() -> Result<()> {
     if !(status == ResponseStatus::PsaErrorInvalidSignature
         || status == ResponseStatus::PsaErrorCorruptionDetected)
     {
-        panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing.");
+        panic!(
+            "An invalid signature or a tampering detection should be the only reasons of the verification failing."
+        );
     } else {
         Ok(())
     }

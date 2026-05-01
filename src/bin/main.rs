@@ -42,12 +42,12 @@ use clap::Parser;
 use libc::{getuid, uid_t};
 use log::{info, trace};
 use parsec_service::utils::cli::Opts;
-use parsec_service::utils::{config::ServiceConfig, ServiceBuilder};
+use parsec_service::utils::{ServiceBuilder, config::ServiceConfig};
 use signal_hook::{consts::SIGHUP, consts::SIGINT, consts::SIGTERM, flag};
 use std::io::{Error, ErrorKind};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use std::time::Duration;
 
@@ -83,8 +83,7 @@ fn main() -> Result<()> {
     let allow_root = config.core_settings.allow_root.unwrap_or(false);
     let current_id: uid_t = unsafe { getuid() };
     if !allow_root && current_id == 0 {
-        return Err(Error::new(
-            ErrorKind::Other,
+        return Err(Error::other(
             "Insecure configuration; the Parsec service should not be running as root! You can \
              modify `allow_root` in the config file to bypass this check (not recommended).",
         )
@@ -104,13 +103,13 @@ fn main() -> Result<()> {
     let mut threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
     // Notify systemd that the daemon is ready, the start command will block until this point.
-    let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+    let _ = sd_notify::notify(&[sd_notify::NotifyState::Ready]);
 
     info!("Parsec is ready.");
 
     while !kill_signal.load(Ordering::Relaxed) {
         if reload_signal.swap(false, Ordering::Relaxed) {
-            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Reloading]);
+            let _ = sd_notify::notify(&[sd_notify::NotifyState::Reloading]);
             info!("SIGHUP signal received. Reloading the configuration...");
 
             threadpool.join();
@@ -138,28 +137,33 @@ fn main() -> Result<()> {
             listener = ServiceBuilder::start_listener(config.listener)?;
             threadpool = ServiceBuilder::build_threadpool(config.core_settings.thread_pool_size);
 
-            let _ = sd_notify::notify(false, &[sd_notify::NotifyState::Ready]);
+            let _ = sd_notify::notify(&[sd_notify::NotifyState::Ready]);
             info!("Parsec configuration reloaded.");
         }
 
-        if let Some(connection) = listener.accept() {
-            let front_end_handler = front_end_handler.clone();
-            threadpool.execute(move || {
-                front_end_handler.handle_request(connection);
-                trace!("handle_request egress");
-            });
-        } else {
-            std::thread::sleep(Duration::from_millis(
-                config
-                    .core_settings
-                    .idle_listener_sleep_duration
-                    .unwrap_or(MAIN_LOOP_DEFAULT_SLEEP),
-            ));
+        match listener.accept() {
+            Some(connection) => {
+                let front_end_handler = front_end_handler.clone();
+                threadpool.execute(move || {
+                    front_end_handler.handle_request(connection);
+                    trace!("handle_request egress");
+                });
+            }
+            _ => {
+                std::thread::sleep(Duration::from_millis(
+                    config
+                        .core_settings
+                        .idle_listener_sleep_duration
+                        .unwrap_or(MAIN_LOOP_DEFAULT_SLEEP),
+                ));
+            }
         }
     }
 
-    let _ = sd_notify::notify(true, &[sd_notify::NotifyState::Stopping]);
-    info!("SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish...");
+    let _ = sd_notify::notify(&[sd_notify::NotifyState::Stopping]);
+    info!(
+        "SIGTERM or SIGINT signal received. Shutting down Parsec, waiting for all threads to finish..."
+    );
     threadpool.join();
     info!("Parsec is now terminated.");
 

@@ -1,7 +1,7 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::key_slot::KeySlotStatus;
 use super::Provider;
+use super::key_slot::KeySlotStatus;
 use crate::authenticators::ApplicationIdentity;
 use log::{error, warn};
 use parsec_interface::operations::psa_key_attributes::{Attributes, EccFamily, Type};
@@ -34,16 +34,14 @@ impl Provider {
         }
 
         let key_attributes = op.attributes;
-        let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
+        let key_type = get_calib_key_type(&key_attributes).inspect_err(|&e| {
             error!("Failed to get type for key. {}", e);
-            e
         })?;
         let slot_id = self
             .key_slots
             .find_suitable_slot(&key_attributes, Some(Opcode::PsaGenerateKey))
-            .map_err(|e| {
+            .inspect_err(|&e| {
                 warn!("Failed to find suitable storage slot for key. {}", e);
-                e
             })?;
         // generate key
         match self.device.gen_key(key_type, slot_id) {
@@ -123,9 +121,8 @@ impl Provider {
         self.key_info_store.does_not_exist(&key_identity)?;
 
         let key_attributes = op.attributes;
-        let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
+        let key_type = get_calib_key_type(&key_attributes).inspect_err(|&e| {
             error!("Failed to get type for key. {}", e);
-            e
         })?;
 
         let slot_id = self
@@ -232,9 +229,8 @@ impl Provider {
         if !key_attributes.is_exportable() {
             return Err(ResponseStatus::PsaErrorNotPermitted);
         }
-        let key_type = get_calib_key_type(&key_attributes).map_err(|e| {
+        let key_type = get_calib_key_type(&key_attributes).inspect_err(|&e| {
             error!("Failed to get type for key. {}", e);
-            e
         })?;
 
         match key_attributes.key_type {

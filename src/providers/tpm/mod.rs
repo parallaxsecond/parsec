@@ -7,8 +7,8 @@
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
-use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
+use crate::providers::crypto_capability::CanDoCrypto;
 use derivative::Derivative;
 use log::{info, trace};
 use parsec_interface::operations::list_providers::Uuid;
@@ -27,10 +27,10 @@ use std::collections::HashSet;
 use std::io::ErrorKind;
 use std::str::FromStr;
 use std::sync::Mutex;
+use tss_esapi::Tcti;
 use tss_esapi::interface_types::algorithm::HashingAlgorithm;
 use tss_esapi::interface_types::resource_handles::Hierarchy;
 use tss_esapi::structures::{SymmetricCipherParameters, SymmetricDefinitionObject};
-use tss_esapi::Tcti;
 use zeroize::Zeroize;
 
 mod asym_encryption;
@@ -110,16 +110,22 @@ impl Provider {
 impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
-        Ok((ProviderInfo {
-            // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
-            uuid: Uuid::parse_str(Provider::PROVIDER_UUID).or(Err(ResponseStatus::InvalidEncoding))?,
-            description: String::from("TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification."),
-            vendor: String::from("Trusted Computing Group (TCG)"),
-            version_maj: 0,
-            version_min: 1,
-            version_rev: 0,
-            id: ProviderId::Tpm,
-        }, SUPPORTED_OPCODES.iter().copied().collect()))
+        Ok((
+            ProviderInfo {
+                // Assigned UUID for this provider: 1e4954a4-ff21-46d3-ab0c-661eeb667e1d
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)
+                    .or(Err(ResponseStatus::InvalidEncoding))?,
+                description: String::from(
+                    "TPM provider, interfacing with a library implementing the TCG TSS 2.0 Enhanced System API specification.",
+                ),
+                vendor: String::from("Trusted Computing Group (TCG)"),
+                version_maj: 0,
+                version_min: 1,
+                version_rev: 0,
+                id: ProviderId::Tpm,
+            },
+            SUPPORTED_OPCODES.iter().copied().collect(),
+        ))
     }
 
     fn list_keys(
@@ -382,10 +388,7 @@ impl ProviderBuilder {
                 return Ok(*cipher);
             }
         }
-        Err(std::io::Error::new(
-            ErrorKind::Other,
-            "desired ciphers not supported",
-        ))
+        Err(std::io::Error::other("desired ciphers not supported"))
     }
 
     /// Create an instance of TpmProvider
@@ -395,139 +398,141 @@ impl ProviderBuilder {
     /// Undefined behaviour might appear if two instances of TransientObjectContext are created
     /// using a same TCTI that does not handle multiple applications concurrently.
     pub unsafe fn build(mut self) -> std::io::Result<Provider> {
-        let owner_auth_unparsed = self.owner_hierarchy_auth.take();
-        let owner_auth = self.get_hierarchy_auth(owner_auth_unparsed)?;
-        let default_cipher = self.find_default_context_cipher()?;
-        let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
-            std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
-        })?)
-        .map_err(|_| {
-            std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
-        })?;
-        self.tcti.zeroize();
-        self.owner_hierarchy_auth.zeroize();
-        let mut builder = tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
-            .with_tcti(tcti)
-            .with_root_key_size(ROOT_KEY_SIZE)
-            .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
-            .with_hierarchy_auth(Hierarchy::Owner, owner_auth)
-            .with_root_hierarchy(Hierarchy::Owner)
-            .with_session_hash_alg(HashingAlgorithm::Sha256)
-            .with_default_context_cipher(default_cipher);
-        if self.endorsement_hierarchy_auth.is_some() {
-            let endorsement_auth_unparsed = self.endorsement_hierarchy_auth.take();
-            let endorsement_auth = self.get_hierarchy_auth(endorsement_auth_unparsed)?;
-            builder = builder.with_hierarchy_auth(Hierarchy::Endorsement, endorsement_auth);
-            self.endorsement_hierarchy_auth.zeroize();
-        }
-
-        let built_provider = Provider::new(
-            self.provider_name.ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, "missing provider name")
-            })?,
-            self.key_info_store.ok_or_else(|| {
-                std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
-            })?,
-            builder.build().map_err(|e| {
-                format_error!("Error creating TSS Transient Object Context", e);
-                std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
-            })?,
-        );
-
-        // Get the root key from the key store
-        let root_key_identity = KeyIdentity::new(
-            ApplicationIdentity::new_internal(),
-            built_provider.provider_identity.clone(),
-            String::from("RootKeyTPM"),
-        );
-        let key_is_stored = match built_provider
-            .key_info_store
-            .does_not_exist(&root_key_identity)
-        {
-            Ok(()) => false,
-            Err(ResponseStatus::PsaErrorAlreadyExists) => true,
-            Err(e) => Err(e).map_err(|e| {
-                format_error!("Failure accessing Key Info Manager", e);
-                std::io::Error::new(ErrorKind::InvalidData, "Key existence check failed")
-            })?,
-        };
-
-        if key_is_stored {
-            let stored_root_key_name: Vec<u8> = built_provider
-                .key_info_store
-                .get_key_id(&root_key_identity)
-                .map_err(|e| {
-                    format_error!("Error getting Key Identities from the Key Info Store", e);
-                    std::io::Error::new(ErrorKind::InvalidData, "failed getting Key Identities")
-                })?;
-            // Check if the stored public part coincides with the one in the context
-            let mut esapi_context = built_provider
-                .esapi_context
-                .lock()
-                .expect("ESAPI Context lock poisoned");
-
-            let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
-                format_error!("Error getting the Root Key's name", e);
-                std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
+        unsafe {
+            let owner_auth_unparsed = self.owner_hierarchy_auth.take();
+            let owner_auth = self.get_hierarchy_auth(owner_auth_unparsed)?;
+            let default_cipher = self.find_default_context_cipher()?;
+            let tcti = Tcti::from_str(self.tcti.as_ref().ok_or_else(|| {
+                std::io::Error::new(ErrorKind::InvalidData, "TCTI configuration missing")
+            })?)
+            .map_err(|_| {
+                std::io::Error::new(ErrorKind::InvalidData, "Invalid TCTI configuration string")
             })?;
-
-            if root_key_name.value().to_vec() != stored_root_key_name {
-                let e = std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "Obtained Root Key name does not coincide with the stored one",
-                );
-                format_error!("Error when verifying the Root Key's Name", e);
-                return Err(e);
+            self.tcti.zeroize();
+            self.owner_hierarchy_auth.zeroize();
+            let mut builder = tss_esapi::abstraction::transient::TransientKeyContextBuilder::new()
+                .with_tcti(tcti)
+                .with_root_key_size(ROOT_KEY_SIZE)
+                .with_root_key_auth_size(ROOT_KEY_AUTH_SIZE)
+                .with_hierarchy_auth(Hierarchy::Owner, owner_auth)
+                .with_root_hierarchy(Hierarchy::Owner)
+                .with_session_hash_alg(HashingAlgorithm::Sha256)
+                .with_default_context_cipher(default_cipher);
+            if self.endorsement_hierarchy_auth.is_some() {
+                let endorsement_auth_unparsed = self.endorsement_hierarchy_auth.take();
+                let endorsement_auth = self.get_hierarchy_auth(endorsement_auth_unparsed)?;
+                builder = builder.with_hierarchy_auth(Hierarchy::Endorsement, endorsement_auth);
+                self.endorsement_hierarchy_auth.zeroize();
             }
-        } else {
-            let mut esapi_context = built_provider
-                .esapi_context
-                .lock()
-                .expect("ESAPI Context lock poisoned");
 
-            let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
-                format_error!("Error getting the the Root Key's Name", e);
-                std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
-            })?;
+            let built_provider = Provider::new(
+                self.provider_name.ok_or_else(|| {
+                    std::io::Error::new(ErrorKind::InvalidData, "missing provider name")
+                })?,
+                self.key_info_store.ok_or_else(|| {
+                    std::io::Error::new(ErrorKind::InvalidData, "missing key info store")
+                })?,
+                builder.build().map_err(|e| {
+                    format_error!("Error creating TSS Transient Object Context", e);
+                    std::io::Error::new(ErrorKind::InvalidData, "failed initializing TSS context")
+                })?,
+            );
 
-            let attributes = Attributes {
-                lifetime: Lifetime::Persistent,
-                key_type: Type::RsaPublicKey,
-                bits: ROOT_KEY_SIZE as usize,
-                policy: Policy {
-                    // Internal key, usage_flags information is not relevant
-                    usage_flags: UsageFlags::default(),
-                    // Internal key, permitted_algorithms information is not relevant
-                    permitted_algorithms: Algorithm::None,
-                },
+            // Get the root key from the key store
+            let root_key_identity = KeyIdentity::new(
+                ApplicationIdentity::new_internal(),
+                built_provider.provider_identity.clone(),
+                String::from("RootKeyTPM"),
+            );
+            let key_is_stored = match built_provider
+                .key_info_store
+                .does_not_exist(&root_key_identity)
+            {
+                Ok(()) => false,
+                Err(ResponseStatus::PsaErrorAlreadyExists) => true,
+                Err(e) => Err(e).map_err(|e| {
+                    format_error!("Failure accessing Key Info Manager", e);
+                    std::io::Error::new(ErrorKind::InvalidData, "Key existence check failed")
+                })?,
             };
 
-            built_provider
-                .key_info_store
-                .insert_key_info(
-                    root_key_identity,
-                    &(root_key_name.value().to_vec()),
-                    attributes,
-                )
-                .map_err(|_| {
-                    std::io::Error::new(
-                        ErrorKind::InvalidData,
-                        "Failed to insert Key Info in the Key Store",
-                    )
-                })?;
-        }
+            if key_is_stored {
+                let stored_root_key_name: Vec<u8> = built_provider
+                    .key_info_store
+                    .get_key_id(&root_key_identity)
+                    .map_err(|e| {
+                        format_error!("Error getting Key Identities from the Key Info Store", e);
+                        std::io::Error::new(ErrorKind::InvalidData, "failed getting Key Identities")
+                    })?;
+                // Check if the stored public part coincides with the one in the context
+                let mut esapi_context = built_provider
+                    .esapi_context
+                    .lock()
+                    .expect("ESAPI Context lock poisoned");
 
-        Ok(built_provider)
+                let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
+                    format_error!("Error getting the Root Key's name", e);
+                    std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
+                })?;
+
+                if root_key_name.value().to_vec() != stored_root_key_name {
+                    let e = std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "Obtained Root Key name does not coincide with the stored one",
+                    );
+                    format_error!("Error when verifying the Root Key's Name", e);
+                    return Err(e);
+                }
+            } else {
+                let mut esapi_context = built_provider
+                    .esapi_context
+                    .lock()
+                    .expect("ESAPI Context lock poisoned");
+
+                let root_key_name = esapi_context.get_root_key_name().map_err(|e| {
+                    format_error!("Error getting the the Root Key's Name", e);
+                    std::io::Error::new(ErrorKind::InvalidData, "failed getting Root Key's Name")
+                })?;
+
+                let attributes = Attributes {
+                    lifetime: Lifetime::Persistent,
+                    key_type: Type::RsaPublicKey,
+                    bits: ROOT_KEY_SIZE as usize,
+                    policy: Policy {
+                        // Internal key, usage_flags information is not relevant
+                        usage_flags: UsageFlags::default(),
+                        // Internal key, permitted_algorithms information is not relevant
+                        permitted_algorithms: Algorithm::None,
+                    },
+                };
+
+                built_provider
+                    .key_info_store
+                    .insert_key_info(
+                        root_key_identity,
+                        &(root_key_name.value().to_vec()),
+                        attributes,
+                    )
+                    .map_err(|_| {
+                        std::io::Error::new(
+                            ErrorKind::InvalidData,
+                            "Failed to insert Key Info in the Key Store",
+                        )
+                    })?;
+            }
+
+            Ok(built_provider)
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::key_info_managers::{KeyIdentity, KeyInfoManagerFactory};
-    use crate::providers::tpm::ROOT_KEY_SIZE;
-    use crate::providers::tpm::{Provider, ProviderBuilder};
     use crate::providers::ApplicationIdentity;
     use crate::providers::ProviderIdentity;
+    use crate::providers::tpm::ROOT_KEY_SIZE;
+    use crate::providers::tpm::{Provider, ProviderBuilder};
     use crate::utils::config::{KeyInfoManagerConfig, KeyInfoManagerType};
     use parsec_interface::operations::psa_algorithm::Algorithm;
     use parsec_interface::operations::psa_key_attributes::{

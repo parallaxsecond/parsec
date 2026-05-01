@@ -36,7 +36,7 @@ use std::convert::TryFrom;
 use std::ffi::OsStr;
 use std::fs::Permissions;
 use std::fs::{DirEntry, File};
-use std::io::{Error, ErrorKind, Read, Write};
+use std::io::{Error, Read, Write};
 use std::ops::Deref;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -210,19 +210,25 @@ impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
     ) -> std::result::Result<Self, Self::Error> {
         // Result types required by clippy as Err result has the possibility of not being compiled.
         let provider_uuid = match key_triple.provider_id {
-            ProviderId::Core => Ok::<String, Self::Error>(
-                CoreProvider::PROVIDER_UUID.to_string(),
-            ),
+            ProviderId::Core => Ok::<String, Self::Error>(CoreProvider::PROVIDER_UUID.to_string()),
             #[cfg(feature = "cryptoauthlib-provider")]
-            ProviderId::CryptoAuthLib => Ok::<String, Self::Error>(CryptoAuthLibProvider::PROVIDER_UUID.to_string()),
+            ProviderId::CryptoAuthLib => {
+                Ok::<String, Self::Error>(CryptoAuthLibProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "mbed-crypto-provider")]
-            ProviderId::MbedCrypto => Ok::<String, Self::Error>(MbedCryptoProvider::PROVIDER_UUID.to_string()),
+            ProviderId::MbedCrypto => {
+                Ok::<String, Self::Error>(MbedCryptoProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "pkcs11-provider")]
-            ProviderId::Pkcs11 => Ok::<String, Self::Error>(Pkcs11Provider::PROVIDER_UUID.to_string()),
+            ProviderId::Pkcs11 => {
+                Ok::<String, Self::Error>(Pkcs11Provider::PROVIDER_UUID.to_string())
+            }
             #[cfg(feature = "tpm-provider")]
             ProviderId::Tpm => Ok::<String, Self::Error>(TpmProvider::PROVIDER_UUID.to_string()),
             #[cfg(feature = "trusted-service-provider")]
-            ProviderId::TrustedService => Ok::<String, Self::Error>(TrustedServiceProvider::PROVIDER_UUID.to_string()),
+            ProviderId::TrustedService => {
+                Ok::<String, Self::Error>(TrustedServiceProvider::PROVIDER_UUID.to_string())
+            }
             #[cfg(not(all(
                 feature = "cryptoauthlib-provider",
                 feature = "mbed-crypto-provider",
@@ -230,7 +236,10 @@ impl TryFrom<(KeyTriple, ProviderIdentity, Auth)> for KeyIdentity {
                 feature = "tpm-provider",
                 feature = "trusted-service-provider",
             )))]
-            _ => Err(format!("Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.", key_triple.provider_id)),
+            _ => Err(format!(
+                "Cannot convert from KeyTriple to KeyIdentity.\nProvider \"{}\" is not recognised.\nCould be it does not exist, or Parsec was not compiled with the required provider feature flags.",
+                key_triple.provider_id
+            )),
         }?;
 
         let app_identity = match auth {
@@ -320,10 +329,7 @@ fn base64_data_triple_to_key_triple(
 fn os_str_to_u8_ref(os_str: &OsStr) -> std::io::Result<&[u8]> {
     match os_str.to_str() {
         Some(str) => Ok(str.as_bytes()),
-        None => Err(Error::new(
-            ErrorKind::Other,
-            "Conversion from PathBuf to String failed.",
-        )),
+        None => Err(Error::other("Conversion from PathBuf to String failed.")),
     }
 }
 
@@ -337,19 +343,13 @@ fn os_str_to_provider_id(os_str: &OsStr) -> std::io::Result<ProviderId> {
         Some(str) => match str.parse::<u8>() {
             Ok(provider_id_u8) => match ProviderId::try_from(provider_id_u8) {
                 Ok(provider_id) => Ok(provider_id),
-                Err(response_status) => {
-                    Err(Error::new(ErrorKind::Other, response_status.to_string()))
-                }
+                Err(response_status) => Err(Error::other(response_status.to_string())),
             },
-            Err(_) => Err(Error::new(
-                ErrorKind::Other,
+            Err(_) => Err(Error::other(
                 "Failed to convert Provider directory name to an u8 number.",
             )),
         },
-        None => Err(Error::new(
-            ErrorKind::Other,
-            "Conversion from PathBuf to String failed.",
-        )),
+        None => Err(Error::other("Conversion from PathBuf to String failed.")),
     }
 }
 
@@ -483,7 +483,7 @@ impl OnDiskKeyInfoManager {
                     .file_name()
                     .expect("The key name directory path should contain a final component."),
             )?)
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+            .map_err(Error::other)?;
 
             // If provider name is not recognized, ignore the key.
             let keytriple = match split_provider_key_filename(&key_name_internal) {
@@ -507,7 +507,7 @@ impl OnDiskKeyInfoManager {
             let _ = key_info_file.read_to_end(&mut key_info)?;
             let key_info = bincode::deserialize(&key_info[..]).map_err(|e| {
                 format_error!("Error deserializing key info", e);
-                Error::new(ErrorKind::Other, "error deserializing key info")
+                Error::other("error deserializing key info")
             })?;
             let _ = key_store_internal.insert(keytriple, key_info);
         }
@@ -525,7 +525,7 @@ impl OnDiskKeyInfoManager {
                     let _ = key_info_file.read_to_end(&mut key_info)?;
                     let key_info = bincode::deserialize(&key_info[..]).map_err(|e| {
                         format_error!("Error deserializing key info", e);
-                        Error::new(ErrorKind::Other, "error deserializing key info")
+                        Error::other("error deserializing key info")
                     })?;
                     match base64_data_triple_to_key_triple(
                         os_str_to_u8_ref(app_name_dir_path.file_name().expect(
@@ -552,9 +552,7 @@ impl OnDiskKeyInfoManager {
                                 "Failed to convert the mapping path found to an UTF-8 string",
                                 string
                             );
-                            return Err(
-                                Error::new(ErrorKind::Other, "error parsing mapping path").into()
-                            );
+                            return Err(Error::other("error parsing mapping path").into());
                         }
                     }
                 }
@@ -631,19 +629,18 @@ impl OnDiskKeyInfoManager {
         };
 
         // Create the mapping file with the corresponding permissions and write the key information
-        let mut mapping_file = File::create(&key_name_file_path).map_err(|e| {
+        let mut mapping_file = File::create(&key_name_file_path).inspect_err(|_| {
             error!(
                 "Failed to create Key Info Mapping file at {:?}",
                 key_name_file_path
             );
-            e
         })?;
 
         let file_permissions = Permissions::from_mode(FILE_PERMISSION);
         fs::set_permissions(&key_name_file_path, file_permissions)?;
         mapping_file.write_all(&bincode::serialize(key_info).map_err(|e| {
             format_error!("Error serializing key info", e);
-            Error::new(ErrorKind::Other, "error serializing key info")
+            Error::other("error serializing key info")
         })?)
     }
 
@@ -804,12 +801,8 @@ impl OnDiskKeyInfoManagerBuilder {
         OnDiskKeyInfoManager::new(
             self.mappings_dir_path
                 .unwrap_or_else(|| PathBuf::from(DEFAULT_MAPPINGS_PATH)),
-            self.auth_type.ok_or_else(|| {
-                Error::new(
-                    ErrorKind::InvalidData,
-                    "AuthType must be supplied to OnDiskKeyInfoManager",
-                )
-            })?,
+            self.auth_type
+                .ok_or_else(|| Error::other("AuthType must be supplied to OnDiskKeyInfoManager"))?,
         )
     }
 }
@@ -869,10 +862,12 @@ mod test {
 
         assert!(manager.get(&key_identity).unwrap().is_none());
 
-        assert!(manager
-            .insert(key_identity.clone(), key_info.clone())
-            .unwrap()
-            .is_none());
+        assert!(
+            manager
+                .insert(key_identity.clone(), key_info.clone())
+                .unwrap()
+                .is_none()
+        );
 
         let stored_key_info = manager
             .get(&key_identity)

@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use cryptoki::error::{Error, RvError};
-use cryptoki::mechanism::rsa;
 use cryptoki::mechanism::Mechanism;
+use cryptoki::mechanism::rsa;
 use cryptoki::object::Attribute;
 use log::error;
 use parsec_interface::operations::psa_algorithm::{AsymmetricSignature, Hash, SignHash};
@@ -12,7 +12,7 @@ use parsec_interface::requests::ResponseStatus;
 use parsec_interface::requests::Result as ResponseResult;
 use picky_asn1::wrapper::ObjectIdentifierAsn1;
 use picky_asn1_x509::{
-    algorithm_identifier::EcParameters, AlgorithmIdentifier, DigestInfo, ShaVariant,
+    AlgorithmIdentifier, DigestInfo, ShaVariant, algorithm_identifier::EcParameters,
 };
 use std::convert::TryInto;
 // Public exponent value for all RSA keys.
@@ -33,7 +33,7 @@ pub fn to_response_status(error: Error) -> ResponseStatus {
             format_error!("Conversion of error to PsaErrorCommunicationFailure", e);
             ResponseStatus::PsaErrorCommunicationFailure
         }
-        Error::Pkcs11(ck_rv) => rv_to_response_status(ck_rv),
+        Error::Pkcs11(ck_rv, _) => rv_to_response_status(ck_rv),
         Error::NotSupported => ResponseStatus::PsaErrorNotSupported,
         Error::TryFromInt(e) => ResponseStatus::from(e),
         Error::TryFromSlice(e) => ResponseStatus::from(e),

@@ -3,9 +3,9 @@
 
 #[cfg(feature = "tpm-provider")]
 mod activate_credential {
+    use e2e_tests::TestClient;
     use e2e_tests::auto_test_keyname;
     use e2e_tests::parsec_client::core::basic_client::PrepareActivateCredential;
-    use e2e_tests::TestClient;
     use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
     use picky_asn1_x509::RsaPublicKey;
     use serial_test::serial;
@@ -15,11 +15,11 @@ mod activate_credential {
         str::FromStr,
     };
     use tss_esapi::{
+        Context,
         abstraction::ek,
         interface_types::{algorithm::AsymmetricAlgorithm, resource_handles::Hierarchy},
         structures::{Public, PublicKeyRsa},
         tcti_ldr::{NetworkTPMConfig, TctiNameConf},
-        Context,
     };
 
     const DEFAULT_HELPER_TPM_CONF: &str = "port=4321";

@@ -142,14 +142,9 @@ impl AteccKeySlot {
         {
             result &= self.config.key_type == rust_cryptoauthlib::KeyType::P256EccKey;
             result &= match key_attr.key_type {
-                Type::EccKeyPair { .. } => {
+                Type::EccKeyPair { .. }
                     // `pub_info == true` is relevant when `is_private == true`
-                    if self.config.ecc_key_attr.is_private {
-                        self.config.pub_info
-                    } else {
-                        true
-                    }
-                }
+                    if self.config.ecc_key_attr.is_private => self.config.pub_info,
                 _ => true,
             };
         }

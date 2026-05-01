@@ -15,7 +15,7 @@ use crate::front::{
     front_end::FrontEndHandlerBuilder, listener::Listen,
 };
 use crate::key_info_managers::KeyInfoManagerFactory;
-use crate::providers::{core::ProviderBuilder as CoreProviderBuilder, Provide};
+use crate::providers::{Provide, core::ProviderBuilder as CoreProviderBuilder};
 use crate::utils::config::{
     AuthenticatorConfig, KeyInfoManagerConfig, ListenerConfig, ListenerType, ProviderConfig,
     ServiceConfig,
@@ -123,7 +123,9 @@ impl ServiceBuilder {
         let authenticators = build_authenticators(&config.authenticator)?;
 
         if authenticators[0].0 == AuthType::Direct {
-            warn!("Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html");
+            warn!(
+                "Direct authenticator has been set as the default one. It is only secure under specific requirements. Please make sure to read the Recommendations on a Secure Parsec Deployment at https://parallaxsecond.github.io/parsec-book/parsec_security/secure_deployment.html"
+            );
         }
 
         let key_info_manager_builders = get_key_info_manager_builders(
@@ -137,7 +139,9 @@ impl ServiceBuilder {
         )?;
 
         if providers.is_empty() {
-            error!("Parsec needs at least one provider to start. No valid provider could be created from the configuration.");
+            error!(
+                "Parsec needs at least one provider to start. No valid provider could be created from the configuration."
+            );
             return Err(Error::new(ErrorKind::InvalidData, "need one provider").into());
         }
 
@@ -198,7 +202,7 @@ fn build_backend_handlers(
     for (_auth_type, authenticator) in authenticators {
         let authenticator_info = authenticator
             .describe()
-            .map_err(|_| Error::new(ErrorKind::Other, "Failed to describe authenticator"))?;
+            .map_err(|_| Error::other("Failed to describe authenticator"))?;
         core_provider_builder = core_provider_builder.with_authenticator_info(authenticator_info);
     }
 
@@ -241,7 +245,10 @@ fn build_providers(
         // Check for duplicate provider names.
         let provider_name = config.provider_name()?;
         if provider_names.contains(&provider_name) {
-            error!("Duplicate provider names found.\n{} was found twice.\nThe \'[[provider]] name config option can be used to differentiate between providers of the same type.\nPlease check your config.toml file.", provider_name);
+            error!(
+                "Duplicate provider names found.\n{} was found twice.\nThe \'[[provider]] name config option can be used to differentiate between providers of the same type.\nPlease check your config.toml file.",
+                provider_name
+            );
             return Err(
                 Error::new(ErrorKind::InvalidData, "duplicate provider names found").into(),
             );
@@ -274,7 +281,7 @@ fn build_providers(
                     &format!("Provider with ID {} cannot be created", provider_id),
                     e
                 );
-                return Err(Error::new(ErrorKind::Other, "failed to create provider").into());
+                return Err(Error::other("failed to create provider").into());
             }
         };
         providers.push((provider_id, provider));
@@ -389,7 +396,7 @@ unsafe fn get_provider(
                     endorsement_hierarchy_auth.as_ref().unwrap().clone(),
                 );
             }
-            Ok(Some(Arc::new(builder.build()?)))
+            Ok(Some(Arc::new(unsafe { builder.build()? })))
         }
         #[cfg(feature = "cryptoauthlib-provider")]
         ProviderConfig::CryptoAuthLib {
@@ -505,11 +512,7 @@ fn build_authenticators(config: &AuthenticatorConfig) -> Result<Vec<(AuthType, A
             ) {
                 Some(authenticator) => authenticator,
                 None => {
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "can not create a SPIFFE Workload API client",
-                    )
-                    .into())
+                    return Err(Error::other("can not create a SPIFFE Workload API client").into());
                 }
             };
             authenticators.push((AuthType::JwtSvid, Box::from(jwt_svid_authenticator)))

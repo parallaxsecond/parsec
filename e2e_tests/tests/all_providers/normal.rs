@@ -1,8 +1,8 @@
 // Copyright 2019 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use e2e_tests::auto_test_keyname;
 use e2e_tests::RawRequestClient;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::requests::request::RawHeader;
 use parsec_client::core::interface::requests::{
@@ -151,6 +151,7 @@ fn list_opcodes() {
     // );
 }
 
+#[allow(unexpected_cfgs)]
 #[cfg(feature = "testing")]
 #[test]
 fn mangled_list_providers() {

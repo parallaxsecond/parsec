@@ -261,6 +261,8 @@ fn main() {
         feature = "tpm-provider",
         feature = "pkcs11-provider"
     )) {
-        panic!("In order to run the fuzz framework against some specific providers, the appropriate features must be set when initializing the corpus: \"mbed-crypto-provider\", \"tpm-provider\", or \"pkcs11-provider\"")
+        panic!(
+            "In order to run the fuzz framework against some specific providers, the appropriate features must be set when initializing the corpus: \"mbed-crypto-provider\", \"tpm-provider\", or \"pkcs11-provider\""
+        )
     }
 }

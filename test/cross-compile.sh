@@ -9,6 +9,9 @@ set -xeuf -o pipefail
 # problem of BoringSSL. See https://github.com/tikv/grpc-rs/issues/536. Once resolved,
 # "all-authenticators" will be used again.
 
+# Update rust in the container
+rustup update
+
 # Allow the `pkg-config` crate to cross-compile
 export PKG_CONFIG_ALLOW_CROSS=1
 # Make the `pkg-config` crate use our wrapper
@@ -30,8 +33,3 @@ cargo build --features "pkcs11-provider, mbed-crypto-provider, tpm-provider, tru
 	--target aarch64-unknown-linux-gnu \
 	--config 'target.aarch64-unknown-linux-gnu.linker="aarch64-linux-gnu-gcc"'
 
-# This is needed because for some reason the i686/i386 libs aren't picked up if we don't toss them around just before...
-apt install -y libc6-dev-i386-amd64-cross
-export SYSROOT=/tmp/i686-linux-gnu
-export RUSTFLAGS="-lcrypto -L/tmp/i686-linux-gnu/lib"
-cargo build --features "pkcs11-provider, mbed-crypto-provider, tpm-provider, unix-peer-credentials-authenticator, direct-authenticator, tss-esapi/generate-bindings" --target i686-unknown-linux-gnu

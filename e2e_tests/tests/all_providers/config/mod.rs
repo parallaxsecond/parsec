@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
 use cryptoki::types::AuthPin;
-use e2e_tests::auto_test_keyname;
 use e2e_tests::TestClient;
+use e2e_tests::auto_test_keyname;
 use log::{error, info};
 use parsec_client::core::interface::operations::list_providers::Uuid;
 use parsec_client::core::interface::operations::psa_algorithm::Hash;
@@ -216,7 +216,9 @@ fn various_fields() {
     set_config("various_field_check.toml");
     reload_service();
 
-    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/toto.sock");
+    unsafe {
+        env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/toto.sock");
+    }
 
     let mut client = TestClient::new();
     // Try to send a bit less than 1KiB, should work
@@ -237,7 +239,9 @@ fn various_fields() {
         ResponseStatus::ResponseTooLarge
     );
 
-    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+    unsafe {
+        env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+    }
 }
 
 #[test]
@@ -456,27 +460,31 @@ fn activate_cred_no_auth() {
 
 #[cfg(feature = "pkcs11-provider")]
 fn init_pkcs11_token(lib: &str, so_pin: &str, pin: &str) -> String {
-    use cryptoki::context::{CInitializeArgs, Pkcs11};
+    use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
     use cryptoki::session::UserType;
     use std::path::Path;
 
     let pkcs11 = Pkcs11::new(Path::new(lib)).unwrap();
     // // initialize the library
-    pkcs11.initialize(CInitializeArgs::OsThreads).unwrap();
+    pkcs11
+        .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
+        .unwrap();
     let slot = pkcs11.get_slots_with_token().unwrap().pop().unwrap();
     pkcs11
-        .init_token(slot, &AuthPin::new(so_pin.to_string()), "Test Token")
+        .init_token(slot, &AuthPin::new(so_pin.to_string().into()), "Test Token")
         .unwrap();
     // open a session
     let session = pkcs11.open_rw_session(slot).unwrap();
     // log in the session
     session
-        .login(UserType::So, Some(&AuthPin::new(so_pin.to_string())))
+        .login(UserType::So, Some(&AuthPin::new(so_pin.to_string().into())))
         .unwrap();
-    session.init_pin(&AuthPin::new(pin.to_string())).unwrap();
+    session
+        .init_pin(&AuthPin::new(pin.to_string().into()))
+        .unwrap();
     // get the token serial number
     let token = pkcs11.get_token_info(slot).unwrap();
-    pkcs11.finalize();
+    let _ = pkcs11.finalize();
     std::str::from_utf8(token.serial_number().as_bytes())
         .unwrap()
         .to_owned()
@@ -535,6 +543,7 @@ fn pkcs11_pin_str_fmt_with_hex_word() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn reject_deprecated() {
     set_config("reject_deprecated.toml");
     reload_service();
@@ -616,6 +625,7 @@ fn reject_deprecated() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn allow_deprecated() {
     set_config("allow_deprecated.toml");
     reload_service();

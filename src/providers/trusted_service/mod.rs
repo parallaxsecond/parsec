@@ -99,7 +99,10 @@ impl Provider {
                         let key_id = match ts_provider.key_info_store.get_key_id(key_identity) {
                             Ok(key_id) => key_id,
                             Err(response_status) => {
-                                error!("Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...", key_identity, response_status);
+                                error!(
+                                    "Error getting the Key ID for KeyIdentity:\n{}\n(error: {}), continuing...",
+                                    key_identity, response_status
+                                );
                                 to_remove.push(key_identity.clone());
                                 continue;
                             }
@@ -112,12 +115,12 @@ impl Provider {
                 }
                 Err(string) => {
                     error!("Key Info Manager error when obtaining handles: {}", string);
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
+                    return Err(std::io::Error::other(string).into());
                 }
             };
             for key_identity in to_remove.iter() {
                 if let Err(string) = ts_provider.key_info_store.remove_key_info(key_identity) {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, string).into());
+                    return Err(std::io::Error::other(string).into());
                 }
             }
         }
@@ -129,16 +132,21 @@ impl Provider {
 impl Provide for Provider {
     fn describe(&self) -> Result<(ProviderInfo, HashSet<Opcode>)> {
         trace!("describe ingress");
-        Ok((ProviderInfo {
-            // Assigned UUID for this provider: 71129441-508a-4da6-b6e8-7b98a777e4c0
-            uuid: Uuid::parse_str(Provider::PROVIDER_UUID)?,
-            description: String::from("Provider exposing functionality provided by the Crypto Trusted Service running in a Trusted Execution Environment"),
-            vendor: String::from("Arm"),
-            version_maj: 0,
-            version_min: 1,
-            version_rev: 0,
-            id: ProviderId::TrustedService,
-        }, SUPPORTED_OPCODES.iter().copied().collect()))
+        Ok((
+            ProviderInfo {
+                // Assigned UUID for this provider: 71129441-508a-4da6-b6e8-7b98a777e4c0
+                uuid: Uuid::parse_str(Provider::PROVIDER_UUID)?,
+                description: String::from(
+                    "Provider exposing functionality provided by the Crypto Trusted Service running in a Trusted Execution Environment",
+                ),
+                vendor: String::from("Arm"),
+                version_maj: 0,
+                version_min: 1,
+                version_rev: 0,
+                id: ProviderId::TrustedService,
+            },
+            SUPPORTED_OPCODES.iter().copied().collect(),
+        ))
     }
 
     fn list_keys(

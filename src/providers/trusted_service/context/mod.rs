@@ -78,21 +78,13 @@ impl Context {
         let service_context = unsafe { service_locator_query(service_name.as_ptr()) };
         if service_context.is_null() {
             error!("Locating crypto Trusted Service failed");
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Failed to obtain a Trusted Service context",
-            )
-            .into());
+            return Err(io::Error::other("Failed to obtain a Trusted Service context").into());
         }
 
         info!("Starting crypto Trusted Service context");
         let rpc_caller_session = unsafe { service_context_open(service_context) };
         if rpc_caller_session.is_null() {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Failed to start Trusted Service context",
-            )
-            .into());
+            return Err(io::Error::other("Failed to start Trusted Service context").into());
         }
         let ctx = Context {
             rpc_caller_session,
@@ -161,11 +153,10 @@ impl Context {
             status,
             i32::try_from(opstatus).map_err(|_| Error::Wrapper(WrapperError::InvalidOpStatus))?,
         )
-        .map_err(|e| {
+        .inspect_err(|_| {
             unsafe {
                 let _ = rpc_caller_session_end(call_handle);
             };
-            e
         })?;
         let resp_buf = unsafe { slice::from_raw_parts_mut(resp_buf, resp_buf_size) };
         resp.merge(&*resp_buf).map_err(|e| {

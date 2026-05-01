@@ -159,7 +159,8 @@ setup_mappings() {
 
 # Change rust toolchain version
 if [[ ! -z ${RUST_TOOLCHAIN_VERSION:+x} ]]; then
-	rustup override set ${RUST_TOOLCHAIN_VERSION}
+        rustup toolchain install ${RUST_TOOLCHAIN_VERSION}
+        rustup override set ${RUST_TOOLCHAIN_VERSION}
 fi
 
 rustup update
@@ -190,12 +191,12 @@ while [ "$#" -gt 0 ]; do
             # Copy provider specific config, unless CI is running `cargo-check` or `on-disk-kim` CI
             if [ "$PROVIDER_NAME" != "cargo-check" ] && [ "$PROVIDER_NAME" != "on-disk-kim" ]; then
                 cp $(pwd)/e2e_tests/provider_cfg/$1/config.toml $CONFIG_PATH
-            elif [ "$PROVIDER_NAME" = "on-disk-kim" ]; then
+            elif [ "$PROVIDER_NAME" == "on-disk-kim" ]; then
                 PROVIDER_NAME=all
                 cp $(pwd)/e2e_tests/provider_cfg/all/on-disk-kim-all-providers.toml $CONFIG_PATH
             fi
 
-            if [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "cargo-check" ]; then
+            if [ "$PROVIDER_NAME" == "all" ] || [ "$PROVIDER_NAME" == "cargo-check" ]; then
                 FEATURES="--features=all-providers,all-authenticators"
                 TEST_FEATURES="--features=all-providers"
             else
@@ -232,13 +233,13 @@ fi
 
 trap cleanup EXIT
 
-if [ "$PROVIDER_NAME" = "mismatcher" ]; then
+if [ "$PROVIDER_NAME" == "mismatcher" ]; then
     python3 $(pwd)/utils/dependency_cross_matcher.py --deps_dir $(pwd)
 
     exit 0
 fi
 
-if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" == "tpm" ] || [ "$PROVIDER_NAME" == "all" ] || [ "$PROVIDER_NAME" == "coverage" ]; then
 	# Copy the NVChip for previously stored state. This is needed for the key mappings test.
     cp /tmp/ondisk/NVChip .
     # Start and configure TPM server
@@ -260,7 +261,7 @@ if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" == "pkcs11" ] || [ "$PROVIDER_NAME" == "all" ] || [ "$PROVIDER_NAME" == "coverage" ]; then
     pushd e2e_tests
     # This command suppose that the slot created by the container will be the first one that appears
     # when printing all the available slots.
@@ -275,7 +276,7 @@ fi
 # Initialising any submodules. Currently used for building the Trusted Service provider
 git submodule update --init
 
-if [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" == "coverage" ]; then
     PROVIDERS="trusted-service mbed-crypto tpm pkcs11"
     EXCLUDES="fuzz/*,e2e_tests/*,src/providers/cryptoauthlib/*,src/authenticators/jwt_svid_authenticator/*"
     UNIT_TEST_FEATURES="unix-peer-credentials-authenticator,direct-authenticator"
@@ -308,7 +309,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
         cp $(pwd)/e2e_tests/provider_cfg/$PROVIDER_NAME/config-sqlite.toml $CONFIG_PATH
         setup_mappings sqlite
 
-        if [ "$PROVIDER_NAME" = "tpm" ]; then
+        if [ "$PROVIDER_NAME" == "tpm" ]; then
             reset_tpm
         fi
 
@@ -329,7 +330,7 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
     exit 0
 fi
 
-if [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" == "all" ]; then
     # Start SPIRE server and agent
     pushd /tmp/spire-0.11.1
     ./bin/spire-server run -config conf/server/server.conf &
@@ -349,7 +350,7 @@ fi
 
 echo "Build test"
 
-if [ "$PROVIDER_NAME" = "cargo-check" ]; then
+if [ "$PROVIDER_NAME" == "cargo-check" ]; then
     # We test that everything in the service still builds with the current Rust stable
     # and an old Rust compiler.
     # The old Rust compiler version is found by manually checking the oldest Rust version of all
@@ -381,6 +382,12 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     exit 0
 fi
 
+if [ "$PROVIDER_NAME" == "trusted-service" ]; then
+    # rust-lld is used by default now on some platforms.
+    # It doesn't check /usr/local/lib where libts.so
+    # is saved in parsec-service-test-all docker containers.
+    export RUSTFLAGS="-L native=/usr/local/lib"
+fi
 RUST_BACKTRACE=1 cargo build $FEATURES
 
 echo "Static checks"
@@ -398,7 +405,7 @@ echo "Unit, doc and integration tests"
 RUST_BACKTRACE=1 cargo test $FEATURES
 
 # Ignored unit tests that we want to manually run should be run here!
-if [ "$PROVIDER_NAME" = "tpm" ] || [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" == "tpm" ] || [ "$PROVIDER_NAME" == "all" ]; then
     RUST_BACKTRACE=1 cargo test $FEATURES -- --ignored test_root_key_check
 fi
 
@@ -412,7 +419,7 @@ RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG
 # Sleep time needed to make sure Parsec is ready before launching the tests.
 wait_for_service
 
-if [ "$PROVIDER_NAME" = "all" ]; then
+if [ "$PROVIDER_NAME" == "all" ]; then
     echo "Execute all-providers normal tests"
     RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml all_providers::normal
 
@@ -489,7 +496,7 @@ else
 	fi
 
     # For the TPM provider we check that keys can still be used after a TPM Reset
-    if [ "$PROVIDER_NAME" = "tpm" ]; then
+    if [ "$PROVIDER_NAME" == "tpm" ]; then
         # We first create the keys
         RUST_BACKTRACE=1 cargo test $TEST_FEATURES --manifest-path ./e2e_tests/Cargo.toml before_tpm_reset
         stop_service
@@ -506,7 +513,7 @@ else
     cp $(pwd)/e2e_tests/provider_cfg/$PROVIDER_NAME/config-sqlite.toml $CONFIG_PATH
     setup_mappings sqlite
 
-    if [ "$PROVIDER_NAME" = "tpm" ]; then
+    if [ "$PROVIDER_NAME" == "tpm" ]; then
         reset_tpm
     fi
 

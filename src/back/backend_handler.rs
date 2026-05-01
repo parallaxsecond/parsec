@@ -11,10 +11,10 @@ use derivative::Derivative;
 use log::{error, trace, warn};
 use parsec_interface::operations::Convert;
 use parsec_interface::operations::{NativeOperation, NativeResult};
-use parsec_interface::requests::{
-    request::RequestHeader, Request, Response, ResponseStatus, Result,
-};
 use parsec_interface::requests::{BodyType, ProviderId};
+use parsec_interface::requests::{
+    Request, Response, ResponseStatus, Result, request::RequestHeader,
+};
 use std::io::{Error, ErrorKind};
 use std::sync::Arc;
 
@@ -88,7 +88,7 @@ impl BackEndHandler {
         let header = request.header;
 
         macro_rules! unwrap_or_else_return {
-            ($result:expr) => {
+            ($result:expr_2021) => {
                 match $result {
                     Ok(value) => value,
                     Err(status) => return Response::from_request_header(header, status),
@@ -128,96 +128,104 @@ impl BackEndHandler {
             }
             NativeOperation::PsaGenerateKey(op_generate_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_generate_key(app.identity(), op_generate_key));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_generate_key(app.identity(), op_generate_key)
+                );
                 trace!("psa_generate_key egress");
                 self.result_to_response(NativeResult::PsaGenerateKey(result), header)
             }
             NativeOperation::PsaImportKey(op_import_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_import_key(app.identity(), op_import_key));
+                let result = unwrap_or_else_return!(
+                    self.provider.psa_import_key(app.identity(), op_import_key)
+                );
                 trace!("psa_import_key egress");
                 self.result_to_response(NativeResult::PsaImportKey(result), header)
             }
             NativeOperation::PsaExportPublicKey(op_export_public_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_export_public_key(app.identity(), op_export_public_key));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_export_public_key(app.identity(), op_export_public_key)
+                );
                 trace!("psa_export_public_key egress");
                 self.result_to_response(NativeResult::PsaExportPublicKey(result), header)
             }
             NativeOperation::PsaExportKey(op_export_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_export_key(app.identity(), op_export_key));
+                let result = unwrap_or_else_return!(
+                    self.provider.psa_export_key(app.identity(), op_export_key)
+                );
                 trace!("psa_export_key egress");
                 self.result_to_response(NativeResult::PsaExportKey(result), header)
             }
             NativeOperation::PsaDestroyKey(op_destroy_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_destroy_key(app.identity(), op_destroy_key));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_destroy_key(app.identity(), op_destroy_key)
+                );
                 trace!("psa_destroy_key egress");
                 self.result_to_response(NativeResult::PsaDestroyKey(result), header)
             }
             NativeOperation::PsaSignHash(op_sign_hash) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_sign_hash(app.identity(), op_sign_hash));
+                let result = unwrap_or_else_return!(
+                    self.provider.psa_sign_hash(app.identity(), op_sign_hash)
+                );
                 trace!("psa_sign_hash egress");
                 self.result_to_response(NativeResult::PsaSignHash(result), header)
             }
             NativeOperation::PsaVerifyHash(op_verify_hash) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_verify_hash(app.identity(), op_verify_hash));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_verify_hash(app.identity(), op_verify_hash)
+                );
                 trace!("psa_verify_hash egress");
                 self.result_to_response(NativeResult::PsaVerifyHash(result), header)
             }
             NativeOperation::PsaAsymmetricEncrypt(op_asymmetric_encrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_asymmetric_encrypt(app.identity(), op_asymmetric_encrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_asymmetric_encrypt(app.identity(), op_asymmetric_encrypt)
+                );
                 trace!("psa_asymmetric_encrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricEncrypt(result), header)
             }
             NativeOperation::PsaAsymmetricDecrypt(op_asymmetric_decrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_asymmetric_decrypt(app.identity(), op_asymmetric_decrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_asymmetric_decrypt(app.identity(), op_asymmetric_decrypt)
+                );
                 trace!("psa_asymmetric_decrypt egress");
                 self.result_to_response(NativeResult::PsaAsymmetricDecrypt(result), header)
             }
             NativeOperation::PsaAeadEncrypt(op_aead_encrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_aead_encrypt(app.identity(), op_aead_encrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_aead_encrypt(app.identity(), op_aead_encrypt)
+                );
                 trace!("psa_aead_encrypt egress");
                 self.result_to_response(NativeResult::PsaAeadEncrypt(result), header)
             }
             NativeOperation::PsaAeadDecrypt(op_aead_decrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_aead_decrypt(app.identity(), op_aead_decrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_aead_decrypt(app.identity(), op_aead_decrypt)
+                );
                 trace!("psa_aead_decrypt egress");
                 self.result_to_response(NativeResult::PsaAeadDecrypt(result), header)
             }
             NativeOperation::ListAuthenticators(op_list_authenticators) => {
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .list_authenticators(op_list_authenticators));
+                let result = unwrap_or_else_return!(
+                    self.provider.list_authenticators(op_list_authenticators)
+                );
                 trace!("list_authenticators egress");
                 self.result_to_response(NativeResult::ListAuthenticators(result), header)
             }
@@ -235,9 +243,10 @@ impl BackEndHandler {
             }
             NativeOperation::DeleteClient(op_delete_client) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .delete_client(app.identity(), op_delete_client));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .delete_client(app.identity(), op_delete_client)
+                );
                 trace!("delete_client egress");
                 self.result_to_response(NativeResult::DeleteClient(result), header)
             }
@@ -255,9 +264,10 @@ impl BackEndHandler {
             }
             NativeOperation::PsaRawKeyAgreement(op_raw_key_agreement) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_raw_key_agreement(app.identity(), op_raw_key_agreement));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_raw_key_agreement(app.identity(), op_raw_key_agreement)
+                );
                 trace!("psa_raw_key_agreement egress");
                 self.result_to_response(NativeResult::PsaRawKeyAgreement(result), header)
             }
@@ -269,49 +279,55 @@ impl BackEndHandler {
             }
             NativeOperation::PsaSignMessage(op_sign_message) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_sign_message(app.identity(), op_sign_message));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_sign_message(app.identity(), op_sign_message)
+                );
                 trace!("psa_sign_message egress");
                 self.result_to_response(NativeResult::PsaSignMessage(result), header)
             }
             NativeOperation::PsaVerifyMessage(op_verify_message) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_verify_message(app.identity(), op_verify_message));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_verify_message(app.identity(), op_verify_message)
+                );
                 trace!("psa_verify_message egress");
                 self.result_to_response(NativeResult::PsaVerifyMessage(result), header)
             }
             NativeOperation::PsaCipherEncrypt(op_cipher_encrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_cipher_encrypt(app.identity(), op_cipher_encrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_cipher_encrypt(app.identity(), op_cipher_encrypt)
+                );
                 trace!("op_cipher_encrypt egress");
                 self.result_to_response(NativeResult::PsaCipherEncrypt(result), header)
             }
             NativeOperation::PsaCipherDecrypt(op_cipher_decrypt) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .psa_cipher_decrypt(app.identity(), op_cipher_decrypt));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .psa_cipher_decrypt(app.identity(), op_cipher_decrypt)
+                );
                 trace!("psa_cipher_decrypt egress");
                 self.result_to_response(NativeResult::PsaCipherDecrypt(result), header)
             }
             NativeOperation::CanDoCrypto(op_can_do_crypto) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .can_do_crypto(app.identity(), op_can_do_crypto));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .can_do_crypto(app.identity(), op_can_do_crypto)
+                );
                 trace!("can_do_crypto egress");
                 self.result_to_response(NativeResult::CanDoCrypto(result), header)
             }
             NativeOperation::PrepareKeyAttestation(op_prepare_key_attestation) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .prepare_key_attestation(app.identity(), op_prepare_key_attestation));
+                let result = unwrap_or_else_return!(
+                    self.provider
+                        .prepare_key_attestation(app.identity(), op_prepare_key_attestation)
+                );
                 trace!("prepare_key_attestation egress");
                 self.result_to_response(NativeResult::PrepareKeyAttestation(result), header)
             }

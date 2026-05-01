@@ -36,7 +36,7 @@
 
 #[allow(unused)]
 macro_rules! format_error {
-    ($message:expr, $error:expr) => {
+    ($message:expr_2021, $error:expr_2021) => {
         if crate::utils::GlobalConfig::log_error_details() {
             log::error!("{}; Error: {}", $message, $error)
         } else {
@@ -47,7 +47,7 @@ macro_rules! format_error {
 
 #[allow(unused)]
 macro_rules! deprecation_check {
-    ($operation:ident, $warning:expr, $return_flag:expr) => {
+    ($operation:ident, $warning:expr_2021, $return_flag:expr_2021) => {
         if let Err(ResponseStatus::DeprecatedPrimitive) = $operation.check_deprecated() {
             log::warn!("{}", $warning);
             if $return_flag && !crate::utils::GlobalConfig::allow_deprecated() {
@@ -59,14 +59,14 @@ macro_rules! deprecation_check {
 
 #[allow(unused)]
 macro_rules! warn_on_deprecated {
-    ($operation:ident, $warning:expr) => {
+    ($operation:ident, $warning:expr_2021) => {
         deprecation_check!($operation, $warning, false);
     };
 }
 
 #[allow(unused)]
 macro_rules! return_on_deprecated {
-    ($operation:ident, $warning:expr) => {
+    ($operation:ident, $warning:expr_2021) => {
         deprecation_check!($operation, $warning, true);
     };
 }

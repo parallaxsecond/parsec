@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::{algorithm_to_mechanism, to_response_status};
 use super::KeyPairType;
 use super::Provider;
+use super::utils::{algorithm_to_mechanism, to_response_status};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use cryptoki::error::Error;
@@ -81,8 +81,8 @@ impl Provider {
                         key_attributes.policy.permitted_algorithms
                     {
                         match e {
-                            Error::Pkcs11(RvError::EncryptedDataInvalid) => {
-                                return ResponseStatus::PsaErrorInvalidPadding
+                            Error::Pkcs11(RvError::EncryptedDataInvalid, _) => {
+                                return ResponseStatus::PsaErrorInvalidPadding;
                             }
                             _ => (),
                         }

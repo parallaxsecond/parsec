@@ -90,14 +90,19 @@ def main(argv=[], prog_name=''):
         if os.path.basename(repo_dir) == 'parsec':
             # Versions should be sorted!
             exceptions = {
-                'base64': ['v0.13.1', 'v0.21.4'],
-                'bindgen': ['v0.57.0', 'v0.66.1'],
-                'bitflags': ['v1.3.2', 'v2.4.1'],
-                'cexpr': ['v0.4.0', 'v0.6.0'],
-                'heck': ['v0.3.3', 'v0.4.1'],
-                'nom': ['v5.1.3', 'v7.1.3'],
-                'shlex': ['v0.1.1', 'v1.2.0'],
-                'syn': ['v1.0.109', 'v2.0.38'],
+                'base64': ['v0.13.1', 'v0.21.7', 'v0.22.1'],
+                'bitflags': ['v1.3.2', 'v2.11.1'],
+                'rustix': ['v0.38.44', 'v1.1.4'],
+                'getrandom': ['v0.2.17', 'v0.4.2'],
+                'hashbrown': ['v0.14.5', 'v0.17.0'],
+                'heck': ['v0.3.3', 'v0.5.0'],
+                'itertools': ['v0.10.5', 'v0.13.0'],
+                'linux-raw-sys': ['v0.4.15', 'v0.12.1'],
+                'secrecy': ['v0.8.0', 'v0.10.3'],
+                'syn': ['v1.0.109', 'v2.0.117'],
+                'synstructure': ['v0.12.6', 'v0.13.2'],
+                'thiserror-impl': ['v1.0.69', 'v2.0.18'],
+                'thiserror': ['v1.0.69', 'v2.0.18'],
             }
             tree_flags = parsec_flags
         elif os.path.basename(repo_dir) == 'parsec-tool':

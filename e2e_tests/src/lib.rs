@@ -87,7 +87,9 @@ impl TestClient {
         INIT.call_once(|| {
             //Check if the environment variable is set, if not use default path
             if Err(env::VarError::NotPresent) == env::var("PARSEC_SERVICE_ENDPOINT") {
-                env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+                unsafe {
+                    env::set_var("PARSEC_SERVICE_ENDPOINT", "unix:/tmp/parsec.sock");
+                }
             }
         });
 

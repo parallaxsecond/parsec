@@ -12,6 +12,7 @@ use crate::providers::pkcs11::Provider as Pkcs11Provider;
 use crate::providers::tpm::Provider as TpmProvider;
 #[cfg(feature = "trusted-service-provider")]
 use crate::providers::trusted_service::Provider as TrustedServiceProvider;
+use log::LevelFilter;
 #[cfg(not(all(
     feature = "mbed-crypto-provider",
     feature = "pkcs11-provider",
@@ -20,7 +21,6 @@ use crate::providers::trusted_service::Provider as TrustedServiceProvider;
     feature = "trusted-service-provider"
 )))]
 use log::error;
-use log::LevelFilter;
 use parsec_interface::requests::ProviderId;
 use serde::Deserialize;
 use std::io::Error;
@@ -280,7 +280,10 @@ impl ProviderConfig {
                 feature = "trusted-service-provider"
             )))]
             _ => {
-                error!("Provider ({:?}) chosen in the configuration was not compiled in Parsec binary.", self);
+                error!(
+                    "Provider ({:?}) chosen in the configuration was not compiled in Parsec binary.",
+                    self
+                );
                 Err(Error::new(ErrorKind::InvalidData, "provider not compiled"))
             }
         }

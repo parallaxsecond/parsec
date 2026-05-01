@@ -1,8 +1,8 @@
 // Copyright 2020 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
-use super::utils::{algorithm_to_mechanism, to_response_status};
 use super::Provider;
-use super::{utils, KeyPairType};
+use super::utils::{algorithm_to_mechanism, to_response_status};
+use super::{KeyPairType, utils};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use log::{info, trace};

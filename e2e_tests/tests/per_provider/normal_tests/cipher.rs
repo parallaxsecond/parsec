@@ -1,8 +1,8 @@
 // Copyright 2021 Contributors to the Parsec project.
 // SPDX-License-Identifier: Apache-2.0
+use e2e_tests::TestClient;
 #[cfg(feature = "cryptoauthlib-provider")]
 use e2e_tests::auto_test_keyname;
-use e2e_tests::TestClient;
 use parsec_client::core::interface::operations::psa_algorithm::Cipher;
 use parsec_client::core::interface::requests::{Opcode, ResponseStatus};
 

@@ -13,7 +13,7 @@ use num_traits::FromPrimitive;
 use parsec_interface::operations::psa_key_attributes::Attributes;
 use parsec_interface::requests::AuthType;
 use rusqlite::types::Type::{Blob, Integer};
-use rusqlite::{params, Connection, Error as RusqliteError};
+use rusqlite::{Connection, Error as RusqliteError, params};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::Permissions;
@@ -150,7 +150,7 @@ impl SQLiteKeyInfoManager {
                         .unwrap_or_else(|_| "DB_FILE_PATH_UNKNOWN".to_string()),
                 );
                 error!("{}", error_message);
-                return Err(Error::new(ErrorKind::Other, error_message).into());
+                return Err(Error::other(error_message).into());
             }
         }
 
@@ -183,7 +183,7 @@ impl SQLiteKeyInfoManager {
                     version_number
                 );
                 error!("{}", error_message);
-                return Err(Error::new(ErrorKind::Other, error_message).into());
+                return Err(Error::other(error_message).into());
             }
         }
 
@@ -224,7 +224,7 @@ impl SQLiteKeyInfoManager {
                 key_attributes_version,
             );
             error!("{}", error_message);
-            return Err(Error::new(ErrorKind::Other, error_message).into());
+            return Err(Error::other(error_message).into());
         }
 
         // All checks have passed, load key mappings
@@ -382,20 +382,19 @@ impl ManageKeyInfo for SQLiteKeyInfoManager {
         key_identity: KeyIdentity,
         key_info: KeyInfo,
     ) -> Result<Option<KeyInfo>, String> {
-        if let Err(err) = self.save_mapping(&key_identity, &key_info) {
-            Err(err.to_string())
-        } else {
-            Ok(self.key_store.insert(key_identity, key_info))
+        match self.save_mapping(&key_identity, &key_info) {
+            Err(err) => Err(err.to_string()),
+            _ => Ok(self.key_store.insert(key_identity, key_info)),
         }
     }
 
     fn remove(&mut self, key_identity: &KeyIdentity) -> Result<Option<KeyInfo>, String> {
-        if let Err(err) = self.delete_mapping(key_identity) {
-            Err(err.to_string())
-        } else if let Some(key_info) = self.key_store.remove(key_identity) {
-            Ok(Some(key_info))
-        } else {
-            Ok(None)
+        match self.delete_mapping(key_identity) {
+            Err(err) => Err(err.to_string()),
+            _ => match self.key_store.remove(key_identity) {
+                Some(key_info) => Ok(Some(key_info)),
+                _ => Ok(None),
+            },
         }
     }
 
@@ -485,7 +484,7 @@ mod test {
     fn test_key_info_with_random_id() -> KeyInfo {
         let mut rng = rand::thread_rng();
         KeyInfo {
-            id: vec![rng.gen(), rng.gen(), rng.gen()],
+            id: vec![rng.r#gen(), rng.r#gen(), rng.r#gen()],
             attributes: test_key_attributes(),
         }
     }
@@ -503,10 +502,12 @@ mod test {
 
         assert!(manager.get(&key_identity).unwrap().is_none());
 
-        assert!(manager
-            .insert(key_identity.clone(), key_info.clone())
-            .unwrap()
-            .is_none());
+        assert!(
+            manager
+                .insert(key_identity.clone(), key_info.clone())
+                .unwrap()
+                .is_none()
+        );
 
         let stored_key_info = manager
             .get(&key_identity)

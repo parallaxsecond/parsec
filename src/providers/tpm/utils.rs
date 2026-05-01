@@ -11,6 +11,7 @@ use picky_asn1::wrapper::IntegerAsn1;
 use picky_asn1_x509::RsaPublicKey;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
+use tss_esapi::Error;
 use tss_esapi::abstraction::transient::{KeyMaterial, KeyParams};
 use tss_esapi::constants::response_code::Tss2ResponseCodeKind;
 use tss_esapi::interface_types::{
@@ -21,7 +22,6 @@ use tss_esapi::structures::{
 };
 use tss_esapi::tss2_esys::TPMS_CONTEXT;
 use tss_esapi::utils::{PublicKey, TpmsContext};
-use tss_esapi::Error;
 use zeroize::{Zeroize, Zeroizing};
 const PUBLIC_EXPONENT_BYTES: [u8; 3] = [0x01, 0x00, 0x01];
 
@@ -473,7 +473,10 @@ fn validate_rsa_public_key(public_key: &RsaPublicKey, attributes: &Attributes) -
 
     if public_key.public_exponent.as_unsigned_bytes_be() != PUBLIC_EXPONENT_BYTES {
         if crate::utils::GlobalConfig::log_error_details() {
-            error!("The TPM Provider only supports 0x10001 as public exponent for RSA public keys, {:?} given.", public_key.public_exponent.as_unsigned_bytes_be());
+            error!(
+                "The TPM Provider only supports 0x10001 as public exponent for RSA public keys, {:?} given.",
+                public_key.public_exponent.as_unsigned_bytes_be()
+            );
         } else {
             error!("The TPM Provider only supports 0x10001 as public exponent for RSA public keys");
         }
@@ -486,12 +489,14 @@ fn validate_rsa_public_key(public_key: &RsaPublicKey, attributes: &Attributes) -
     if key_bits != 0 && len * 8 != key_bits {
         if crate::utils::GlobalConfig::log_error_details() {
             error!(
-                    "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}) for RSA keys.",
-                    attributes.bits,
-                    len * 8
-                );
+                "`bits` field of key attributes (value: {}) must be either 0 or equal to the size of the key in `data` (value: {}) for RSA keys.",
+                attributes.bits,
+                len * 8
+            );
         } else {
-            error!("`bits` field of key attributes must be either 0 or equal to the size of the key in `data` for RSA keys.");
+            error!(
+                "`bits` field of key attributes must be either 0 or equal to the size of the key in `data` for RSA keys."
+            );
         }
         return Err(ResponseStatus::PsaErrorInvalidArgument);
     }
@@ -530,12 +535,14 @@ fn validate_ecc_public_key(public_key: &[u8], attributes: &Attributes) -> Result
     if attributes.bits != 0 && (len * 8) / 2 != attributes.bits {
         if crate::utils::GlobalConfig::log_error_details() {
             error!(
-                    "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
-                    attributes.bits,
-                    len * 8
-                );
+                "`bits` field of key attributes (value: {}) must be either 0 or equal to half the size of the key in `data` (value: {}) for Weierstrass curves.",
+                attributes.bits,
+                len * 8
+            );
         } else {
-            error!("`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves.");
+            error!(
+                "`bits` field of key attributes must be either 0 or equal to half the size of the key in `data` for Weierstrass curves."
+            );
         }
         return Err(ResponseStatus::PsaErrorInvalidArgument);
     }

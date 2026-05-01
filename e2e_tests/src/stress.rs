@@ -9,7 +9,7 @@ use rand::{
     thread_rng,
 };
 use std::convert::TryInto;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::Duration;
 
@@ -56,11 +56,7 @@ pub struct StressTestConfig {
 }
 
 fn generate_string(size: usize) -> String {
-    thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(size)
-        .map(char::from)
-        .collect()
+    thread_rng().sample_iter(&Alphanumeric).take(size).collect()
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -136,11 +132,14 @@ impl StressTestWorker {
         // Create ECC sign/verify key
         let ecc_key_name = generate_string(10);
         let res = client.generate_ecc_key_pair_secpr1_ecdsa_sha256(ecc_key_name.clone());
-        if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
-            panic!(
-                "Failed to create ECC key with something different than NotSupported: {}",
-                res.unwrap_err()
-            );
+        match res {
+            Ok(_) | Err(ResponseStatus::PsaErrorNotSupported) => {}
+            Err(e) => {
+                panic!(
+                    "Failed to create ECC key with something different than NotSupported: {}",
+                    e
+                );
+            }
         }
         let ecc_key_name = if res.is_ok() {
             Some(ecc_key_name)
@@ -152,11 +151,14 @@ impl StressTestWorker {
         let encrypt_key_name = generate_string(10);
         let res = client.generate_rsa_encryption_keys_rsapkcs1v15crypt(encrypt_key_name.clone());
 
-        if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
-            panic!(
-                "Failed to create Asymmetric Encryption key with something different than NotSupported: {}",
-                res.unwrap_err()
-            );
+        match res {
+            Ok(_) | Err(ResponseStatus::PsaErrorNotSupported) => {}
+            Err(e) => {
+                panic!(
+                    "Failed to create Asymmetric Encryption key with something different than NotSupported: {}",
+                    e
+                );
+            }
         }
         let encrypt_key_name = if res.is_ok()
             && opcodes.contains(&Opcode::PsaAsymmetricEncrypt)
@@ -234,7 +236,10 @@ impl StressTestWorker {
                     || status == ResponseStatus::PsaErrorInvalidArgument
                     || status == ResponseStatus::PsaErrorCorruptionDetected)
                 {
-                    panic!("An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.", status);
+                    panic!(
+                        "An invalid signature or a tampering detection should be the only reasons of the verification failing. Status returned: {:?}.",
+                        status
+                    );
                 }
             }
             Operation::SignEcc => {
@@ -247,11 +252,14 @@ impl StressTestWorker {
                     HASH.to_vec(),
                 );
 
-                if !(res.is_ok() || res == Err(ResponseStatus::PsaErrorNotSupported)) {
-                    panic!(
-                        "ECC signing failed with an error other than NotSupported: {}",
-                        res.unwrap_err()
-                    );
+                match res {
+                    Ok(_) | Err(ResponseStatus::PsaErrorNotSupported) => {}
+                    Err(e) => {
+                        panic!(
+                            "ECC signing failed with an error other than NotSupported: {}",
+                            e
+                        );
+                    }
                 }
             }
             Operation::VerifyEcc => {
@@ -271,7 +279,10 @@ impl StressTestWorker {
                     || status == ResponseStatus::PsaErrorCorruptionDetected
                     || status == ResponseStatus::PsaErrorNotSupported)
                 {
-                    panic!("An invalid signature, a tampering detection or no support should be the only reasons of the ECC verification failing. Status returned: {:?}.", status);
+                    panic!(
+                        "An invalid signature, a tampering detection or no support should be the only reasons of the ECC verification failing. Status returned: {:?}.",
+                        status
+                    );
                 }
             }
             Operation::DestroyKey => {
