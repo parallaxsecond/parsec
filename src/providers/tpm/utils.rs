@@ -135,6 +135,12 @@ pub struct LegacyPasswordContext {
     pub auth_value: Vec<u8>,
 }
 
+/// Convert PSA key attributes to the TPM parameters used to create or load a key.
+///
+/// An ECDSA `SignHash::Any` policy maps to a NULL ECC scheme. The signing
+/// operation must supply a concrete scheme; it must not replace the stored
+/// key template. The TPM provider supports SHA-256 signing for this policy.
+/// Concrete-hash ECDSA policies retain their fixed scheme and hash.
 pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
     match attributes.key_type {
         Type::RsaKeyPair | Type::RsaPublicKey => {
@@ -177,6 +183,9 @@ pub fn parsec_to_tpm_params(attributes: Attributes) -> Result<KeyParams> {
                 Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
                     hash_alg: SignHash::Specific(hash),
                 }) => EccScheme::EcDsa(HashScheme::new(convert_hash_to_tpm(hash)?)),
+                Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+                    hash_alg: SignHash::Any,
+                }) => EccScheme::Null,
                 Algorithm::AsymmetricSignature(AsymmetricSignature::EcdsaAny)
                 | Algorithm::AsymmetricSignature(AsymmetricSignature::DeterministicEcdsa {
                     ..

@@ -8,7 +8,30 @@ use parsec_interface::operations::psa_algorithm::*;
 use parsec_interface::operations::{psa_sign_hash, psa_verify_hash};
 use parsec_interface::requests::{ResponseStatus, Result};
 use std::convert::TryFrom;
-use tss_esapi::structures::{Auth, Digest};
+use tss_esapi::interface_types::algorithm::HashingAlgorithm;
+use tss_esapi::structures::{Auth, Digest, HashScheme, SignatureScheme};
+
+/// Select the signing command's scheme without changing the key template.
+///
+/// An ECDSA wildcard key policy uses a NULL template and requires a concrete
+/// operation scheme. SHA-256 is supported; other wildcard-policy signing
+/// requests return `PsaErrorNotSupported`. Fixed policies use the key's scheme.
+/// The caller must validate the request against the key attributes first.
+fn signing_scheme(policy: Algorithm, algorithm: AsymmetricSignature) -> Result<SignatureScheme> {
+    match policy {
+        Algorithm::AsymmetricSignature(AsymmetricSignature::Ecdsa {
+            hash_alg: SignHash::Any,
+        }) => match algorithm {
+            AsymmetricSignature::Ecdsa {
+                hash_alg: SignHash::Specific(Hash::Sha256),
+            } => Ok(SignatureScheme::EcDsa {
+                hash_scheme: HashScheme::new(HashingAlgorithm::Sha256),
+            }),
+            _ => Err(ResponseStatus::PsaErrorNotSupported),
+        },
+        _ => Ok(SignatureScheme::Null),
+    }
+}
 
 impl Provider {
     pub(super) fn psa_sign_hash_internal(
@@ -48,8 +71,9 @@ impl Provider {
 
         op.validate(key_attributes)?;
 
+        let scheme = signing_scheme(key_attributes.policy.permitted_algorithms, op.alg)?;
         let signature = esapi_context
-            .sign(
+            .sign_with_scheme(
                 password_context.key_material().clone(),
                 utils::parsec_to_tpm_params(key_attributes)?,
                 Some(
@@ -57,6 +81,7 @@ impl Provider {
                         .map_err(utils::to_response_status)?,
                 ),
                 Digest::try_from((*op.hash).clone()).map_err(utils::to_response_status)?,
+                scheme,
             )
             .map_err(|e| {
                 if crate::utils::GlobalConfig::log_error_details() {
